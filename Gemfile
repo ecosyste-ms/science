@@ -41,8 +41,21 @@ gem 'csv'
 gem 'stemmify'
 gem 'appsignal'
 gem 'commonmarker'
+gem 'github-markup'
 gem 'ostruct'
 gem 'dalli'
+gem 'matrix'
+gem 'tf-idf-similarity'
+gem 'stopwords-filter', require: 'stopwords', github: 'eliasbaixas/stopwords-filter', branch: 'master'
+
+gem "redcarpet", :platforms => :ruby
+gem "RedCloth"
+gem "rdoc"
+gem "org-ruby"
+gem "creole"
+gem "wikicloth", github: 'nricciar/wikicloth'
+gem "twitter-text"
+gem "asciidoctor"
 
 group :development, :test do
   gem 'dotenv-rails'

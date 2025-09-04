@@ -1,6 +1,25 @@
+GIT
+  remote: https://github.com/eliasbaixas/stopwords-filter.git
+  revision: 83fabb7507604a1bce9b587d2024ff3935f24adb
+  branch: master
+  specs:
+    stopwords-filter (0.7.0)
+
+GIT
+  remote: https://github.com/nricciar/wikicloth.git
+  revision: 00226ffc6eb46de12038feb6f4c88275645969f7
+  specs:
+    wikicloth (0.8.3)
+      builder
+      expression_parser
+      htmlentities
+      nokogiri
+      twitter-text (>= 2.1)
+
 GEM
   remote: https://rubygems.org/
   specs:
+    RedCloth (4.3.4)
     actioncable (8.0.2.1)
       actionpack (= 8.0.2.1)
       activesupport (= 8.0.2.1)
@@ -77,6 +96,7 @@ GEM
     appsignal (4.7.0)
       logger
       rack (>= 2.0.0)
+    asciidoctor (2.0.23)
     base64 (0.3.0)
     benchmark (0.4.1)
     bigdecimal (3.2.3)
@@ -111,6 +131,7 @@ GEM
       bigdecimal
       rexml
     crass (1.0.6)
+    creole (0.5.0)
     csv (3.3.5)
     dalli (3.2.8)
     date (3.4.1)
@@ -123,6 +144,7 @@ GEM
     erubi (1.13.1)
     ethon (0.17.0)
       ffi (>= 1.15.0)
+    expression_parser (0.9.0)
     faraday (2.13.4)
       faraday-net_http (>= 2.0, < 3.5)
       json
@@ -142,6 +164,7 @@ GEM
     ffi (1.17.2-x86_64-darwin)
     ffi (1.17.2-x86_64-linux-gnu)
     ffi (1.17.2-x86_64-linux-musl)
+    github-markup (5.0.1)
     globalid (1.2.1)
       activesupport (>= 6.1)
     google-protobuf (4.32.0-aarch64-linux-gnu)
@@ -165,8 +188,10 @@ GEM
     groupdate (6.7.0)
       activesupport (>= 7.1)
     hashdiff (1.2.0)
+    htmlentities (4.3.4)
     i18n (1.14.7)
       concurrent-ruby (~> 1.0)
+    idn-ruby (0.1.5)
     io-console (0.8.1)
     irb (1.15.2)
       pp (>= 0.6.0)
@@ -192,6 +217,7 @@ GEM
       net-pop
       net-smtp
     marcel (1.0.4)
+    matrix (0.4.3)
     mini_mime (1.1.5)
     minitest (5.25.5)
     mocha (2.7.1)
@@ -222,6 +248,8 @@ GEM
     nokogiri (1.18.9-x86_64-linux-musl)
       racc (~> 1.4)
     numerizer (0.1.1)
+    org-ruby (0.9.12)
+      rubypants (~> 0.2)
     ostruct (0.6.3)
     pagy (9.4.0)
     pg (1.6.2-aarch64-linux)
@@ -297,6 +325,7 @@ GEM
     rdoc (6.14.2)
       erb
       psych (>= 4.0.0)
+    redcarpet (3.6.1)
     redis (5.4.1)
       redis-client (>= 0.22.0)
     redis-client (0.25.2)
@@ -311,6 +340,7 @@ GEM
       actionpack (>= 5.2, < 8.1)
       railties (>= 5.2, < 8.1)
     ruby2_keywords (0.0.5)
+    rubypants (0.7.1)
     sassc (2.4.0)
       ffi (~> 1.9)
     sassc-rails (2.1.2)
@@ -352,13 +382,22 @@ GEM
       sprockets (>= 3.0.0)
     stemmify (0.0.2)
     stringio (3.1.7)
+    tf-idf-similarity (0.3.0)
+      unicode_utils (~> 1.4)
     thor (1.4.0)
     tilt (2.6.1)
     timeout (0.4.3)
+    twitter-text (3.1.0)
+      idn-ruby
+      unf (~> 0.1.0)
     typhoeus (1.4.1)
       ethon (>= 0.9.0)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
+    unf (0.1.4)
+      unf_ext
+    unf_ext (0.0.9.1)
+    unicode_utils (1.4.0)
     uri (1.0.3)
     useragent (0.16.11)
     web-console (4.2.1)
@@ -386,13 +425,16 @@ PLATFORMS
   x86_64-linux-musl
 
 DEPENDENCIES
+  RedCloth
   appsignal
+  asciidoctor
   bootsnap
   bootstrap
   bootstrap-icons-helper (~> 2.0)
   cff
   commonmarker
   counter_culture
+  creole
   csv
   dalli
   dotenv-rails
@@ -400,11 +442,14 @@ DEPENDENCIES
   faraday-follow_redirects
   faraday-retry
   faraday-typhoeus
+  github-markup
   google-protobuf
   groupdate
   jbuilder
   jquery-rails
+  matrix
   mocha
+  org-ruby
   ostruct
   pagy
   pg
@@ -416,6 +461,8 @@ DEPENDENCIES
   rack-cors
   rails (~> 8.0.0)
   rails-controller-testing
+  rdoc
+  redcarpet
   redis
   rswag-api
   rswag-ui
@@ -430,10 +477,15 @@ DEPENDENCIES
   sitemap_generator
   sprockets-rails
   stemmify
+  stopwords-filter!
+  tf-idf-similarity
+  twitter-text
   web-console
   webmock
+  wikicloth!
 
 CHECKSUMS
+  RedCloth (4.3.4) sha256=5231b2fdd91a933915cba330e5fd1a74025e77b56f57b7404c7191ebf2812297
   actioncable (8.0.2.1) sha256=6f1cb20db39fba28a93569e8d5dab42b2749d7ddd4baebb5bbecd4217e49d6a2
   actionmailbox (8.0.2.1) sha256=8ea8c6e31e448961c06fc1d6282775b32aff1c009f232d4564e07e54850a6cad
   actionmailer (8.0.2.1) sha256=0de14d8d04541eab130858cb2f0697266be42de1afe1104bc43d7998137ddb9c
@@ -447,6 +499,7 @@ CHECKSUMS
   activesupport (8.0.2.1) sha256=0405a76fd1ca989975d9ae00d46a4d3979bdf3817482d846b63affa84bd561c6
   addressable (2.8.7) sha256=462986537cf3735ab5f3c0f557f14155d778f4b43ea4f485a9deb9c8f7c58232
   appsignal (4.7.0) sha256=9037199709e91aa0315c9c3d7f6ad5a6417922c0d60cdd3b587bce98612500af
+  asciidoctor (2.0.23) sha256=52208807f237dfa0ca29882f8b13d60b820496116ad191cf197ca56f2b7fddf3
   base64 (0.3.0) sha256=27337aeabad6ffae05c265c450490628ef3ebd4b67be58257393227588f5a97b
   benchmark (0.4.1) sha256=d4ef40037bba27f03b28013e219b950b82bace296549ec15a78016552f8d2cce
   bigdecimal (3.2.3) sha256=ffd11d1ac67a0d3b2f44aec0a6487210b3f813f363dd11f1fcccf5ba00da4e1b
@@ -469,6 +522,7 @@ CHECKSUMS
   counter_culture (3.11.2) sha256=10f62d78f9f6e042640124847902761af8cc37aa96d3c40bdc253805b6efe33d
   crack (1.0.0) sha256=c83aefdb428cdc7b66c7f287e488c796f055c0839e6e545fec2c7047743c4a49
   crass (1.0.6) sha256=dc516022a56e7b3b156099abc81b6d2b08ea1ed12676ac7a5657617f012bd45d
+  creole (0.5.0) sha256=951701e2d80760f156b1cb2a93471ca97c076289becc067a33b745133ed32c03
   csv (3.3.5) sha256=6e5134ac3383ef728b7f02725d9872934f523cb40b961479f69cf3afa6c8e73f
   dalli (3.2.8) sha256=2e63595084d91fae2655514a02c5d4fc0f16c0799893794abe23bf628bebaaa5
   date (3.4.1) sha256=bf268e14ef7158009bfeaec40b5fa3c7271906e88b196d958a89d4b408abe64f
@@ -478,6 +532,7 @@ CHECKSUMS
   erb (5.0.2) sha256=d30f258143d4300fb4ecf430042ac12970c9bb4b33c974a545b8f58c1ec26c0f
   erubi (1.13.1) sha256=a082103b0885dbc5ecf1172fede897f9ebdb745a4b97a5e8dc63953db1ee4ad9
   ethon (0.17.0) sha256=2a467db7620243af86aaf146aaa5b2cb7228a5646a013d8558cd240f7cf6e3b4
+  expression_parser (0.9.0) sha256=2b56db3cffc48c3337f4f29f5bc2374c86e7ba29acb40269c74bb55af9f868a4
   faraday (2.13.4) sha256=c719ff52cfd0dbaeca79dd83ed3aeea3f621032abf8bc959d1c05666157cac26
   faraday-follow_redirects (0.3.0) sha256=d92d975635e2c7fe525dd494fcd4b9bb7f0a4a0ec0d5f4c15c729530fdb807f9
   faraday-net_http (3.4.1) sha256=095757fae7872b94eac839c08a1a4b8d84fd91d6886cfbe75caa2143de64ab3b
@@ -489,6 +544,7 @@ CHECKSUMS
   ffi (1.17.2-x86_64-darwin) sha256=981f2d4e32ea03712beb26e55e972797c2c5a7b0257955d8667ba58f2da6440e
   ffi (1.17.2-x86_64-linux-gnu) sha256=05d2026fc9dbb7cfd21a5934559f16293815b7ce0314846fee2ac8efbdb823ea
   ffi (1.17.2-x86_64-linux-musl) sha256=97c0eb3981414309285a64dc4d466bd149e981c279a56371ef811395d68cb95c
+  github-markup (5.0.1) sha256=b6e9f8538cb8566935321433190615cbc747550e1705a7af5ba24048d0ddc472
   globalid (1.2.1) sha256=70bf76711871f843dbba72beb8613229a49429d1866828476f9c9d6ccc327ce9
   google-protobuf (4.32.0-aarch64-linux-gnu) sha256=764c3e3e4e4952f798746e5933375f50609572aa964b767d7ab0f96a57fca788
   google-protobuf (4.32.0-aarch64-linux-musl) sha256=17d1442d5e266b96362c35fde23722797344083eddef459fe58731babcc7f52e
@@ -498,7 +554,9 @@ CHECKSUMS
   google-protobuf (4.32.0-x86_64-linux-musl) sha256=d26307111f43a27065f38128d744b6e3fcebfb6c6c1595d3755787cda6eebced
   groupdate (6.7.0) sha256=beaa8d5bf3856814681914a1d4a20e77436a2214b85d0017dc2ea5c355fb6777
   hashdiff (1.2.0) sha256=c984f13e115bfc9953332e8e83bd9d769cfde9944e2d54e07eb9df7b76e140b5
+  htmlentities (4.3.4) sha256=125a73c6c9f2d1b62100b7c3c401e3624441b663762afa7fe428476435a673da
   i18n (1.14.7) sha256=ceba573f8138ff2c0915427f1fc5bdf4aa3ab8ae88c8ce255eb3ecf0a11a5d0f
+  idn-ruby (0.1.5) sha256=3076fa1aac170e92310d02822badf6b11e74e17915a045c8f9ad053bba24c037
   io-console (0.8.1) sha256=1e15440a6b2f67b6ea496df7c474ed62c860ad11237f29b3bd187f054b925fcb
   irb (1.15.2) sha256=222f32952e278da34b58ffe45e8634bf4afc2dc7aa9da23fed67e581aa50fdba
   jbuilder (2.14.1) sha256=4eb26376ff60ef100cb4fd6fd7533cd271f9998327e86adf20fd8c0e69fabb42
@@ -510,6 +568,7 @@ CHECKSUMS
   loofah (2.24.1) sha256=655a30842b70ec476410b347ab1cd2a5b92da46a19044357bbd9f401b009a337
   mail (2.8.1) sha256=ec3b9fadcf2b3755c78785cb17bc9a0ca9ee9857108a64b6f5cfc9c0b5bfc9ad
   marcel (1.0.4) sha256=0d5649feb64b8f19f3d3468b96c680bae9746335d02194270287868a661516a4
+  matrix (0.4.3) sha256=a0d5ab7ddcc1973ff690ab361b67f359acbb16958d1dc072b8b956a286564c5b
   mini_mime (1.1.5) sha256=8681b7e2e4215f2a159f9400b5816d85e9d8c6c6b491e96a12797e798f8bccef
   minitest (5.25.5) sha256=391b6c6cb43a4802bfb7c93af1ebe2ac66a210293f4a3fb7db36f2fc7dc2c756
   mocha (2.7.1) sha256=8f7d538d5d3ebc75fc788b3d92fbab913a93a78462d2a3ce99d1bdde7af7f851
@@ -527,6 +586,7 @@ CHECKSUMS
   nokogiri (1.18.9-x86_64-linux-gnu) sha256=b52f5defedc53d14f71eeaaf990da66b077e1918a2e13088b6a96d0230f44360
   nokogiri (1.18.9-x86_64-linux-musl) sha256=e69359d6240c17e64cc9f43970d54f13bfc7b8cc516b819228f687e953425e69
   numerizer (0.1.1) sha256=10ec9efec62472b69a3a0e275a18a44baa595ce6e2e4cfc1678d5cb2974c336f
+  org-ruby (0.9.12) sha256=93cbec3a4470cb9dca6a4a98dc276a6434ea9d9e7bc2d42ea33c3aedd5d1c974
   ostruct (0.6.3) sha256=95a2ed4a4bd1d190784e666b47b2d3f078e4a9efda2fccf18f84ddc6538ed912
   pagy (9.4.0) sha256=db3f2e043f684155f18f78be62a81e8d033e39b9f97b1e1a8d12ad38d7bce738
   pg (1.6.2-aarch64-linux) sha256=0503c6be5b0ca5ca3aaf91f2ed638f90843313cb81e8e7d7b60ad4bb62c3d131
@@ -558,6 +618,7 @@ CHECKSUMS
   railties (8.0.2.1) sha256=54e40e1771fc2878f572d5a4e076cddb057ba8d4d471f8b7d9bfc61bc1301d4c
   rake (13.3.0) sha256=96f5092d786ff412c62fde76f793cc0541bd84d2eb579caa529aa8a059934493
   rdoc (6.14.2) sha256=9fdd44df130f856ae70cc9a264dfd659b9b40de369b16581f4ab746e42439226
+  redcarpet (3.6.1) sha256=d444910e6aa55480c6bcdc0cdb057626e8a32c054c29e793fa642ba2f155f445
   redis (5.4.1) sha256=b5e675b57ad22b15c9bcc765d5ac26f60b675408af916d31527af9bd5a81faae
   redis-client (0.25.2) sha256=aa37e34c29da39fdb0b8663e7a649adb0923959cd4a9351befe2cd19e6f8d6f0
   reline (0.6.2) sha256=1dad26a6008872d59c8e05244b119347c9f2ddaf4a53dce97856cd5f30a02846
@@ -565,6 +626,7 @@ CHECKSUMS
   rswag-api (2.16.0) sha256=b653f7bd92e98be18b01ab4525d88950d7b0960e293a99f856b9efcee3ae6074
   rswag-ui (2.16.0) sha256=a1f49e927dceda92e6e6e7c1000f1e217ee66c565f69e28131dc98b33cd3a04f
   ruby2_keywords (0.0.5) sha256=ffd13740c573b7301cf7a2e61fc857b2a8e3d3aff32545d6f8300d8bae10e3ef
+  rubypants (0.7.1) sha256=30eb674add457dd05232c6357f7ee674536606f79d9f55e0f84db442bce2624f
   sassc (2.4.0) sha256=4c60a2b0a3b36685c83b80d5789401c2f678c1652e3288315a1551d811d9f83e
   sassc-rails (2.1.2) sha256=5f4fdf3881fc9bdc8e856ffbd9850d70a2878866feae8114aa45996179952db5
   secure_headers (7.1.0) sha256=6b1f9d5f9507af2948f4636452c41c09371927836396c2185438ffdf0a731124
@@ -579,18 +641,25 @@ CHECKSUMS
   sprockets (4.2.2) sha256=761e5a49f1c288704763f73139763564c845a8f856d52fba013458f8af1b59b1
   sprockets-rails (3.5.2) sha256=a9e88e6ce9f8c912d349aa5401509165ec42326baf9e942a85de4b76dbc4119e
   stemmify (0.0.2) sha256=81d529fde51aa206ebbf61f6a142fc41882a1259e1e0f7f783cf6b8ef6aafbc9
+  stopwords-filter (0.7.0)
   stringio (3.1.7) sha256=5b78b7cb242a315fb4fca61a8255d62ec438f58da2b90be66048546ade4507fa
+  tf-idf-similarity (0.3.0) sha256=bbb81620fdd2a82a2b5c7033a8719458934d8732c1492e7830e7f44ad5aa7d0a
   thor (1.4.0) sha256=8763e822ccb0f1d7bee88cde131b19a65606657b847cc7b7b4b82e772bcd8a3d
   tilt (2.6.1) sha256=35a99bba2adf7c1e362f5b48f9b581cce4edfba98117e34696dde6d308d84770
   timeout (0.4.3) sha256=9509f079b2b55fe4236d79633bd75e34c1c1e7e3fb4b56cb5fda61f80a0fe30e
+  twitter-text (3.1.0) sha256=7fa4b3abf380ba26f3b4d310f41c6fecab0c0f137e7d51d6b201d02117b8d5b6
   typhoeus (1.4.1) sha256=1c17db8364bd45ab302dc61e460173c3e69835896be88a3df07c206d5c55ef7c
   tzinfo (2.0.6) sha256=8daf828cc77bcf7d63b0e3bdb6caa47e2272dcfaf4fbfe46f8c3a9df087a829b
+  unf (0.1.4) sha256=4999517a531f2a955750f8831941891f6158498ec9b6cb1c81ce89388e63022e
+  unf_ext (0.0.9.1) sha256=926114a858934126c6bbfd3254347dadb5dae354711869368c0f75e3765fc6e9
+  unicode_utils (1.4.0) sha256=b922d0cf2313b6b7136ada6645ce7154ffc86418ca07d53b058efe9eb72f2a40
   uri (1.0.3) sha256=e9f2244608eea2f7bc357d954c65c910ce0399ca5e18a7a29207ac22d8767011
   useragent (0.16.11) sha256=700e6413ad4bb954bb63547fa098dddf7b0ebe75b40cc6f93b8d54255b173844
   web-console (4.2.1) sha256=e7bcf37a10ea2b4ec4281649d1cee461b32232d0a447e82c786e6841fd22fe20
   webmock (3.25.1) sha256=ab9d5d9353bcbe6322c83e1c60a7103988efc7b67cd72ffb9012629c3d396323
   websocket-driver (0.8.0) sha256=ed0dba4b943c22f17f9a734817e808bc84cdce6a7e22045f5315aa57676d4962
   websocket-extensions (0.1.5) sha256=1c6ba63092cda343eb53fc657110c71c754c56484aad42578495227d717a8241
+  wikicloth (0.8.3)
   zeitwerk (2.7.3) sha256=b2e86b4a9b57d26ba68a15230dcc7fe6f040f06831ce64417b0621ad96ba3e85
 
 RUBY VERSION

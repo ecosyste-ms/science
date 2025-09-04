@@ -1,6 +1,8 @@
 require 'csv'
+require 'matrix'
 require 'tf-idf-similarity'
 require 'stopwords'
+require 'github/markup'
 
 class Project < ApplicationRecord
   include EcosystemApiClient
@@ -25,17 +27,15 @@ class Project < ApplicationRecord
   scope :with_keywords, -> { where.not(keywords: []) }
   scope :without_keywords, -> { where(keywords: []) }
   scope :with_packages, -> { where.not(packages: [nil, []]) }
+  scope :with_readme, -> { where.not(readme: nil) }
+  scope :without_readme, -> { where(readme: nil) }
 
   scope :with_keywords_from_contributors, -> { where.not(keywords_from_contributors: []) }
   scope :without_keywords_from_contributors, -> { where(keywords_from_contributors: []) }
   
   scope :with_joss, -> { where.not(joss_metadata: nil) }
 
-  def self.import_from_csv
-  
-    # url = 'https://raw.githubusercontent.com/protontypes/open-source-in-environmental-sustainability/main/open-source-in-environmental-sustainability/csv/projects.csv'
-    url = 'https://gist.githubusercontent.com/andrew/44442a6a84395df81bc1b0a153c5abaf/raw/fb4d3ff68eb65ebca9c9387fadb30349e3563e1b/Projects-Gridview.csv'
-
+  def self.import_from_csv(url)
     conn = Faraday.new(url: url) do |faraday|
       faraday.response :follow_redirects
       faraday.adapter Faraday.default_adapter
@@ -194,6 +194,7 @@ class Project < ApplicationRecord
     fetch_owner
     fetch_dependencies
     fetch_packages
+    fetch_readme
     combine_keywords
     fetch_commits
     fetch_events
@@ -784,7 +785,7 @@ class Project < ApplicationRecord
       text_parts = []
       text_parts << project.name if project.name.present?
       text_parts << project.description if project.description.present?
-      text_parts << project.readme if project.readme.present?
+      text_parts << project.preprocessed_readme if project.readme.present?
       text = text_parts.join(' ')
       
       # Remove stopwords
@@ -794,13 +795,15 @@ class Project < ApplicationRecord
       TfIdfSimilarity::Document.new(filtered_text)
     end
 
-    # Create corpus and model
-    corpus = TfIdfSimilarity::Corpus.new(documents)
-    model = TfIdfSimilarity::TfIdfModel.new(corpus, library: :narray)
+    # Create model
+    model = TfIdfSimilarity::TfIdfModel.new(documents)
+
+    # Get all terms from all documents
+    all_terms = documents.flat_map(&:terms).uniq
 
     # Calculate IDF for each term
     idf_scores = {}
-    corpus.terms.each do |term|
+    all_terms.each do |term|
       idf_scores[term] = model.idf(term)
     end
 
@@ -815,6 +818,24 @@ class Project < ApplicationRecord
     self.class.calculate_idf([self])
   end
 
+  def preprocessed_readme
+    return '' unless readme.present?
+    
+    begin
+      html_content = GitHub::Markup.render(readme_file_name, readme.force_encoding("UTF-8"))
+      
+      # Extract text from HTML
+      text = Nokogiri::HTML(html_content).text.strip.downcase
+      # remove URLs
+      text = text.gsub(/https?:\/\/[^\s]+/, '')
+      # normalize whitespace
+      text.gsub(/\s+/, ' ')
+    rescue => e
+      # Return empty string if any error occurs during rendering or processing
+      ''
+    end
+  end
+
   def citation_file_name
     return unless repository.present?
     return unless repository['metadata'].present?
@@ -825,6 +846,78 @@ class Project < ApplicationRecord
   def download_url
     return unless repository.present?
     repository['download_url']
+  end
+
+  def readme_file_name
+    return unless repository.present?
+    return unless repository['metadata'].present?
+    return unless repository['metadata']['files'].present?
+    repository['metadata']['files']['readme']
+  end
+
+  def readme_is_markdown?
+    return unless readme_file_name.present?
+    readme_file_name.downcase.ends_with?('.md') || readme_file_name.downcase.ends_with?('.markdown')
+  end
+
+  def load_readme
+    return unless download_url.present?
+    conn = Faraday.new(url: archive_url(readme_file_name)) do |faraday|
+      faraday.response :follow_redirects
+      faraday.adapter Faraday.default_adapter
+      faraday.headers['User-Agent'] = 'explore.market.dev'
+    end
+    response = conn.get
+    return unless response.success?
+    json = JSON.parse(response.body)
+    json['contents'].gsub("\u0000", '').encode('UTF-8', invalid: :replace, undef: :replace, replace: '')
+  end
+
+  def fetch_readme
+    if readme_file_name.blank? || download_url.blank?
+      fetch_readme_fallback
+    else  
+      readme_content = load_readme
+      if readme_content.present?
+        self.readme = readme_content
+        self.save if changed?
+      else
+        fetch_readme_fallback
+      end
+    end
+  rescue => e
+    puts "Error fetching readme for #{repository_url}"
+    puts e.message
+    puts e.backtrace
+    fetch_readme_fallback
+  end
+  
+  def load_readme_fallback
+    file_name = readme_file_name.presence || 'README.md'
+    conn = Faraday.new(url: raw_url(file_name)) do |faraday|
+      faraday.response :follow_redirects
+      faraday.adapter Faraday.default_adapter
+    end
+  
+    response = conn.get
+    return unless response.success?
+    response.body.gsub("\u0000", '').encode('UTF-8', invalid: :replace, undef: :replace, replace: '')
+  end
+
+  def fetch_readme_fallback
+    readme_content = load_readme_fallback
+    return unless readme_content.present?
+    self.readme = readme_content
+    self.save if changed?
+  rescue => e
+    puts "Error fetching fallback readme for #{repository_url}"
+    puts e.message
+    puts e.backtrace
+  end
+
+  def readme_url
+    return unless repository.present?
+    "#{repository['html_url']}/blob/#{repository['default_branch']}/#{readme_file_name}"
   end
 
   def archive_url(path)

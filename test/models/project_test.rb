@@ -94,8 +94,14 @@ class ProjectTest < ActiveSupport::TestCase
     assert_not_includes terms, 'for'
     assert_not_includes terms, 'and'
     assert_not_includes terms, 'it'
-    assert_not_includes terms, 'will'
     assert_not_includes terms, 'be'
+    assert_not_includes terms, 'very'
+    
+    # These should NOT be filtered (not stopwords)
+    assert_includes terms, 'will'
+    assert_includes terms, 'useful'
+    assert_includes terms, 'climate'
+    assert_includes terms, 'tool'
   end
 
   test "calculate_idf handles missing fields gracefully" do

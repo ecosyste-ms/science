@@ -1,40 +1,39 @@
-FROM ruby:3.4.5-slim
+FROM ruby:3.4.5-alpine
 
 ENV APP_ROOT=/usr/src/app
 ENV DATABASE_PORT=5432
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
 WORKDIR $APP_ROOT
 
-# * Setup system
-# * Install Ruby dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    git \
-    nodejs \
-    libpq-dev \
-    tzdata \
-    curl \
-    libcurl4-openssl-dev \
-    libyaml-dev \
- && rm -rf /var/lib/apt/lists/*
-
-# Will invalidate cache as soon as the Gemfile changes
 COPY Gemfile Gemfile.lock .ruby-version $APP_ROOT/
 
-RUN bundle config --global frozen 1 \
- && bundle config set without 'test' \
- && bundle install --jobs 2
+RUN apk add --no-cache \
+    build-base \
+    netcat-openbsd \
+    git \
+    tzdata \
+    curl-dev \
+    libc6-compat \
+    tar \
+    libarchive-tools \
+    icu-dev \
+    cmake \
+    perl \
+    libidn-dev \
+    py-pip \
+    nodejs \
+    npm \
+    yaml-dev \
+    libffi-dev \
+ && gem update --system \
+ && gem install bundler foreman \
+ && bundle config set without 'test development' \
+ && bundle install --jobs 8 \
+ && pip install docutils \
+ && npm install -g repomix
 
-# ========================================================
-# Application layer
-
-# Copy application code
 COPY . $APP_ROOT
 
-RUN bundle exec bootsnap precompile --gemfile app/ lib/
+RUN RAILS_ENV=production bundle exec rake assets:precompile
 
-# Precompile assets for a production environment.
-# This is done to include assets in production images on Dockerhub.
-RUN SECRET_KEY_BASE=1 RAILS_ENV=production bundle exec rake assets:precompile
-
-# Startup
 CMD ["bin/docker-start"]
