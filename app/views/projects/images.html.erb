@@ -1,0 +1,20 @@
+<% @meta_title = "Open Source Science Images" %>
+<% @meta_description = "Images extracted from open source science project readmes" %>
+
+<div class="container-sm">
+  <h1 class='mb-3'>
+    Open Source Science Images
+  </h1>
+  
+  <p class='lead'>
+    Images extracted from open source science project readmes.
+  </p>
+
+  <% @projects.each do |project|%>
+    <% project.readme_image_urls.each do |image_url| %>
+      <a href="<%= project.url %>" target="_blank">
+        <img loading="lazy" src="<%= image_url %>" title='<%= project.name %>' style='max-width:100%'>
+      </a>
+    <% end %>  
+  <% end %>
+</div>

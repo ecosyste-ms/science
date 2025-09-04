@@ -1,0 +1,37 @@
+<div class="card mb-3 issue d-flex" id="issue_<%= issue.id %>">
+  <div class="card-body pb-1">
+    <div class="d-flex">
+      
+      <div class="flex-grow-1 ms-3 text-break">
+        <h5 class='card-title'>
+          <%= link_to issue.html_url, target: :_blank do %>
+            #<%= issue.number %> - <%= issue.title %>
+          <% end %>
+        </h5>
+      
+        <p class="card-subtitle mb-2 text-muted"><small>
+          Project: <%= link_to issue.project.to_s, project_url(issue.project) %>
+          <% if issue.project.category %>
+            - <%= issue.project.category %> - <%= issue.project.sub_category %>
+          <% end %>
+          <% if issue.project.language%>
+            - <%= issue.project.language %>
+          <% end %>
+          <br/>
+          Opened by <%= issue.user %> <%= time_ago_in_words(issue.created_at) %> ago
+          - Last Updated <%= time_ago_in_words(issue.updated_at) %> ago
+            - <%= pluralize issue.comments_count, 'comment' %>   
+          <br />
+          <% if issue.labels.any? %>
+          <% issue.labels.each do |label| %>
+              <span class="badge text-bg-light"><%= label %></span>
+            <% end %>
+          <% end %>
+        </small></p>
+      </div>
+      <div class="flex-shrink-0">
+        <img src="<%= issue.project.avatar_url %>" class="rounded" height='40' width='40' onerror="this.style.display='none'">
+      </div>  
+    </div>
+  </div>
+</div>

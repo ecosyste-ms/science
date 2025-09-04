@@ -1,0 +1,94 @@
+<% @meta_title = "Open Source Science Dependencies" %>
+<% @meta_description = "Browse the most used dependencies in open source science projects" %>
+
+<div class="container-sm">
+  <h1 class='mb-3'>
+    Open Source Science Dependencies
+  </h1>
+  
+  <p class='lead'>
+    The most used dependencies in open source science projects.
+  </p>
+
+  <div class='row'>
+    <div class='col-md-8'>
+      
+      <div class="card mb-3 d-flex">
+        <div class="card-header">
+          100 Most used dependencies across all categories
+          <% if params[:threshold].present? %>
+            (Excluding Top <%= params[:threshold] %>% packages within each ecosystem)
+          <% end %>
+        </div>
+        <ul class="list-group list-group-flush">
+          <% i = 0 %>
+          <% @dependencies.each do |dependency, count| %>
+            <% next if ['python', 'r'].include?(dependency[1]) %>
+            <% next if i > 100 %>
+            <% package = @dependency_records.find{|p| p['ecosystem'] == dependency[0] && p['name'] == dependency[1] } %>
+            
+            <% if params[:threshold] && package.average_ranking && package.average_ranking < params[:threshold].to_f  %>
+              <% next unless package.project && package.project.reviewed? %>
+            <% end %>
+
+            <li class="list-group-item">
+              <%= dependency[0] %> : <%= link_to dependency[1], "https://packages.ecosyste.ms/packages/lookup?ecosystem=#{dependency[0]}&name=#{dependency[1]}", target: :_blank %>
+              <small class='ps-3 text-muted'>
+                <i><%= pluralize count, 'dependent project' %></i>
+              
+                
+                <% if package && package.average_ranking %>
+                  <i>
+                    - Top <%= package.average_ranking.round(2) %>%
+                  </i>
+
+                  <% if package.project && package.project.reviewed? %>
+                    <i>
+                      - <%= link_to '(in Science)', lookup_projects_path(url: package['repository_url']), method: :post %>
+                    </i>
+                  <% end %>
+                <% end %>
+              </small>
+            </li>  
+            <% i = i + 1%>
+          <% end %>
+        </ul>
+      </div>
+
+    </div>
+    <div class='col-md-4'>
+      <div class="card mb-3 d-flex">
+        <div class="card-header">
+          Most used package managers across all projects
+        </div>
+        <ul class="list-group list-group-flush">
+          <% Project.reviewed.map(&:dependency_ecosystems).flatten(1).group_by(&:itself).transform_values(&:count).sort_by{|k,v| v}.reverse.each do |ecosystem, count| %>
+            <li class="list-group-item">
+              <%= ecosystem %>
+              <small class='ps-3 text-muted'>
+                <i><%= pluralize count, 'project' %></i>
+              </small>
+            </li>  
+          <% end %>
+        </ul>
+      </div>
+
+      <div class="card mb-3 d-flex">
+        <div class="card-header">
+          Most popular package managers by package count
+        </div>
+        <ul class="list-group list-group-flush">
+          <% Dependency.group(:ecosystem).count.sort_by{|k,v| v}.reverse.each do |ecosystem, count| %>
+            <li class="list-group-item">
+              <%= ecosystem %>
+              <small class='ps-3 text-muted'>
+                <i><%= pluralize count, 'project' %></i>
+              </small>
+            </li>  
+          <% end %>
+        </ul>
+      </div>
+
+      
+    </div>
+</div>

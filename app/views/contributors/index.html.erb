@@ -1,0 +1,10 @@
+<% @meta_title = "Contributors to Open Source Science Software Projects" %>
+<% @meta_description = "Browse contributors to open source scientific software projects" %>
+
+<div class="container-md">
+
+  <h2>Contributors</h2>
+
+  <%= render @contributors %>
+  <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>  
+</div>

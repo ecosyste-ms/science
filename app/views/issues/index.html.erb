@@ -1,0 +1,16 @@
+<% @meta_title = "Open issues" %>
+<% @meta_description = "Browse open issues in open source software projects" %>
+
+<div class="container-sm">
+  <h1 class='mb-3'>
+    Contribute to Open Source Science Software Projects
+  </h1>
+  
+  <p class='lead'>
+    <strong>Find an issue</strong> that you can help with. 
+    <strong>Contribute</strong> to the project and advance scientific research.
+  </p>
+
+  <%= render @issues %>
+  <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>  
+</div>

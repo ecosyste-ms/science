@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+title: 'Ecosyste.ms: Science'
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Andrew
+    family-names: Nesbitt
+    email: andrew@ecosyste.ms
+    orcid: 'https://orcid.org/0009-0007-2710-1118'
+repository-code: 'https://github.com/ecosyste-ms/science'
+url: 'https://science.ecosyste.ms'
+abstract: >-
+  A discovery and classification system for open source scientific software, providing APIs and tools to help researchers find, evaluate, and connect with computational tools and libraries across all scientific domains.
+keywords:
+  - open source
+  - scientific software
+  - research software
+  - computational science
+  - scientific computing
+  - research tools
+license: AGPL-3.0

@@ -1,0 +1,99 @@
+<div class="card mb-3 project d-flex" id="project_<%= project.id %>">
+  <div class="card-body pb-1">
+    <div class="d-flex">
+      
+      <div class="flex-grow-1 ms-3 text-break">
+        <h5 class='card-title'>
+          <%= link_to project.url, project_path(project) %>
+        </h5>
+      
+        <p class="card-subtitle mb-2 text-muted">
+          <%= project.description %>        
+
+          <% if project.keywords.any? %>
+            <br/>
+            <% project.keywords.each do |keyword| %>
+              <span class="badge bg-light text-dark">
+                <%= link_to keyword, url_for(keyword: keyword) %>
+              </span>
+            <% end %>
+          <% end %>
+          <br/>
+          <small>
+            Added: <%= time_ago_in_words(project.created_at) %> ago - Last Synced: <%= time_ago_in_words(project.last_synced_at) %> ago
+            <% if project.first_created %>
+             - Created: <%= project.first_created.to_date.to_fs(:long) %>
+            <% end %>
+          </small>
+        </p>  
+
+        <div class='row small'>
+          <div class='col-4'>
+            <ul>
+              <li>
+                Relevant topics? <span title='<%= project.matching_topics.join(', ') %>'><%= project.good_topics? %></span>
+              </li>
+              <li>
+                External users? <%= project.external_users? %>
+              </li>
+              <li>
+                Open source license? <%= project.open_source_license? %>
+              </li>
+              <li>
+                Active? <%= project.active? %>
+              </li>
+              <li>
+                Fork? <%= project.fork? %>
+              </li>
+            </ul>
+          </div>
+          <div class='col-4'>
+            <ul>
+              <li>
+                Main Language: <%= link_to project.language, url_for(language: project.language) %>
+              </li>
+              <li>
+                Commits: <%= project.commits && project.commits['total_commits'] %>
+              </li>
+              <li>
+                Committers: <%= project.commits && project.commits['total_committers'] %>
+              </li>
+              <li>
+                Issues: <%= project.issues_stats && project.issues_stats['issues_count'] %>
+              </li>
+              <li>
+                Pull Requests: <%= project.issues_stats && project.issues_stats['pull_requests_count'] %>
+              </li>
+            </ul>
+          </div>
+          <div class='col-4'>
+            <ul>
+              <li>
+                Owner: <%= link_to project.owner_name, url_for(owner: project.owner_name) %>
+              </li>
+              <li>
+                Stars: <%= project.repository['stargazers_count'] %>
+              </li>
+              <li>
+                Forks: <%= project.repository['forks_count'] %>
+              </li>
+              <li>
+                Packages: <%= project.packages_count %>
+              </li>
+              <% if project.downloads && project.downloads > 0 %>
+              <li>
+                Downloads: <%= number_with_delimiter project.downloads %>
+              </li>
+              <% end %>
+            </ul>
+          </div>
+          
+        </div>
+
+      </div>
+      <div class="flex-shrink-0">
+        <img src="<%= project.avatar_url %>" class="rounded" height='40' width='40' onerror="this.style.display='none'">
+      </div>  
+    </div>
+  </div>
+</div>
