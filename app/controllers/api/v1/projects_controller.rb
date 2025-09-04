@@ -2,7 +2,6 @@ class Api::V1::ProjectsController < Api::V1::ApplicationController
   def index
     @projects = Project.all.where.not(last_synced_at: nil)
 
-    @projects = @projects.where(reviewed: true) if params[:reviewed] == 'true'
 
     if params[:sort].present? || params[:order].present?
       sort = params[:sort].presence || 'projects.updated_at'
@@ -36,17 +35,24 @@ class Api::V1::ProjectsController < Api::V1::ApplicationController
   end
 
   def packages
-    @projects = Project.reviewed.active.select{|p| p.packages.present? }.sort_by{|p| p.packages.sum{|p| p['downloads'] || 0 } }.reverse
+    @projects = Project.active.select{|p| p.packages.present? }.sort_by{|p| p.packages.sum{|p| p['downloads'] || 0 } }.reverse
   end
 
   def search
-    filters = []
-    filters << "keywords = \"#{params[:keywords]}\"" if params[:keywords].present?
-    filters << "language = \"#{params[:language]}\"" if params[:language].present?
-  
-    filter_string = filters.join(" AND ") if filters.any?
-  
-    @projects = Project.pagy_search(params[:q], facets: ['keywords', 'language'], filter: filter_string)
-    @pagy, @projects = pagy_meilisearch(@projects, limit: 20)
+    @scope = Project
+    
+    if params[:q].present?
+      @scope = @scope.where("url ILIKE ?", "%#{params[:q]}%")
+    end
+    
+    if params[:keywords].present?
+      @scope = @scope.keyword(params[:keywords])
+    end
+    
+    if params[:language].present?
+      @scope = @scope.language(params[:language])
+    end
+    
+    @pagy, @projects = pagy(@scope, limit: 20)
   end
 end

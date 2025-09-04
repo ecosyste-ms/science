@@ -3,6 +3,6 @@ Faraday.default_adapter = :typhoeus
 
 Faraday.default_connection_options = {
   headers: {
-    'User-Agent' => 'ost.ecosyste.ms'
+    'User-Agent' => 'science.ecosyste.ms'
   }
 }

@@ -1,22 +1,9 @@
 require 'csv'
+require 'tf-idf-similarity'
+require 'stopwords'
 
 class Project < ApplicationRecord
   include EcosystemApiClient
-
-  # include Meilisearch::Rails
-  # extend Pagy::Meilisearch
-  # ActiveRecord_Relation.include Pagy::Meilisearch
-
-  # meilisearch do
-  #   add_attribute :language
-  #   searchable_attributes [:name, :description, :url, :keywords, :owner, :category, :sub_category, :rubric, :works, :citation_file]
-  #   displayed_attributes [:id, :name, :description, :url, :keywords,  :owner, :category, :sub_category, :rubric, :works, :citation_file]
-  #   filterable_attributes [:language, :keywords]
-
-  #   sortable_attributes [:name, :score]
-
-  #   faceting "sortFacetValuesBy": {'*'=> 'count'}
-  # end 
 
   validates :url, presence: true, uniqueness: { case_sensitive: false }
 
@@ -41,6 +28,8 @@ class Project < ApplicationRecord
 
   scope :with_keywords_from_contributors, -> { where.not(keywords_from_contributors: []) }
   scope :without_keywords_from_contributors, -> { where(keywords_from_contributors: []) }
+  
+  scope :with_joss, -> { where.not(joss_metadata: nil) }
 
   def self.import_from_csv
   
@@ -253,7 +242,7 @@ class Project < ApplicationRecord
 
   def ping
     ping_urls.each do |url|
-      Faraday.get(url, nil, {'User-Agent' => 'ost.ecosyste.ms'}) rescue nil
+      Faraday.get(url, nil, {'User-Agent' => 'science.ecosyste.ms'}) rescue nil
     end
   end
 
@@ -759,20 +748,16 @@ class Project < ApplicationRecord
         existing_project = Project.find_by(url: repo_url)
         if existing_project.present?
           total_existing += 1
-          # Update scientific metadata if project exists
+          # Update JOSS metadata if project exists
           existing_project.update(
-            rubric: existing_project.rubric.presence || 'Published in JOSS',
-            category: existing_project.category.presence || 'Scientific Software',
-            sub_category: existing_project.sub_category.presence || 'Peer-reviewed'
+            joss_metadata: paper
           )
         else
           project = Project.create(
             url: repo_url,
             name: paper['title'],
             description: "#{paper['title']} - Published in JOSS (#{paper['year']})",
-            rubric: 'Published in JOSS',
-            category: 'Scientific Software', 
-            sub_category: 'Peer-reviewed'
+            joss_metadata: paper
           )
           if project.persisted?
             total_created += 1
@@ -789,6 +774,45 @@ class Project < ApplicationRecord
     puts "Total new projects created: #{total_created}"
     puts "Total existing projects found: #{total_existing}"
     puts "Grand total: #{total_created + total_existing}"
+  end
+
+  def self.calculate_idf(projects)
+    return [] if projects.empty?
+
+    # Prepare documents from projects
+    documents = projects.map do |project|
+      text_parts = []
+      text_parts << project.name if project.name.present?
+      text_parts << project.description if project.description.present?
+      text_parts << project.readme if project.readme.present?
+      text = text_parts.join(' ')
+      
+      # Remove stopwords
+      filter = Stopwords::Snowball::Filter.new('en')
+      filtered_text = filter.filter(text.downcase.split).join(' ')
+      
+      TfIdfSimilarity::Document.new(filtered_text)
+    end
+
+    # Create corpus and model
+    corpus = TfIdfSimilarity::Corpus.new(documents)
+    model = TfIdfSimilarity::TfIdfModel.new(corpus, library: :narray)
+
+    # Calculate IDF for each term
+    idf_scores = {}
+    corpus.terms.each do |term|
+      idf_scores[term] = model.idf(term)
+    end
+
+    # Sort by IDF score (descending) and return as array of hashes
+    idf_scores.sort_by { |_, score| -score }.map do |term, score|
+      { term: term, score: score }
+    end
+  end
+
+  def calculate_idf
+    # Use the class method with an array containing just this project
+    self.class.calculate_idf([self])
   end
 
   def citation_file_name
