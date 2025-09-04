@@ -5,7 +5,7 @@ namespace :papers do
 
     categories = {}
 
-    Project.reviewed.with_works.group_by(&:category).each do |category, cat_projects|
+    Project.with_works.group_by(&:category).each do |category, cat_projects|
       categories[category] = []
       markdown_string << "## #{category}\n\n"
       
