@@ -11,10 +11,9 @@ namespace :projects do
     Project.sync_least_recently_synced_reviewed
   end
 
-  desc 'import projects'
-  task :import => :environment do
-    Project.import_from_readme
-    Project.import_education
+  desc 'import projects from JOSS'
+  task :import_joss => :environment do
+    Project.import_from_joss
   end
 
   desc 'discover projects'

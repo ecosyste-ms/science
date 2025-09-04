@@ -3,20 +3,20 @@ require 'csv'
 class Project < ApplicationRecord
   include EcosystemApiClient
 
-  include Meilisearch::Rails
-  extend Pagy::Meilisearch
-  ActiveRecord_Relation.include Pagy::Meilisearch
+  # include Meilisearch::Rails
+  # extend Pagy::Meilisearch
+  # ActiveRecord_Relation.include Pagy::Meilisearch
 
-  meilisearch do
-    add_attribute :language
-    searchable_attributes [:name, :description, :url, :keywords, :owner, :category, :sub_category, :scientific_domain, :works, :citation_file]
-    displayed_attributes [:id, :name, :description, :url, :keywords,  :owner, :category, :sub_category, :scientific_domain, :works, :citation_file]
-    filterable_attributes [:language, :keywords]
+  # meilisearch do
+  #   add_attribute :language
+  #   searchable_attributes [:name, :description, :url, :keywords, :owner, :category, :sub_category, :rubric, :works, :citation_file]
+  #   displayed_attributes [:id, :name, :description, :url, :keywords,  :owner, :category, :sub_category, :rubric, :works, :citation_file]
+  #   filterable_attributes [:language, :keywords]
 
-    sortable_attributes [:name, :score]
+  #   sortable_attributes [:name, :score]
 
-    faceting "sortFacetValuesBy": {'*'=> 'count'}
-  end 
+  #   faceting "sortFacetValuesBy": {'*'=> 'count'}
+  # end 
 
   validates :url, presence: true, uniqueness: { case_sensitive: false }
 
@@ -62,7 +62,7 @@ class Project < ApplicationRecord
       project = Project.find_or_create_by(url: row['git_url'].downcase)
       project.name = row['project_name']
       project.description = row['oneliner']
-      project.scientific_domain = row['scientific_domain']
+      project.rubric = row['rubric']
       project.save
       project.sync_async unless project.last_synced_at.present?
     end
@@ -151,7 +151,7 @@ class Project < ApplicationRecord
   end
 
   def self.domain_keywords(domain)
-    Project.where(scientific_domain: domain).pluck(:keywords).flatten.group_by(&:itself).transform_values(&:count).sort_by{|k,v| v}.reverse
+    Project.where(rubric: domain).pluck(:keywords).flatten.group_by(&:itself).transform_values(&:count).sort_by{|k,v| v}.reverse
   end
 
   def self.sync_least_recently_synced
@@ -727,6 +727,68 @@ class Project < ApplicationRecord
         end
       end
     end
+  end
+
+  def self.import_from_joss
+    puts "Starting JOSS import..."
+    page = 1
+    total_created = 0
+    total_existing = 0
+    
+    loop do
+      puts "Fetching page #{page}..."
+      url = "https://joss.theoj.org/papers/published.json?page=#{page}"
+      
+      conn = Faraday.new(url: url) do |faraday|
+        faraday.response :follow_redirects
+        faraday.adapter Faraday.default_adapter
+      end
+      
+      response = conn.get
+      break unless response.success?
+      
+      papers = JSON.parse(response.body)
+      break if papers.empty?
+      
+      papers.each do |paper|
+        next if paper['software_repository'].blank?
+        
+        # Normalize the URL (lowercase and remove trailing slash)
+        repo_url = paper['software_repository'].downcase.chomp('/')
+        
+        existing_project = Project.find_by(url: repo_url)
+        if existing_project.present?
+          total_existing += 1
+          # Update scientific metadata if project exists
+          existing_project.update(
+            rubric: existing_project.rubric.presence || 'Published in JOSS',
+            category: existing_project.category.presence || 'Scientific Software',
+            sub_category: existing_project.sub_category.presence || 'Peer-reviewed'
+          )
+        else
+          project = Project.create(
+            url: repo_url,
+            name: paper['title'],
+            description: "#{paper['title']} - Published in JOSS (#{paper['year']})",
+            rubric: 'Published in JOSS',
+            category: 'Scientific Software', 
+            sub_category: 'Peer-reviewed'
+          )
+          if project.persisted?
+            total_created += 1
+            project.sync_async
+          end
+        end
+      end
+      
+      puts "Page #{page}: #{papers.size} papers processed"
+      page += 1
+    end
+    
+    puts "JOSS import complete!"
+    puts "Total new projects created: #{total_created}"
+    puts "Total existing projects found: #{total_existing}"
+    puts "Grand total: #{total_created + total_existing}"
   end
 
   def citation_file_name
