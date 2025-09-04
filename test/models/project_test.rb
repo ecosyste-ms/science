@@ -1,6 +1,56 @@
 require 'test_helper'
 
 class ProjectTest < ActiveSupport::TestCase
+  test "update_science_score sets science_score attribute" do
+    project = Project.create!(url: 'https://github.com/test/science-project')
+    project.repository = {
+      'metadata' => {
+        'files' => {
+          'citation' => 'CITATION.cff'
+        }
+      }
+    }
+    project.citation_file = 'test citation content'
+    
+    project.update_science_score
+    
+    assert_not_nil project.science_score
+    assert project.science_score > 0
+  end
+
+  test "science_score_breakdown returns score and breakdown" do
+    project = Project.create!(url: 'https://github.com/test/science-project')
+    project.repository = {
+      'metadata' => {
+        'files' => {
+          'citation' => 'CITATION.cff',
+          'codemeta' => 'codemeta.json'
+        }
+      }
+    }
+    project.citation_file = 'test citation content'
+    project.readme = 'This paper has DOI: 10.1234/example'
+    
+    result = project.science_score_breakdown
+    
+    assert_not_nil result[:score]
+    assert_not_nil result[:breakdown]
+    assert result[:score] > 0
+    assert result[:breakdown][:has_citation_file][:present]
+    assert result[:breakdown][:has_codemeta][:present]
+    assert result[:breakdown][:has_doi_in_readme][:present]
+  end
+
+  test "science_score_breakdown handles missing data gracefully" do
+    project = Project.create!(url: 'https://github.com/test/basic-project')
+    
+    result = project.science_score_breakdown
+    
+    assert_not_nil result[:score]
+    assert_equal 0.0, result[:score]
+    assert_not result[:breakdown][:has_citation_file][:present]
+    assert_not result[:breakdown][:has_doi_in_readme][:present]
+  end
   test "github_pages_to_repo_url" do
     project = Project.new
     repo_url = project.github_pages_to_repo_url('https://foo.github.io/bar')

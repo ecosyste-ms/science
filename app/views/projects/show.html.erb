@@ -11,13 +11,34 @@
     <%= link_to @project.url, @project.url %>
   </p>
 
-  <% if @project.reviewed %>
-    <p>
-      Category: <%= link_to @project.category, category_path(@project.category) %><br>
-      Sub Category: <%= link_to @project.sub_category, sub_category_category_path(@project.category, @project.sub_category) %>
-    </p>
+  <% if @project.science_score.present? && @project.science_score > 0 %>
+    <div class="card mb-3">
+      <div class="card-header">
+        <h5 class="mb-0">Science Score: <%= number_with_precision(@project.science_score, precision: 1) %>%</h5>
+      </div>
+      <div class="card-body">
+        <% breakdown = @project.science_score_breakdown %>
+        <p class="text-muted">This score indicates how likely this project is to be science-related based on various indicators:</p>
+        
+        <ul class="list-group list-group-flush">
+          <% breakdown[:breakdown].each do |key, value| %>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <span class="<%= value[:present] ? 'text-success' : 'text-muted' %>">
+                  <%= value[:present] ? '✓' : '○' %>
+                </span>
+                <strong><%= value[:description] %></strong>
+                <% if value[:details].present? %>
+                  <br>
+                  <small class="text-muted"><%= value[:details] %></small>
+                <% end %>
+              </div>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    </div>
   <% end %>
-
       
   <% if @project.last_synced_at %>
   
@@ -49,29 +70,8 @@
         <%= link_to 'JSON representation', api_v1_project_path(@project) %>
     </small></i></p>
 
-    <% unless @project.reviewed %>
-      <h3>Acceptance Criteria</h3>
-      <ul>
-        <li>
-          Revelant topics? <span title='<%= @project.matching_topics.join(', ') %>'><%= @project.good_topics? %></span>
-        </li>
-        <li>
-          External users? <%= @project.external_users? %>
-        </li>
-        <li>
-          Open source license? <%= @project.open_source_license? %>
-        </li>
-        <li>
-          Active? <%= @project.active? %>
-        </li>
-        <li>
-          Fork? <%= @project.fork? %>
-        </li>
-      </ul>
-
-    <% end %>
-
     <%= render 'repository' %>
+    <%= render 'joss' %>
     <%= render 'citation' %>
     <%= render 'owner' %>
     <%= render 'events' %>

@@ -40,7 +40,6 @@ gem 'redis'
 gem 'csv'
 gem 'stemmify'
 gem 'appsignal'
-gem 'commonmarker'
 gem 'github-markup'
 gem 'ostruct'
 gem 'dalli'
@@ -53,6 +52,7 @@ gem "RedCloth"
 gem "rdoc"
 gem "org-ruby"
 gem "creole"
+gem "rexml"
 gem "wikicloth", github: 'nricciar/wikicloth'
 gem "twitter-text"
 gem "asciidoctor"

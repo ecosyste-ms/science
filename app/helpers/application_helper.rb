@@ -41,6 +41,6 @@ module ApplicationHelper
 
   def render_markdown(str)
     return '' unless str.present?
-    Commonmarker.to_html(str)
+    GitHub::Markup.render('README.md', str)
   end
 end

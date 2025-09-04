@@ -206,6 +206,7 @@ class Project < ApplicationRecord
     update_keywords_from_contributors
     update(last_synced_at: Time.now, matching_criteria: matching_criteria?)
     update_score
+    update_science_score
     ping
   end
 
@@ -493,6 +494,16 @@ class Project < ApplicationRecord
 
   def update_score
     update_attribute :score, score_parts.sum
+  end
+
+  def update_science_score
+    result = science_score_breakdown
+    update_attribute :science_score, result[:score]
+  end
+
+  def science_score_breakdown
+    calculator = ScienceScoreCalculator.new(self)
+    calculator.calculate
   end
 
   def score_parts
@@ -831,6 +842,9 @@ class Project < ApplicationRecord
       # normalize whitespace
       text.gsub(/\s+/, ' ')
     rescue => e
+      puts "Error preprocessing readme for #{repository_url}"
+      p e.message
+      p e.backtrace
       # Return empty string if any error occurs during rendering or processing
       ''
     end

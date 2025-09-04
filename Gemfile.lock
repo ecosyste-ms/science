@@ -116,12 +116,6 @@ GEM
       language_list (~> 1.2.1)
     chronic_duration (0.10.6)
       numerizer (~> 0.1.1)
-    commonmarker (2.3.2-aarch64-linux)
-    commonmarker (2.3.2-aarch64-linux-musl)
-    commonmarker (2.3.2-arm64-darwin)
-    commonmarker (2.3.2-x86_64-darwin)
-    commonmarker (2.3.2-x86_64-linux)
-    commonmarker (2.3.2-x86_64-linux-musl)
     concurrent-ruby (1.3.5)
     connection_pool (2.5.4)
     counter_culture (3.11.2)
@@ -432,7 +426,6 @@ DEPENDENCIES
   bootstrap
   bootstrap-icons-helper (~> 2.0)
   cff
-  commonmarker
   counter_culture
   creole
   csv
@@ -464,6 +457,7 @@ DEPENDENCIES
   rdoc
   redcarpet
   redis
+  rexml
   rswag-api
   rswag-ui
   sassc-rails
@@ -511,12 +505,6 @@ CHECKSUMS
   builder (3.3.0) sha256=497918d2f9dca528fdca4b88d84e4ef4387256d984b8154e9d5d3fe5a9c8835f
   cff (1.3.0) sha256=d2b65d57160040ad244087d65b89769558a40aafb34b13d048e0ea72bc521316
   chronic_duration (0.10.6) sha256=fac58d4147d3183a40811400380cafcef049f2bb02421d2fd1c6e685fbe8facc
-  commonmarker (2.3.2-aarch64-linux) sha256=51027e4eeabdffa8cc05b0d722115f9f18d6848750b6bbbe6971ba72b8025f28
-  commonmarker (2.3.2-aarch64-linux-musl) sha256=8bc38cfb89174883b56b72133019a581d2870d79058f630459cbeaad90be4d82
-  commonmarker (2.3.2-arm64-darwin) sha256=0829dc0d18b05c292796cf6f74c8512c0280158e81b250b6e86494256c519575
-  commonmarker (2.3.2-x86_64-darwin) sha256=71a0f51a5820ce3f438d03cd1d4d9f92a673bfb1f6670927a692061cff58fd8d
-  commonmarker (2.3.2-x86_64-linux) sha256=b5118733b892c01165642b5a060d03e0fbeb6f0d39327b0424143db6c5e233e1
-  commonmarker (2.3.2-x86_64-linux-musl) sha256=1d88a929e91a4c9456fdfefa1a6ace2126b9993e5d930fb9e11462f7c7f5472e
   concurrent-ruby (1.3.5) sha256=813b3e37aca6df2a21a3b9f1d497f8cbab24a2b94cab325bffe65ee0f6cbebc6
   connection_pool (2.5.4) sha256=e9e1922327416091f3f6542f5f4446c2a20745276b9aa796dd0bb2fd0ea1e70a
   counter_culture (3.11.2) sha256=10f62d78f9f6e042640124847902761af8cc37aa96d3c40bdc253805b6efe33d
