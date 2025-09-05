@@ -4,7 +4,7 @@ class ProjectsController < ApplicationController
   end
 
   def index
-    @scope = Project
+    @scope = Project.where('science_score > 0')
 
     if params[:keyword].present?
       @scope = @scope.keyword(params[:keyword])

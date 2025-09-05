@@ -1,0 +1,13 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  project: one
+  field: one
+  confidence_score: 1.5
+  match_signals: 
+
+two:
+  project: two
+  field: two
+  confidence_score: 1.5
+  match_signals: 

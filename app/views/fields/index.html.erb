@@ -1,0 +1,108 @@
+<% @meta_title = "Scientific Fields" %>
+
+<div class="container-md">
+  <div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+      <h1>Scientific Fields</h1>
+      <p class="text-muted">
+        Automatic classification of scientific software projects into research fields based on OpenAlex taxonomy.
+      </p>
+    </div>
+    <div class="text-end">
+      <%= link_to "View All Projects", projects_path, class: "btn btn-outline-primary" %>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h3 class="text-primary"><%= @fields.count %></h3>
+          <p class="text-muted mb-0">Fields</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h3 class="text-success"><%= ProjectField.distinct.count(:project_id) %></h3>
+          <p class="text-muted mb-0">Classified Projects</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h3 class="text-info"><%= (ProjectField.average(:confidence_score) * 100).round(1) %>%</h3>
+          <p class="text-muted mb-0">Avg Confidence</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h3 class="text-warning"><%= Project.joins(:project_fields).group('projects.id').having('COUNT(project_fields.id) > 1').count.size %></h3>
+          <p class="text-muted mb-0">Multi-field Projects</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <% Field::DOMAINS.each do |domain_key, domain_name| %>
+      <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><%= domain_name %></h5>
+          </div>
+          <div class="card-body">
+            <% fields_in_domain = @fields.select { |f| f.domain == domain_key.to_s } %>
+            <% if fields_in_domain.any? %>
+              <% fields_in_domain.each do |field| %>
+                <div class="mb-3 pb-2 border-bottom">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                      <h6>
+                        <%= link_to field.name, field_path(field), class: "text-decoration-none" %>
+                      </h6>
+                      
+                      <% if field.keywords.present? && field.keywords.any? %>
+                        <div class="mt-1">
+                          <% field.keywords.first(4).each do |keyword| %>
+                            <span class="badge bg-light text-dark me-1 mb-1 small">
+                              <%= keyword %>
+                            </span>
+                          <% end %>
+                          <% if field.keywords.size > 4 %>
+                            <small class="text-muted">
+                              +<%= field.keywords.size - 4 %>
+                            </small>
+                          <% end %>
+                        </div>
+                      <% end %>
+                    </div>
+                    
+                    <div class="text-end ms-2">
+                      <% project_count = @field_stats[field.id]&.fetch(:project_count, 0) || 0 %>
+                      <span class="badge bg-<%= project_count > 100 ? 'success' : project_count > 50 ? 'info' : project_count > 10 ? 'secondary' : 'light text-dark' %>">
+                        <%= project_count %>
+                      </span>
+                      <% if @field_stats[field.id]&.fetch(:avg_confidence, nil).present? %>
+                        <br>
+                        <small class="text-muted">
+                          <%= (@field_stats[field.id][:avg_confidence] * 100).round %>%
+                        </small>
+                      <% end %>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
+            <% else %>
+              <p class="text-muted small">No fields in this domain yet.</p>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

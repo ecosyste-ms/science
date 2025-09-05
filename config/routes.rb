@@ -55,6 +55,8 @@ Rails.application.routes.draw do
   
   resources :contributors, only: [:index, :show] 
 
+  resources :fields, only: [:index, :show]
+
   resources :categories, only: [:index, :show] do
     member do
       get '/:sub_category', action: :show, as: :sub_category

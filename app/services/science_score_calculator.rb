@@ -9,21 +9,33 @@ class ScienceScoreCalculator
     # French academic institutions
     'umontpellier.fr', 'sorbonne', 'cnrs.fr', 'inria.fr', 'inserm.fr', 
     'pasteur.fr', 'polytechnique', 'centralesupelec.fr', 'ens.fr',
-    'univ-', 'u-', # Common French university prefixes (e.g., univ-lille.fr, u-bordeaux.fr)
+    'univ-', 'u-', # Common French university prefixes
     # German academic institutions  
     'mpg.de', 'fraunhofer.de', 'helmholtz', 'uni-', 'tu-', 'fh-',
+    'dlr.de', 'fz-juelich.de', 'tum.de', 'rwth-aachen.de', 'dfki.de',
     # Netherlands
     'tudelft.nl', 'uva.nl', 'vu.nl', 'rug.nl', 'tue.nl', 'leiden',
+    # Swiss
+    'ethz.ch', 'epfl.ch', 'cern.ch', 'unige.ch', 'unibas.ch', 'psi.ch',
+    # Austrian
+    'ac.at', 'tuwien.ac.at', 'uibk.ac.at',
+    # Israeli
+    'ac.il', 'huji.ac.il', 'weizmann.ac.il', 'technion.ac.il',
+    # Indian IITs and research
+    'ac.in', 'iitb.ac.in', 'iiitd.ac.in', 'iitk.ac.in', 'iisc.ac.in',
     # Other European
-    'ethz.ch', 'epfl.ch', 'cern.ch', 'embl', 'ebi.ac.uk',
-    'ku.dk', 'dtu.dk', 'kth.se', 'chalmers.se', 'ntnu.no', 'uio.no',
+    'embl', 'ebi.ac.uk', 'ku.dk', 'dtu.dk', 'kth.se', 'chalmers.se', 
+    'ntnu.no', 'uio.no', 'ucl.ac.uk', 'cam.ac.uk', 'ox.ac.uk', 'ic.ac.uk',
     # Canadian
     'utoronto.ca', 'ubc.ca', 'mcgill.ca', 'uwaterloo.ca', 'ualberta.ca',
     # Australian/NZ  
     'csiro.au', 'unsw.edu.au', 'anu.edu.au', 'unimelb.edu.au',
-    # Research institutions
+    # US National Labs and Research
     'nih.gov', 'nasa.gov', 'noaa.gov', 'usgs.gov', 'nist.gov',
-    'ornl.gov', 'lbl.gov', 'anl.gov', 'bnl.gov', 'fnal.gov'
+    'ornl.gov', 'lbl.gov', 'anl.gov', 'bnl.gov', 'fnal.gov',
+    'lanl.gov', 'llnl.gov', 'pnnl.gov', 'inl.gov',
+    # Research organizations
+    'ligo.org', 'ieee.org'
   ]
 
   DOI_PATTERNS = [
@@ -75,36 +87,67 @@ class ScienceScoreCalculator
       has_academic_committers: check_academic_committers,
       has_joss_paper: check_joss_paper
     }
+    
+    # Add JOSS IDF similarity for non-JOSS projects
+    unless project.joss_metadata.present?
+      @breakdown[:joss_vocabulary_similarity] = check_joss_vocabulary_similarity
+    end
 
     calculate_score
   end
 
   def calculate_score
-    total_weight = 0.0
-    weighted_score = 0.0
-
-    scoring_weights = {
-      has_citation_file: 0.15,
-      has_codemeta: 0.1,
-      has_zenodo: 0.1,
-      has_doi_in_readme: 0.1,
-      has_academic_links: 0.1,
-      has_academic_committers: 0.1,
-      has_joss_paper: 0.35
-    }
-
-    @breakdown.each do |key, value|
-      if value[:present]
-        weight = scoring_weights[key] || 0
-        weighted_score += weight
-        total_weight += weight
+    # JOSS projects are automatically scientific (peer-reviewed)
+    if project.joss_metadata.present?
+      # JOSS projects get base 85% plus any additional indicators
+      base_score = 85.0
+      bonus_weight = 0.0
+      
+      # Add bonuses for additional scientific indicators (up to 15%)
+      bonus_weights = {
+        has_citation_file: 0.05,
+        has_codemeta: 0.03,
+        has_zenodo: 0.03,
+        has_doi_in_readme: 0.02,
+        has_academic_committers: 0.02
+      }
+      
+      @breakdown.each do |key, value|
+        if value[:present] && bonus_weights[key]
+          bonus_weight += bonus_weights[key]
+        end
       end
-    end
+      
+      final_score = base_score + (bonus_weight * 100)
+    else
+      # Non-JOSS projects use weighted scoring
+      total_weight = 0.0
+      weighted_score = 0.0
 
-    final_score = (weighted_score / scoring_weights.values.sum) * 100
+      scoring_weights = {
+        has_citation_file: 0.20,
+        has_codemeta: 0.15,
+        has_zenodo: 0.15,
+        has_doi_in_readme: 0.15,
+        has_academic_links: 0.10,
+        has_academic_committers: 0.10,
+        joss_vocabulary_similarity: 0.15
+      }
+
+      @breakdown.each do |key, value|
+        if value[:present] && key != :has_joss_paper
+          weight = scoring_weights[key] || 0
+          weighted_score += weight
+          total_weight += weight
+        end
+      end
+
+      # Normalize to percentage
+      final_score = scoring_weights.values.sum > 0 ? (weighted_score / scoring_weights.values.sum) * 100 : 0
+    end
     
     {
-      score: final_score.round(2),
+      score: [final_score.round(2), 100.0].min,
       breakdown: @breakdown,
       max_score: 100
     }
@@ -250,6 +293,42 @@ class ScienceScoreCalculator
       present: project.joss_metadata.present?,
       description: "JOSS paper metadata",
       details: project.joss_metadata.present? ? "Published in Journal of Open Source Software" : nil
+    }
+  end
+
+  def check_joss_vocabulary_similarity
+    # Calculate similarity score using JOSS IDF
+    similarity_score = begin
+      # Try to use cached full corpus, otherwise use limited sample
+      # This prevents multiple workers from trying to build full corpus simultaneously
+      if File.exist?(JossIdfAnalyzer::IDF_CACHE_FILE)
+        # Full corpus cache exists, use it
+        JossIdfAnalyzer.calculate_joss_idf
+      else
+        # No cache yet, use limited sample to avoid timeout in Sidekiq
+        JossIdfAnalyzer.calculate_joss_idf(limit: 500)
+      end
+      project.joss_idf_score
+    rescue => e
+      Rails.logger.error "Error calculating JOSS vocabulary similarity: #{e.message}"
+      0.0
+    end
+    
+    # Consider moderate similarity (>30%) as present for non-JOSS projects
+    threshold = 30.0
+    has_similarity = similarity_score >= threshold
+    
+    {
+      present: has_similarity,
+      description: "Scientific vocabulary similarity",
+      details: if similarity_score > 0
+        has_similarity ? 
+          "#{similarity_score.round(1)}% similarity to JOSS scientific vocabulary" : 
+          "Low similarity (#{similarity_score.round(1)}%) to scientific vocabulary"
+      else
+        "Unable to calculate vocabulary similarity"
+      end,
+      score: similarity_score
     }
   end
 end

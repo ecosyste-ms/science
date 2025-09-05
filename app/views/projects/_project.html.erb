@@ -20,6 +20,19 @@
             <% end %>
           </p>
         <% end %>
+        
+        <% if project.fields.any? %>
+          <p>
+            <% project.all_fields_with_confidence.each do |field, confidence| %>
+              <span class="badge bg-<%= confidence > 0.7 ? 'info' : confidence > 0.5 ? 'secondary' : 'light' %>">
+                <%= field.name %>
+                <% if confidence < 0.5 %>
+                  <small>(<%= (confidence * 100).round(0) %>%)</small>
+                <% end %>
+              </span>
+            <% end %>
+          </p>
+        <% end %>
 
         <% if project.last_synced_at %>
         <p class="card-subtitle mb-2 text-muted"><i><small>

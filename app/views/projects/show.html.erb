@@ -63,6 +63,21 @@
         <% end %>
       </p>
     <% end %>
+    
+    <% if @project.fields.any? %>
+      <h4>Scientific Fields</h4>
+      <% @project.all_fields_with_confidence.each do |field, confidence| %>
+        <div class="mb-2">
+          <span class="badge bg-<%= confidence > 0.7 ? 'primary' : confidence > 0.5 ? 'info' : 'secondary' %> me-2">
+            <%= field.name %>
+          </span>
+          <small class="text-muted">
+            <%= field.domain_display_name %> - 
+            <%= (confidence * 100).round(0) %>% confidence
+          </small>
+        </div>
+      <% end %>
+    <% end %>
 
 
     <p class="card-subtitle mb-2 text-muted"><i><small>

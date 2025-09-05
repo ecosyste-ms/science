@@ -1,0 +1,19 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  name: MyString
+  domain: MyString
+  openalex_id: MyString
+  description: MyText
+  keywords: MyText
+  packages: MyText
+  indicators: MyText
+
+two:
+  name: MyString
+  domain: MyString
+  openalex_id: MyString
+  description: MyText
+  keywords: MyText
+  packages: MyText
+  indicators: MyText

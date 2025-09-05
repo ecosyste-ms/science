@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_04_152949) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_04_165406) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -51,6 +51,21 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_04_152949) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "fields", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "domain", null: false
+    t.string "openalex_id"
+    t.text "description"
+    t.text "keywords", default: [], array: true
+    t.text "packages", default: [], array: true
+    t.text "indicators", default: [], array: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["domain"], name: "index_fields_on_domain"
+    t.index ["name"], name: "index_fields_on_name", unique: true
+    t.index ["openalex_id"], name: "index_fields_on_openalex_id", unique: true
+  end
+
   create_table "issues", force: :cascade do |t|
     t.integer "project_id"
     t.string "uuid"
@@ -78,6 +93,19 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_04_152949) do
     t.datetime "updated_at", null: false
     t.string "labels", default: [], array: true
     t.index ["project_id"], name: "index_issues_on_project_id"
+  end
+
+  create_table "project_fields", force: :cascade do |t|
+    t.bigint "project_id", null: false
+    t.bigint "field_id", null: false
+    t.float "confidence_score", default: 0.0, null: false
+    t.jsonb "match_signals", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["confidence_score"], name: "index_project_fields_on_confidence_score"
+    t.index ["field_id"], name: "index_project_fields_on_field_id"
+    t.index ["project_id", "field_id"], name: "index_project_fields_on_project_id_and_field_id", unique: true
+    t.index ["project_id"], name: "index_project_fields_on_project_id"
   end
 
   create_table "projects", force: :cascade do |t|
@@ -144,4 +172,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_04_152949) do
     t.datetime "updated_at", null: false
     t.index ["project_id"], name: "index_votes_on_project_id"
   end
+
+  add_foreign_key "project_fields", "fields"
+  add_foreign_key "project_fields", "projects"
 end

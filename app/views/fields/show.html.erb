@@ -1,0 +1,188 @@
+<% @meta_title = @field.name %>
+<% @meta_description = "Scientific software projects in #{@field.name} (#{@field.domain_display_name})" %>
+
+<div class="container-md">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><%= link_to "Fields", fields_path %></li>
+      <li class="breadcrumb-item"><%= @field.domain_display_name %></li>
+      <li class="breadcrumb-item active" aria-current="page"><%= @field.name %></li>
+    </ol>
+  </nav>
+
+  <h1><%= @field.name %></h1>
+  <p class="lead text-muted"><%= @field.domain_display_name %></p>
+
+  <div class="row mb-4">
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Field Statistics</h5>
+          <div class="row">
+            <div class="col-md-6">
+              <p>
+                <strong>Total Projects:</strong> <%= @stats[:total_projects] %><br>
+                <strong>Average Confidence:</strong> 
+                <% if @stats[:avg_confidence] %>
+                  <%= (@stats[:avg_confidence] * 100).round %>%
+                <% else %>
+                  N/A
+                <% end %>
+              </p>
+            </div>
+            <div class="col-md-6">
+              <p>
+                <strong>High Confidence (≥70%):</strong> <%= @stats[:high_confidence_count] %><br>
+                <strong>Medium Confidence (50-70%):</strong> <%= @stats[:medium_confidence_count] %><br>
+                <strong>Low Confidence (<50%):</strong> <%= @stats[:low_confidence_count] %>
+              </p>
+            </div>
+          </div>
+
+          <% if @field.keywords.present? && @field.keywords.any? %>
+            <h6 class="mt-3">Field Keywords:</h6>
+            <div>
+              <% @field.keywords.each do |keyword| %>
+                <span class="badge bg-primary me-1 mb-1"><%= keyword %></span>
+              <% end %>
+            </div>
+          <% end %>
+
+          <% if @field.packages.present? && @field.packages.any? %>
+            <h6 class="mt-3">Common Packages:</h6>
+            <div>
+              <% @field.packages.each do |package| %>
+                <span class="badge bg-info me-1 mb-1"><%= package %></span>
+              <% end %>
+            </div>
+          <% end %>
+
+          <% if @field.indicators.present? && @field.indicators.any? %>
+            <h6 class="mt-3">Scientific Indicators:</h6>
+            <div>
+              <% @field.indicators.each do |indicator| %>
+                <span class="badge bg-secondary me-1 mb-1"><%= indicator %></span>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <% if @top_keywords.any? %>
+        <div class="card mt-3">
+          <div class="card-body">
+            <h5 class="card-title">Top Keywords from Projects</h5>
+            <div>
+              <% @top_keywords.each do |keyword, count| %>
+                <span class="badge bg-light text-dark me-1 mb-1">
+                  <%= keyword %> <span class="text-muted">(<%= count %>)</span>
+                </span>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Related Fields</h5>
+          <% related_fields = Field.where(domain: @field.domain)
+                                   .where.not(id: @field.id) %>
+          <% if related_fields.any? %>
+            <ul class="list-unstyled">
+              <% related_fields.each do |field| %>
+                <li class="mb-2">
+                  <%= link_to field.name, field_path(field) %>
+                  <small class="text-muted">
+                    (<%= field.project_fields.count %> projects)
+                  </small>
+                </li>
+              <% end %>
+            </ul>
+          <% else %>
+            <p class="text-muted">No other fields in this domain.</p>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Projects in <%= @field.name %> <span class="text-muted">(<%= @stats[:total_projects] %>)</span></h3>
+  
+  <% if @project_fields && @project_fields.any? %>
+    <% @project_fields.each do |project_field| %>
+      <% project = project_field.project %>
+      <div class="card mb-3">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="flex-grow-1">
+              <h5 class="card-title">
+                <%= link_to project.name, project_path(project) %>
+                <span class="badge bg-<%= project_field.confidence_score >= 0.7 ? 'success' : project_field.confidence_score >= 0.5 ? 'warning' : 'secondary' %> ms-2">
+                  <%= (project_field.confidence_score * 100).round %>% confidence
+                </span>
+              </h5>
+              
+              <p class="card-text text-muted">
+                <%= project.description %>
+              </p>
+
+              <% if project.keywords.present? && project.keywords.any? %>
+                <div class="mb-2">
+                  <% project.keywords.first(10).each do |keyword| %>
+                    <span class="badge bg-light text-dark me-1">
+                      <%= keyword %>
+                    </span>
+                  <% end %>
+                  <% if project.keywords.size > 10 %>
+                    <small class="text-muted">+<%= project.keywords.size - 10 %> more</small>
+                  <% end %>
+                </div>
+              <% end %>
+
+              <% other_fields = project.fields.where.not(id: @field.id) %>
+              <% if other_fields.any? %>
+                <small class="text-muted">
+                  Also in: 
+                  <% other_fields.each_with_index do |other_field, i| %>
+                    <%= link_to other_field.name, field_path(other_field) %><%= ", " unless i == other_fields.size - 1 %>
+                  <% end %>
+                </small>
+              <% end %>
+
+              <% if project_field.match_signals.present? %>
+                <div class="mt-2">
+                  <small class="text-muted">
+                    Match signals:
+                    <% project_field.match_signals.each do |signal, score| %>
+                      <% if score > 0 %>
+                        <span class="badge bg-light text-dark">
+                          <%= signal %>: <%= (score * 100).round %>%
+                        </span>
+                      <% end %>
+                    <% end %>
+                  </small>
+                </div>
+              <% end %>
+            </div>
+
+            <% if project.science_score.present? %>
+              <div class="text-end ms-3">
+                <small class="text-muted">Science Score</small><br>
+                <span class="badge bg-info"><%= project.science_score.round %>%</span>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <%== pagy_nav(@pagy) %>
+  <% else %>
+    <div class="alert alert-info">
+      No projects have been classified in this field yet.
+    </div>
+  <% end %>
+</div>

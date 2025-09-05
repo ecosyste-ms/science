@@ -11,6 +11,8 @@ class Project < ApplicationRecord
 
   has_many :issues, dependent: :delete_all
   has_many :releases, dependent: :delete_all
+  has_many :project_fields, dependent: :destroy
+  has_many :fields, through: :project_fields
 
   has_many :good_first_issues, -> { good_first_issue }, class_name: 'Issue'
 
@@ -55,6 +57,69 @@ class Project < ApplicationRecord
       project.save
       project.sync_async unless project.last_synced_at.present?
     end
+  end
+
+  def self.import_science_csv(file_path = 'data/science.csv', batch_size: 1000, sync: false)
+    unless File.exist?(file_path)
+      puts "File not found: #{file_path}"
+      return
+    end
+
+    imported_count = 0
+    existing_count = 0
+    failed_count = 0
+    projects_to_sync = []
+    
+    CSV.foreach(file_path, headers: true).with_index do |row, index|
+      next if row['HTML URL'].blank?
+      
+      url = row['HTML URL'].downcase
+      
+      begin
+        project = Project.find_or_initialize_by(url: url)
+        
+        if project.new_record?
+          if project.save
+            imported_count += 1
+            projects_to_sync << project.id if sync
+          else
+            failed_count += 1
+            puts "Failed to save: #{url} - #{project.errors.full_messages.join(', ')}"
+          end
+        else
+          existing_count += 1
+        end
+        
+        # Print progress every batch_size rows
+        if (index + 1) % batch_size == 0
+          puts "Processed #{index + 1} rows: #{imported_count} imported, #{existing_count} existing, #{failed_count} failed"
+          
+          # Trigger sync for batch if requested
+          if sync && projects_to_sync.any?
+            puts "  Queuing sync for #{projects_to_sync.length} projects..."
+            projects_to_sync.each { |id| SyncProjectWorker.perform_async(id) }
+            projects_to_sync = []
+          end
+        end
+      rescue => e
+        failed_count += 1
+        puts "Error processing row #{index + 1}: #{e.message}"
+      end
+    end
+    
+    # Sync remaining projects
+    if sync && projects_to_sync.any?
+      puts "Queuing sync for final #{projects_to_sync.length} projects..."
+      projects_to_sync.each { |id| SyncProjectWorker.perform_async(id) }
+    end
+    
+    puts "\n=== Import Complete ==="
+    puts "Imported: #{imported_count} new projects"
+    puts "Existing: #{existing_count} projects already in database"
+    puts "Failed: #{failed_count} projects"
+    puts "Total in database: #{Project.count}"
+    
+    { imported: imported_count, existing: existing_count, failed: failed_count }
   end
 
   def self.discover_via_topics(limit=100)
@@ -504,6 +569,24 @@ class Project < ApplicationRecord
   def science_score_breakdown
     calculator = ScienceScoreCalculator.new(self)
     calculator.calculate
+  end
+
+  def joss_idf_score
+    JossIdfAnalyzer.score_project(self)
+  end
+
+  def primary_field
+    project_fields.primary.first&.field
+  end
+  
+  def all_fields_with_confidence
+    project_fields.includes(:field)
+                  .by_confidence
+                  .map { |pf| [pf.field, pf.confidence_score] }
+  end
+  
+  def update_field_classifications
+    FieldClassifier.new.classify_and_save(self)
   end
 
   def score_parts
