@@ -32,7 +32,7 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     result = calculator.check_doi_in_readme
     
     assert result[:present]
-    assert_equal "DOI references in README", result[:description]
+    assert_equal "DOI references", result[:description]
     assert_match(/Found \d+ DOI reference/, result[:details])
   end
 

@@ -128,14 +128,15 @@ class JossIdfAnalyzer
     def identify_scientific_indicators(percentile: 0.05)
       idf_scores = calculate_joss_idf
       
-      return [] if idf_scores.empty?
+      return {} if idf_scores.empty?
 
       # Sort by IDF (ascending - lower IDF means more common in JOSS)
       sorted_terms = idf_scores.sort_by { |_, score| score }
       
       # Get terms below the specified percentile (most common in JOSS)
       # Using a much smaller percentile to focus on truly discriminative terms
-      cutoff_index = (sorted_terms.length * percentile).to_i
+      # For small datasets, use a minimum of 5 terms
+      cutoff_index = [(sorted_terms.length * percentile).to_i, [5, sorted_terms.length].min].max
       scientific_terms = sorted_terms[0...cutoff_index]
       
       # Filter to keep meaningful scientific terms
@@ -144,7 +145,7 @@ class JossIdfAnalyzer
       
       scientific_terms.select do |term, score|
         term.length > 2 && 
-        score > 1.0 && # More selective - must appear in good portion of JOSS projects
+        score >= 1.0 && # Must appear in good portion of JOSS projects
         score < 4.0 && # But not too rare
         !exclude_patterns.any? { |pattern| term.include?(pattern) }
       end.to_h
