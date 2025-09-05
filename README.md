@@ -4,6 +4,50 @@ A discovery and classification system for open source scientific software projec
 
 This project is part of [Ecosyste.ms](https://ecosyste.ms): Tools and open datasets to support, sustain, and secure critical digital infrastructure.
 
+## Features
+
+### Scientific Software Discovery
+- **Automated Discovery**: Continuously discovers scientific software from GitHub, GitLab, and other sources
+- **Multi-Source Integration**: Aggregates data from repositories, package registries, and academic databases
+- **JOSS Integration**: Includes all papers from the Journal of Open Source Software
+- **Topic-Based Search**: Find projects by scientific domain, keywords, or research areas
+
+### Project Classification & Analysis
+- **Field Classification**: Automatically categorizes projects into 17 scientific fields across 4 domains:
+  - Physical Sciences (Physics, Chemistry, Materials Science, Earth Sciences, Astronomy)
+  - Life Sciences (Biology, Medicine, Neuroscience, Biochemistry, Genetics)
+  - Social Sciences (Economics, Psychology, Sociology)
+  - Computer Science (Artificial Intelligence, Computational Biology, Data Science, Scientific Computing)
+- **Science Score**: Evaluates scientific merit (0-100) based on:
+  - Presence of citation files (CITATION.cff)
+  - Published JOSS papers
+  - DOI references and academic links
+  - Academic contributor affiliations
+  - Scientific vocabulary analysis
+- **Quality Metrics**: Tracks maintenance, activity, dependencies, and community engagement
+
+### Advanced Analytics
+- **JOSS Vocabulary Analysis**: Uses TF-IDF to compare projects against the corpus of peer-reviewed scientific software
+- **Contributor Networks**: Maps academic institutions and research collaborations
+- **Dependency Mapping**: Visualizes how scientific packages interconnect
+- **Citation Tracking**: Monitors academic citations and research impact
+
+## Current Scale
+
+- **60,000+** scientific software projects tracked
+- **2,800+** peer-reviewed JOSS papers included
+- **48,000+** projects with calculated science scores
+- **17** scientific fields for classification
+- **100+** academic institutions recognized
+
+## Use Cases
+
+- **Researchers**: Find specialized tools for your scientific domain
+- **Developers**: Discover similar projects and potential collaborations
+- **Institutions**: Track your organization's scientific software contributions
+- **Funders**: Identify critical research infrastructure needing support
+- **Students**: Explore real-world scientific computing implementations
+
 ## API
 
 Documentation for the REST API is available here: [https://science.ecosyste.ms/docs](https://science.ecosyste.ms/docs)
