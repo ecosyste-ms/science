@@ -54,12 +54,8 @@ class ProjectsController < ApplicationController
   end
 
   def lookup
-    @project = Project.find_by(url: params[:url].downcase)
-    if @project.nil?
-      @project = Project.create(url: params[:url].downcase)
-      @project.sync_async
-    end
-    redirect_to @project
+    @query = params[:q]
+    @results = ProjectSearch.new(@query, 20).search if @query.present?
   end
 
   def review

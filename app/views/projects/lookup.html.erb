@@ -1,0 +1,126 @@
+<div class="container-md">
+  <div class="row">
+    <div class="col-lg-8 offset-lg-2">
+      <h2 class="mb-4">Scientific Project Lookup</h2>
+      
+      <div class="card mb-4">
+        <div class="card-body">
+          <p class="text-muted">
+            Find scientific software projects by name. Enter a project name, repository name, or partial name.
+            Results are ranked by confidence based on match type and project popularity.
+          </p>
+          
+          <%= form_with url: lookup_projects_path, method: :get, local: true, class: "mb-0" do |f| %>
+            <div class="input-group">
+              <%= text_field_tag :q, @query, 
+                  class: "form-control form-control-lg", 
+                  placeholder: "e.g., numpy, scikit-learn, matplotlib, pandas...",
+                  autofocus: true %>
+              <button class="btn btn-primary" type="submit">
+                Search
+              </button>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <% if @query.present? && @results %>
+        <% if @results.any? %>
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">Found <%= @results.size %> results for "<%= @query %>"</h5>
+            </div>
+            <div class="list-group list-group-flush">
+              <% @results.each do |result| %>
+                <% project = result[:project] %>
+                <%= link_to project_path(project), class: "list-group-item list-group-item-action" do %>
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                      <div class="d-flex align-items-center mb-1">
+                        <h6 class="mb-0 me-2">
+                          <%= project.name || project.url.split('/').last %>
+                        </h6>
+                        <% confidence_class = case result[:confidence]
+                           when 90..100 then 'success'
+                           when 70..89 then 'info'
+                           when 50..69 then 'warning'
+                           else 'secondary'
+                           end %>
+                        <span class="badge bg-<%= confidence_class %> me-2">
+                          <%= result[:confidence] %>% confidence
+                        </span>
+                        <span class="badge bg-light text-dark">
+                          <%= result[:match_type].humanize %>
+                        </span>
+                      </div>
+                      
+                      <div class="text-muted small mb-1">
+                        <%= project.url %>
+                      </div>
+                      
+                      <% if project.description.present? %>
+                        <p class="text-muted small mb-1">
+                          <%= truncate(project.description, length: 150) %>
+                        </p>
+                      <% end %>
+                      
+                      <div class="d-flex align-items-center gap-3 small text-muted">
+                        <% if project.science_score.present? %>
+                          <span>
+                            Science Score: <strong><%= project.science_score %></strong>
+                          </span>
+                        <% end %>
+                        
+                        <% if project.repository.present? %>
+                          <% if project.repository['stargazers_count'].present? %>
+                            <span>
+                              ⭐ <%= number_with_delimiter(project.repository['stargazers_count']) %>
+                            </span>
+                          <% end %>
+                          
+                          <% if project.repository['language'].present? %>
+                            <span>
+                              <%= project.repository['language'] %>
+                            </span>
+                          <% end %>
+                        <% end %>
+                      </div>
+                    </div>
+                  </div>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+        <% else %>
+          <div class="alert alert-info" role="alert">
+            <h5 class="alert-heading">No results found</h5>
+            <p class="mb-0">
+              No scientific projects found matching "<%= @query %>". Try:
+            </p>
+            <ul class="mb-0 mt-2">
+              <li>Using a different spelling or variation</li>
+              <li>Using just the repository name (last part of the URL)</li>
+              <li>Searching for a more common project name</li>
+            </ul>
+          </div>
+        <% end %>
+      <% elsif @query.present? %>
+        <div class="text-center text-muted">
+          <p>Searching...</p>
+        </div>
+      <% else %>
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Popular Scientific Projects</h5>
+            <p class="text-muted">Try searching for these popular scientific software projects:</p>
+            <div class="d-flex flex-wrap gap-2">
+              <% %w[numpy pandas scikit-learn matplotlib tensorflow pytorch jupyter scipy sympy opencv astropy biopython rdkit qiskit dask networkx].each do |name| %>
+                <%= link_to name, lookup_projects_path(q: name), class: "btn btn-sm btn-outline-primary" %>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
