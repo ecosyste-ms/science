@@ -4,7 +4,11 @@ class ProjectsController < ApplicationController
   end
 
   def index
-    @stats = Rails.cache.fetch('homepage_stats', expires_in: 1.hour) do
+    @stats = if Rails.env.production?
+      Rails.cache.fetch('homepage_stats', expires_in: 1.hour) do
+        Project.stats_summary
+      end
+    else
       Project.stats_summary
     end
     
