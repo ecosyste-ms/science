@@ -1,4 +1,7 @@
 <div class="container-md">
+  <% if @stats.present? %>
+    <%= render 'stats', stats: @stats %>
+  <% end %>
 
     <ul class="nav nav-tabs my-3">
       <li class="nav-item">

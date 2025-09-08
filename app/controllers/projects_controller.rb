@@ -4,6 +4,10 @@ class ProjectsController < ApplicationController
   end
 
   def index
+    @stats = Rails.cache.fetch('homepage_stats', expires_in: 1.hour) do
+      Project.stats_summary
+    end
+    
     @scope = Project.where('science_score > 0')
 
     if params[:keyword].present?

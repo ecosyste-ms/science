@@ -25,6 +25,7 @@ class Project < ApplicationRecord
   scope :matching_criteria, -> { where(matching_criteria: true) }
   scope :with_works, -> { where('length(works::text) > 2') }
   scope :with_repository, -> { where.not(repository: nil) }
+  scope :without_repository, -> { where(repository: nil) }
   scope :with_commits, -> { where.not(commits: nil) }
   scope :with_keywords, -> { where.not(keywords: []) }
   scope :without_keywords, -> { where(keywords: []) }
@@ -36,6 +37,8 @@ class Project < ApplicationRecord
   scope :without_keywords_from_contributors, -> { where(keywords_from_contributors: []) }
   
   scope :with_joss, -> { where.not(joss_metadata: nil) }
+  scope :scientific, -> { where('science_score >= ?', 50) }
+  scope :highly_scientific, -> { where('science_score >= ?', 75) }
 
   def self.import_from_csv(url)
     conn = Faraday.new(url: url) do |faraday|
@@ -457,6 +460,8 @@ class Project < ApplicationRecord
   end
 
   def fetch_commits
+    return unless repository.present?
+    
     conn = ecosystem_http_client(commits_api_url)
     response = conn.get
     return unless response.success?
@@ -813,6 +818,583 @@ class Project < ApplicationRecord
     end
   end
 
+  def self.import_from_cran
+    import_from_registry('cran.r-project.org', 'CRAN')
+  end
+
+  def self.import_from_bioconductor
+    import_from_registry('bioconductor.org', 'Bioconductor')
+  end
+
+  def self.import_from_conda_forge
+    import_from_registry('conda-forge.org', 'conda-forge')
+  end
+
+  def self.top_joss_topics(limit = 50)
+    # Get all keywords/topics from JOSS projects
+    joss_projects = Project.with_joss.with_keywords
+    
+    # Count frequency of each keyword
+    keyword_counts = Hash.new(0)
+    joss_projects.each do |project|
+      project.keywords.each do |keyword|
+        # Skip common/generic keywords that aren't useful topics
+        next if keyword.blank?
+        next if keyword.length < 3
+        keyword_counts[keyword.downcase] += 1
+      end
+    end
+    
+    # Sort by frequency and take top N
+    keyword_counts.sort_by { |_, count| -count }.first(limit).map(&:first)
+  end
+
+  def self.import_all_joss_topics
+    topics = top_joss_topics(50)
+    
+    if topics.empty?
+      puts "No topics found from JOSS projects"
+      return
+    end
+    
+    puts "Found #{topics.length} top topics from JOSS projects"
+    puts "Topics: #{topics.join(', ')}"
+    puts "\n" + "="*60 + "\n"
+    
+    total_stats = { created: 0, existing: 0 }
+    
+    topics.each_with_index do |topic, index|
+      puts "\n[#{index + 1}/#{topics.length}] Importing topic: #{topic}"
+      puts "-"*40
+      
+      # Import repositories for this topic
+      stats = import_from_github_topic(topic)
+      total_stats[:created] += stats[:created]
+      total_stats[:existing] += stats[:existing]
+      
+      # Brief pause to avoid rate limiting
+      sleep(1)
+    end
+    
+    puts "\n" + "="*60
+    puts "=== All JOSS Topics Import Complete ==="
+    puts "Total new projects created: #{total_stats[:created]}"
+    puts "Total existing projects found: #{total_stats[:existing]}"
+    puts "Grand total: #{total_stats[:created] + total_stats[:existing]}"
+  end
+
+  def self.import_from_package_keyword(keyword, max_pages = 10)
+    puts "Starting package keyword import for '#{keyword}'..."
+    page = 1
+    total_created = 0
+    total_existing = 0
+    total_skipped = 0
+    
+    loop do
+      puts "Fetching page #{page}..."
+      url = "https://packages.ecosyste.ms/api/v1/keywords/#{CGI.escape(keyword)}?page=#{page}"
+      
+      conn = Faraday.new(url: url) do |faraday|
+        faraday.response :follow_redirects
+        faraday.request :retry, max: 3, interval: 0.5, interval_randomness: 0.5, backoff_factor: 2
+        faraday.adapter Faraday.default_adapter
+      end
+      
+      response = conn.get
+      break unless response.success?
+      
+      data = JSON.parse(response.body)
+      packages = data['packages'] || []
+      break if packages.empty?
+      
+      packages.each do |package|
+        # Skip if no repository URL
+        if package['repository_url'].blank?
+          total_skipped += 1
+          next
+        end
+        
+        # Only process GitHub repositories
+        unless package['repository_url'].downcase.include?('github.com')
+          total_skipped += 1
+          next
+        end
+        
+        # Normalize the URL (lowercase and remove trailing slash)
+        repo_url = package['repository_url'].downcase.chomp('/')
+        
+        existing_project = Project.find_by(url: repo_url)
+        if existing_project.present?
+          total_existing += 1
+        else
+          project = Project.create(url: repo_url)
+          if project.persisted?
+            project.sync_async
+            total_created += 1
+            puts "  Created: #{repo_url}"
+          else
+            puts "  Failed to create: #{repo_url} - #{project.errors.full_messages.join(', ')}"
+          end
+        end
+      end
+      
+      puts "Page #{page} processed - Created: #{total_created}, Existing: #{total_existing}, Skipped: #{total_skipped}"
+      page += 1
+      
+      # Stop after max_pages
+      if page > max_pages
+        puts "Reached maximum page limit (#{max_pages})"
+        break
+      end
+    end
+    
+    puts "\n=== Package Keyword '#{keyword}' Import Complete ==="
+    puts "Total new projects created: #{total_created}"
+    puts "Total existing projects found: #{total_existing}"
+    puts "Total packages skipped (no GitHub URL): #{total_skipped}"
+    puts "Grand total GitHub projects: #{total_created + total_existing}"
+    
+    # Return stats for aggregation
+    { created: total_created, existing: total_existing, skipped: total_skipped }
+  end
+
+  def self.import_all_joss_keywords
+    keywords = top_joss_topics(50)
+    
+    if keywords.empty?
+      puts "No keywords found from JOSS projects"
+      return
+    end
+    
+    puts "Found #{keywords.length} top keywords from JOSS projects"
+    puts "Keywords: #{keywords.join(', ')}"
+    puts "\n" + "="*60 + "\n"
+    
+    total_stats = { created: 0, existing: 0, skipped: 0 }
+    
+    keywords.each_with_index do |keyword, index|
+      puts "\n[#{index + 1}/#{keywords.length}] Importing packages with keyword: #{keyword}"
+      puts "-"*40
+      
+      # Import packages for this keyword
+      stats = import_from_package_keyword(keyword)
+      total_stats[:created] += stats[:created]
+      total_stats[:existing] += stats[:existing]
+      total_stats[:skipped] += stats[:skipped]
+      
+      # Brief pause to avoid rate limiting
+      sleep(1)
+    end
+    
+    puts "\n" + "="*60
+    puts "=== All JOSS Keywords Package Import Complete ==="
+    puts "Total new projects created: #{total_stats[:created]}"
+    puts "Total existing projects found: #{total_stats[:existing]}"
+    puts "Total packages skipped (no GitHub URL): #{total_stats[:skipped]}"
+    puts "Grand total GitHub projects: #{total_stats[:created] + total_stats[:existing]}"
+  end
+
+  def self.github_owners(min_science_score = 50)
+    # Extract unique GitHub owner names from projects with reasonable science score
+    owners = []
+    
+    scope = Project.with_repository
+    scope = scope.where('science_score >= ?', min_science_score) if min_science_score > 0
+    
+    scope.find_each do |project|
+      # Match GitHub URLs and extract owner
+      if project.url =~ /github\.com\/([^\/]+)\//i
+        owner = $1.downcase
+        owners << owner unless owner.blank?
+      end
+    end
+    
+    owners.uniq.sort
+  end
+
+  def self.scientific_github_owners
+    # Convenience method for owners from scientific projects (score >= 50)
+    github_owners(50)
+  end
+
+  def self.stats_summary
+    total_projects = Project.count
+    scored_projects = Project.where.not(science_score: nil).count
+    
+    # Science score distribution
+    score_distribution = Project.group(:science_score).count
+    scientific_count = Project.scientific.count
+    highly_scientific_count = Project.highly_scientific.count
+    
+    # Calculate averages for scored projects
+    avg_score = Project.where.not(science_score: nil).average(:science_score)&.round(1)
+    median_score = Project.where.not(science_score: nil).median(:science_score) rescue nil
+    
+    # Repository stats
+    with_repo_count = Project.with_repository.count
+    with_readme_count = Project.with_readme.count
+    with_packages_count = Project.with_packages.count
+    
+    # Contributor stats from repository data
+    total_repo_contributors = Project.with_repository
+      .where.not(repository: nil)
+      .sum("COALESCE((repository->>'contributors_count')::integer, 0)")
+    
+    avg_repo_contributors = Project.with_repository
+      .where.not(repository: nil)
+      .where("(repository->>'contributors_count') IS NOT NULL")
+      .average("(repository->>'contributors_count')::integer")&.round(1)
+    
+    # Contributor stats from contributors table
+    total_unique_contributors = Contributor.count
+    # For JSON columns in PostgreSQL, check if not empty object
+    contributors_with_profile = Contributor.where("profile::text != '{}'::text AND profile IS NOT NULL").count
+    contributors_with_topics = Contributor.where.not(topics: []).count
+    contributors_with_categories = Contributor.where.not(categories: []).count
+    
+    # Activity stats
+    total_stars = Project.with_repository
+      .where.not(repository: nil)
+      .sum("COALESCE((repository->>'stargazers_count')::integer, 0)")
+    
+    total_forks = Project.with_repository
+      .where.not(repository: nil)
+      .sum("COALESCE((repository->>'forks_count')::integer, 0)")
+    
+    # JOSS stats
+    joss_count = Project.with_joss.count
+    
+    # Language distribution (top 10)
+    language_distribution = Project.with_repository
+      .where.not(repository: nil)
+      .where("repository->>'language' IS NOT NULL")
+      .group("repository->>'language'")
+      .count
+      .sort_by { |_, count| -count }
+      .first(10)
+    
+    {
+      total_projects: total_projects,
+      scored_projects: scored_projects,
+      scientific_projects: scientific_count,
+      highly_scientific_projects: highly_scientific_count,
+      average_science_score: avg_score,
+      median_science_score: median_score,
+      projects_with_repository: with_repo_count,
+      projects_with_readme: with_readme_count,
+      projects_with_packages: with_packages_count,
+      joss_projects: joss_count,
+      total_repo_contributors: total_repo_contributors,
+      average_repo_contributors: avg_repo_contributors,
+      total_unique_contributors: total_unique_contributors,
+      contributors_with_profile: contributors_with_profile,
+      contributors_with_topics: contributors_with_topics,
+      contributors_with_categories: contributors_with_categories,
+      total_stars: total_stars,
+      total_forks: total_forks,
+      score_distribution: score_distribution,
+      top_languages: language_distribution
+    }
+  end
+
+  def self.import_from_github_owner(owner, max_pages = 10)
+    puts "Starting GitHub owner import for '#{owner}'..."
+    page = 1
+    total_created = 0
+    total_existing = 0
+    
+    loop do
+      puts "Fetching page #{page}..."
+      url = "https://repos.ecosyste.ms/api/v1/hosts/GitHub/owners/#{owner}/repositories?page=#{page}"
+      
+      conn = Faraday.new(url: url) do |faraday|
+        faraday.response :follow_redirects
+        faraday.request :retry, max: 3, interval: 0.5, interval_randomness: 0.5, backoff_factor: 2
+        faraday.adapter Faraday.default_adapter
+      end
+      
+      response = conn.get
+      break unless response.success?
+      
+      repositories = JSON.parse(response.body)
+      break if repositories.empty?
+      
+      repositories.each do |repo|
+        next if repo['html_url'].blank?
+        
+        # Normalize the URL (lowercase and remove trailing slash)
+        repo_url = repo['html_url'].downcase.chomp('/')
+        
+        existing_project = Project.find_by(url: repo_url)
+        if existing_project.present?
+          total_existing += 1
+        else
+          project = Project.create(url: repo_url)
+          if project.persisted?
+            project.sync_async
+            total_created += 1
+            puts "  Created: #{repo_url}"
+          else
+            puts "  Failed to create: #{repo_url} - #{project.errors.full_messages.join(', ')}"
+          end
+        end
+      end
+      
+      puts "Page #{page} processed - Created: #{total_created}, Existing: #{total_existing}"
+      page += 1
+      
+      # Stop after max_pages
+      if page > max_pages
+        puts "Reached maximum page limit (#{max_pages})"
+        break
+      end
+    end
+    
+    puts "\n=== GitHub Owner '#{owner}' Import Complete ==="
+    puts "Total new projects created: #{total_created}"
+    puts "Total existing projects found: #{total_existing}"
+    puts "Grand total: #{total_created + total_existing}"
+    
+    # Return stats for aggregation
+    { created: total_created, existing: total_existing }
+  end
+
+  def self.import_from_papers
+    puts "Starting papers.ecosyste.ms import..."
+    page = 1
+    total_created = 0
+    total_existing = 0
+    total_skipped = 0
+    
+    loop do
+      puts "Fetching page #{page}..."
+      url = "https://papers.ecosyste.ms/api/v1/projects?page=#{page}"
+      
+      conn = Faraday.new(url: url) do |faraday|
+        faraday.response :follow_redirects
+        faraday.request :retry, max: 3, interval: 0.5, interval_randomness: 0.5, backoff_factor: 2
+        faraday.adapter Faraday.default_adapter
+      end
+      
+      response = conn.get
+      break unless response.success?
+      
+      projects = JSON.parse(response.body)
+      break if projects.empty?
+      
+      projects.each do |project|
+        # Skip if no package field or package is null
+        if project['package'].blank?
+          total_skipped += 1
+          next
+        end
+        
+        # Extract repository URL from package field
+        repository_url = project['package']['repository_url']
+        
+        # Skip if no repository URL
+        if repository_url.blank?
+          total_skipped += 1
+          next
+        end
+        
+        # Only process GitHub repositories
+        unless repository_url.downcase.include?('github.com')
+          total_skipped += 1
+          next
+        end
+        
+        # Normalize the URL (lowercase and remove trailing slash)
+        repo_url = repository_url.downcase.chomp('/')
+        
+        existing_project = Project.find_by(url: repo_url)
+        if existing_project.present?
+          total_existing += 1
+        else
+          new_project = Project.create(url: repo_url)
+          if new_project.persisted?
+            new_project.sync_async
+            total_created += 1
+            puts "  Created: #{repo_url}"
+          else
+            puts "  Failed to create: #{repo_url} - #{new_project.errors.full_messages.join(', ')}"
+          end
+        end
+      end
+      
+      puts "Page #{page} processed - Created: #{total_created}, Existing: #{total_existing}, Skipped: #{total_skipped}"
+      page += 1
+    end
+    
+    puts "\n=== Papers Import Complete ==="
+    puts "Total new projects created: #{total_created}"
+    puts "Total existing projects found: #{total_existing}"
+    puts "Total projects skipped (no GitHub URL): #{total_skipped}"
+    puts "Grand total GitHub projects: #{total_created + total_existing}"
+  end
+
+  def self.import_all_github_owners(limit = nil, min_science_score = 50)
+    owners = github_owners(min_science_score)
+    owners = owners.first(limit) if limit
+    
+    if owners.empty?
+      puts "No GitHub owners found with science score >= #{min_science_score}"
+      return
+    end
+    
+    puts "Found #{owners.length} unique GitHub owners (science score >= #{min_science_score})"
+    puts "\n" + "="*60 + "\n"
+    
+    total_stats = { created: 0, existing: 0 }
+    
+    owners.each_with_index do |owner, index|
+      puts "\n[#{index + 1}/#{owners.length}] Importing repositories from owner: #{owner}"
+      puts "-"*40
+      
+      # Import repositories for this owner
+      stats = import_from_github_owner(owner)
+      total_stats[:created] += stats[:created]
+      total_stats[:existing] += stats[:existing]
+      
+      # Brief pause to avoid rate limiting
+      sleep(1)
+    end
+    
+    puts "\n" + "="*60
+    puts "=== All GitHub Owners Import Complete ==="
+    puts "Total new projects created: #{total_stats[:created]}"
+    puts "Total existing projects found: #{total_stats[:existing]}"
+    puts "Grand total: #{total_stats[:created] + total_stats[:existing]}"
+  end
+
+  def self.import_from_github_topic(topic, max_pages = 10)
+    puts "Starting GitHub topic import for '#{topic}'..."
+    page = 1
+    total_created = 0
+    total_existing = 0
+    
+    loop do
+      puts "Fetching page #{page}..."
+      url = "https://repos.ecosyste.ms/api/v1/hosts/GitHub/topics/#{topic}?page=#{page}"
+      
+      conn = Faraday.new(url: url) do |faraday|
+        faraday.response :follow_redirects
+        faraday.request :retry, max: 3, interval: 0.5, interval_randomness: 0.5, backoff_factor: 2
+        faraday.adapter Faraday.default_adapter
+      end
+      
+      response = conn.get
+      break unless response.success?
+      
+      data = JSON.parse(response.body)
+      repositories = data['repositories'] || []
+      break if repositories.empty?
+      
+      repositories.each do |repo|
+        next if repo['html_url'].blank?
+        
+        # Normalize the URL (lowercase and remove trailing slash)
+        repo_url = repo['html_url'].downcase.chomp('/')
+        
+        existing_project = Project.find_by(url: repo_url)
+        if existing_project.present?
+          total_existing += 1
+        else
+          project = Project.create(url: repo_url)
+          if project.persisted?
+            project.sync_async
+            total_created += 1
+            puts "  Created: #{repo_url}"
+          else
+            puts "  Failed to create: #{repo_url} - #{project.errors.full_messages.join(', ')}"
+          end
+        end
+      end
+      
+      puts "Page #{page} processed - Created: #{total_created}, Existing: #{total_existing}"
+      page += 1
+      
+      # Stop after max_pages
+      if page > max_pages
+        puts "Reached maximum page limit (#{max_pages})"
+        break
+      end
+    end
+    
+    puts "\n=== GitHub Topic '#{topic}' Import Complete ==="
+    puts "Total new projects created: #{total_created}"
+    puts "Total existing projects found: #{total_existing}"
+    puts "Grand total: #{total_created + total_existing}"
+    
+    # Return stats for aggregation
+    { created: total_created, existing: total_existing }
+  end
+
+  def self.import_from_registry(registry, registry_name)
+    puts "Starting #{registry_name} import of GitHub projects..."
+    page = 1
+    total_created = 0
+    total_existing = 0
+    total_skipped = 0
+    
+    loop do
+      puts "Fetching page #{page}..."
+      url = "https://packages.ecosyste.ms/api/v1/registries/#{registry}/packages?page=#{page}"
+      
+      conn = Faraday.new(url: url) do |faraday|
+        faraday.response :follow_redirects
+        faraday.request :retry, max: 3, interval: 0.5, interval_randomness: 0.5, backoff_factor: 2
+        faraday.adapter Faraday.default_adapter
+      end
+      
+      response = conn.get
+      break unless response.success?
+      
+      packages = JSON.parse(response.body)
+      break if packages.empty?
+      
+      packages.each do |package|
+        # Skip if no repository URL
+        if package['repository_url'].blank?
+          total_skipped += 1
+          next
+        end
+        
+        # Only process GitHub repositories
+        unless package['repository_url'].downcase.include?('github.com')
+          total_skipped += 1
+          next
+        end
+        
+        # Normalize the URL (lowercase and remove trailing slash)
+        repo_url = package['repository_url'].downcase.chomp('/')
+        
+        existing_project = Project.find_by(url: repo_url)
+        if existing_project.present?
+          total_existing += 1
+        else
+          project = Project.create(url: repo_url)
+          if project.persisted?
+            project.sync_async
+            total_created += 1
+            puts "  Created: #{repo_url}"
+          else
+            puts "  Failed to create: #{repo_url} - #{project.errors.full_messages.join(', ')}"
+          end
+        end
+      end
+      
+      puts "Page #{page} processed - Created: #{total_created}, Existing: #{total_existing}, Skipped: #{total_skipped}"
+      page += 1
+    end
+    
+    puts "\n=== #{registry_name} Import Complete ==="
+    puts "Total new projects created: #{total_created}"
+    puts "Total existing projects found: #{total_existing}"
+    puts "Total packages skipped (no GitHub URL): #{total_skipped}"
+    puts "Grand total GitHub projects: #{total_created + total_existing}"
+  end
+
   def self.import_from_joss
     puts "Starting JOSS import..."
     page = 1
@@ -825,6 +1407,7 @@ class Project < ApplicationRecord
       
       conn = Faraday.new(url: url) do |faraday|
         faraday.response :follow_redirects
+        faraday.request :retry, max: 3, interval: 0.5, interval_randomness: 0.5, backoff_factor: 2
         faraday.adapter Faraday.default_adapter
       end
       
@@ -971,6 +1554,8 @@ class Project < ApplicationRecord
   end
 
   def fetch_readme
+    return unless repository.present?
+    
     if readme_file_name.blank? || download_url.blank?
       fetch_readme_fallback
     else  
@@ -990,9 +1575,16 @@ class Project < ApplicationRecord
   end
   
   def load_readme_fallback
+    return unless repository.present?
+    
     file_name = readme_file_name.presence || 'README.md'
-    conn = Faraday.new(url: raw_url(file_name)) do |faraday|
+    url = raw_url(file_name)
+    
+    return unless url.present?
+    
+    conn = Faraday.new(url: url) do |faraday|
       faraday.response :follow_redirects
+      faraday.request :retry, max: 3, interval: 0.5, interval_randomness: 0.5, backoff_factor: 2
       faraday.adapter Faraday.default_adapter
     end
   
@@ -1002,14 +1594,18 @@ class Project < ApplicationRecord
   end
 
   def fetch_readme_fallback
+    return unless repository.present?
+    
     readme_content = load_readme_fallback
     return unless readme_content.present?
     self.readme = readme_content
     self.save if changed?
   rescue => e
-    puts "Error fetching fallback readme for #{repository_url}"
-    puts e.message
-    puts e.backtrace
+    puts "Error fetching fallback readme for project #{self.id} (#{self.url})"
+    puts "  repository_url: #{repository_url}"
+    puts "  Error: #{e.class} - #{e.message}"
+    puts "  Backtrace:"
+    puts e.backtrace.first(5)
   end
 
   def readme_url
@@ -1023,6 +1619,7 @@ class Project < ApplicationRecord
   end
 
   def fetch_citation_file
+    return unless repository.present?
     return unless citation_file_name.present?
     return unless download_url.present?
     conn = ecosystem_http_client(archive_url(citation_file_name))
@@ -1065,6 +1662,8 @@ class Project < ApplicationRecord
   end
 
   def sync_issues
+    return unless repository.present?
+    
     conn = ecosystem_http_client(issues_api_url)
     response = conn.get
     return unless response.success?

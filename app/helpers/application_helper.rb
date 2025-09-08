@@ -2,7 +2,7 @@ module ApplicationHelper
   include Pagy::Frontend
 
   def meta_title
-    [@meta_title, 'Open Source Science Software'].compact.join(' | ')
+    [@meta_title, 'Open Source Science'].compact.join(' | ')
   end
 
   def meta_description
@@ -10,7 +10,7 @@ module ApplicationHelper
   end
 
   def app_name
-    "Open Source Science Software"
+    "Open Source Science"
   end
 
   def app_description

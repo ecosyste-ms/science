@@ -1,0 +1,181 @@
+<div class="stats-summary bg-light p-4 mb-4 rounded">
+  <div class="row mb-3">
+    <div class="col-md-3 col-sm-6 mb-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h3 class="text-primary"><%= number_with_delimiter(@stats[:total_projects]) %></h3>
+          <p class="text-muted mb-0">Total Projects</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h3 class="text-success"><%= number_with_delimiter(@stats[:scientific_projects]) %></h3>
+          <p class="text-muted mb-0">Scientific Projects</p>
+          <small class="text-muted">(score ≥ 50)</small>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h3 class="text-info"><%= number_with_delimiter(@stats[:highly_scientific_projects]) %></h3>
+          <p class="text-muted mb-0">Highly Scientific</p>
+          <small class="text-muted">(score ≥ 75)</small>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h3 class="text-warning"><%= number_with_delimiter(@stats[:joss_projects]) %></h3>
+          <p class="text-muted mb-0">JOSS Papers</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="row mb-3">
+    <div class="col-md-3 col-sm-6 mb-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h4><%= @stats[:average_science_score] || 'N/A' %></h4>
+          <p class="text-muted mb-0">Avg Science Score</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h4><%= number_with_delimiter(@stats[:total_stars]) %></h4>
+          <p class="text-muted mb-0">Total Stars</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h4><%= number_with_delimiter(@stats[:total_unique_contributors]) %></h4>
+          <p class="text-muted mb-0">Unique Contributors</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h4><%= number_with_delimiter(@stats[:total_forks]) %></h4>
+          <p class="text-muted mb-0">Total Forks</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <% if @stats[:top_languages].present? %>
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Top Programming Languages</h5>
+          <div class="language-list">
+            <% @stats[:top_languages].each do |language, count| %>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span><%= language %></span>
+                <span class="badge bg-secondary"><%= number_with_delimiter(count) %></span>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Data Completeness</h5>
+          <div class="progress-list">
+            <div class="mb-3">
+              <div class="d-flex justify-content-between mb-1">
+                <span>With Repository Data</span>
+                <span><%= number_with_delimiter(@stats[:projects_with_repository]) %> / <%= number_with_delimiter(@stats[:total_projects]) %></span>
+              </div>
+              <div class="progress">
+                <div class="progress-bar" role="progressbar" style="width: <%= (@stats[:projects_with_repository].to_f / @stats[:total_projects] * 100).round %>%"></div>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <div class="d-flex justify-content-between mb-1">
+                <span>With README</span>
+                <span><%= number_with_delimiter(@stats[:projects_with_readme]) %> / <%= number_with_delimiter(@stats[:total_projects]) %></span>
+              </div>
+              <div class="progress">
+                <div class="progress-bar bg-success" role="progressbar" style="width: <%= (@stats[:projects_with_readme].to_f / @stats[:total_projects] * 100).round %>%"></div>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <div class="d-flex justify-content-between mb-1">
+                <span>With Packages</span>
+                <span><%= number_with_delimiter(@stats[:projects_with_packages]) %> / <%= number_with_delimiter(@stats[:total_projects]) %></span>
+              </div>
+              <div class="progress">
+                <div class="progress-bar bg-info" role="progressbar" style="width: <%= (@stats[:projects_with_packages].to_f / @stats[:total_projects] * 100).round %>%"></div>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <div class="d-flex justify-content-between mb-1">
+                <span>Science Scored</span>
+                <span><%= number_with_delimiter(@stats[:scored_projects]) %> / <%= number_with_delimiter(@stats[:total_projects]) %></span>
+              </div>
+              <div class="progress">
+                <div class="progress-bar bg-warning" role="progressbar" style="width: <%= (@stats[:scored_projects].to_f / @stats[:total_projects] * 100).round %>%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="row mt-3">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Contributor Statistics</h5>
+          <div class="contributor-stats">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span>Total Unique Contributors</span>
+              <span class="badge bg-primary"><%= number_with_delimiter(@stats[:total_unique_contributors]) %></span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span>Contributors with Profile</span>
+              <span class="badge bg-info"><%= number_with_delimiter(@stats[:contributors_with_profile]) %></span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span>Contributors with Topics</span>
+              <span class="badge bg-success"><%= number_with_delimiter(@stats[:contributors_with_topics]) %></span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span>Contributors with Categories</span>
+              <span class="badge bg-warning"><%= number_with_delimiter(@stats[:contributors_with_categories]) %></span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span>Avg Contributors per Project</span>
+              <span class="badge bg-secondary"><%= @stats[:average_repo_contributors] || 'N/A' %></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+  <% end %>
+</div>
