@@ -1017,6 +1017,60 @@ class Project < ApplicationRecord
     github_owners(50)
   end
 
+  def self.import_from_ost
+    puts "Importing reviewed projects from OST..."
+    page = 1
+    total_imported = 0
+    
+    loop do
+      url = "https://ost.ecosyste.ms/api/v1/projects?reviewed=true&page=#{page}"
+      conn = Faraday.new(url: url) do |faraday|
+        faraday.headers['User-Agent'] = 'science.ecosyste.ms'
+        faraday.response :follow_redirects
+        faraday.request :retry, max: 3, interval: 1, backoff_factor: 2
+        faraday.adapter Faraday.default_adapter
+      end
+      
+      begin
+        response = conn.get
+        break unless response.success?
+        
+        projects = JSON.parse(response.body)
+        break if projects.empty?
+        
+        projects.each do |project_data|
+          next unless project_data['url'].present?
+          
+          # Only import GitHub projects for now
+          next unless project_data['url'].include?('github.com')
+          
+          existing = Project.find_by(url: project_data['url'])
+          if existing.nil?
+            project = Project.create(url: project_data['url'])
+            if project.persisted?
+              project.sync_async
+              total_imported += 1
+              puts "Imported: #{project_data['url']}"
+            end
+          else
+            puts "Already exists: #{project_data['url']}"
+          end
+        end
+        
+        page += 1
+        puts "Processed page #{page - 1}, total imported: #{total_imported}"
+        
+        # Safety limit
+        break if page > 100
+      rescue => e
+        puts "Error on page #{page}: #{e.message}"
+        break
+      end
+    end
+    
+    puts "Import complete. Total imported: #{total_imported}"
+  end
+
   def self.stats_summary
     total_projects = Project.count
     scored_projects = Project.where.not(science_score: nil).count
@@ -1039,16 +1093,10 @@ class Project < ApplicationRecord
     total_repo_contributors = Project.with_repository
       .where.not(repository: nil)
       .sum("COALESCE((repository->>'contributors_count')::integer, 0)")
-    
-    avg_repo_contributors = Project.with_repository
-      .where.not(repository: nil)
-      .where("(repository->>'contributors_count') IS NOT NULL")
-      .average("(repository->>'contributors_count')::integer")&.round(1)
-    
+        
     # Contributor stats from contributors table
     total_unique_contributors = Contributor.count
     # For JSON columns in PostgreSQL, check if not empty object
-    contributors_with_profile = Contributor.where("profile::text != '{}'::text AND profile IS NOT NULL").count
     contributors_with_topics = Contributor.where.not(topics: []).count
     contributors_with_categories = Contributor.where.not(categories: []).count
     
@@ -1085,9 +1133,7 @@ class Project < ApplicationRecord
       projects_with_packages: with_packages_count,
       joss_projects: joss_count,
       total_repo_contributors: total_repo_contributors,
-      average_repo_contributors: avg_repo_contributors,
       total_unique_contributors: total_unique_contributors,
-      contributors_with_profile: contributors_with_profile,
       contributors_with_topics: contributors_with_topics,
       contributors_with_categories: contributors_with_categories,
       total_stars: total_stars,

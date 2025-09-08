@@ -92,4 +92,9 @@ namespace :projects do
   task :sync_dependencies => :environment do
     Project.sync_dependencies
   end
+
+  desc 'import reviewed projects from OST (Open Sustainable Technology)'
+  task :import_ost => :environment do
+    Project.import_from_ost
+  end
 end
