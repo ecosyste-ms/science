@@ -41,12 +41,6 @@
                   <i>
                     - Top <%= package.average_ranking.round(2) %>%
                   </i>
-
-                  <% if package.project %>
-                    <i>
-                      - <%= link_to '(in Science)', lookup_projects_path(url: package['repository_url']), method: :post %>
-                    </i>
-                  <% end %>
                 <% end %>
               </small>
             </li>  
