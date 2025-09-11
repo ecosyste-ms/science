@@ -87,24 +87,18 @@ class ProjectsController < ApplicationController
   end
 
   def create
-    @project = Project.new(project_params)
-    if @project.valid?
-      @project = Project.find_by(url: params[:project][:url].downcase)
-      if @project.nil?
-
-        @project = Project.new(project_params)
-
-        if @project.save
-          @project.sync_async
-          redirect_to @project
-        else
-          render 'new'
-        end
-      else
-        redirect_to @project
-      end
+    # Check for existing project first
+    existing_project = Project.find_by(url: params[:project][:url].downcase)
+    if existing_project
+      redirect_to existing_project
     else
-      render 'new'
+      @project = Project.new(project_params)
+      if @project.save
+        @project.sync_async
+        redirect_to @project
+      else
+        render 'new'
+      end
     end
   end
 
@@ -113,16 +107,16 @@ class ProjectsController < ApplicationController
   end
 
   def dependencies
-    @dependencies = Project.map(&:dependency_packages).flatten(1).group_by(&:itself).transform_values(&:count).sort_by{|k,v| v}.reverse
+    @dependencies = Project.all.map(&:dependency_packages).flatten(1).group_by(&:itself).transform_values(&:count).sort_by{|k,v| v}.reverse
     @dependency_records = Dependency.where('count > 1').includes(:project)
     @packages = []
   end
 
   def packages
-    @projects = Project.select{|p| p.packages.present? }.sort_by{|p| p.packages.sum{|p| p['downloads'] || 0 } }.reverse
+    @projects = Project.all.select{|p| p.packages.present? }.sort_by{|p| p.packages.sum{|p| p['downloads'] || 0 } }.reverse
   end
 
   def images
-    @projects = Project.select{|p| p.readme_image_urls.present? }
+    @projects = Project.all.select{|p| p.readme_image_urls.present? }
   end
 end
