@@ -39,6 +39,7 @@ class Project < ApplicationRecord
   scope :with_joss, -> { where.not(joss_metadata: nil) }
   scope :scientific, -> { where('science_score >= ?', 50) }
   scope :highly_scientific, -> { where('science_score >= ?', 75) }
+  scope :should_sync, -> { where('last_synced_at IS NULL OR science_score IS NULL OR science_score > 0') }
 
   def self.import_from_csv(url)
     conn = Faraday.new(url: url) do |faraday|
@@ -212,13 +213,13 @@ class Project < ApplicationRecord
   end
 
   def self.sync_least_recently_synced
-    Project.where(last_synced_at: nil).or(Project.where("last_synced_at < ?", 1.day.ago)).order('last_synced_at asc nulls first').limit(500).each do |project|
+    Project.should_sync.where(last_synced_at: nil).or(Project.should_sync.where("last_synced_at < ?", 1.day.ago)).order('last_synced_at asc nulls first').limit(500).each do |project|
       project.sync_async
     end
   end
 
   def self.sync_least_recently_synced_reviewed
-    Project.where(last_synced_at: nil).or(Project.where("last_synced_at < ?", 1.day.ago)).order('last_synced_at asc nulls first').limit(500).each do |project|
+    Project.should_sync.where(last_synced_at: nil).or(Project.should_sync.where("last_synced_at < ?", 1.day.ago)).order('last_synced_at asc nulls first').limit(500).each do |project|
       project.sync_async
     end
   end

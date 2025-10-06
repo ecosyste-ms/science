@@ -162,8 +162,48 @@ class ProjectTest < ActiveSupport::TestCase
     )
 
     result = project.calculate_idf
-    
+
     assert_kind_of Array, result
     assert_not_empty result
+  end
+
+  test "should_sync scope includes projects never synced" do
+    project = Project.create!(
+      url: 'https://github.com/test/never-synced',
+      last_synced_at: nil,
+      science_score: nil
+    )
+
+    assert_includes Project.should_sync, project
+  end
+
+  test "should_sync scope includes projects with positive science score" do
+    project = Project.create!(
+      url: 'https://github.com/test/scientific-project',
+      last_synced_at: 1.day.ago,
+      science_score: 75.5
+    )
+
+    assert_includes Project.should_sync, project
+  end
+
+  test "should_sync scope excludes projects with zero science score that have been synced" do
+    project = Project.create!(
+      url: 'https://github.com/test/non-scientific',
+      last_synced_at: 1.day.ago,
+      science_score: 0
+    )
+
+    assert_not_includes Project.should_sync, project
+  end
+
+  test "should_sync scope includes projects with nil science score that have been synced" do
+    project = Project.create!(
+      url: 'https://github.com/test/unknown-science',
+      last_synced_at: 1.day.ago,
+      science_score: nil
+    )
+
+    assert_includes Project.should_sync, project
   end
 end
