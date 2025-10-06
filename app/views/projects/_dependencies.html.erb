@@ -1,44 +1,37 @@
 <% if @project.dependencies.present? %>
-  <div class="mb-4">
-    <h3 class="mb-3">Dependencies</h3>
+  <hr/>
+  <h2>Dependencies</h2>
 
-    <% @project.dependencies.each do |manifest| %>
-      <div class="card border-0 shadow-sm mb-3">
-        <div class="card-header bg-white border-bottom">
-          <div class="d-flex justify-content-between align-items-center">
-            <h6 class="mb-0"><%= manifest['filepath'] %></h6>
-            <span class="badge rounded-pill bg-primary"><%= manifest['ecosystem'] %></span>
-          </div>
-        </div>
-        <% if manifest['kind'] == 'lockfile' && manifest['dependencies'].length > 100 %>
-          <div class="card-body">
-            <p class="text-muted mb-0">
-              <%= pluralize(manifest['dependencies'].length, 'dependencies') %>
-            </p>
-          </div>
-        <% else %>
-          <ul class="list-group list-group-flush">
-            <% manifest['dependencies'].sort_by{|d| [d['kind'], d['package_name']]}.each do |dependency| %>
-              <li class="list-group-item border-0 d-flex justify-content-between align-items-center">
-                <div>
-                  <strong><%= dependency['package_name'] %></strong>
-                  <% if dependency['requirements'].present? %>
-                    <code class="text-muted ms-2"><%= dependency['requirements'] %></code>
-                  <% end %>
-                </div>
-                <div>
-                  <% if dependency['kind'] != 'runtime' %>
-                    <span class="badge rounded-pill bg-light text-dark"><%= dependency['kind'] %></span>
-                  <% end %>
-                  <% if dependency['optional'] %>
-                    <span class="badge rounded-pill bg-info text-dark">optional</span>
-                  <% end %>
-                </div>
-              </li>
-            <% end %>
-          </ul>
-        <% end %>
+  <% @project.dependencies.each do |manifest| %>
+    <div class="card mb-3">
+      <div class="card-header">
+        <%= manifest['filepath'] %>
+        <span class='text-muted'>
+          <%= manifest['ecosystem'] %>
+        </span>
       </div>
-    <% end %>
-  </div>
+      <ul class="list-group list-group-flush">
+        <% if manifest['kind'] == 'lockfile' && manifest['dependencies'].length > 100 %>
+          <li class="list-group-item">
+            <%= pluralize(manifest['dependencies'].length, 'dependencies') %>
+          </li>
+        <% else %>
+          <% manifest['dependencies'].sort_by{|d| [d['kind'], d['package_name']]}.each do |dependency| %>
+            <li class="list-group-item">
+              <%= dependency['package_name'] %>
+              <i><%= dependency['requirements'] %></i>
+              <small class='text-muted'>
+              <% if dependency['kind'] != 'runtime' %>
+                <%= dependency['kind'] %>
+              <% end %>
+              <% if dependency['optional'] %>
+                (optional)
+              <% end %>
+              </small>
+            </li>
+          <% end %>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
 <% end %>
