@@ -26,7 +26,6 @@ Rails.application.routes.draw do
         collection do
           get :lookup
           get :packages
-          get :images
           get :search
         end
         member do
@@ -42,7 +41,6 @@ Rails.application.routes.draw do
       get :review
       get :dependencies
       get :packages
-      get :images
       get :search
     end
     resources :releases, only: [:index, :show]

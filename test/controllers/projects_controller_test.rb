@@ -89,11 +89,6 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "should get images" do
-    get images_projects_url
-    assert_response :success
-  end
-
   test "should get review" do
     get review_projects_url
     assert_response :success

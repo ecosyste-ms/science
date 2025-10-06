@@ -4,8 +4,10 @@ class ProjectsController < ApplicationController
   end
 
   def index
-    @stats = if Rails.env.production?
-      Rails.cache.fetch('homepage_stats', expires_in: 1.hour) do
+    # Cache stats for 6 hours since they don't change that frequently
+    # Use cache in all environments where it's configured (not just production)
+    @stats = if Rails.cache.respond_to?(:fetch)
+      Rails.cache.fetch('homepage_stats', expires_in: 6.hours) do
         Project.stats_summary
       end
     else
@@ -107,16 +109,37 @@ class ProjectsController < ApplicationController
   end
 
   def dependencies
-    @dependencies = Project.all.map(&:dependency_packages).flatten(1).group_by(&:itself).transform_values(&:count).sort_by{|k,v| v}.reverse
+    # Cache dependencies aggregation for 2 hours
+    @dependencies = if Rails.cache.respond_to?(:fetch)
+      Rails.cache.fetch('dependencies_aggregation', expires_in: 2.hours) do
+        Project.all.map(&:dependency_packages).flatten(1).group_by(&:itself).transform_values(&:count).sort_by{|k,v| v}.reverse
+      end
+    else
+      Project.all.map(&:dependency_packages).flatten(1).group_by(&:itself).transform_values(&:count).sort_by{|k,v| v}.reverse
+    end
+
+    # Cache ecosystem counts for 2 hours
+    @ecosystem_counts = if Rails.cache.respond_to?(:fetch)
+      Rails.cache.fetch('dependency_ecosystem_counts', expires_in: 2.hours) do
+        Dependency.group(:ecosystem).count.sort_by{|k,v| v}.reverse
+      end
+    else
+      Dependency.group(:ecosystem).count.sort_by{|k,v| v}.reverse
+    end
+
     @dependency_records = Dependency.where('count > 1').includes(:project)
     @packages = []
   end
 
   def packages
-    @projects = Project.all.select{|p| p.packages.present? }.sort_by{|p| p.packages.sum{|p| p['downloads'] || 0 } }.reverse
+    # Cache packages list for 2 hours
+    @projects = if Rails.cache.respond_to?(:fetch)
+      Rails.cache.fetch('packages_projects_list', expires_in: 2.hours) do
+        Project.all.select{|p| p.packages.present? }.sort_by{|p| p.packages.sum{|p| p['downloads'] || 0 } }.reverse
+      end
+    else
+      Project.all.select{|p| p.packages.present? }.sort_by{|p| p.packages.sum{|p| p['downloads'] || 0 } }.reverse
+    end
   end
 
-  def images
-    @projects = Project.all.select{|p| p.readme_image_urls.present? }
-  end
 end

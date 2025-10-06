@@ -72,13 +72,13 @@
           Most popular package managers by package count
         </div>
         <ul class="list-group list-group-flush">
-          <% Dependency.group(:ecosystem).count.sort_by{|k,v| v}.reverse.each do |ecosystem, count| %>
+          <% @ecosystem_counts.each do |ecosystem, count| %>
             <li class="list-group-item">
               <%= ecosystem %>
               <small class='ps-3 text-muted'>
                 <i><%= pluralize count, 'project' %></i>
               </small>
-            </li>  
+            </li>
           <% end %>
         </ul>
       </div>
