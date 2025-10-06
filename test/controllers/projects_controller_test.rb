@@ -143,9 +143,70 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
         science_score: 50
       )
     end
-    
+
     get search_projects_url, params: { q: "test" }
     assert_response :success
     # Should have pagination if more than 20 results
+  end
+
+  test "search results are sorted by combined science_score and ranking" do
+    # Simulates root_numpy: high science (95) but low ranking (7.7) = 102.7
+    root_numpy = Project.create!(
+      url: "https://github.com/scikit-hep/root_numpy",
+      name: "root_numpy",
+      science_score: 95,
+      score: 7.7
+    )
+
+    # Simulates main numpy: medium science (75) but high ranking (40) = 115
+    numpy = Project.create!(
+      url: "https://github.com/numpy/numpy",
+      name: "numpy",
+      science_score: 75,
+      score: 40
+    )
+
+    # Low combined score
+    other_numpy = Project.create!(
+      url: "https://github.com/other/numpy",
+      name: "numpy-other",
+      science_score: 65,
+      score: 5
+    )
+
+    get search_projects_url, params: { q: "numpy" }
+    assert_response :success
+
+    projects = assigns(:projects)
+
+    assert_equal 3, projects.length
+    # numpy should be first (75 + 40 = 115)
+    assert_equal numpy.id, projects[0].id
+    # root_numpy should be second (95 + 7.7 = 102.7)
+    assert_equal root_numpy.id, projects[1].id
+    # other_numpy should be third (65 + 5 = 70)
+    assert_equal other_numpy.id, projects[2].id
+  end
+
+  test "search filters out projects with zero science_score" do
+    project_with_score = Project.create!(
+      url: "https://github.com/test/zeroscore",
+      name: "zeroscore-project",
+      science_score: 50
+    )
+
+    project_zero = Project.create!(
+      url: "https://github.com/zero/zeroscore",
+      name: "zeroscore-zero",
+      science_score: 0
+    )
+
+    get search_projects_url, params: { q: "zeroscore" }
+    assert_response :success
+
+    projects = assigns(:projects)
+
+    assert_equal 1, projects.length
+    assert_equal project_with_score.id, projects.first.id
   end
 end

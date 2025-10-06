@@ -38,20 +38,22 @@ class ProjectsController < ApplicationController
   end
 
   def search
-    @scope = Project
-    
+    @scope = Project.where('science_score > 0')
+
     if params[:q].present?
       @scope = @scope.where("url ILIKE ?", "%#{params[:q]}%")
     end
-    
+
     if params[:keywords].present?
       @scope = @scope.keyword(params[:keywords])
     end
-    
+
     if params[:language].present?
       @scope = @scope.language(params[:language])
     end
-    
+
+    @scope = @scope.order(Arel.sql('(science_score + COALESCE(score, 0)) DESC'))
+
     @pagy, @projects = pagy(@scope, limit: 20)
   end
 
