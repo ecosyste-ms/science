@@ -1,48 +1,79 @@
 <% if @project.owner %>
-  <hr>
-  <h2>
-    <%= link_to 'Owner metadata', @project.owner_url, target: :_blank %>
-  </h2>
+  <div class="mb-4">
+    <h3 class="mb-3">
+      <%= link_to 'Owner', @project.owner_url, target: :_blank, class: 'text-decoration-none' %>
+    </h3>
 
-  <ul>
-    <li>
-      Name: <%= @project.owner['name'] %>
-    </li>
-    <li>
-      Login: <%= @project.owner['login'] %>
-    </li>
-    <li>
-      Email: <%= @project.owner['email'] %>
-    </li>
-    <li>
-      Kind: <%= @project.owner['kind'] %>
-    </li>
-    <li>
-      Description: <%= @project.owner['description'] %>
-    </li>
-    <li>
-      Website: <%= @project.owner['website'] %>
-    </li>
-    <li>
-      Location: <%= @project.owner['location'] %>
-    </li>
-    <li>
-      Twitter: <%= @project.owner['twitter'] %>
-    </li>
-    <li>
-      Company: <%= @project.owner['company'] %>
-    </li>
-    <li>
-      Icon url: <%= @project.owner['icon_url'] %>
-    </li>
-    <li>
-      Repositories: <%= @project.owner['repositories_count'] %>
-    </li>
-    <li>
-      Last ynced at: <%= @project.owner['last_synced_at'] %>
-    </li>
-    <li>
-      Profile URL: <%= @project.owner['html_url'] %>
-    </li>
-  </ul>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <ul class="list-unstyled mb-0">
+              <% if @project.owner['name'].present? %>
+                <li class="mb-2">
+                  <strong>Name:</strong> <%= @project.owner['name'] %>
+                </li>
+              <% end %>
+              <% if @project.owner['login'].present? %>
+                <li class="mb-2">
+                  <strong>Login:</strong> <%= @project.owner['login'] %>
+                </li>
+              <% end %>
+              <% if @project.owner['kind'].present? %>
+                <li class="mb-2">
+                  <strong>Kind:</strong> <span class="badge rounded-pill bg-primary"><%= @project.owner['kind'] %></span>
+                </li>
+              <% end %>
+              <% if @project.owner['email'].present? %>
+                <li class="mb-2">
+                  <strong>Email:</strong> <%= @project.owner['email'] %>
+                </li>
+              <% end %>
+              <% if @project.owner['location'].present? %>
+                <li class="mb-2">
+                  <strong>Location:</strong> <%= @project.owner['location'] %>
+                </li>
+              <% end %>
+              <% if @project.owner['company'].present? %>
+                <li class="mb-2">
+                  <strong>Company:</strong> <%= @project.owner['company'] %>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+
+          <div class="col-md-6">
+            <ul class="list-unstyled mb-0">
+              <% if @project.owner['website'].present? %>
+                <li class="mb-2">
+                  <strong>Website:</strong> <%= link_to @project.owner['website'], @project.owner['website'], class: 'text-decoration-none' %>
+                </li>
+              <% end %>
+              <% if @project.owner['twitter'].present? %>
+                <li class="mb-2">
+                  <strong>Twitter:</strong> <%= @project.owner['twitter'] %>
+                </li>
+              <% end %>
+              <% if @project.owner['repositories_count'].present? %>
+                <li class="mb-2">
+                  <strong>Repositories:</strong> <%= number_with_delimiter @project.owner['repositories_count'] %>
+                </li>
+              <% end %>
+              <% if @project.owner['html_url'].present? %>
+                <li class="mb-2">
+                  <strong>Profile:</strong> <%= link_to @project.owner['html_url'], @project.owner['html_url'], class: 'text-decoration-none' %>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+        </div>
+
+        <% if @project.owner['description'].present? %>
+          <div class="mt-3 pt-3 border-top">
+            <p class="text-muted mb-0"><%= @project.owner['description'] %></p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
 <% end %>

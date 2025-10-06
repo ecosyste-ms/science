@@ -568,16 +568,26 @@ class Project < ApplicationRecord
   end
 
   def update_science_score
-    result = science_score_breakdown
-    update_attribute :science_score, result[:score]
+    result = calculate_science_score_breakdown
+    update(science_score: result[:score], science_score_breakdown: result)
   end
 
   def science_score_breakdown
+    # Return stored breakdown from database
+    # This method should only be called from views/API, never calculate on the fly
+    read_attribute(:science_score_breakdown) || {}
+  end
+
+  def calculate_science_score_breakdown
+    # This method should only be called from background jobs
+    # It performs expensive calculations including JOSS IDF analysis
     calculator = ScienceScoreCalculator.new(self)
     calculator.calculate
   end
 
   def joss_idf_score
+    # This method should only be called from background jobs via calculate_science_score_breakdown
+    # It may trigger expensive corpus building if cache is not available
     JossIdfAnalyzer.score_project(self)
   end
 
@@ -1702,6 +1712,27 @@ class Project < ApplicationRecord
     return unless commits.present?
     return unless commits['committers'].present?
     commits['committers'].map{|c| c['email'].split('@')[1].try(:downcase) }.reject{|e| e.nil? || ignored_domains.include?(e) || e.ends_with?('.local') || e.split('.').length ==1  }.group_by(&:itself).transform_values(&:count).sort_by{|k,v| v}.reverse
+  end
+
+  def filtered_commiter_domains
+    # Show top 20 domains plus any academic domains (even if not in top 20)
+    all_domains = commiter_domains || []
+    return [] if all_domains.empty?
+
+    top_20 = all_domains.first(20)
+    academic_domains = all_domains.select { |domain, _count| is_academic_domain?(domain) }
+
+    # Combine and deduplicate while preserving order
+    (top_20 + academic_domains).uniq
+  end
+
+  def is_academic_domain?(domain)
+    return false unless domain.present?
+
+    # Check if domain contains any academic pattern
+    ScienceScoreCalculator::ACADEMIC_DOMAINS.any? do |pattern|
+      domain.include?(pattern)
+    end
   end
 
   def ignored_domains

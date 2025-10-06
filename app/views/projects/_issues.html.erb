@@ -1,128 +1,208 @@
 <% if @project.issue_stats && @project.issue_stats['last_synced_at'] %>
+  <div class="mb-4">
+    <h3 class="mb-3">
+      <%= link_to 'Issues and Pull Requests', @project.issue_stats_url, target: :_blank, class: 'text-decoration-none' %>
+    </h3>
 
-    <hr>
-    <h2>
-      
-      <%= link_to 'Issue and Pull Request metadata', @project.issue_stats_url, target: :_blank %>
-    </h2>
-
-  <% if @project.issue_stats['last_synced_at'] %>
-      <p class="card-subtitle mb-2 text-muted"><i><small>
-        Last synced: <%= distance_of_time_in_words_to_now @project.issue_stats['last_synced_at'] %> ago
-    </small></i></p>
+    <% if @project.issue_stats['last_synced_at'] %>
+      <p class="text-muted mb-3">
+        <small>Last synced: <%= distance_of_time_in_words_to_now @project.issue_stats['last_synced_at'] %> ago</small>
+      </p>
     <% end %>
+
     <% if @project.issue_stats['issues_count'] %>
-      <div class='row'>
-        <div class='col-md-6'>
-          <p>
-            Total issues: <%= number_with_delimiter @project.issue_stats.issues_count %><br>
-            Total pull requests: <%= number_with_delimiter @project.issue_stats.pull_requests_count %><br>
-            Average time to close issues: <%= distance_of_time_in_words_if_present @project.issue_stats.avg_time_to_close_issue %><br>
-            Average time to close pull requests: <%= distance_of_time_in_words_if_present @project.issue_stats.avg_time_to_close_pull_request %><br>
-            Total issue authors: <%= number_with_delimiter @project.issue_stats.issue_authors_count %><br>
-            Total pull request authors: <%= number_with_delimiter @project.issue_stats.pull_request_authors_count %><br>
-            Average comments per issue: <%= rounded_number_with_delimiter @project.issue_stats.avg_comments_per_issue %><br>
-            Average comments per pull request: <%= rounded_number_with_delimiter @project.issue_stats.avg_comments_per_pull_request %><br>
-            Merged pull request: <%= rounded_number_with_delimiter @project.issue_stats.merged_pull_requests_count %><br>
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+          <div class="row g-4">
+            <div class="col-md-6">
+              <h6 class="text-muted text-uppercase small mb-3">All Time</h6>
+              <ul class="list-unstyled mb-0">
+                <li class="mb-2">
+                  <strong>Total issues:</strong> <%= number_with_delimiter @project.issue_stats.issues_count %>
+                </li>
+                <li class="mb-2">
+                  <strong>Total pull requests:</strong> <%= number_with_delimiter @project.issue_stats.pull_requests_count %>
+                </li>
+                <li class="mb-2">
+                  <strong>Average time to close issues:</strong> <%= distance_of_time_in_words_if_present @project.issue_stats.avg_time_to_close_issue %>
+                </li>
+                <li class="mb-2">
+                  <strong>Average time to close pull requests:</strong> <%= distance_of_time_in_words_if_present @project.issue_stats.avg_time_to_close_pull_request %>
+                </li>
+                <li class="mb-2">
+                  <strong>Total issue authors:</strong> <%= number_with_delimiter @project.issue_stats.issue_authors_count %>
+                </li>
+                <li class="mb-2">
+                  <strong>Total pull request authors:</strong> <%= number_with_delimiter @project.issue_stats.pull_request_authors_count %>
+                </li>
+                <li class="mb-2">
+                  <strong>Average comments per issue:</strong> <%= rounded_number_with_delimiter @project.issue_stats.avg_comments_per_issue %>
+                </li>
+                <li class="mb-2">
+                  <strong>Average comments per pull request:</strong> <%= rounded_number_with_delimiter @project.issue_stats.avg_comments_per_pull_request %>
+                </li>
+                <li class="mb-2">
+                  <strong>Merged pull requests:</strong> <%= rounded_number_with_delimiter @project.issue_stats.merged_pull_requests_count %>
+                </li>
+                <li class="mb-2">
+                  <strong>Bot issues:</strong> <%= number_with_delimiter @project.issue_stats.bot_issues_count %>
+                </li>
+                <li class="mb-2">
+                  <strong>Bot pull requests:</strong> <%= number_with_delimiter @project.issue_stats.bot_pull_requests_count %>
+                </li>
+              </ul>
+            </div>
 
-            Bot issues: <%= number_with_delimiter @project.issue_stats.bot_issues_count %><br>
-            Bot pull requests: <%= number_with_delimiter @project.issue_stats.bot_pull_requests_count %>
-          </p>
-        </div>
-        <div class='col-md-6'>
-          <p>
-            Past year issues: <%= number_with_delimiter @project.issue_stats.past_year_issues_count %><br>
-            Past year pull requests: <%= number_with_delimiter @project.issue_stats.past_year_pull_requests_count %><br>
-            Past year average time to close issues: <%= distance_of_time_in_words_if_present @project.issue_stats.past_year_avg_time_to_close_issue %><br>
-            Past year average time to close pull requests: <%= distance_of_time_in_words_if_present @project.issue_stats.past_year_avg_time_to_close_pull_request %><br>
-            Past year issue authors: <%= number_with_delimiter @project.issue_stats.past_year_issue_authors_count %><br>
-            Past year pull request authors: <%= number_with_delimiter @project.issue_stats.past_year_pull_request_authors_count %><br>
-            Past year average comments per issue: <%= rounded_number_with_delimiter @project.issue_stats.past_year_avg_comments_per_issue %><br>
-            Past year average comments per pull request: <%= rounded_number_with_delimiter @project.issue_stats.past_year_avg_comments_per_pull_request %><br>
-            Past year merged pull request: <%= rounded_number_with_delimiter @project.issue_stats.past_year_merged_pull_requests_count %><br>
-            Past year bot issues: <%= number_with_delimiter @project.issue_stats.past_year_bot_issues_count %><br>
-            Past year bot pull requests: <%= number_with_delimiter @project.issue_stats.past_year_bot_pull_requests_count %>
+            <div class="col-md-6">
+              <h6 class="text-muted text-uppercase small mb-3">Past Year</h6>
+              <ul class="list-unstyled mb-0">
+                <li class="mb-2">
+                  <strong>Issues:</strong> <%= number_with_delimiter @project.issue_stats.past_year_issues_count %>
+                </li>
+                <li class="mb-2">
+                  <strong>Pull requests:</strong> <%= number_with_delimiter @project.issue_stats.past_year_pull_requests_count %>
+                </li>
+                <li class="mb-2">
+                  <strong>Average time to close issues:</strong> <%= distance_of_time_in_words_if_present @project.issue_stats.past_year_avg_time_to_close_issue %>
+                </li>
+                <li class="mb-2">
+                  <strong>Average time to close pull requests:</strong> <%= distance_of_time_in_words_if_present @project.issue_stats.past_year_avg_time_to_close_pull_request %>
+                </li>
+                <li class="mb-2">
+                  <strong>Issue authors:</strong> <%= number_with_delimiter @project.issue_stats.past_year_issue_authors_count %>
+                </li>
+                <li class="mb-2">
+                  <strong>Pull request authors:</strong> <%= number_with_delimiter @project.issue_stats.past_year_pull_request_authors_count %>
+                </li>
+                <li class="mb-2">
+                  <strong>Average comments per issue:</strong> <%= rounded_number_with_delimiter @project.issue_stats.past_year_avg_comments_per_issue %>
+                </li>
+                <li class="mb-2">
+                  <strong>Average comments per pull request:</strong> <%= rounded_number_with_delimiter @project.issue_stats.past_year_avg_comments_per_pull_request %>
+                </li>
+                <li class="mb-2">
+                  <strong>Merged pull requests:</strong> <%= rounded_number_with_delimiter @project.issue_stats.past_year_merged_pull_requests_count %>
+                </li>
+                <li class="mb-2">
+                  <strong>Bot issues:</strong> <%= number_with_delimiter @project.issue_stats.past_year_bot_issues_count %>
+                </li>
+                <li class="mb-2">
+                  <strong>Bot pull requests:</strong> <%= number_with_delimiter @project.issue_stats.past_year_bot_pull_requests_count %>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="mt-3 pt-3 border-top">
+            <small class="text-muted">
+              <%= link_to 'View more stats', @project.issue_stats_url, target: :_blank, class: 'text-decoration-none' %>
+            </small>
+          </div>
         </div>
       </div>
-      More stats: <%= link_to @project.issue_stats_url, @project.issue_stats_url, target: :_blank %><br>
-      <hr>
       <% if @project.issue_stats.issue_author_associations_count.any? || @project.issue_stats.pull_request_author_associations_count.any? %>
-      <div class='row'>
-        <div class='col-md-4'>
-          <h4>Issue Author Associations</h4>
-          <ul>
-            <% @project.issue_stats.issue_author_associations_count.each do |author, count| %>
-              <li>
-                <%= author.humanize %>
-                (<%= number_with_delimiter count %>, <%= number_to_percentage count.to_f / @project.issue_stats.issues_count * 100, precision: 2 %>)
-              </li>
-            <% end %>
-          </ul>
+        <div class="card border-0 shadow-sm mb-3">
+          <div class="card-header bg-white border-bottom">
+            <h6 class="mb-0">Author Associations</h6>
+          </div>
+          <div class="card-body">
+            <div class="row g-4">
+              <div class="col-md-6">
+                <h6 class="text-muted text-uppercase small mb-3">Issue Authors</h6>
+                <ul class="list-unstyled mb-0">
+                  <% @project.issue_stats.issue_author_associations_count.each do |author, count| %>
+                    <li class="mb-2">
+                      <span class="badge rounded-pill bg-light text-dark">
+                        <%= author.humanize %>
+                      </span>
+                      <small class="text-muted ms-2">
+                        <%= number_with_delimiter count %> (<%= number_to_percentage count.to_f / @project.issue_stats.issues_count * 100, precision: 1 %>)
+                      </small>
+                    </li>
+                  <% end %>
+                </ul>
+              </div>
+              <div class="col-md-6">
+                <h6 class="text-muted text-uppercase small mb-3">Pull Request Authors</h6>
+                <ul class="list-unstyled mb-0">
+                  <% @project.issue_stats.pull_request_author_associations_count.each do |author, count| %>
+                    <li class="mb-2">
+                      <span class="badge rounded-pill bg-light text-dark">
+                        <%= author.humanize %>
+                      </span>
+                      <small class="text-muted ms-2">
+                        <%= number_with_delimiter count %> (<%= number_to_percentage count.to_f / @project.issue_stats.pull_requests_count * 100, precision: 1 %>)
+                      </small>
+                    </li>
+                  <% end %>
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class='col-md-4'>
-          <h4>Pull Request Author Associations</h4>
-          <ul>
-            <% @project.issue_stats.pull_request_author_associations_count.each do |author, count| %>
-              <li>
-                <%= author.humanize %>
-                (<%= number_with_delimiter count %>, <%= number_to_percentage count.to_f / @project.issue_stats.pull_requests_count * 100, precision: 2 %>)
-              </li>
-            <% end %>
-          </ul>
-        </div>
-      </div>
-      <hr>
       <% end %>
-      <div class='row'>
-        <div class='col-md-4'>
-          <h4>Top Issue Authors</h4>
-          <ul>
-            <% @project.issue_stats.issue_authors.to_h.first(15).each do |author, count| %>
-              <li>
-                <%= author %>
-                (<%= number_with_delimiter count %>)
-              </li>
-            <% end %>
-          </ul>
+
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white border-bottom">
+          <h6 class="mb-0">Top Authors</h6>
         </div>
-        <div class='col-md-4'>
-          <h4>Top Pull Request Authors</h4>
-          <ul>
-            <% @project.issue_stats.pull_request_authors.to_h.first(15).each do |author, count| %>
-              <li>
-                <%= author %>
-                (<%= number_with_delimiter count %>)
-              </li>
-            <% end %>
-          </ul>
+        <div class="card-body">
+          <div class="row g-4">
+            <div class="col-md-6">
+              <h6 class="text-muted text-uppercase small mb-3">Issue Authors</h6>
+              <ul class="list-unstyled mb-0">
+                <% @project.issue_stats.issue_authors.to_h.first(15).each do |author, count| %>
+                  <li class="mb-2">
+                    <strong><%= author %></strong>
+                    <small class="text-muted ms-2">(<%= number_with_delimiter count %>)</small>
+                  </li>
+                <% end %>
+              </ul>
+            </div>
+            <div class="col-md-6">
+              <h6 class="text-muted text-uppercase small mb-3">Pull Request Authors</h6>
+              <ul class="list-unstyled mb-0">
+                <% @project.issue_stats.pull_request_authors.to_h.first(15).each do |author, count| %>
+                  <li class="mb-2">
+                    <strong><%= author %></strong>
+                    <small class="text-muted ms-2">(<%= number_with_delimiter count %>)</small>
+                  </li>
+                <% end %>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
 
-      <hr>
-      <div class='row'>
-        <div class='col-md-4'>
-          <h4>Top Issue Labels</h4>
-          <ul>
-            <% @project.issue_stats.issue_labels_count.to_h.first(30).each do |label, count| %>
-              <li>
-                <%= label %>
-                (<%= number_with_delimiter count %>)
-              </li>
-            <% end %>
-          </ul>
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom">
+          <h6 class="mb-0">Top Labels</h6>
         </div>
-        <div class='col-md-4'>
-          <h4>Top Pull Request Labels</h4>
-          <ul>
-            <% @project.issue_stats.pull_request_labels_count.to_h.first(30).each do |label, count| %>
-              <li>
-                <%= label %>
-                (<%= number_with_delimiter count %>)
-              </li>
-            <% end %>
-          </ul>
+        <div class="card-body">
+          <div class="row g-4">
+            <div class="col-md-6">
+              <h6 class="text-muted text-uppercase small mb-3">Issue Labels</h6>
+              <div class="d-flex flex-wrap gap-2">
+                <% @project.issue_stats.issue_labels_count.to_h.first(30).each do |label, count| %>
+                  <span class="badge rounded-pill bg-light text-dark">
+                    <%= label %> (<%= number_with_delimiter count %>)
+                  </span>
+                <% end %>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <h6 class="text-muted text-uppercase small mb-3">Pull Request Labels</h6>
+              <div class="d-flex flex-wrap gap-2">
+                <% @project.issue_stats.pull_request_labels_count.to_h.first(30).each do |label, count| %>
+                  <span class="badge rounded-pill bg-light text-dark">
+                    <%= label %> (<%= number_with_delimiter count %>)
+                  </span>
+                <% end %>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-
     <% end %>
+  </div>
 <% end %>

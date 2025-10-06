@@ -2,40 +2,55 @@
 <% @meta_description = @project.description %>
 
 <div class="container-md">
-  <h1>
-    <%= @project.to_s %><br/>
-  </h1>
+  <div class="mb-4">
+    <h1 class="mb-3">
+      <%= @project.to_s %>
+    </h1>
 
-  <p>
-    <%= @project.description %> <br/>
-    <%= link_to @project.url, @project.url %>
-  </p>
+    <% if @project.description.present? %>
+      <p class="lead text-muted mb-3">
+        <%= @project.description %>
+      </p>
+    <% end %>
+
+    <% if @project.url.present? %>
+      <p>
+        <%= link_to @project.url, @project.url, class: "text-decoration-none" %>
+      </p>
+    <% end %>
+  </div>
 
   <% if @project.science_score.present? && @project.science_score > 0 %>
-    <div class="card mb-3">
-      <div class="card-header">
-        <h5 class="mb-0">Science Score: <%= number_with_precision(@project.science_score, precision: 1) %>%</h5>
+    <div class="card mb-4 border-0 shadow-sm">
+      <div class="card-header bg-white border-bottom">
+        <h4 class="mb-0">Science Score: <span class="text-primary"><%= number_with_precision(@project.science_score, precision: 1) %>%</span></h4>
       </div>
       <div class="card-body">
         <% breakdown = @project.science_score_breakdown %>
-        <p class="text-muted">This score indicates how likely this project is to be science-related based on various indicators:</p>
-        
-        <ul class="list-group list-group-flush">
-          <% breakdown[:breakdown].each do |key, value| %>
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-              <div>
-                <span class="<%= value[:present] ? 'text-success' : 'text-muted' %>">
-                  <%= value[:present] ? '✓' : '○' %>
-                </span>
-                <strong><%= value[:description] %></strong>
-                <% if value[:details].present? %>
-                  <br>
-                  <small class="text-muted"><%= value[:details] %></small>
-                <% end %>
-              </div>
-            </li>
-          <% end %>
-        </ul>
+        <p class="text-muted mb-3">This score indicates how likely this project is to be science-related based on various indicators:</p>
+
+        <% if breakdown.present? && breakdown[:breakdown].present? %>
+          <ul class="list-group list-group-flush">
+            <% breakdown[:breakdown].each do |key, value| %>
+              <li class="list-group-item border-0 px-0">
+                <div class="d-flex align-items-start">
+                  <span class="me-2 <%= value[:present] ? 'text-success' : 'text-muted' %>" style="font-size: 1.25rem;">
+                    <%= value[:present] ? '✓' : '○' %>
+                  </span>
+                  <div>
+                    <strong><%= value[:description] %></strong>
+                    <% if value[:details].present? %>
+                      <br>
+                      <small class="text-muted"><%= value[:details] %></small>
+                    <% end %>
+                  </div>
+                </div>
+              </li>
+            <% end %>
+          </ul>
+        <% else %>
+          <p class="text-muted"><em>Score breakdown is being calculated...</em></p>
+        <% end %>
       </div>
     </div>
   <% end %>
@@ -43,47 +58,56 @@
   <% if @project.last_synced_at %>
   
     <% if @project.keywords.any? %>
-      <h4>Keywords</h4>
-      <p>
-        <% @project.keywords.each do |keyword| %>
-          <span class="badge bg-light text-dark">
-            <%= keyword %>
-          </span>
-        <% end %>
-      </p>
+      <div class="mb-4">
+        <h4 class="mb-3">Keywords</h4>
+        <div>
+          <% @project.keywords.each do |keyword| %>
+            <span class="badge rounded-pill bg-light text-dark me-2 mb-2">
+              <%= keyword %>
+            </span>
+          <% end %>
+        </div>
+      </div>
     <% end %>
 
     <% if @project.keywords_from_contributors.any? %>
-      <h4>Keywords from Contributors</h4>
-      <p>
-        <% @project.keywords_from_contributors.each do |keyword| %>
-          <span class="badge bg-light text-dark">
-            <%= keyword %>
-          </span>
-        <% end %>
-      </p>
-    <% end %>
-    
-    <% if @project.fields.any? %>
-      <h4>Scientific Fields</h4>
-      <% @project.all_fields_with_confidence.each do |field, confidence| %>
-        <div class="mb-2">
-          <span class="badge bg-<%= confidence > 0.7 ? 'primary' : confidence > 0.5 ? 'info' : 'secondary' %> me-2">
-            <%= field.name %>
-          </span>
-          <small class="text-muted">
-            <%= field.domain_display_name %> - 
-            <%= (confidence * 100).round(0) %>% confidence
-          </small>
+      <div class="mb-4">
+        <h4 class="mb-3">Keywords from Contributors</h4>
+        <div>
+          <% @project.keywords_from_contributors.each do |keyword| %>
+            <span class="badge rounded-pill bg-light text-dark me-2 mb-2">
+              <%= keyword %>
+            </span>
+          <% end %>
         </div>
-      <% end %>
+      </div>
+    <% end %>
+
+    <% if @project.fields.any? %>
+      <div class="mb-4">
+        <h4 class="mb-3">Scientific Fields</h4>
+        <% @project.all_fields_with_confidence.each do |field, confidence| %>
+          <div class="mb-2">
+            <span class="badge rounded-pill bg-<%= confidence > 0.7 ? 'primary' : confidence > 0.5 ? 'info' : 'secondary' %> me-2">
+              <%= field.name %>
+            </span>
+            <small class="text-muted">
+              <%= field.domain_display_name %> -
+              <%= (confidence * 100).round(0) %>% confidence
+            </small>
+          </div>
+        <% end %>
+      </div>
     <% end %>
 
 
-    <p class="card-subtitle mb-2 text-muted"><i><small>
-        Last synced: <%= distance_of_time_in_words_to_now @project.last_synced_at %> ago <br>
-        <%= link_to 'JSON representation', api_v1_project_path(@project) %>
-    </small></i></p>
+    <div class="mb-4">
+      <small class="text-muted">
+        Last synced: <%= distance_of_time_in_words_to_now @project.last_synced_at %> ago
+        &middot;
+        <%= link_to 'JSON representation', api_v1_project_path(@project), class: 'text-decoration-none' %>
+      </small>
+    </div>
 
     <%= render 'repository' %>
     <%= render 'joss' %>
@@ -94,10 +118,6 @@
     <%= render 'issues' %>
     <%= render partial: 'packages', locals: {project: @project } %>
     <%= render 'dependencies' %>
-
-    <p>
-      Score: <%= @project.score %>
-    </p>
   <% else %>
     <p>
       This project has not been synced yet. Check back in a few minutes.

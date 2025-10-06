@@ -1,5 +1,15 @@
 <% if @project.citation_file %>
-  <h2>Citation (<%= link_to @project.citation_file_name, @project.blob_url(@project.citation_file_name),target: :_blank %>)</h2>
-  <pre><%= @project.citation_file %></pre>
-  <%# todo turn into APA or BibTex formats if parsable %>
+  <div class="mb-4">
+    <h3 class="mb-3">
+      Citation
+      <small class="text-muted">
+        (<%= link_to @project.citation_file_name, @project.blob_url(@project.citation_file_name), target: :_blank, class: 'text-decoration-none' %>)
+      </small>
+    </h3>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <pre class="mb-0"><%= @project.citation_file %></pre>
+      </div>
+    </div>
+  </div>
 <% end %>

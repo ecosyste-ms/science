@@ -1,186 +1,221 @@
 <% if project.packages.present? %>
-    <hr>
-    <h2>
-      Package metadata
-    </h2>
+  <div class="mb-4">
+    <h3 class="mb-3">Packages</h3>
 
-    <ul>
-      <li>
-        Total packages: <%= number_with_delimiter project.packages.length %>
-      <li>
-        Total downloads: 
-        <% if project.packages.sum{|p| p['downloads'] || 0 } > 0 %>
-        <ul>
-          <% project.packages.group_by{|p| p['ecosystem'] }.each do |ecosystem, pkgs| %>
-            <% next if pkgs.sum{|p| p['downloads'] || 0 }.zero? %>
-            <li>
-              <%= ecosystem %>:
-              <%= number_with_delimiter pkgs.sum{|p| p['downloads'] || 0 } %>
-              <%= pkgs.first['downloads_period'] %>
-            </li>
-          <% end %>
-        </ul>
-        <% else %>
-          <i>unknown</i>
-        <% end %>
-      </li>
-      <% if project.packages.map{|p| p['docker_downloads_count'] || 0 }.sum > 0 %>
-      <li>
-        Total docker downloads: <%= number_with_delimiter project.packages.map{|p| p['docker_downloads_count'] || 0 }.sum %>
-      </li>
-      <% end %>
-      <li>
-        Total dependent packages: <%= number_with_delimiter project.packages.sum{|p| p['dependent_packages_count'] || 0 } %>
-        <% if project.packages.length > 1 %>
-          <small class='text-muted'>(may contain duplicates)</small>
-        <% end %>
-      </li>
-      <li>
-        Total dependent repositories: <%= number_with_delimiter project.packages.sum{|p| p['dependent_repos_count'] || 0 } %>
-        <% if project.packages.length > 1 %>
-          <small class='text-muted'>(may contain duplicates)</small>
-        <% end %>
-      </li>
-      <li>
-        Total versions: <%= number_with_delimiter project.packages.sum{|p| p['versions_count'] || 0 } %>
-      </li>
-      <% if project.packages.map{|p| p['maintainers'].map{|m| m['uuid'] } }.flatten.uniq.length > 0 %>
-      <li>
-        Total maintainers: <%= number_with_delimiter project.packages.map{|p| p['maintainers'].map{|m| m['uuid'] } }.flatten.uniq.length %>
-      </li>
-      <% end %>
-      <% if project.packages.map{|p| p['advisories'] }.flatten.uniq.length > 0 %>
-      <li>
-        Total advisories: <%= number_with_delimiter project.packages.map{|p| p['advisories'] }.flatten.uniq.length %>
-      </li>
-      <% end %>
-    </ul>
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <ul class="list-unstyled mb-0">
+              <li class="mb-2">
+                <strong>Total packages:</strong> <%= number_with_delimiter project.packages.length %>
+              </li>
+              <li class="mb-2">
+                <strong>Total downloads:</strong>
+                <% if project.packages.sum{|p| p['downloads'] || 0 } > 0 %>
+                  <ul class="list-unstyled ms-3 mt-1">
+                    <% project.packages.group_by{|p| p['ecosystem'] }.each do |ecosystem, pkgs| %>
+                      <% next if pkgs.sum{|p| p['downloads'] || 0 }.zero? %>
+                      <li class="mb-1">
+                        <span class="badge rounded-pill bg-primary"><%= ecosystem %></span>
+                        <%= number_with_delimiter pkgs.sum{|p| p['downloads'] || 0 } %>
+                        <small class="text-muted"><%= pkgs.first['downloads_period'] %></small>
+                      </li>
+                    <% end %>
+                  </ul>
+                <% else %>
+                  <span class="text-muted">unknown</span>
+                <% end %>
+              </li>
+              <% if project.packages.map{|p| p['docker_downloads_count'] || 0 }.sum > 0 %>
+                <li class="mb-2">
+                  <strong>Total docker downloads:</strong> <%= number_with_delimiter project.packages.map{|p| p['docker_downloads_count'] || 0 }.sum %>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <ul class="list-unstyled mb-0">
+              <li class="mb-2">
+                <strong>Total dependent packages:</strong> <%= number_with_delimiter project.packages.sum{|p| p['dependent_packages_count'] || 0 } %>
+                <% if project.packages.length > 1 %>
+                  <br><small class="text-muted">(may contain duplicates)</small>
+                <% end %>
+              </li>
+              <li class="mb-2">
+                <strong>Total dependent repositories:</strong> <%= number_with_delimiter project.packages.sum{|p| p['dependent_repos_count'] || 0 } %>
+                <% if project.packages.length > 1 %>
+                  <br><small class="text-muted">(may contain duplicates)</small>
+                <% end %>
+              </li>
+              <li class="mb-2">
+                <strong>Total versions:</strong> <%= number_with_delimiter project.packages.sum{|p| p['versions_count'] || 0 } %>
+              </li>
+              <% if project.packages.map{|p| p['maintainers'].map{|m| m['uuid'] } }.flatten.uniq.length > 0 %>
+                <li class="mb-2">
+                  <strong>Total maintainers:</strong> <%= number_with_delimiter project.packages.map{|p| p['maintainers'].map{|m| m['uuid'] } }.flatten.uniq.length %>
+                </li>
+              <% end %>
+              <% if project.packages.map{|p| p['advisories'] }.flatten.uniq.length > 0 %>
+                <li class="mb-2">
+                  <strong>Total advisories:</strong> <span class="badge rounded-pill bg-warning text-dark"><%= number_with_delimiter project.packages.map{|p| p['advisories'] }.flatten.uniq.length %></span>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
 
 
     <% project.packages.sort_by{|p| p['rankings']['average'] || 100 }.each do |package| %>
-      <div class='card mb-3'>
-        <div class="card-body pb-1">
-          <div class="d-flex">
-            <div class="flex-grow-1 ms-3 text-break">
-              <h5 class='card-title'>
-                <%= link_to package['registry']['name'], package['registry']['url'] %>: <%= link_to package['name'], package['registry_url'] %>
-              </h5>
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+          <h5 class="card-title mb-2">
+            <%= link_to package['registry']['name'], package['registry']['url'], class: 'text-decoration-none' %>:
+            <%= link_to package['name'], package['registry_url'], class: 'text-decoration-none' %>
+          </h5>
 
-              <p class="card-subtitle mb-2 text-muted">
-                <%= package['description'] %>
-              </p>
+          <% if package['description'].present? %>
+            <p class="text-muted mb-3">
+              <%= package['description'] %>
+            </p>
+          <% end %>
 
-              <ul>
-                <li>
-                  Homepage: <%= package['homepage'] %>
-                </li>
-                <% if package['keywords'].present? %>
-                <li>
-                  Keywords: <%= package['keywords'].join(', ') %>
-                </li>
-                <% end %>
-                <% if package['status'].present? %>
-                <li>
-                  Status: <%= package['status'] %>
-                </li>
-                <% end %>
-                <% if package['documentation_url'].present? %>
-                  <li>
-                    Documentation: <%= link_to package['documentation_url'], package['documentation_url'] %>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <ul class="list-unstyled mb-0">
+                <% if package['homepage'].present? %>
+                  <li class="mb-2">
+                    <strong>Homepage:</strong> <%= link_to package['homepage'], package['homepage'], class: 'text-decoration-none' %>
                   </li>
                 <% end %>
-                <li>
-                  Licenses: <%= package['licenses'] %>
-                </li>
-                <% if package['keywords'].present? %>
-                <li>
-                  Keywords: <%= package['keywords'] %>
-                </li>
+                <% if package['documentation_url'].present? %>
+                  <li class="mb-2">
+                    <strong>Documentation:</strong> <%= link_to package['documentation_url'], package['documentation_url'], class: 'text-decoration-none' %>
+                  </li>
                 <% end %>
-                <li>
-                  Latest release: <%= package['latest_release_number'] %> 
-                  <% if package['latest_release_published_at'] %>
-                    <i>
-                      (published <%= distance_of_time_in_words_to_now package['latest_release_published_at'] %> ago)
-                    </i>
-                  <% end %>
+                <% if package['licenses'].present? %>
+                  <li class="mb-2">
+                    <strong>License:</strong> <span class="badge rounded-pill bg-light text-dark"><%= package['licenses'] %></span>
+                  </li>
+                <% end %>
+                <% if package['status'].present? %>
+                  <li class="mb-2">
+                    <strong>Status:</strong> <span class="badge rounded-pill bg-info text-dark"><%= package['status'] %></span>
+                  </li>
+                <% end %>
+                <% if package['latest_release_number'].present? %>
+                  <li class="mb-2">
+                    <strong>Latest release:</strong> <%= package['latest_release_number'] %>
+                    <% if package['latest_release_published_at'] %>
+                      <br><small class="text-muted">published <%= distance_of_time_in_words_to_now package['latest_release_published_at'] %> ago</small>
+                    <% end %>
+                  </li>
+                <% end %>
+              </ul>
+            </div>
+
+            <div class="col-md-6">
+              <ul class="list-unstyled mb-0">
+                <li class="mb-2">
+                  <strong>Versions:</strong> <%= number_with_delimiter package['versions_count'] %>
                 </li>
-                <li>
-                  Last Synced: <%= package['last_synced_at'] %> 
-                  (<%= distance_of_time_in_words_to_now package['last_synced_at'] %> ago)
+                <li class="mb-2">
+                  <strong>Dependent Packages:</strong> <%= link_to number_with_delimiter(package['dependent_packages_count']), package['dependent_packages_url'].gsub('/api/v1', ''), target: :_blank, class: 'text-decoration-none' %>
                 </li>
-                <li>
-                  Versions: <%= number_with_delimiter package['versions_count'] %>
-                </li>
-                <li>
-                  Dependent Packages: <%= link_to number_with_delimiter(package['dependent_packages_count']), package['dependent_packages_url'].gsub('/api/v1', ''), target: :_blank %>
-                </li>
-                <li>
-                  Dependent Repositories: <%= link_to number_with_delimiter(package['dependent_repos_count']), "https://repos.ecosyste.ms/usage/#{package['ecosystem']}/#{package['name']}", target: :_blank %>
+                <li class="mb-2">
+                  <strong>Dependent Repositories:</strong> <%= link_to number_with_delimiter(package['dependent_repos_count']), "https://repos.ecosyste.ms/usage/#{package['ecosystem']}/#{package['name']}", target: :_blank, class: 'text-decoration-none' %>
                 </li>
                 <% if package['downloads'] %>
-                <li>
-                  Downloads: <%= number_with_delimiter(package['downloads']) %> <%= package['downloads_period'].try(:humanize).try(:gsub,'-', ' ') %> 
-                </li>
+                  <li class="mb-2">
+                    <strong>Downloads:</strong> <%= number_with_delimiter(package['downloads']) %> <small class="text-muted"><%= package['downloads_period'].try(:humanize).try(:gsub,'-', ' ') %></small>
+                  </li>
                 <% end %>
                 <% if package['docker_downloads_count'] %>
-                <li>
-                  Docker Downloads: <%= number_with_delimiter(package['docker_downloads_count']) %>
-                </li>
-                <% end %>
-                <li>
-                  Rankings:
-                  <ul>
-                    <% package['rankings'].sort_by{|k,v| v.nil? ? 100 : v }.each do |k,v| %>
-                      <% next if v.nil? %>
-                      <li>
-                        <%= k.humanize %>: <%= v.round(3) %>%
-                      </li>
-                    <% end%>
-                  </ul>
-                </li>
-                <% if package['maintainers'].any? %>
-                <li>
-                  Maintainers (<%= package['maintainers'].length %>)
-                  <ul>
-                    <% package['maintainers'].each do |maintainer| %>
-                      <li>
-                        <%= link_to (maintainer['login'] || maintainer['uuid']), maintainer['html_url'] %>
-                      </li>
-                    <% end%>
-                  </ul>
-                </li>
-                <% end%>
-                <% if package['metadata'] %>
-                  <% if package['metadata']['funding'] %>
-                    <li>
-                      Funding: 
-                      <ul>
-                        <% Array(package['metadata']['funding']).each do |link| %>
-                          <li>
-                            <%= Array(link).join(': ') %>
-                          </li>
-                        <% end %>
-                      </ul>
-                    </li>
-                  <% end %>
-                <% end %>
-                <% if package['advisories'].any? %>
-                  <li>
-                    Advisories:
-                    <ul>
-                      <% package['advisories'].each do |advisory| %>
-                        <li>
-                          <%= link_to advisory['title'], advisory['url'] %>
-                        </li>
-                      <% end %>
-                    </ul>
+                  <li class="mb-2">
+                    <strong>Docker Downloads:</strong> <%= number_with_delimiter(package['docker_downloads_count']) %>
                   </li>
                 <% end %>
               </ul>
             </div>
           </div>
+
+          <% if package['keywords'].present? %>
+            <div class="mb-3 pt-3 border-top">
+              <h6 class="text-muted text-uppercase small mb-2">Keywords</h6>
+              <div>
+                <% package['keywords'].each do |keyword| %>
+                  <span class="badge rounded-pill bg-light text-dark me-2 mb-2"><%= keyword %></span>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+
+          <% if package['rankings'] && package['rankings'].any?{|k,v| v.present?} %>
+            <div class="mb-3 pt-3 border-top">
+              <h6 class="text-muted text-uppercase small mb-2">Rankings</h6>
+              <div class="row g-2">
+                <% package['rankings'].sort_by{|k,v| v.nil? ? 100 : v }.each do |k,v| %>
+                  <% next if v.nil? %>
+                  <div class="col-md-6">
+                    <strong><%= k.humanize %>:</strong> <%= v.round(1) %>%
+                  </div>
+                <% end%>
+              </div>
+            </div>
+          <% end %>
+
+          <% if package['maintainers']&.any? %>
+            <div class="mb-3 pt-3 border-top">
+              <h6 class="text-muted text-uppercase small mb-2">Maintainers (<%= package['maintainers'].length %>)</h6>
+              <div class="d-flex flex-wrap gap-2">
+                <% package['maintainers'].each do |maintainer| %>
+                  <%= link_to (maintainer['login'] || maintainer['uuid']), maintainer['html_url'], class: 'badge rounded-pill bg-light text-dark text-decoration-none' %>
+                <% end%>
+              </div>
+            </div>
+          <% end%>
+
+          <% if package['metadata']&.dig('funding') %>
+            <div class="mb-3 pt-3 border-top">
+              <h6 class="text-muted text-uppercase small mb-2">Funding</h6>
+              <ul class="list-unstyled mb-0">
+                <% Array(package['metadata']['funding']).each do |link| %>
+                  <li class="mb-1">
+                    <%= Array(link).join(': ') %>
+                  </li>
+                <% end %>
+              </ul>
+            </div>
+          <% end %>
+
+          <% if package['advisories']&.any? %>
+            <div class="pt-3 border-top">
+              <h6 class="text-muted text-uppercase small mb-2">
+                <span class="badge rounded-pill bg-warning text-dark">Advisories (<%= package['advisories'].length %>)</span>
+              </h6>
+              <% advisories_to_show = package['advisories'].first(10) %>
+              <ul class="list-unstyled mb-0">
+                <% advisories_to_show.each do |advisory| %>
+                  <li class="mb-1">
+                    <%= link_to advisory['title'], advisory['url'], class: 'text-decoration-none' %>
+                  </li>
+                <% end %>
+                <% if package['advisories'].length > 10 %>
+                  <li class="mb-1 text-muted">
+                    <small>...and <%= package['advisories'].length - 10 %> more</small>
+                  </li>
+                <% end %>
+              </ul>
+            </div>
+          <% end %>
+
+          <div class="mt-3 pt-3 border-top">
+            <small class="text-muted">Last synced: <%= distance_of_time_in_words_to_now package['last_synced_at'] %> ago</small>
+          </div>
         </div>
       </div>
     <% end %>
-  <% end %>
+  </div>
+<% end %>

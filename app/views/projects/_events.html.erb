@@ -1,23 +1,33 @@
 <% if @project.events %>
-  <hr>
-  <h2>
-    GitHub Events
-  </h2>
-  
-  <h5>Total</h5>
-  <ul>
-    <% @project.events['total'].each do |k,v| %>
-      <li>
-        <%= k.underscore.humanize %>: <%= v %>
-      </li>
-    <% end %>
-  </ul>
-  <h5>Last Year</h5>
-  <ul>
-    <% @project.events['last_year'].each do |k,v| %>
-      <li>
-        <%= k.underscore.humanize %>: <%= v %>
-      </li>
-    <% end %>
-  </ul>
+  <div class="mb-4">
+    <h3 class="mb-3">GitHub Events</h3>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <div class="row g-4">
+          <div class="col-md-6">
+            <h6 class="text-muted text-uppercase small mb-3">Total</h6>
+            <ul class="list-unstyled mb-0">
+              <% @project.events['total'].each do |k,v| %>
+                <li class="mb-2">
+                  <strong><%= k.underscore.humanize %>:</strong> <%= number_with_delimiter v %>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+
+          <div class="col-md-6">
+            <h6 class="text-muted text-uppercase small mb-3">Last Year</h6>
+            <ul class="list-unstyled mb-0">
+              <% @project.events['last_year'].each do |k,v| %>
+                <li class="mb-2">
+                  <strong><%= k.underscore.humanize %>:</strong> <%= number_with_delimiter v %>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 <% end %>

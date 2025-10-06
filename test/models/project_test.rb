@@ -18,7 +18,7 @@ class ProjectTest < ActiveSupport::TestCase
     assert project.science_score > 0
   end
 
-  test "science_score_breakdown returns score and breakdown" do
+  test "calculate_science_score_breakdown returns score and breakdown" do
     project = Project.create!(url: 'https://github.com/test/science-project')
     project.repository = {
       'metadata' => {
@@ -30,9 +30,9 @@ class ProjectTest < ActiveSupport::TestCase
     }
     project.citation_file = 'test citation content'
     project.readme = 'This paper has DOI: 10.1234/example'
-    
-    result = project.science_score_breakdown
-    
+
+    result = project.calculate_science_score_breakdown
+
     assert_not_nil result[:score]
     assert_not_nil result[:breakdown]
     assert result[:score] > 0
@@ -41,11 +41,11 @@ class ProjectTest < ActiveSupport::TestCase
     assert result[:breakdown][:has_doi_in_readme][:present]
   end
 
-  test "science_score_breakdown handles missing data gracefully" do
+  test "calculate_science_score_breakdown handles missing data gracefully" do
     project = Project.create!(url: 'https://github.com/test/basic-project')
-    
-    result = project.science_score_breakdown
-    
+
+    result = project.calculate_science_score_breakdown
+
     assert_not_nil result[:score]
     assert_equal 0.0, result[:score]
     assert_not result[:breakdown][:has_citation_file][:present]
@@ -205,5 +205,50 @@ class ProjectTest < ActiveSupport::TestCase
     )
 
     assert_includes Project.should_sync, project
+  end
+
+  test "filtered_commiter_domains returns top 20 plus academic domains" do
+    project = Project.create!(url: 'https://github.com/test/project')
+
+    # Create 25 domains: 20 non-academic, 5 academic
+    committers = []
+
+    # Add 20 non-academic domains with decreasing counts
+    20.times do |i|
+      count = 100 - i
+      count.times do
+        committers << { 'email' => "user#{i}@company#{i}.com" }
+      end
+    end
+
+    # Add 5 academic domains with low counts (would be outside top 20)
+    3.times { committers << { 'email' => 'researcher@mit.edu' } }
+    2.times { committers << { 'email' => 'scientist@ox.ac.uk' } }
+    1.times { committers << { 'email' => 'prof@ethz.ch' } }
+
+    project.commits = { 'committers' => committers }
+
+    filtered = project.filtered_commiter_domains
+    domain_names = filtered.map(&:first)
+
+    # Should have top 20 companies plus 3 academic domains = 23 total
+    assert_equal 23, filtered.length
+    assert_includes domain_names, 'mit.edu'
+    assert_includes domain_names, 'ox.ac.uk'
+    assert_includes domain_names, 'ethz.ch'
+    assert_includes domain_names, 'company0.com'
+    assert_includes domain_names, 'company19.com'
+  end
+
+  test "is_academic_domain? identifies academic domains" do
+    project = Project.create!(url: 'https://github.com/test/project')
+
+    assert project.is_academic_domain?('mit.edu')
+    assert project.is_academic_domain?('oxford.ac.uk')
+    assert project.is_academic_domain?('ethz.ch')
+    assert project.is_academic_domain?('nasa.gov')
+
+    assert_not project.is_academic_domain?('google.com')
+    assert_not project.is_academic_domain?('microsoft.com')
   end
 end

@@ -1,70 +1,112 @@
 <% if @project.commits && @project.commits['last_synced_at'] %>
-    <hr>
-    <h2>
-      <%= link_to 'Committers metadata', @project.commits_url, target: :_blank %>
-    </h2>
+  <div class="mb-4">
+    <h3 class="mb-3">
+      <%= link_to 'Committers', @project.commits_url, target: :_blank, class: 'text-decoration-none' %>
+    </h3>
 
     <% if @project.commits['last_synced_at'] %>
-      <p class="card-subtitle mb-2 text-muted"><i><small>
-        Last synced: <%= distance_of_time_in_words_to_now @project.commits['last_synced_at'] %> ago
-    </small></i></p>
+      <p class="text-muted mb-3">
+        <small>Last synced: <%= distance_of_time_in_words_to_now @project.commits['last_synced_at'] %> ago</small>
+      </p>
     <% end %>
+
     <% if @project.commits['total_commits'] %>
-      <div class='row'>
-        <div class='col-md-6'>
-          <p>
-            Total Commits: <%= number_with_delimiter @project.commits['total_commits'] %><br>
-            Total Committers: <%= number_with_delimiter @project.commits['total_committers'] %><br>
-            Avg Commits per committer: <%= number_with_delimiter @project.commits['mean_commits'].round(3) %><br>
-            Development Distribution Score (<a href='https://report.opensustain.tech/chapters/development-distribution-score.html' target="_blank">DDS</a>): <%= @project.commits['dds'].round(3) %><br/>
-          </p>
-        </div>
-        <div class='col-md-6'>
-          <% if @project.commits['past_year_total_commits'] %>
-            <p>
-              Commits in past year: <%= number_with_delimiter @project.commits['past_year_total_commits'] %><br>
-              Committers  in past year: <%= number_with_delimiter @project.commits['past_year_total_committers'] %><br>
-              Avg Commits per committer in past year: <%= number_with_delimiter @project.commits['past_year_mean_commits'].round(3) %><br>
-              Development Distribution Score (<a href='https://report.opensustain.tech/chapters/development-distribution-score.html' target="_blank">DDS</a>)  in past year: <%= @project.commits['past_year_dds'].round(3) %><br/>
-            </p>
-          <% end %>
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+          <div class="row g-4">
+            <div class="col-md-6">
+              <h6 class="text-muted text-uppercase small mb-3">All Time</h6>
+              <ul class="list-unstyled mb-0">
+                <li class="mb-2">
+                  <strong>Total Commits:</strong> <%= number_with_delimiter @project.commits['total_commits'] %>
+                </li>
+                <li class="mb-2">
+                  <strong>Total Committers:</strong> <%= number_with_delimiter @project.commits['total_committers'] %>
+                </li>
+                <li class="mb-2">
+                  <strong>Avg Commits per committer:</strong> <%= number_with_delimiter @project.commits['mean_commits'].round(3) %>
+                </li>
+                <li class="mb-2">
+                  <strong>Development Distribution Score (<%= link_to 'DDS', 'https://report.opensustain.tech/chapters/development-distribution-score.html', target: "_blank", class: 'text-decoration-none' %>):</strong> <%= @project.commits['dds'].round(3) %>
+                </li>
+              </ul>
+            </div>
+
+            <% if @project.commits['past_year_total_commits'] %>
+              <div class="col-md-6">
+                <h6 class="text-muted text-uppercase small mb-3">Past Year</h6>
+                <ul class="list-unstyled mb-0">
+                  <li class="mb-2">
+                    <strong>Commits:</strong> <%= number_with_delimiter @project.commits['past_year_total_commits'] %>
+                  </li>
+                  <li class="mb-2">
+                    <strong>Committers:</strong> <%= number_with_delimiter @project.commits['past_year_total_committers'] %>
+                  </li>
+                  <li class="mb-2">
+                    <strong>Avg Commits per committer:</strong> <%= number_with_delimiter @project.commits['past_year_mean_commits'].round(3) %>
+                  </li>
+                  <li class="mb-2">
+                    <strong>Development Distribution Score (<%= link_to 'DDS', 'https://report.opensustain.tech/chapters/development-distribution-score.html', target: "_blank", class: 'text-decoration-none' %>):</strong> <%= @project.commits['past_year_dds'].round(3) %>
+                  </li>
+                </ul>
+              </div>
+            <% end %>
+          </div>
         </div>
       </div>
 
-    <table class='table'>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Commits</th>
-        </tr>
-      </thead>
-      <tbody>        
-        <% @project.commits['committers'].first(30).each do |committer| %>
-          <tr>
-            <td><%= link_to_unless committer['login'].blank?, committer['name'], "https://github.com/#{committer['login']}" %></td>
-            <td><%= obfustcate_email(committer['email']) %></td>
-            <td><%= committer['count'] %></td>
-          </tr>
-        <% end %>
-        <% if @project.commits['total_committers'] > 30 %>
-          <tr>
-            <td colspan='3'>
-              <i>
-              and <a href='<%= @project.commits_url %>'><%= @project.commits['total_committers'] - 30 %> more...</a>
-              </i>
-            </td>
-          </tr>
-        <%end %>
-      </tbody>
-    </table>
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white border-bottom">
+          <h6 class="mb-0">Top Committers</h6>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th class="border-0">Name</th>
+                <th class="border-0">Email</th>
+                <th class="border-0">Commits</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @project.commits['committers'].first(30).each do |committer| %>
+                <tr>
+                  <td><%= link_to_unless committer['login'].blank?, committer['name'], "https://github.com/#{committer['login']}", class: 'text-decoration-none' %></td>
+                  <td><small class="text-muted"><%= obfustcate_email(committer['email']) %></small></td>
+                  <td><%= number_with_delimiter committer['count'] %></td>
+                </tr>
+              <% end %>
+              <% if @project.commits['total_committers'] > 30 %>
+                <tr>
+                  <td colspan="3" class="text-muted">
+                    <small>
+                      and <%= link_to number_with_delimiter(@project.commits['total_committers'] - 30) + ' more...', @project.commits_url, class: 'text-decoration-none' %>
+                    </small>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-    <h4>Committer domains:</h4>
-    <ul>
-      <% @project.commiter_domains.each do |k,v| %>
-        <li><%= link_to k, "http://#{k}", target: :_blank %>: <%= v %></li>
+      <% filtered_domains = @project.filtered_commiter_domains %>
+      <% if filtered_domains.any? %>
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white border-bottom">
+            <h6 class="mb-0">Committer Domains <small class="text-muted">(Top 20 + Academic)</small></h6>
+          </div>
+          <div class="card-body">
+            <div class="d-flex flex-wrap gap-2">
+              <% filtered_domains.each do |k,v| %>
+                <span class="badge rounded-pill <%= @project.is_academic_domain?(k) ? 'bg-success text-white' : 'bg-light text-dark' %>">
+                  <%= link_to k, "http://#{k}", target: :_blank, class: "text-decoration-none #{@project.is_academic_domain?(k) ? 'text-white' : 'text-dark'}" %>: <%= v %>
+                </span>
+              <% end %>
+            </div>
+          </div>
+        </div>
       <% end %>
-    </ul>  
     <% end %>
-
-  <% end %>
+  </div>
+<% end %>

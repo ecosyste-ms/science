@@ -1486,3 +1486,9 @@ a.project-badge {
 .scrollable-window--vulnerability-list {
 
 }
+
+/* README images - prevent overflow */
+.card img {
+  max-width: 100%;
+  height: auto;
+}

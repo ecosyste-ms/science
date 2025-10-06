@@ -1,137 +1,153 @@
 <% if @project.repository %>
-    <h2>
-      
-      <%= link_to 'Repository metadata', @project.repos_url, target: :_blank %>
-    </h2>
-
-    <p>
-      <%= @project.repository['description'] %>
-    </p>
-
-    <ul>
-      <li>
-        Host: <%= @project.repository['host']['name'] %>
-      </li>
-      <li>
-        URL: <%= link_to @project['url'], @project['url'] %>
-      </li>
-      <li>
-        Owner: <%= @project.repository['owner'] %>
-      </li>
-      <% if @project.repository['license'] %>
-      <li>
-        License: <%= @project.repository['license'] %>
-      </li>
-      <% end %>
-      <% if @project.repository['archived'] %>
-      <li>
-        Archived: <%= @project.repository['archived'] %>
-      </li>
-      <% end %>
-      <% if @project.repository['fork'] %>
-      <li>
-        Fork: <%= @project.repository['fork'] %> (<%= @project.repository['source_name'] %>)
-      </li>
-      <% end %>
-      <li>
-        Created: <%= @project.repository['created_at'] %> 
-        (<%= distance_of_time_in_words_to_now @project.repository['created_at'] %> ago)
-      </li>
-      <li>
-        Default Branch: <%= @project.repository['default_branch'] %>
-      </li>
-      <% if @project.repository['pushed_at'] %> 
-      <li>
-        Last Pushed: <%= @project.repository['pushed_at'] %> 
-        (<%= distance_of_time_in_words_to_now @project.repository['pushed_at'] %> ago)
-      </li>
-      <% end %>
-      <li>
-        Last Synced: <%= @project.repository['last_synced_at'] %> 
-        (<%= distance_of_time_in_words_to_now @project.repository['last_synced_at'] %> ago)
-        <% if @project.repository['latest_commit_sha'] %>
-          (<%= @project.repository['latest_commit_sha'] %>)
-        <% end %>
-      </li>
-      <% if @project.repository['topics'].any? %>
-      <li>
-        Topics: <%= @project.repository['topics'].join(', ') %>
-      </li>
-      <% end %>
-      <% if @project.repository['language'] %>
-      <li>
-        Language: <%= @project.repository['language'] %>
-      </li>
-      <% end %>
-      <% if @project.repository['homepage'] %>
-      <li>
-        Homepage: <%= link_to @project.repository['homepage'], @project.repository['homepage'] %>
-      </li>
-      <% end %>
-      <% if @project.repository['size'] %>
-      <li>
-        Size: <%= number_to_human_size @project.repository['size']*1000 %>
-      </li>
-      <% end %>
-      <li>
-        Stars: <%= number_with_delimiter @project.repository['stargazers_count'] %>
-      </li>
-      <% if  @project.repository['subscribers_count'] %>
-      <li>
-        Watchers: <%= number_with_delimiter @project.repository['subscribers_count'] %>
-      </li>
-      <% end %>
-      <li>
-        Forks: <%= number_with_delimiter @project.repository['forks_count'] %>
-      </li>
-      <li>
-        Open Issues: <%= number_with_delimiter @project.repository['open_issues_count'] %>
-      </li>
-      <li>
-        Releases: <%= link_to number_with_delimiter(@project.releases.count), project_releases_path(@project) %>
-      </li>
-      <% if @project.repository['metadata']  %>
-        <% if @project.repository['metadata']['files'] %>
-          <li>
-            Metadata Files:
-            <ul>
-              <% @project.repository['metadata']['files'].each do |k,v| %>
-                <% next if v.blank? %>
-                <li>
-                  <%= k.humanize %>: <%= v %>
-                </li>
-              <% end %>
-            </ul>
-          </li>
-        <% end %>
-        <% if @project.repository['metadata']['funding'] && @project.repository['metadata']['funding'].is_a?(Array) %>
-          <li>
-            Funding: 
-            <ul>
-              <% @project.repository['metadata']['funding'].each do |k,v| %>
-                <li>
-                  <%= k.humanize %>: <%= Array(v).join(', ') %>
-                </li>
-              <% end %>
-            </ul>
-          </li>
-        <% end %>
-      <% end %>
-    </ul>
-
-    <% if @project.readme %>
-      <h2>
-        <%= link_to @project.readme_file_name, @project.readme_url, target: :_blank %>
+    <div class="mb-4">
+      <h2 class="mb-3">
+        <%= link_to 'Repository', @project.repos_url, target: :_blank, class: 'text-decoration-none' %>
       </h2>
 
-      <% if @project.readme_is_markdown? %>
-        <div class='card p-2'>
-          <%== render_markdown @project.readme %>
-        </div>
-      <% else %>
-        <pre class='card p-2'>
-          <%== @project.readme %>
-        </pre>
+      <% if @project.repository['description'].present? %>
+        <p class="text-muted mb-3">
+          <%= @project.repository['description'] %>
+        </p>
       <% end %>
+
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <h6 class="text-muted text-uppercase small mb-2">Basic Info</h6>
+              <ul class="list-unstyled mb-0">
+                <li class="mb-2">
+                  <strong>Host:</strong> <%= @project.repository['host']['name'] %>
+                </li>
+                <li class="mb-2">
+                  <strong>Owner:</strong> <%= @project.repository['owner'] %>
+                </li>
+                <% if @project.repository['license'] %>
+                  <li class="mb-2">
+                    <strong>License:</strong> <span class="badge rounded-pill bg-light text-dark"><%= @project.repository['license'] %></span>
+                  </li>
+                <% end %>
+                <% if @project.repository['language'] %>
+                  <li class="mb-2">
+                    <strong>Language:</strong> <span class="badge rounded-pill bg-primary"><%= @project.repository['language'] %></span>
+                  </li>
+                <% end %>
+                <% if @project.repository['default_branch'] %>
+                  <li class="mb-2">
+                    <strong>Default Branch:</strong> <%= @project.repository['default_branch'] %>
+                  </li>
+                <% end %>
+                <% if @project.repository['homepage'] %>
+                  <li class="mb-2">
+                    <strong>Homepage:</strong> <%= link_to @project.repository['homepage'], @project.repository['homepage'], class: 'text-decoration-none' %>
+                  </li>
+                <% end %>
+                <% if @project.repository['size'] %>
+                  <li class="mb-2">
+                    <strong>Size:</strong> <%= number_to_human_size @project.repository['size']*1000 %>
+                  </li>
+                <% end %>
+              </ul>
+            </div>
+
+            <div class="col-md-6">
+              <h6 class="text-muted text-uppercase small mb-2">Statistics</h6>
+              <ul class="list-unstyled mb-0">
+                <li class="mb-2">
+                  <strong>Stars:</strong> <%= number_with_delimiter @project.repository['stargazers_count'] %>
+                </li>
+                <% if @project.repository['subscribers_count'] %>
+                  <li class="mb-2">
+                    <strong>Watchers:</strong> <%= number_with_delimiter @project.repository['subscribers_count'] %>
+                  </li>
+                <% end %>
+                <li class="mb-2">
+                  <strong>Forks:</strong> <%= number_with_delimiter @project.repository['forks_count'] %>
+                </li>
+                <li class="mb-2">
+                  <strong>Open Issues:</strong> <%= number_with_delimiter @project.repository['open_issues_count'] %>
+                </li>
+                <li class="mb-2">
+                  <strong>Releases:</strong> <%= link_to number_with_delimiter(@project.releases.count), project_releases_path(@project), class: 'text-decoration-none' %>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <% if @project.repository['archived'] || @project.repository['fork'] %>
+            <div class="mt-3 pt-3 border-top">
+              <% if @project.repository['archived'] %>
+                <span class="badge rounded-pill bg-warning text-dark me-2">Archived</span>
+              <% end %>
+              <% if @project.repository['fork'] %>
+                <span class="badge rounded-pill bg-info text-dark">Fork of <%= @project.repository['source_name'] %></span>
+              <% end %>
+            </div>
+          <% end %>
+
+          <% if @project.repository['topics'].any? %>
+            <div class="mt-3 pt-3 border-top">
+              <h6 class="text-muted text-uppercase small mb-2">Topics</h6>
+              <div>
+                <% @project.repository['topics'].each do |topic| %>
+                  <span class="badge rounded-pill bg-light text-dark me-2 mb-2"><%= topic %></span>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+
+          <div class="mt-3 pt-3 border-top">
+            <small class="text-muted">
+              Created <%= distance_of_time_in_words_to_now @project.repository['created_at'] %> ago
+              <% if @project.repository['pushed_at'] %>
+                &middot; Last pushed <%= distance_of_time_in_words_to_now @project.repository['pushed_at'] %> ago
+              <% end %>
+            </small>
+          </div>
+
+          <% if @project.repository['metadata']  %>
+            <% if @project.repository['metadata']['files'] && @project.repository['metadata']['files'].any?{|k,v| v.present?} %>
+              <div class="mt-3 pt-3 border-top">
+                <h6 class="text-muted text-uppercase small mb-2">Metadata Files</h6>
+                <div class="d-flex flex-wrap gap-2">
+                  <% @project.repository['metadata']['files'].each do |k,v| %>
+                    <% next if v.blank? %>
+                    <span class="badge rounded-pill bg-success text-white"><%= k.humanize %></span>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+
+            <% if @project.repository['metadata']['funding'] && @project.repository['metadata']['funding'].is_a?(Array) && @project.repository['metadata']['funding'].any? %>
+              <div class="mt-3 pt-3 border-top">
+                <h6 class="text-muted text-uppercase small mb-2">Funding</h6>
+                <ul class="list-unstyled mb-0">
+                  <% @project.repository['metadata']['funding'].each do |k,v| %>
+                    <li class="mb-1">
+                      <strong><%= k.humanize %>:</strong> <%= Array(v).join(', ') %>
+                    </li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <% if @project.readme %>
+      <div class="mb-4">
+        <h4 class="mb-3">
+          <%= link_to @project.readme_file_name, @project.readme_url, target: :_blank, class: 'text-decoration-none' %>
+        </h4>
+
+        <% if @project.readme_is_markdown? %>
+          <div class="card border-0 shadow-sm p-3">
+            <%== render_markdown @project.readme %>
+          </div>
+        <% else %>
+          <pre class="card border-0 shadow-sm p-3"><%== @project.readme %></pre>
+        <% end %>
+      </div>
     <% end %>
   <% end %>

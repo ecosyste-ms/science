@@ -1,62 +1,81 @@
 <% if @project.joss_metadata.present? %>
-  <h3>JOSS Publication</h3>
-  <div class="card mb-3">
-    <div class="card-body">
-      <h5 class="card-title"><%= @project.joss_metadata['title'] %></h5>
-      
-      <p class="card-text">
-        <strong>Published:</strong> <%= Date.parse(@project.joss_metadata['published_at']).strftime("%B %d, %Y") if @project.joss_metadata['published_at'] %><br>
-        <strong>DOI:</strong> <%= link_to @project.joss_metadata['doi'], "https://doi.org/#{@project.joss_metadata['doi']}", target: "_blank" if @project.joss_metadata['doi'] %><br>
-        <strong>Volume:</strong> <%= @project.joss_metadata['volume'] %>, 
-        <strong>Issue:</strong> <%= @project.joss_metadata['issue'] %>, 
-        <strong>Page:</strong> <%= @project.joss_metadata['page'] %>
-      </p>
+  <div class="mb-4">
+    <h3 class="mb-3">JOSS Publication</h3>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title mb-3"><%= @project.joss_metadata['title'] %></h5>
 
-      <% if @project.joss_metadata['authors'].present? %>
-        <p>
-          <strong>Authors:</strong><br>
-          <% @project.joss_metadata['authors'].each do |author| %>
-            <%= author['given_name'] %> <%= author['middle_name'] %> <%= author['last_name'] %>
-            <% if author['orcid'].present? %>
-              <%= link_to image_tag("https://orcid.org/sites/default/files/images/orcid_16x16.png", alt: "ORCID", style: "width: 16px; height: 16px;"), 
-                          "https://orcid.org/#{author['orcid']}", target: "_blank", title: "ORCID: #{author['orcid']}" %>
+        <div class="mb-3">
+          <div class="row g-2">
+            <% if @project.joss_metadata['published_at'] %>
+              <div class="col-md-4">
+                <strong class="text-muted small">Published</strong>
+                <div><%= Date.parse(@project.joss_metadata['published_at']).strftime("%B %d, %Y") %></div>
+              </div>
             <% end %>
-            <br>
-            <small class="text-muted"><%= author['affiliation'] %></small><br>
-          <% end %>
-        </p>
-      <% end %>
+            <% if @project.joss_metadata['doi'] %>
+              <div class="col-md-8">
+                <strong class="text-muted small">DOI</strong>
+                <div><%= link_to @project.joss_metadata['doi'], "https://doi.org/#{@project.joss_metadata['doi']}", target: "_blank", class: 'text-decoration-none' %></div>
+              </div>
+            <% end %>
+          </div>
+        </div>
 
-      <% if @project.joss_metadata['editor_name'].present? %>
-        <p>
-          <strong>Editor:</strong> 
-          <%= @project.joss_metadata['editor_name'] %>
-          <% if @project.joss_metadata['editor_orcid'].present? %>
-            <%= link_to image_tag("https://orcid.org/sites/default/files/images/orcid_16x16.png", alt: "ORCID", style: "width: 16px; height: 16px;"), 
-                        "https://orcid.org/#{@project.joss_metadata['editor_orcid']}", target: "_blank", title: "ORCID: #{@project.joss_metadata['editor_orcid']}" %>
-          <% end %>
-        </p>
-      <% end %>
+        <div class="mb-3 text-muted">
+          <small>
+            Volume <%= @project.joss_metadata['volume'] %>, Issue <%= @project.joss_metadata['issue'] %>, Page <%= @project.joss_metadata['page'] %>
+          </small>
+        </div>
 
-      <% if @project.joss_metadata['tags'].present? %>
-        <p>
-          <strong>Tags:</strong><br>
-          <% @project.joss_metadata['tags'].split(',').each do |tag| %>
-            <span class="badge bg-secondary"><%= tag.strip %></span>
-          <% end %>
-        </p>
-      <% end %>
+        <% if @project.joss_metadata['authors'].present? %>
+          <div class="mb-3 pt-3 border-top">
+            <h6 class="text-muted text-uppercase small mb-2">Authors</h6>
+            <% @project.joss_metadata['authors'].each do |author| %>
+              <div class="mb-2">
+                <%= author['given_name'] %> <%= author['middle_name'] %> <%= author['last_name'] %>
+                <% if author['orcid'].present? %>
+                  <%= link_to image_tag("https://orcid.org/sites/default/files/images/orcid_16x16.png", alt: "ORCID", style: "width: 16px; height: 16px;"),
+                              "https://orcid.org/#{author['orcid']}", target: "_blank", title: "ORCID: #{author['orcid']}" %>
+                <% end %>
+                <br>
+                <small class="text-muted"><%= author['affiliation'] %></small>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
 
-      <div class="btn-group" role="group">
-        <% if @project.joss_metadata['pdf_url'].present? %>
-          <%= link_to "View PDF", @project.joss_metadata['pdf_url'], target: "_blank", class: "btn btn-sm btn-outline-primary" %>
+        <% if @project.joss_metadata['editor_name'].present? %>
+          <div class="mb-3 pt-3 border-top">
+            <h6 class="text-muted text-uppercase small mb-2">Editor</h6>
+            <%= @project.joss_metadata['editor_name'] %>
+            <% if @project.joss_metadata['editor_orcid'].present? %>
+              <%= link_to image_tag("https://orcid.org/sites/default/files/images/orcid_16x16.png", alt: "ORCID", style: "width: 16px; height: 16px;"),
+                          "https://orcid.org/#{@project.joss_metadata['editor_orcid']}", target: "_blank", title: "ORCID: #{@project.joss_metadata['editor_orcid']}" %>
+            <% end %>
+          </div>
         <% end %>
-        <% if @project.joss_metadata['paper_review'].present? %>
-          <%= link_to "Review Thread", @project.joss_metadata['paper_review'], target: "_blank", class: "btn btn-sm btn-outline-secondary" %>
+
+        <% if @project.joss_metadata['tags'].present? %>
+          <div class="mb-3 pt-3 border-top">
+            <h6 class="text-muted text-uppercase small mb-2">Tags</h6>
+            <% @project.joss_metadata['tags'].split(',').each do |tag| %>
+              <span class="badge rounded-pill bg-light text-dark me-2 mb-2"><%= tag.strip %></span>
+            <% end %>
+          </div>
         <% end %>
-        <% if @project.joss_metadata['software_archive'].present? %>
-          <%= link_to "Software Archive", @project.joss_metadata['software_archive'], target: "_blank", class: "btn btn-sm btn-outline-secondary" %>
-        <% end %>
+
+        <div class="pt-3 border-top">
+          <% if @project.joss_metadata['pdf_url'].present? %>
+            <%= link_to "View PDF", @project.joss_metadata['pdf_url'], target: "_blank", class: "btn btn-sm btn-primary rounded-pill me-2" %>
+          <% end %>
+          <% if @project.joss_metadata['paper_review'].present? %>
+            <%= link_to "Review Thread", @project.joss_metadata['paper_review'], target: "_blank", class: "btn btn-sm btn-outline-secondary rounded-pill me-2" %>
+          <% end %>
+          <% if @project.joss_metadata['software_archive'].present? %>
+            <%= link_to "Software Archive", @project.joss_metadata['software_archive'], target: "_blank", class: "btn btn-sm btn-outline-secondary rounded-pill" %>
+          <% end %>
+        </div>
       </div>
     </div>
   </div>
