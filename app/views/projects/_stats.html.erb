@@ -14,19 +14,19 @@
         <div class="card-body">
           <h3 class="text-success"><%= number_with_delimiter(@stats[:scientific_projects]) %></h3>
           <p class="text-muted mb-0">Scientific Projects</p>
-          <small class="text-muted">(score ≥ 50)</small>
         </div>
       </div>
     </div>
     
     <div class="col-md-3 col-sm-6 mb-3">
-      <div class="card text-center">
-        <div class="card-body">
-          <h3 class="text-info"><%= number_with_delimiter(@stats[:highly_scientific_projects]) %></h3>
-          <p class="text-muted mb-0">Highly Scientific</p>
-          <small class="text-muted">(score ≥ 75)</small>
+      <%= link_to institutional_owners_path, class: "text-decoration-none" do %>
+        <div class="card text-center">
+          <div class="card-body">
+            <h3 class="text-info"><%= number_with_delimiter(@stats[:institutional_owners]) %></h3>
+            <p class="text-muted mb-0">Institutional Owners</p>
+          </div>
         </div>
-      </div>
+      <% end %>
     </div>
     
     <div class="col-md-3 col-sm-6 mb-3">

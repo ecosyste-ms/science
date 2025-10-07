@@ -1169,7 +1169,10 @@ class Project < ApplicationRecord
 
     # JOSS stats
     joss_count = Project.with_joss.count
-    
+
+    # Institutional owners stats
+    institutional_owners_count = Owner.institutional.count
+
     # Language distribution (top 10)
     language_distribution = Project.with_repository
       .where('science_score > 0')
@@ -1179,7 +1182,7 @@ class Project < ApplicationRecord
       .count
       .sort_by { |_, count| -count }
       .first(10)
-    
+
     {
       total_projects: total_projects,
       scored_projects: scored_projects,
@@ -1190,6 +1193,7 @@ class Project < ApplicationRecord
       projects_with_readme: with_readme_count,
       projects_with_packages: with_packages_count,
       joss_projects: joss_count,
+      institutional_owners: institutional_owners_count,
       score_distribution: score_distribution,
       top_languages: language_distribution
     }

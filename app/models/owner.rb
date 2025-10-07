@@ -12,9 +12,9 @@ class Owner < ApplicationRecord
 
   scope :organizations, -> { where(kind: 'organization') }
   scope :institutional, -> {
-    organizations.where("website IS NOT NULL AND website != ''").select do |owner|
-      owner.institutional?
-    end
+    # Build SQL conditions to match any academic domain
+    conditions = ACADEMIC_DOMAINS.map { |domain| "LOWER(website) LIKE '%#{sanitize_sql_like(domain)}%'" }.join(' OR ')
+    organizations.where("website IS NOT NULL AND website != '' AND (#{conditions})")
   }
 
   def institutional?
