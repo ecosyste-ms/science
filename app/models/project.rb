@@ -1073,7 +1073,7 @@ class Project < ApplicationRecord
     puts "Grand total GitHub projects: #{total_stats[:created] + total_stats[:existing]}"
   end
 
-  def self.github_owners(min_science_score = 50)
+  def self.github_owners(min_science_score = 20)
     # Extract unique GitHub owner names from projects with reasonable science score
     owners = []
     
@@ -1092,8 +1092,8 @@ class Project < ApplicationRecord
   end
 
   def self.scientific_github_owners
-    # Convenience method for owners from scientific projects (score >= 50)
-    github_owners(50)
+    # Convenience method for owners from scientific projects (score >= 20)
+    github_owners(20)
   end
 
   def self.import_from_ost
@@ -1335,7 +1335,7 @@ class Project < ApplicationRecord
     puts "Grand total GitHub projects: #{total_created + total_existing}"
   end
 
-  def self.import_all_github_owners(limit = nil, min_science_score = 50)
+  def self.import_all_github_owners(limit = nil, min_science_score = 20)
     owners = github_owners(min_science_score)
     owners = owners.first(limit) if limit
     
