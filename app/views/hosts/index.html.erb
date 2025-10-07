@@ -12,7 +12,7 @@
             <%= link_to host.name, host_path(host.name) %>
           </h5>
           <small class="text-muted">
-            <%= number_with_delimiter(host.repositories_count) %> repositories
+            <%= number_with_delimiter(host.repositories_count) %> projects
           </small>
         </div>
         <% if host.url.present? %>
