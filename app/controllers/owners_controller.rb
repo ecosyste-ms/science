@@ -1,7 +1,7 @@
 class OwnersController < ApplicationController
   def index
     @host = Host.find_by_name!(params[:host_id])
-    scope = @host.owners.order('repositories_count DESC')
+    scope = @host.owners.order('projects_count DESC')
     @pagy, @owners = pagy(scope)
   end
 

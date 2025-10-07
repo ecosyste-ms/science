@@ -12,7 +12,7 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
 
   test "should show owner" do
     host = Host.create!(name: "GitHub")
-    owner = Owner.create!(host: host, login: "testuser", name: "Test User", repositories_count: 10)
+    owner = Owner.create!(host: host, login: "testuser", name: "Test User")
     project = Project.create!(url: "https://github.com/testuser/repo", owner_record: owner, science_score: 5.0)
 
     get host_owner_url(host.name, owner.login)

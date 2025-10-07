@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_10_07_070947) do
+ActiveRecord::Schema[8.0].define(version: 2025_10_07_075104) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -142,6 +142,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_07_070947) do
     t.boolean "hidden"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "projects_count", default: 0, null: false
     t.index "host_id, lower((login)::text)", name: "index_owners_on_host_id_lower_login", unique: true
     t.index ["host_id", "uuid"], name: "index_owners_on_host_id_uuid", unique: true
     t.index ["last_synced_at"], name: "index_owners_on_last_synced_at"
