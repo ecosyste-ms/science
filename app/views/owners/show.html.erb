@@ -1,0 +1,28 @@
+<% @meta_title = "#{@owner} on #{@host.name}" %>
+<% @meta_description = "Browse #{number_with_delimiter(@pagy.count)} scientific software #{'project'.pluralize(@pagy.count)} by #{@owner_record.name || @owner} on #{@host.name}." %>
+
+<div class="container-sm">
+  <h1 class='mb-4'>
+    <%= link_to @host.name, host_path(@host.name) %> / <%= @owner %>
+    <small class='text-muted'>
+      <%= number_with_delimiter(@pagy.count) %> <%= 'project'.pluralize(@pagy.count) %>
+    </small>
+  </h1>
+
+  <% if @owner_record.name.present? %>
+    <p><%= @owner_record.name %></p>
+  <% end %>
+
+  <% if @owner_record.description.present? %>
+    <p><%= @owner_record.description %></p>
+  <% end %>
+
+  <% if @owner_record.website.present? %>
+    <p><%= link_to @owner_record.website, @owner_record.website, target: '_blank' %></p>
+  <% end %>
+
+  <h3 class="mt-4 mb-3">Projects</h3>
+
+  <%= render @projects %>
+  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+</div>

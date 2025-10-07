@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_10_06_202247) do
+ActiveRecord::Schema[8.0].define(version: 2025_10_07_070947) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -66,6 +66,22 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_06_202247) do
     t.index ["openalex_id"], name: "index_fields_on_openalex_id", unique: true
   end
 
+  create_table "hosts", force: :cascade do |t|
+    t.string "name"
+    t.string "url"
+    t.string "kind"
+    t.integer "repositories_count", default: 0
+    t.integer "owners_count", default: 0
+    t.string "version"
+    t.string "status"
+    t.datetime "status_checked_at"
+    t.integer "response_time"
+    t.text "last_error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_hosts_on_name", unique: true
+  end
+
   create_table "issues", force: :cascade do |t|
     t.integer "project_id"
     t.string "uuid"
@@ -102,6 +118,33 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_06_202247) do
     t.datetime "updated_at", null: false
     t.index ["paper_id"], name: "index_mentions_on_paper_id"
     t.index ["project_id"], name: "index_mentions_on_project_id"
+  end
+
+  create_table "owners", force: :cascade do |t|
+    t.integer "host_id"
+    t.string "login"
+    t.string "name"
+    t.string "uuid"
+    t.string "kind"
+    t.string "description"
+    t.string "email"
+    t.string "website"
+    t.string "location"
+    t.string "twitter"
+    t.string "company"
+    t.string "icon_url"
+    t.integer "repositories_count", default: 0
+    t.datetime "last_synced_at"
+    t.json "metadata", default: {}
+    t.bigint "total_stars"
+    t.integer "followers"
+    t.integer "following"
+    t.boolean "hidden"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "host_id, lower((login)::text)", name: "index_owners_on_host_id_lower_login", unique: true
+    t.index ["host_id", "uuid"], name: "index_owners_on_host_id_uuid", unique: true
+    t.index ["last_synced_at"], name: "index_owners_on_last_synced_at"
   end
 
   create_table "papers", force: :cascade do |t|
@@ -165,8 +208,12 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_06_202247) do
     t.float "science_score"
     t.json "science_score_breakdown", default: {}
     t.integer "mentions_count", default: 0
+    t.integer "host_id"
+    t.integer "owner_id"
     t.index ["category", "sub_category"], name: "index_projects_on_category_and_sub_category", where: "((category IS NOT NULL) AND (sub_category IS NOT NULL))"
     t.index ["collection_id"], name: "index_projects_on_collection_id"
+    t.index ["host_id"], name: "index_projects_on_host_id"
+    t.index ["owner_id"], name: "index_projects_on_owner_id"
     t.index ["reviewed"], name: "index_projects_on_reviewed"
     t.index ["url"], name: "index_projects_on_url", unique: true
   end

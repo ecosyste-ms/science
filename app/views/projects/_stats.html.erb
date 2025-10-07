@@ -30,12 +30,14 @@
     </div>
     
     <div class="col-md-3 col-sm-6 mb-3">
-      <div class="card text-center">
-        <div class="card-body">
-          <h3 class="text-warning"><%= number_with_delimiter(@stats[:joss_projects]) %></h3>
-          <p class="text-muted mb-0">JOSS Papers</p>
+      <%= link_to joss_projects_path, class: "text-decoration-none" do %>
+        <div class="card text-center">
+          <div class="card-body">
+            <h3 class="text-warning"><%= number_with_delimiter(@stats[:joss_projects]) %></h3>
+            <p class="text-muted mb-0">JOSS Papers</p>
+          </div>
         </div>
-      </div>
+      <% end %>
     </div>
   </div>
 

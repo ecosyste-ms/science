@@ -1,0 +1,29 @@
+<% @meta_title = "Source Code Hosts" %>
+<% @meta_description = "Browse scientific software projects by source code hosting platform. Explore repositories from GitHub, GitLab, and other platforms." %>
+
+<div class="container-sm">
+  <h1 class='mb-4'>Hosts</h1>
+
+  <div class="list-group">
+    <% @hosts.each do |host| %>
+      <div class="list-group-item">
+        <div class="d-flex w-100 justify-content-between">
+          <h5 class="mb-1">
+            <%= link_to host.name, host_path(host.name) %>
+          </h5>
+          <small class="text-muted">
+            <%= number_with_delimiter(host.repositories_count) %> repositories
+          </small>
+        </div>
+        <% if host.url.present? %>
+          <p class="mb-1">
+            <small class="text-muted"><%= link_to host.url, host.url, target: '_blank' %></small>
+          </p>
+        <% end %>
+        <small class="text-muted">
+          <%= number_with_delimiter(host.owners_count) %> owners
+        </small>
+      </div>
+    <% end %>
+  </div>
+</div>

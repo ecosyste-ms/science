@@ -1,0 +1,50 @@
+<% @meta_title = "#{@host.name} Owners" %>
+<% @meta_description = "Browse organizations and users with scientific software projects on #{@host.name}. Explore #{number_with_delimiter(@host.owners_count)} owners and their repositories." %>
+
+<div class="container-sm">
+  <h1 class='mb-4'>
+    <%= link_to @host.name, host_path(@host.name) %>
+  </h1>
+
+  <ul class="nav nav-tabs my-3">
+    <li class="nav-item">
+      <%= link_to host_path(@host.name), class: 'nav-link' do %>
+        Projects
+        <span class="badge bg-secondary rounded-pill">
+          <%= number_with_delimiter @host.repositories_count %>
+        </span>
+      <% end %>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link active" aria-current="page">
+        Owners
+        <span class="badge bg-secondary rounded-pill">
+          <%= number_with_delimiter @host.owners_count %>
+        </span>
+      </a>
+    </li>
+  </ul>
+
+  <div class="list-group">
+    <% @owners.each do |owner| %>
+      <div class="list-group-item">
+        <div class="d-flex w-100 justify-content-between">
+          <h5 class="mb-1">
+            <%= link_to owner.login, host_owner_path(@host.name, owner.login) %>
+          </h5>
+          <small class="text-muted">
+            <%= number_with_delimiter(owner.repositories_count) %> repositories
+          </small>
+        </div>
+        <% if owner.name.present? %>
+          <p class="mb-1"><%= owner.name %></p>
+        <% end %>
+        <% if owner.description.present? %>
+          <p class="mb-1"><small class="text-muted"><%= truncate(owner.description, length: 200) %></small></p>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+</div>

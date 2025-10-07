@@ -249,4 +249,58 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, projects.length
     assert_equal project_with_score.id, projects.first.id
   end
+
+  test "should get joss" do
+    get joss_projects_url
+    assert_response :success
+  end
+
+  test "joss lists only projects with joss_metadata" do
+    joss_project = Project.create!(
+      url: "https://github.com/test/joss-project",
+      name: "joss-project",
+      science_score: 85,
+      joss_metadata: { "doi" => "10.21105/joss.12345" }
+    )
+
+    non_joss_project = Project.create!(
+      url: "https://github.com/test/non-joss",
+      name: "non-joss",
+      science_score: 60
+    )
+
+    get joss_projects_url
+    assert_response :success
+
+    projects = assigns(:projects)
+
+    assert_includes projects, joss_project
+    assert_not_includes projects, non_joss_project
+  end
+
+  test "joss projects are sorted by combined score" do
+    joss_low = Project.create!(
+      url: "https://github.com/test/joss-low",
+      name: "joss-low",
+      science_score: 85,
+      score: 5,
+      joss_metadata: { "doi" => "10.21105/joss.00001" }
+    )
+
+    joss_high = Project.create!(
+      url: "https://github.com/test/joss-high",
+      name: "joss-high",
+      science_score: 85,
+      score: 50,
+      joss_metadata: { "doi" => "10.21105/joss.00002" }
+    )
+
+    get joss_projects_url
+    assert_response :success
+
+    projects = assigns(:projects)
+
+    assert_equal joss_high.id, projects.first.id
+    assert_equal joss_low.id, projects.second.id
+  end
 end

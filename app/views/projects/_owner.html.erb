@@ -1,7 +1,12 @@
-<% if @project.owner %>
+<% owner_json = @project.read_attribute(:owner) %>
+<% if owner_json %>
   <div class="mb-4">
     <h3 class="mb-3">
-      <%= link_to 'Owner', @project.owner_url, target: :_blank, class: 'text-decoration-none' %>
+      <% if @project.owner_record.present? && @project.host.present? %>
+        <%= link_to 'Owner', host_owner_path(@project.host.name, @project.owner_record.login), class: 'text-decoration-none' %>
+      <% else %>
+        Owner
+      <% end %>
     </h3>
 
     <div class="card border-0 shadow-sm">
@@ -9,34 +14,34 @@
         <div class="row g-3">
           <div class="col-md-6">
             <ul class="list-unstyled mb-0">
-              <% if @project.owner['name'].present? %>
+              <% if owner_json['name'].present? %>
                 <li class="mb-2">
-                  <strong>Name:</strong> <%= @project.owner['name'] %>
+                  <strong>Name:</strong> <%= owner_json['name'] %>
                 </li>
               <% end %>
-              <% if @project.owner['login'].present? %>
+              <% if owner_json['login'].present? %>
                 <li class="mb-2">
-                  <strong>Login:</strong> <%= @project.owner['login'] %>
+                  <strong>Login:</strong> <%= owner_json['login'] %>
                 </li>
               <% end %>
-              <% if @project.owner['kind'].present? %>
+              <% if owner_json['kind'].present? %>
                 <li class="mb-2">
-                  <strong>Kind:</strong> <span class="badge rounded-pill bg-primary"><%= @project.owner['kind'] %></span>
+                  <strong>Kind:</strong> <span class="badge rounded-pill bg-primary"><%= owner_json['kind'] %></span>
                 </li>
               <% end %>
-              <% if @project.owner['email'].present? %>
+              <% if owner_json['email'].present? %>
                 <li class="mb-2">
-                  <strong>Email:</strong> <%= @project.owner['email'] %>
+                  <strong>Email:</strong> <%= owner_json['email'] %>
                 </li>
               <% end %>
-              <% if @project.owner['location'].present? %>
+              <% if owner_json['location'].present? %>
                 <li class="mb-2">
-                  <strong>Location:</strong> <%= @project.owner['location'] %>
+                  <strong>Location:</strong> <%= owner_json['location'] %>
                 </li>
               <% end %>
-              <% if @project.owner['company'].present? %>
+              <% if owner_json['company'].present? %>
                 <li class="mb-2">
-                  <strong>Company:</strong> <%= @project.owner['company'] %>
+                  <strong>Company:</strong> <%= owner_json['company'] %>
                 </li>
               <% end %>
             </ul>
@@ -44,33 +49,33 @@
 
           <div class="col-md-6">
             <ul class="list-unstyled mb-0">
-              <% if @project.owner['website'].present? %>
+              <% if owner_json['website'].present? %>
                 <li class="mb-2">
-                  <strong>Website:</strong> <%= link_to @project.owner['website'], @project.owner['website'], class: 'text-decoration-none' %>
+                  <strong>Website:</strong> <%= link_to owner_json['website'], owner_json['website'], class: 'text-decoration-none' %>
                 </li>
               <% end %>
-              <% if @project.owner['twitter'].present? %>
+              <% if owner_json['twitter'].present? %>
                 <li class="mb-2">
-                  <strong>Twitter:</strong> <%= @project.owner['twitter'] %>
+                  <strong>Twitter:</strong> <%= owner_json['twitter'] %>
                 </li>
               <% end %>
-              <% if @project.owner['repositories_count'].present? %>
+              <% if owner_json['repositories_count'].present? %>
                 <li class="mb-2">
-                  <strong>Repositories:</strong> <%= number_with_delimiter @project.owner['repositories_count'] %>
+                  <strong>Repositories:</strong> <%= number_with_delimiter owner_json['repositories_count'] %>
                 </li>
               <% end %>
-              <% if @project.owner['html_url'].present? %>
+              <% if owner_json['html_url'].present? %>
                 <li class="mb-2">
-                  <strong>Profile:</strong> <%= link_to @project.owner['html_url'], @project.owner['html_url'], class: 'text-decoration-none' %>
+                  <strong>Profile:</strong> <%= link_to owner_json['html_url'], owner_json['html_url'], class: 'text-decoration-none' %>
                 </li>
               <% end %>
             </ul>
           </div>
         </div>
 
-        <% if @project.owner['description'].present? %>
+        <% if owner_json['description'].present? %>
           <div class="mt-3 pt-3 border-top">
-            <p class="text-muted mb-0"><%= @project.owner['description'] %></p>
+            <p class="text-muted mb-0"><%= owner_json['description'] %></p>
           </div>
         <% end %>
       </div>

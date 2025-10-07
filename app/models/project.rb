@@ -9,6 +9,9 @@ class Project < ApplicationRecord
 
   validates :url, presence: true, uniqueness: { case_sensitive: false }
 
+  belongs_to :host, optional: true
+  belongs_to :owner_record, class_name: 'Owner', foreign_key: 'owner_id', optional: true
+
   has_many :issues, dependent: :delete_all
   has_many :releases, dependent: :delete_all
   has_many :project_fields, dependent: :destroy
@@ -262,7 +265,9 @@ class Project < ApplicationRecord
     check_url
     return unless self.persisted?
     fetch_repository
+    find_or_create_host
     fetch_owner
+    find_or_create_owner
     fetch_dependencies
     fetch_packages
     import_mentions
@@ -405,6 +410,62 @@ class Project < ApplicationRecord
     self.save
   rescue
     puts "Error fetching owner for #{repository_url}"
+  end
+
+  def find_or_create_host
+    return unless repository.present?
+    return unless repository['host'].present?
+
+    host_data = repository['host']
+    return unless host_data['name'].present?
+
+    host = Host.find_or_initialize_by(name: host_data['name'])
+    host.assign_attributes(
+      url: host_data['url'],
+      kind: host_data['kind']
+    )
+    host.save
+
+    self.update(host: host)
+  rescue => e
+    puts "Error finding or creating host for #{repository_url}: #{e.message}"
+  end
+
+  def find_or_create_owner
+    owner_data = read_attribute(:owner)
+    return unless owner_data.present?
+    return unless host.present?
+    return unless owner_data['login'].present?
+
+    owner_record = Owner.find_or_initialize_by(
+      host: host,
+      login: owner_data['login'].downcase
+    )
+
+    owner_record.assign_attributes(
+      name: owner_data['name'],
+      uuid: owner_data['uuid'],
+      kind: owner_data['kind'],
+      description: owner_data['description'],
+      email: owner_data['email'],
+      website: owner_data['website'],
+      location: owner_data['location'],
+      twitter: owner_data['twitter'],
+      company: owner_data['company'],
+      icon_url: owner_data['icon_url'],
+      repositories_count: owner_data['repositories_count'] || 0,
+      last_synced_at: Time.now,
+      metadata: owner_data['metadata'] || {},
+      total_stars: owner_data['total_stars'],
+      followers: owner_data['followers'],
+      following: owner_data['following'],
+      hidden: owner_data['hidden']
+    )
+    owner_record.save
+
+    self.update_column(:owner_id, owner_record.id)
+  rescue => e
+    puts "Error finding or creating owner for #{repository_url}: #{e.message}"
   end
 
   def timeline_url
@@ -2078,24 +2139,35 @@ class Project < ApplicationRecord
 
       puts "Fetching mentions for #{ecosystem}/#{name}"
 
-      mentions_url = "https://papers.ecosyste.ms/api/v1/projects/#{ecosystem}/#{name}/mentions"
-      conn = ecosystem_http_client(mentions_url)
+      page = 1
+      per_page = 1000
 
-      response = conn.get
-      next unless response.success?
+      loop do
+        mentions_url = "https://papers.ecosyste.ms/api/v1/projects/#{ecosystem}/#{name}/mentions?page=#{page}&per_page=#{per_page}"
+        conn = ecosystem_http_client(mentions_url)
 
-      mentions_data = JSON.parse(response.body)
+        response = conn.get
+        break unless response.success?
 
-      mentions_data.each do |mention_data|
-        next unless mention_data['paper_url'].present?
+        mentions_data = JSON.parse(response.body)
+        break if mentions_data.empty?
 
-        # Fetch and create/update paper
-        paper = fetch_or_create_paper(mention_data['paper_url'])
-        next unless paper
+        mentions_data.each do |mention_data|
+          next unless mention_data['paper_url'].present?
 
-        # Create mention if it doesn't exist
-        mention = Mention.find_or_create_by(paper: paper, project: self)
-        created_mentions << mention
+          # Fetch and create/update paper
+          paper = fetch_or_create_paper(mention_data['paper_url'])
+          next unless paper
+
+          # Create mention if it doesn't exist
+          mention = Mention.find_or_create_by(paper: paper, project: self)
+          created_mentions << mention
+        end
+
+        # If we got fewer results than per_page, we're on the last page
+        break if mentions_data.length < per_page
+
+        page += 1
       end
     end
 

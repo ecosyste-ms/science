@@ -1,6 +1,6 @@
 class ProjectsController < ApplicationController
   def show
-    @project = Project.includes(papers: :mentions).find(params[:id])
+    @project = Project.includes(:host, :owner_record, papers: :mentions).find(params[:id])
   end
 
   def index
@@ -142,6 +142,26 @@ class ProjectsController < ApplicationController
     else
       Project.all.select{|p| p.packages.present? }.sort_by{|p| p.packages.sum{|p| p['downloads'] || 0 } }.reverse
     end
+  end
+
+  def joss
+    @scope = Project.where("joss_metadata IS NOT NULL")
+
+    if params[:keyword].present?
+      @scope = @scope.keyword(params[:keyword])
+    end
+
+    if params[:language].present?
+      @scope = @scope.language(params[:language])
+    end
+
+    if params[:sort]
+      @scope = @scope.order("#{params[:sort]} #{params[:order]}")
+    else
+      @scope = @scope.order(Arel.sql('(science_score + COALESCE(score, 0)) DESC'))
+    end
+
+    @pagy, @projects = pagy(@scope)
   end
 
 end

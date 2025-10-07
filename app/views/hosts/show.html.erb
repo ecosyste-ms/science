@@ -1,0 +1,35 @@
+<% @meta_title = "#{@host.name}" %>
+<% @meta_description = "Browse #{number_with_delimiter(@host.repositories_count)} scientific software projects hosted on #{@host.name}. Explore research software and computational tools." %>
+
+<div class="container-sm">
+  <h1 class='mb-4'>
+    <%= @host.name %>
+  </h1>
+
+  <% if @host.url.present? %>
+    <p>
+      <%= link_to @host.url, @host.url, target: '_blank' %>
+    </p>
+  <% end %>
+
+  <ul class="nav nav-tabs my-3">
+    <li class="nav-item">
+      <a class="nav-link active" aria-current="page">
+        Projects
+        <span class="badge bg-secondary rounded-pill">
+          <%= number_with_delimiter @host.repositories_count %>
+        </span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <%= link_to host_owners_path(@host.name), class: 'nav-link' do %>
+        Owners
+        <span class="badge bg-secondary rounded-pill">
+          <%= number_with_delimiter @host.owners_count %>
+        </span>
+      <% end %>
+    </li>
+  </ul>
+
+  <%= render @projects %>
+</div>

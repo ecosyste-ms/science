@@ -1,3 +1,6 @@
+<% @meta_title = "Open Source Science" %>
+<% @meta_description = "Discover and explore scientific open source software projects. Browse #{@stats[:total_projects] if @stats} analyzed projects including JOSS papers, research software, and computational tools." %>
+
 <div class="container-md">
   <% if @stats.present? %>
     <%= render 'stats', stats: @stats %>

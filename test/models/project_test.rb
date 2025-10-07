@@ -281,7 +281,7 @@ class ProjectTest < ActiveSupport::TestCase
       'openalex_data' => { 'type' => 'article' }
     }
 
-    stub_request(:get, "https://papers.ecosyste.ms/api/v1/projects/pypi/test-package/mentions")
+    stub_request(:get, "https://papers.ecosyste.ms/api/v1/projects/pypi/test-package/mentions?page=1&per_page=1000")
       .to_return(status: 200, body: mentions_response.to_json)
 
     stub_request(:get, "https://papers.ecosyste.ms/api/v1/papers/10.1234%2Fexample1")
@@ -314,12 +314,12 @@ class ProjectTest < ActiveSupport::TestCase
       ]
     )
 
-    stub_request(:get, "https://papers.ecosyste.ms/api/v1/projects/pypi/package1/mentions")
+    stub_request(:get, "https://papers.ecosyste.ms/api/v1/projects/pypi/package1/mentions?page=1&per_page=1000")
       .to_return(status: 200, body: [
         { 'paper_url' => 'https://papers.ecosyste.ms/api/v1/papers/10.1%2Fpaper1' }
       ].to_json)
 
-    stub_request(:get, "https://papers.ecosyste.ms/api/v1/projects/npm/package2/mentions")
+    stub_request(:get, "https://papers.ecosyste.ms/api/v1/projects/npm/package2/mentions?page=1&per_page=1000")
       .to_return(status: 200, body: [
         { 'paper_url' => 'https://papers.ecosyste.ms/api/v1/papers/10.2%2Fpaper2' }
       ].to_json)
@@ -359,5 +359,134 @@ class ProjectTest < ActiveSupport::TestCase
     assert_no_difference ['Paper.count', 'Mention.count'] do
       project.import_mentions
     end
+  end
+
+  test "find_or_create_host creates new host" do
+    project = Project.create!(
+      url: 'https://github.com/test/project',
+      repository: {
+        'host' => {
+          'name' => 'GitHub',
+          'url' => 'https://github.com',
+          'kind' => 'git'
+        }
+      }
+    )
+
+    assert_difference 'Host.count', 1 do
+      project.find_or_create_host
+    end
+
+    project.reload
+    assert_equal 'GitHub', project.host.name
+    assert_equal 'https://github.com', project.host.url
+    assert_equal 'git', project.host.kind
+  end
+
+  test "find_or_create_host finds existing host" do
+    host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'git')
+    project = Project.create!(
+      url: 'https://github.com/test/project',
+      repository: {
+        'host' => {
+          'name' => 'GitHub',
+          'url' => 'https://github.com',
+          'kind' => 'git'
+        }
+      }
+    )
+
+    assert_no_difference 'Host.count' do
+      project.find_or_create_host
+    end
+
+    project.reload
+    assert_equal host, project.host
+  end
+
+  test "find_or_create_host returns early if repository is missing" do
+    project = Project.create!(url: 'https://github.com/test/project')
+
+    assert_no_difference 'Host.count' do
+      project.find_or_create_host
+    end
+
+    assert_nil project.host
+  end
+
+  test "find_or_create_owner creates new owner" do
+    host = Host.create!(name: 'GitHub')
+    project = Project.create!(url: 'https://github.com/test/project', host: host)
+    project.update_column(:owner, {
+      'login' => 'testuser',
+      'name' => 'Test User',
+      'uuid' => '123',
+      'kind' => 'user',
+      'description' => 'A test user',
+      'email' => 'test@example.com',
+      'website' => 'https://example.com',
+      'location' => 'San Francisco',
+      'twitter' => 'testuser',
+      'company' => 'Test Company',
+      'icon_url' => 'https://example.com/icon.png',
+      'repositories_count' => 10,
+      'metadata' => { 'key' => 'value' },
+      'total_stars' => 100,
+      'followers' => 50,
+      'following' => 25,
+      'hidden' => false
+    })
+
+    assert_difference 'Owner.count', 1 do
+      project.find_or_create_owner
+    end
+
+    project.reload
+    assert_equal 'testuser', project.owner_record.login
+    assert_equal 'Test User', project.owner_record.name
+    assert_equal '123', project.owner_record.uuid
+    assert_equal 'user', project.owner_record.kind
+    assert_equal host, project.owner_record.host
+  end
+
+  test "find_or_create_owner finds existing owner by login (case insensitive)" do
+    host = Host.create!(name: 'GitHub')
+    owner = Owner.create!(host: host, login: 'testuser')
+    project = Project.create!(url: 'https://github.com/test/project', host: host)
+    project.update_column(:owner, {
+      'login' => 'TestUser',
+      'name' => 'Test User Updated'
+    })
+
+    assert_no_difference 'Owner.count' do
+      project.find_or_create_owner
+    end
+
+    project.reload
+    assert_equal owner, project.owner_record
+    assert_equal 'Test User Updated', project.owner_record.name
+  end
+
+  test "find_or_create_owner returns early if owner json is missing" do
+    host = Host.create!(name: 'GitHub')
+    project = Project.create!(url: 'https://github.com/test/project', host: host)
+
+    assert_no_difference 'Owner.count' do
+      project.find_or_create_owner
+    end
+
+    assert_nil project.owner
+  end
+
+  test "find_or_create_owner returns early if host is missing" do
+    project = Project.create!(url: 'https://github.com/test/project')
+    project.update_column(:owner, { 'login' => 'testuser' })
+
+    assert_no_difference 'Owner.count' do
+      project.find_or_create_owner
+    end
+
+    project.reload
+    assert_nil project.owner_id
   end
 end

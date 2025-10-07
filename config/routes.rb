@@ -42,6 +42,7 @@ Rails.application.routes.draw do
       get :dependencies
       get :packages
       get :search
+      get :joss
     end
     resources :releases, only: [:index, :show]
   end
@@ -61,6 +62,10 @@ Rails.application.routes.draw do
   end
 
   resources :exports, only: [:index], path: 'open-data'
+
+  resources :hosts, constraints: { id: /.*/ }, only: [:index, :show] do
+    resources :owners, only: [:index, :show]
+  end
 
   get '/404', to: 'errors#not_found'
   get '/422', to: 'errors#unprocessable'
