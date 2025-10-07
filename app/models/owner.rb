@@ -1,5 +1,5 @@
 class Owner < ApplicationRecord
-  belongs_to :host
+  belongs_to :host, counter_cache: :owners_count
   has_many :projects, foreign_key: 'owner_id'
 
   validates :login, presence: true

@@ -9,7 +9,7 @@ class Project < ApplicationRecord
 
   validates :url, presence: true, uniqueness: { case_sensitive: false }
 
-  belongs_to :host, optional: true
+  belongs_to :host, optional: true, counter_cache: :repositories_count
   belongs_to :owner_record, class_name: 'Owner', foreign_key: 'owner_id', optional: true
 
   has_many :issues, dependent: :delete_all
