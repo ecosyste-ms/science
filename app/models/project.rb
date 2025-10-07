@@ -2065,7 +2065,9 @@ class Project < ApplicationRecord
   end
 
   def import_mentions
-    return unless packages.present?
+    return [] unless packages.present?
+
+    created_mentions = []
 
     packages.each do |package|
       next unless package['ecosystem'].present? && package['name'].present?
@@ -2091,11 +2093,15 @@ class Project < ApplicationRecord
         next unless paper
 
         # Create mention if it doesn't exist
-        Mention.find_or_create_by(paper: paper, project: self)
+        mention = Mention.find_or_create_by(paper: paper, project: self)
+        created_mentions << mention
       end
     end
+
+    created_mentions
   rescue => e
     puts "Error importing mentions: #{e.message}"
+    []
   end
 
   def fetch_or_create_paper(paper_url)

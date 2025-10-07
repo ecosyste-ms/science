@@ -1,0 +1,55 @@
+<% if @project.mentions.any? %>
+  <div class="mb-4">
+    <h3 class="mb-3">Papers & Mentions</h3>
+
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <p class="mb-0">
+          <strong>Total mentions:</strong> <%= number_with_delimiter @project.mentions_count %>
+        </p>
+      </div>
+    </div>
+
+    <% @project.papers.includes(:mentions).each do |paper| %>
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+          <h5 class="card-title mb-2">
+            <%= paper.title %>
+          </h5>
+
+          <ul class="list-unstyled mb-0">
+            <% if paper.doi.present? %>
+              <li class="mb-2">
+                <strong>DOI:</strong> <%= link_to paper.doi, "https://doi.org/#{paper.doi}", class: 'text-decoration-none', target: '_blank' %>
+              </li>
+            <% end %>
+
+            <% if paper.openalex_id.present? %>
+              <li class="mb-2">
+                <strong>OpenAlex ID:</strong> <%= link_to paper.openalex_id, "https://openalex.org/works/#{paper.openalex_id}", class: 'text-decoration-none', target: '_blank' %>
+              </li>
+            <% end %>
+
+            <% if paper.publication_date.present? %>
+              <li class="mb-2">
+                <strong>Published:</strong> <%= paper.publication_date.strftime('%B %Y') %>
+              </li>
+            <% end %>
+
+            <% if paper.mentions_count && paper.mentions_count > 1 %>
+              <li class="mb-2">
+                <strong>Total mentions:</strong> <%= number_with_delimiter paper.mentions_count %>
+              </li>
+            <% end %>
+          </ul>
+
+          <% if paper.last_synced_at %>
+            <div class="mt-3 pt-3 border-top">
+              <small class="text-muted">Last synced: <%= distance_of_time_in_words_to_now paper.last_synced_at %> ago</small>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>

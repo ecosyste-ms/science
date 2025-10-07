@@ -1,6 +1,6 @@
 class ProjectsController < ApplicationController
   def show
-    @project = Project.find(params[:id])
+    @project = Project.includes(papers: :mentions).find(params[:id])
   end
 
   def index
