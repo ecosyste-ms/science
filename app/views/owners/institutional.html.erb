@@ -1,0 +1,38 @@
+<% @meta_title = "Institutional Owners" %>
+<% @meta_description = "Browse scientific software projects from academic institutions, research organizations, and government agencies. Explore university labs, national research centers, and educational institutions." %>
+
+<div class="container-sm">
+  <h1 class='mb-4'>Institutional Owners</h1>
+
+  <p class="lead text-muted mb-4">
+    Organizations with institutional domains (.edu, .gov, research institutions, etc.)
+  </p>
+
+  <div class="list-group">
+    <% @owners.each do |owner| %>
+      <div class="list-group-item">
+        <div class="d-flex w-100 justify-content-between">
+          <h5 class="mb-1">
+            <%= link_to owner.login, host_owner_path(owner.host.name, owner.login) %>
+            <% if owner.website.present? %>
+              <small class="text-muted">
+                <%= link_to owner.extract_domain(owner.website), owner.website, target: '_blank', class: 'text-decoration-none' %>
+              </small>
+            <% end %>
+          </h5>
+          <small class="text-muted">
+            <%= number_with_delimiter(owner.projects_count) %> projects
+          </small>
+        </div>
+        <% if owner.name.present? %>
+          <p class="mb-1"><%= owner.name %></p>
+        <% end %>
+        <% if owner.description.present? %>
+          <p class="mb-1"><small class="text-muted"><%= truncate(owner.description, length: 200) %></small></p>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
+</div>

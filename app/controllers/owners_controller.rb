@@ -1,4 +1,15 @@
 class OwnersController < ApplicationController
+  def institutional
+    # Get all organizations with websites, ordered by projects_count
+    scope = Owner.organizations
+                 .where("website IS NOT NULL AND website != ''")
+                 .order('projects_count DESC')
+
+    # Filter to institutional ones
+    @owners = scope.select { |owner| owner.institutional? }
+    @pagy, @owners = pagy_array(@owners)
+  end
+
   def index
     @host = Host.find_by_name!(params[:host_id])
     scope = @host.owners.order('projects_count DESC')

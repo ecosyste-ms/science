@@ -46,4 +46,15 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
     get host_owner_url(host.name, owner.login)
     assert_response :success
   end
+
+  test "institutional action shows only institutional owners" do
+    host = Host.create!(name: "GitHub")
+    institutional_owner = Owner.create!(host: host, login: "stanford", kind: "organization", website: "stanford.edu")
+    regular_owner = Owner.create!(host: host, login: "mycompany", kind: "organization", website: "mycompany.com")
+    user_owner = Owner.create!(host: host, login: "johndoe", kind: "user", website: "johndoe.com")
+
+    get institutional_owners_url
+    assert_response :success
+    assert_select "h1", /Institutional Owners/
+  end
 end

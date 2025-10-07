@@ -64,4 +64,48 @@ class OwnerTest < ActiveSupport::TestCase
     assert_includes owner.projects, project1
     assert_includes owner.projects, project2
   end
+
+  test "institutional? returns true for org with edu domain" do
+    host = Host.create!(name: "GitHub")
+    owner = Owner.create!(host: host, login: "stanford", kind: "organization", website: "stanford.edu")
+
+    assert owner.institutional?
+  end
+
+  test "institutional? returns true for org with gov domain" do
+    host = Host.create!(name: "GitHub")
+    owner = Owner.create!(host: host, login: "nasa", kind: "organization", website: "https://nasa.gov")
+
+    assert owner.institutional?
+  end
+
+  test "institutional? returns false for org with non-institutional domain" do
+    host = Host.create!(name: "GitHub")
+    owner = Owner.create!(host: host, login: "mycompany", kind: "organization", website: "mycompany.com")
+
+    assert_not owner.institutional?
+  end
+
+  test "institutional? returns false for user owner" do
+    host = Host.create!(name: "GitHub")
+    owner = Owner.create!(host: host, login: "johndoe", kind: "user", website: "johndoe.edu")
+
+    assert_not owner.institutional?
+  end
+
+  test "institutional? returns false when no website" do
+    host = Host.create!(name: "GitHub")
+    owner = Owner.create!(host: host, login: "someorg", kind: "organization", website: nil)
+
+    assert_not owner.institutional?
+  end
+
+  test "organizations scope returns only organizations" do
+    host = Host.create!(name: "GitHub")
+    org = Owner.create!(host: host, login: "org1", kind: "organization")
+    user = Owner.create!(host: host, login: "user1", kind: "user")
+
+    assert_includes Owner.organizations, org
+    assert_not_includes Owner.organizations, user
+  end
 end

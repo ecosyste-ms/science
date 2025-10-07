@@ -63,6 +63,8 @@ Rails.application.routes.draw do
 
   resources :exports, only: [:index], path: 'open-data'
 
+  get '/institutional-owners', to: 'owners#institutional', as: :institutional_owners
+
   resources :hosts, constraints: { id: /.*/ }, only: [:index, :show] do
     resources :owners, only: [:index, :show]
   end
