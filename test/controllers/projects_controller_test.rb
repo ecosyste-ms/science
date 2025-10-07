@@ -22,6 +22,46 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "index results are sorted by combined science_score and ranking" do
+    project_low = Project.create!(
+      url: "https://github.com/test/project-low",
+      name: "project-low",
+      science_score: 40,
+      score: 10
+    )
+
+    project_high = Project.create!(
+      url: "https://github.com/test/project-high",
+      name: "project-high",
+      science_score: 60,
+      score: 60
+    )
+
+    project_medium = Project.create!(
+      url: "https://github.com/test/project-medium",
+      name: "project-medium",
+      science_score: 30,
+      score: 60
+    )
+
+    get projects_url
+    assert_response :success
+
+    projects = assigns(:projects)
+
+    # project_high: 60 + 60 = 120 (should be first)
+    # @project from setup: 85 + 0 = 85
+    # project_medium: 30 + 60 = 90 (should be second)
+    # project_low: 40 + 10 = 50
+    # Find the positions of our test projects
+    high_index = projects.index { |p| p.id == project_high.id }
+    medium_index = projects.index { |p| p.id == project_medium.id }
+    low_index = projects.index { |p| p.id == project_low.id }
+
+    assert high_index < medium_index
+    assert medium_index < low_index
+  end
+
   test "should get show" do
     get project_url(@project)
     assert_response :success

@@ -13,7 +13,7 @@ class ProjectsController < ApplicationController
     else
       Project.stats_summary
     end
-    
+
     @scope = Project.where('science_score > 0')
 
     if params[:keyword].present?
@@ -31,7 +31,7 @@ class ProjectsController < ApplicationController
     if params[:sort]
       @scope = @scope.order("#{params[:sort]} #{params[:order]}")
     else
-      @scope = @scope.order('score DESC nulls last')
+      @scope = @scope.order(Arel.sql('(science_score + COALESCE(score, 0)) DESC'))
     end
 
     @pagy, @projects = pagy(@scope)
