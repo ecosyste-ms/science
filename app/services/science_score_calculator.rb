@@ -85,9 +85,10 @@ class ScienceScoreCalculator
       has_doi_in_readme: check_doi_in_readme,
       has_academic_links: check_academic_links,
       has_academic_committers: check_academic_committers,
+      has_institutional_owner: check_institutional_owner,
       has_joss_paper: check_joss_paper
     }
-    
+
     # Add JOSS IDF similarity for non-JOSS projects
     unless project.joss_metadata.present?
       @breakdown[:joss_vocabulary_similarity] = check_joss_vocabulary_similarity
@@ -109,7 +110,8 @@ class ScienceScoreCalculator
         has_codemeta: 0.03,
         has_zenodo: 0.03,
         has_doi_in_readme: 0.02,
-        has_academic_committers: 0.02
+        has_academic_committers: 0.02,
+        has_institutional_owner: 0.03
       }
       
       @breakdown.each do |key, value|
@@ -125,12 +127,13 @@ class ScienceScoreCalculator
       weighted_score = 0.0
 
       scoring_weights = {
-        has_citation_file: 0.20,
-        has_codemeta: 0.15,
-        has_zenodo: 0.15,
-        has_doi_in_readme: 0.15,
+        has_citation_file: 0.18,
+        has_codemeta: 0.13,
+        has_zenodo: 0.13,
+        has_doi_in_readme: 0.13,
         has_academic_links: 0.10,
         has_academic_committers: 0.10,
+        has_institutional_owner: 0.08,
         joss_vocabulary_similarity: 0.15
       }
 
@@ -285,6 +288,40 @@ class ScienceScoreCalculator
       details: academic_committers.any? ? 
         "#{academic_committers.length} of #{total_committers} committers (#{percentage}%) from academic institutions" : nil,
       committers: academic_committers.take(5)
+    }
+  end
+
+  def check_institutional_owner
+    return { present: false, description: "Institutional organization owner", details: nil } unless project.owner_record.present?
+
+    owner = project.owner_record
+    owner_json = project.read_attribute(:owner)
+
+    # Check if owner is an organization
+    return { present: false, description: "Institutional organization owner", details: nil } unless owner.kind == 'organization'
+
+    # Check if owner has a website
+    return { present: false, description: "Institutional organization owner", details: nil } unless owner_json && owner_json['website'].present?
+
+    website = owner_json['website'].downcase
+
+    # Extract domain from website URL
+    domain = begin
+      uri = URI.parse(website.start_with?('http') ? website : "https://#{website}")
+      uri.host
+    rescue
+      website.gsub(/^(https?:\/\/)?(www\.)?/, '').split('/').first
+    end
+
+    return { present: false, description: "Institutional organization owner", details: nil } unless domain
+
+    # Check if domain matches any academic patterns
+    is_institutional = ACADEMIC_DOMAINS.any? { |academic_domain| domain.include?(academic_domain) }
+
+    {
+      present: is_institutional,
+      description: "Institutional organization owner",
+      details: is_institutional ? "Organization #{owner.login} has institutional domain (#{domain})" : nil
     }
   end
 

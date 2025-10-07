@@ -84,10 +84,81 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
   test "calculate_score returns 0 when no indicators present" do
     calculator = ScienceScoreCalculator.new(@project)
     result = calculator.calculate
-    
+
     assert_equal 0.0, result[:score]
     assert_not result[:breakdown][:has_citation_file][:present]
     assert_not result[:breakdown][:has_doi_in_readme][:present]
     assert_not result[:breakdown][:has_academic_links][:present]
+  end
+
+  test "check_institutional_owner detects organization with edu domain" do
+    host = Host.create!(name: 'GitHub')
+    owner = Owner.create!(host: host, login: 'stanford', kind: 'organization')
+    @project.update(host: host, owner_record: owner)
+    @project.update_column(:owner, { 'website' => 'stanford.edu' })
+
+    calculator = ScienceScoreCalculator.new(@project)
+    result = calculator.check_institutional_owner
+
+    assert result[:present]
+    assert_equal "Institutional organization owner", result[:description]
+    assert_match(/stanford/, result[:details])
+    assert_match(/stanford.edu/, result[:details])
+  end
+
+  test "check_institutional_owner detects organization with gov domain" do
+    host = Host.create!(name: 'GitHub')
+    owner = Owner.create!(host: host, login: 'nasa', kind: 'organization')
+    @project.update(host: host, owner_record: owner)
+    @project.update_column(:owner, { 'website' => 'https://nasa.gov' })
+
+    calculator = ScienceScoreCalculator.new(@project)
+    result = calculator.check_institutional_owner
+
+    assert result[:present]
+    assert_match(/nasa/, result[:details])
+  end
+
+  test "check_institutional_owner returns false for non-institutional domain" do
+    host = Host.create!(name: 'GitHub')
+    owner = Owner.create!(host: host, login: 'mycompany', kind: 'organization')
+    @project.update(host: host, owner_record: owner)
+    @project.update_column(:owner, { 'website' => 'mycompany.com' })
+
+    calculator = ScienceScoreCalculator.new(@project)
+    result = calculator.check_institutional_owner
+
+    assert_not result[:present]
+  end
+
+  test "check_institutional_owner returns false for user owner" do
+    host = Host.create!(name: 'GitHub')
+    owner = Owner.create!(host: host, login: 'johndoe', kind: 'user')
+    @project.update(host: host, owner_record: owner)
+    @project.update_column(:owner, { 'website' => 'johndoe.edu' })
+
+    calculator = ScienceScoreCalculator.new(@project)
+    result = calculator.check_institutional_owner
+
+    assert_not result[:present]
+  end
+
+  test "check_institutional_owner returns false when no owner" do
+    calculator = ScienceScoreCalculator.new(@project)
+    result = calculator.check_institutional_owner
+
+    assert_not result[:present]
+  end
+
+  test "check_institutional_owner returns false when no website" do
+    host = Host.create!(name: 'GitHub')
+    owner = Owner.create!(host: host, login: 'someorg', kind: 'organization')
+    @project.update(host: host, owner_record: owner)
+    @project.update_column(:owner, { 'website' => nil })
+
+    calculator = ScienceScoreCalculator.new(@project)
+    result = calculator.check_institutional_owner
+
+    assert_not result[:present]
   end
 end
