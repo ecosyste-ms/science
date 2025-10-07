@@ -578,7 +578,8 @@ class Project < ApplicationRecord
   def science_score_breakdown
     # Return stored breakdown from database
     # This method should only be called from views/API, never calculate on the fly
-    read_attribute(:science_score_breakdown) || {}
+    breakdown = read_attribute(:science_score_breakdown)
+    breakdown&.with_indifferent_access
   end
 
   def calculate_science_score_breakdown
