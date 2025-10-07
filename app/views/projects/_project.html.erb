@@ -40,7 +40,7 @@
             <%= project.category %> - <%= project.sub_category %> -
           <% end %>
           Last synced: <%= project.last_synced_at.strftime("%d %b %Y") %>
-          - Ranking: <%= project.score.round(1) %>
+          - Ranking: <%= project.score.finite? ? project.score.round(1) : 0 %>
           <% if project.science_score.present? %>
             - Science Score: <%= number_with_precision(project.science_score, precision: 0) %>%
           <% end %>

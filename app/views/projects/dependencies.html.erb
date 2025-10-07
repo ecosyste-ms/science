@@ -37,7 +37,7 @@
                 <i><%= pluralize count, 'dependent project' %></i>
               
                 
-                <% if package && package.average_ranking %>
+                <% if package && package.average_ranking && package.average_ranking.finite? %>
                   <i>
                     - Top <%= package.average_ranking.round(2) %>%
                   </i>
