@@ -13,6 +13,8 @@ class Project < ApplicationRecord
   has_many :releases, dependent: :delete_all
   has_many :project_fields, dependent: :destroy
   has_many :fields, through: :project_fields
+  has_many :mentions, dependent: :destroy
+  has_many :papers, through: :mentions
 
   has_many :good_first_issues, -> { good_first_issue }, class_name: 'Issue'
 
@@ -263,6 +265,7 @@ class Project < ApplicationRecord
     fetch_owner
     fetch_dependencies
     fetch_packages
+    import_mentions
     fetch_readme
     combine_keywords
     fetch_commits
@@ -1092,39 +1095,19 @@ class Project < ApplicationRecord
     highly_scientific_count = Project.highly_scientific.count
     
     # Calculate averages for scored projects
-    avg_score = Project.where.not(science_score: nil).average(:science_score)&.round(1)
     median_score = Project.where.not(science_score: nil).median(:science_score) rescue nil
-    
+
     # Repository stats
     with_repo_count = Project.with_repository.count
     with_readme_count = Project.with_readme.count
     with_packages_count = Project.with_packages.count
-    
-    # Contributor stats from repository data
-    total_repo_contributors = Project.with_repository
-      .where.not(repository: nil)
-      .sum("COALESCE((repository->>'contributors_count')::integer, 0)")
-        
-    # Contributor stats from contributors table
-    total_unique_contributors = Contributor.count
-    # For JSON columns in PostgreSQL, check if not empty object
-    contributors_with_topics = Contributor.where.not(topics: []).count
-    contributors_with_categories = Contributor.where.not(categories: []).count
-    
-    # Activity stats
-    total_stars = Project.with_repository
-      .where.not(repository: nil)
-      .sum("COALESCE((repository->>'stargazers_count')::integer, 0)")
-    
-    total_forks = Project.with_repository
-      .where.not(repository: nil)
-      .sum("COALESCE((repository->>'forks_count')::integer, 0)")
-    
+
     # JOSS stats
     joss_count = Project.with_joss.count
     
     # Language distribution (top 10)
     language_distribution = Project.with_repository
+      .where('science_score > 0')
       .where.not(repository: nil)
       .where("repository->>'language' IS NOT NULL")
       .group("repository->>'language'")
@@ -1137,18 +1120,11 @@ class Project < ApplicationRecord
       scored_projects: scored_projects,
       scientific_projects: scientific_count,
       highly_scientific_projects: highly_scientific_count,
-      average_science_score: avg_score,
       median_science_score: median_score,
       projects_with_repository: with_repo_count,
       projects_with_readme: with_readme_count,
       projects_with_packages: with_packages_count,
       joss_projects: joss_count,
-      total_repo_contributors: total_repo_contributors,
-      total_unique_contributors: total_unique_contributors,
-      contributors_with_topics: contributors_with_topics,
-      contributors_with_categories: contributors_with_categories,
-      total_stars: total_stars,
-      total_forks: total_forks,
       score_distribution: score_distribution,
       top_languages: language_distribution
     }
@@ -2086,5 +2062,66 @@ class Project < ApplicationRecord
       r = Release.find_or_create_by(project_id: id, uuid: release['uuid'])
       r.update(release.except('release_url'))
     end
+  end
+
+  def import_mentions
+    return unless packages.present?
+
+    packages.each do |package|
+      next unless package['ecosystem'].present? && package['name'].present?
+
+      ecosystem = package['ecosystem']
+      name = package['name']
+
+      puts "Fetching mentions for #{ecosystem}/#{name}"
+
+      mentions_url = "https://papers.ecosyste.ms/api/v1/projects/#{ecosystem}/#{name}/mentions"
+      conn = ecosystem_http_client(mentions_url)
+
+      response = conn.get
+      next unless response.success?
+
+      mentions_data = JSON.parse(response.body)
+
+      mentions_data.each do |mention_data|
+        next unless mention_data['paper_url'].present?
+
+        # Fetch and create/update paper
+        paper = fetch_or_create_paper(mention_data['paper_url'])
+        next unless paper
+
+        # Create mention if it doesn't exist
+        Mention.find_or_create_by(paper: paper, project: self)
+      end
+    end
+  rescue => e
+    puts "Error importing mentions: #{e.message}"
+  end
+
+  def fetch_or_create_paper(paper_url)
+    conn = ecosystem_http_client(paper_url)
+    response = conn.get
+    return unless response.success?
+
+    paper_data = JSON.parse(response.body)
+
+    paper = Paper.find_or_initialize_by(doi: paper_data['doi']) if paper_data['doi'].present?
+    paper ||= Paper.find_or_initialize_by(openalex_id: paper_data['openalex_id']) if paper_data['openalex_id'].present?
+    paper ||= Paper.new
+
+    paper.assign_attributes(
+      doi: paper_data['doi'],
+      openalex_id: paper_data['openalex_id'],
+      title: paper_data['title'],
+      publication_date: paper_data['publication_date'],
+      openalex_data: paper_data['openalex_data'],
+      last_synced_at: Time.now
+    )
+
+    paper.save
+    paper
+  rescue => e
+    puts "Error fetching paper from #{paper_url}: #{e.message}"
+    nil
   end
 end

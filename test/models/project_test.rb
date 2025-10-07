@@ -251,4 +251,113 @@ class ProjectTest < ActiveSupport::TestCase
     assert_not project.is_academic_domain?('google.com')
     assert_not project.is_academic_domain?('microsoft.com')
   end
+
+  test "import_mentions returns early if no packages" do
+    project = Project.create!(url: 'https://github.com/test/project')
+    project.packages = nil
+
+    assert_no_difference ['Paper.count', 'Mention.count'] do
+      project.import_mentions
+    end
+  end
+
+  test "import_mentions creates papers and mentions for each package" do
+    project = Project.create!(
+      url: 'https://github.com/test/project',
+      packages: [
+        { 'ecosystem' => 'pypi', 'name' => 'test-package' }
+      ]
+    )
+
+    mentions_response = [
+      { 'paper_url' => 'https://papers.ecosyste.ms/api/v1/papers/10.1234%2Fexample1' }
+    ]
+
+    paper_response = {
+      'doi' => '10.1234/example1',
+      'openalex_id' => 'W123456',
+      'title' => 'Test Paper',
+      'publication_date' => '2023-01-01',
+      'openalex_data' => { 'type' => 'article' }
+    }
+
+    stub_request(:get, "https://papers.ecosyste.ms/api/v1/projects/pypi/test-package/mentions")
+      .to_return(status: 200, body: mentions_response.to_json)
+
+    stub_request(:get, "https://papers.ecosyste.ms/api/v1/papers/10.1234%2Fexample1")
+      .to_return(status: 200, body: paper_response.to_json)
+
+    assert_difference 'Paper.count', 1 do
+      assert_difference 'Mention.count', 1 do
+        project.import_mentions
+      end
+    end
+
+    paper = Paper.last
+    assert_equal '10.1234/example1', paper.doi
+    assert_equal 'Test Paper', paper.title
+
+    mention = Mention.last
+    assert_equal paper, mention.paper
+    assert_equal project, mention.project
+
+    project.reload
+    assert_equal 1, project.mentions_count
+  end
+
+  test "import_mentions handles multiple packages" do
+    project = Project.create!(
+      url: 'https://github.com/test/project',
+      packages: [
+        { 'ecosystem' => 'pypi', 'name' => 'package1' },
+        { 'ecosystem' => 'npm', 'name' => 'package2' }
+      ]
+    )
+
+    stub_request(:get, "https://papers.ecosyste.ms/api/v1/projects/pypi/package1/mentions")
+      .to_return(status: 200, body: [
+        { 'paper_url' => 'https://papers.ecosyste.ms/api/v1/papers/10.1%2Fpaper1' }
+      ].to_json)
+
+    stub_request(:get, "https://papers.ecosyste.ms/api/v1/projects/npm/package2/mentions")
+      .to_return(status: 200, body: [
+        { 'paper_url' => 'https://papers.ecosyste.ms/api/v1/papers/10.2%2Fpaper2' }
+      ].to_json)
+
+    stub_request(:get, "https://papers.ecosyste.ms/api/v1/papers/10.1%2Fpaper1")
+      .to_return(status: 200, body: {
+        'doi' => '10.1/paper1',
+        'title' => 'Paper 1'
+      }.to_json)
+
+    stub_request(:get, "https://papers.ecosyste.ms/api/v1/papers/10.2%2Fpaper2")
+      .to_return(status: 200, body: {
+        'doi' => '10.2/paper2',
+        'title' => 'Paper 2'
+      }.to_json)
+
+    assert_difference 'Paper.count', 2 do
+      assert_difference 'Mention.count', 2 do
+        project.import_mentions
+      end
+    end
+
+    project.reload
+    assert_equal 2, project.mentions_count
+  end
+
+  test "import_mentions skips packages without ecosystem or name" do
+    project = Project.create!(
+      url: 'https://github.com/test/project',
+      packages: [
+        { 'ecosystem' => 'pypi' },
+        { 'name' => 'package2' },
+        {}
+      ]
+    )
+
+    assert_no_difference ['Paper.count', 'Mention.count'] do
+      project.import_mentions
+    end
+  end
 end

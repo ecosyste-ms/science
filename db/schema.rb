@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_10_06_142913) do
+ActiveRecord::Schema[8.0].define(version: 2025_10_06_202247) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -95,6 +95,29 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_06_142913) do
     t.index ["project_id"], name: "index_issues_on_project_id"
   end
 
+  create_table "mentions", force: :cascade do |t|
+    t.integer "paper_id"
+    t.integer "project_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["paper_id"], name: "index_mentions_on_paper_id"
+    t.index ["project_id"], name: "index_mentions_on_project_id"
+  end
+
+  create_table "papers", force: :cascade do |t|
+    t.string "doi"
+    t.string "openalex_id"
+    t.string "title"
+    t.datetime "publication_date"
+    t.json "openalex_data"
+    t.integer "mentions_count", default: 0
+    t.datetime "last_synced_at"
+    t.text "urls", default: [], array: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["doi"], name: "index_papers_on_doi"
+  end
+
   create_table "project_fields", force: :cascade do |t|
     t.bigint "project_id", null: false
     t.bigint "field_id", null: false
@@ -141,6 +164,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_06_142913) do
     t.json "joss_metadata"
     t.float "science_score"
     t.json "science_score_breakdown", default: {}
+    t.integer "mentions_count", default: 0
     t.index ["category", "sub_category"], name: "index_projects_on_category_and_sub_category", where: "((category IS NOT NULL) AND (sub_category IS NOT NULL))"
     t.index ["collection_id"], name: "index_projects_on_collection_id"
     t.index ["reviewed"], name: "index_projects_on_reviewed"
