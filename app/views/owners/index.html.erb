@@ -33,7 +33,7 @@
             <%= link_to owner.login, host_owner_path(@host.name, owner.login) %>
           </h5>
           <small class="text-muted">
-            <%= number_with_delimiter(owner.repositories_count) %> repositories
+            <%= number_with_delimiter(owner.projects_count) %> projects
           </small>
         </div>
         <% if owner.name.present? %>
@@ -46,5 +46,5 @@
     <% end %>
   </div>
 
-  <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+  <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
 </div>
