@@ -40,19 +40,23 @@ class Api::V1::ProjectsController < Api::V1::ApplicationController
 
   def search
     @scope = Project
-    
+
     if params[:q].present?
       @scope = @scope.where("url ILIKE ?", "%#{params[:q]}%")
     end
-    
+
     if params[:keywords].present?
       @scope = @scope.keyword(params[:keywords])
     end
-    
+
     if params[:language].present?
       @scope = @scope.language(params[:language])
     end
-    
+
     @pagy, @projects = pagy(@scope, limit: 20)
+  end
+
+  def names
+    render json: Project.all_package_and_project_names
   end
 end

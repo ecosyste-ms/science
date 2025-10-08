@@ -489,4 +489,75 @@ class ProjectTest < ActiveSupport::TestCase
     project.reload
     assert_nil project.owner_id
   end
+
+  test "packages_sorted_ids returns cached sorted project ids" do
+    project1 = Project.create!(
+      url: 'https://github.com/test/project1',
+      science_score: 50,
+      packages: [{ 'name' => 'pkg1', 'downloads' => 1000 }]
+    )
+    project2 = Project.create!(
+      url: 'https://github.com/test/project2',
+      science_score: 75,
+      packages: [{ 'name' => 'pkg2', 'downloads' => 5000 }]
+    )
+    project3 = Project.create!(
+      url: 'https://github.com/test/project3',
+      science_score: 0,
+      packages: [{ 'name' => 'pkg3', 'downloads' => 10000 }]
+    )
+
+    Rails.cache.clear
+    ids = Project.packages_sorted_ids
+
+    assert_includes ids, project1.id
+    assert_includes ids, project2.id
+    assert_not_includes ids, project3.id
+    assert_equal project2.id, ids.first
+  end
+
+  test "packages_sorted returns projects in correct order" do
+    project1 = Project.create!(
+      url: 'https://github.com/test/project1',
+      science_score: 50,
+      packages: [{ 'name' => 'pkg1', 'downloads' => 1000 }]
+    )
+    project2 = Project.create!(
+      url: 'https://github.com/test/project2',
+      science_score: 75,
+      packages: [{ 'name' => 'pkg2', 'downloads' => 5000 }]
+    )
+
+    Rails.cache.clear
+    projects = Project.packages_sorted
+
+    assert_equal 2, projects.length
+    assert_equal project2.id, projects.first.id
+    assert_equal project1.id, projects.last.id
+  end
+
+  test "all_package_and_project_names returns unique lowercase names" do
+    Project.create!(
+      url: 'https://github.com/test/project1',
+      name: 'Climate Tool',
+      science_score: 50,
+      packages: [{ 'name' => 'climate-pkg' }, { 'name' => 'Weather-Lib' }]
+    )
+    Project.create!(
+      url: 'https://github.com/test/project2',
+      name: 'Weather System',
+      science_score: 75,
+      packages: [{ 'name' => 'weather-lib' }, { 'name' => 'climate-pkg' }]
+    )
+
+    Rails.cache.clear
+    names = Project.all_package_and_project_names
+
+    assert_includes names, 'climate-pkg'
+    assert_includes names, 'weather-lib'
+    assert_includes names, 'climate tool'
+    assert_includes names, 'weather system'
+    assert_equal names, names.uniq
+    assert_equal names, names.sort
+  end
 end

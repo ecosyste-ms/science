@@ -118,6 +118,21 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Project"
+  /projects/names:
+    get:
+      description: get unique package and project names from scientific projects
+      operationId: getProjectNames
+      tags:
+        - projects
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
   /projects/images:
     get:
       description: get projects with images

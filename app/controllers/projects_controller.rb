@@ -134,14 +134,7 @@ class ProjectsController < ApplicationController
   end
 
   def packages
-    # Cache packages list for 2 hours
-    @projects = if Rails.cache.respond_to?(:fetch)
-      Rails.cache.fetch('packages_projects_list', expires_in: 2.hours) do
-        Project.all.select{|p| p.packages.present? }.sort_by{|p| p.packages.sum{|p| p['downloads'] || 0 } }.reverse
-      end
-    else
-      Project.all.select{|p| p.packages.present? }.sort_by{|p| p.packages.sum{|p| p['downloads'] || 0 } }.reverse
-    end
+    @projects = Project.packages_sorted
   end
 
   def joss

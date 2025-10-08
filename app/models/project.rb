@@ -1150,15 +1150,39 @@ class Project < ApplicationRecord
     puts "Import complete. Total imported: #{total_imported}"
   end
 
+  def self.packages_sorted_ids
+    Rails.cache.fetch('packages_projects_ids', expires_in: 2.hours) do
+      with_packages
+        .where('science_score > 0')
+        .sort_by { |p| p.packages.sum { |pkg| pkg['downloads'] || 0 } }
+        .reverse
+        .map(&:id)
+    end
+  end
+
+  def self.packages_sorted
+    project_ids = packages_sorted_ids
+    Project.where(id: project_ids).index_by(&:id).values_at(*project_ids).compact
+  end
+
+  def self.all_package_and_project_names
+    Rails.cache.fetch('all_package_and_project_names', expires_in: 2.hours) do
+      projects = packages_sorted
+      package_names = projects.flat_map { |p| p.packages.map { |pkg| pkg['name'] } }.compact
+      project_names = projects.map(&:name).compact
+      (package_names + project_names).map(&:downcase).uniq.sort
+    end
+  end
+
   def self.stats_summary
     total_projects = Project.count
     scored_projects = Project.where.not(science_score: nil).count
-    
+
     # Science score distribution
     score_distribution = Project.group(:science_score).count
     scientific_count = Project.scientific.count
     highly_scientific_count = Project.highly_scientific.count
-    
+
     # Calculate averages for scored projects
     median_score = Project.where.not(science_score: nil).median(:science_score) rescue nil
 
