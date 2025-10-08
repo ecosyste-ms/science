@@ -212,7 +212,14 @@
           <% end %>
 
           <div class="mt-3 pt-3 border-top">
-            <small class="text-muted">Last synced: <%= distance_of_time_in_words_to_now package['last_synced_at'] %> ago</small>
+            <small class="text-muted">
+              Last synced:
+              <% if package['last_synced_at'] %>
+                <%= distance_of_time_in_words_to_now package['last_synced_at'] %> ago
+              <% else %>
+                Never
+              <% end %>
+            </small>
           </div>
         </div>
       </div>
