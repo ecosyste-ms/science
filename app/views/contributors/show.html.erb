@@ -26,16 +26,8 @@
       <% end %>
     <% end %>
 
-    <b>OST Projects:</b> <%= @contributor.reviewed_projects_count %><br>
-    <b>Languages:</b> <%= @contributor.reviewed_projects.map(&:language).uniq.join(', ') %><br>
     <b>Categories:</b> <%= @contributor.categories.compact.sort.join(', ') %><br>
     <b>Sub Categories:</b> <%= @contributor.sub_categories.compact.sort.join(', ') %><br>
     <b>Topics:</b> <%=@contributor.topics_without_ignored.join(', ') %>
   </small></i></p>
-
-  <h3>Contributed Projects</h3>
-
-  <% @contributor.reviewed_projects.each do |project| %>
-    <%= render 'projects/project', project: project %>
-  <% end %>
 </div>
