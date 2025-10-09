@@ -1,8 +1,18 @@
 <% @meta_title = "Open Source Science" %>
 <% @meta_description = "Discover and explore scientific open source software projects. Browse #{@stats[:total_projects] if @stats} analyzed projects including JOSS papers, research software, and computational tools." %>
-
-<div class="container-md">
+<div class="generic-home__hero generic-home__hero--left mt-5">
+  <div class="container">
+    <div class="row">
+      <div class="col py-5">
+        <h1 class="display-1 mb-3">Open Source in Science</h1>
+        <h2 class="lead mb-4">Uncovering the software underpinning scientific research</h2>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="container mt-4">
   <% if @stats.present? %>
+    <h2>Our data</h2>
     <%= render 'stats', stats: @stats %>
   <% end %>
 

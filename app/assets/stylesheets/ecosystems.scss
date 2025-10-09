@@ -677,6 +677,9 @@ body {
 .well {
   background-color: $color-grey-light;
   border-radius: $border-radius;
+  .bg-light {
+    background-color: $color-grey !important;
+  }
 }
 
 .well--grey {
@@ -1174,6 +1177,21 @@ body {
   }
   @include media-breakpoint-up(lg) { 
     grid-template-columns: repeat(4, 1fr);
+    > .card:first-child {
+      grid-column: span 1;
+    }
+  }
+}
+
+.two-equal-widgets {
+  /* 
+   * Two widgets, same size, one column each wide, one row each deep
+   * | 1 | 2 |
+   */
+  display: grid;
+  gap: $grid-gutter-width;
+  @include media-breakpoint-up(md) { 
+    grid-template-columns: repeat(2, 1fr);
     > .card:first-child {
       grid-column: span 1;
     }
