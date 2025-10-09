@@ -2,6 +2,20 @@
 
 A discovery and classification system for open source scientific software projects. This platform helps researchers, developers, and institutions find, evaluate, and connect with scientific computing tools, research software, and data analysis libraries across all domains of science.
 
+## About
+
+Scientific software is the foundation of modern research, yet it remains difficult to discover and evaluate. Researchers often struggle to find existing tools for their domain, assess software quality and scientific rigor, or identify opportunities for collaboration. Research software is frequently developed in academic silos, leading to duplicated effort and missed connections between related projects.
+
+Ecosyste.ms: Science addresses these challenges by:
+
+- **Aggregating** scientific software from multiple sources (GitHub, package registries, academic journals)
+- **Analyzing** projects using a multi-dimensional science score that evaluates citations, academic affiliations, peer review status, and scientific vocabulary
+- **Classifying** projects into scientific fields and domains to improve discoverability
+- **Connecting** researchers with related projects, potential collaborators, and research infrastructure
+- **Tracking** institutional contributions by identifying academic and research organization affiliations from contributor email domains
+
+The platform makes research software more visible, helping researchers discover tools, institutions recognize their software impact, and funders identify critical research infrastructure that needs support.
+
 This project is part of [Ecosyste.ms](https://ecosyste.ms): Tools and open datasets to support, sustain, and secure critical digital infrastructure.
 
 ## Features
@@ -28,9 +42,10 @@ This project is part of [Ecosyste.ms](https://ecosyste.ms): Tools and open datas
 
 ### Advanced Analytics
 - **JOSS Vocabulary Analysis**: Uses TF-IDF to compare projects against the corpus of peer-reviewed scientific software
-- **Contributor Networks**: Maps academic institutions and research collaborations
+- **Contributor Networks**: Maps academic institutions and research collaborations through email domain analysis
+- **Institutional Tracking**: Identifies and tracks contributions from universities, research labs, and academic organizations
 - **Dependency Mapping**: Visualizes how scientific packages interconnect
-- **Citation Tracking**: Monitors academic citations and research impact
+- **Citation Tracking**: Monitors academic citations and research impact via DOI references
 
 ## Current Scale
 
