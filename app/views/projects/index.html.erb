@@ -19,7 +19,7 @@
   <div class="mb-5">
     <h3 class="h2 mb-4">Browse our data by</h3>
     <a href="#" class="btn btn-primary rounded-pill me-3 px-5 fw-normal">Projects</a> 
-    <a href="#" class="btn btn-primary rounded-pill me-3 px-5 fw-normal">Fields</a> 
+    <%= link_to "Fields", fields_path, class: "btn btn-primary rounded-pill me-3 px-5 fw-normal" %>
     <%= link_to "Institutions", institutional_owners_path, class: "btn btn-primary rounded-pill me-3 px-5 fw-normal" %>
     <%= link_to "JOSS papers", joss_projects_path, class: "btn btn-primary rounded-pill me-3 px-5 fw-normal" %>
   </div>
