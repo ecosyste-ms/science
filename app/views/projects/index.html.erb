@@ -10,13 +10,33 @@
     </div>
   </div>
 </div>
+
 <div class="container mt-4">
   <% if @stats.present? %>
     <h2>Our data</h2>
     <%= render 'stats', stats: @stats %>
   <% end %>
-
-    <ul class="nav nav-tabs my-3">
+  <div class="mb-5">
+    <h3 class="h2 mb-4">Browse our data by</h3>
+    <a href="#" class="btn btn-primary rounded-pill me-3 px-5 fw-normal">Projects</a> 
+    <a href="#" class="btn btn-primary rounded-pill me-3 px-5 fw-normal">Fields</a> 
+    <%= link_to "Institutions", institutional_owners_path, class: "btn btn-primary rounded-pill me-3 px-5 fw-normal" %>
+    <%= link_to "JOSS papers", joss_projects_path, class: "btn btn-primary rounded-pill me-3 px-5 fw-normal" %>
+  </div>
+</div>
+<div class="generic-home__ecosystems-banner grey-bg mb-5">
+        <div class="container">
+          <div class="row">
+            <div class="col-12 col-lg-4">
+              <h2 class="mb-4 mt-5">Part of the Ecosyste.ms Platform</h2>
+              <p class="mb-4">We provide this essential service at no cost as part of the broader ecosyste.ms initiative to support and secure critical digital infrastructure</p>
+              <p><a href="https://ecosyste.ms" class="spesh-link mb-5">Find out more</a></p>
+            </div>
+          </div>
+        </div>
+      </div>
+<div class="container">
+<ul class="nav nav-tabs my-3">
       <li class="nav-item">
         <h2>Projects</h2>
       </li>
@@ -33,7 +53,6 @@
         </div>
       </li>
     </ul>
-
   <%= render @projects %>
   <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>  
 </div>
