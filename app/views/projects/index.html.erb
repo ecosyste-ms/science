@@ -16,13 +16,32 @@
   </div>
 </div>
 
-<div class="container mt-5 mb-5">
+<div class="container mt-5">
   <% if @stats.present? %>
     <h2>Data coverage</h2>
     <%= render 'stats', stats: @stats %>
   <% end %>
-</div>
 
+  <div class="generic-home__benefits py-5">
+    <h2>How it works</h2>
+    <div class="row mb-5">
+      <div class="col-12 col-md-12 col-lg-4">
+        <%= image_tag("stack-1.svg", alt: " ", size: "80x150", class: "mt-2 mb-4") %>
+        <h3 class="h4">We collect research data</h3>
+        <p>Pulling in millions of papers and metadata from sources like Crossref and OpenAlex, so we can see how research is built</p> 
+      </div>
+      <div class="col-12 col-md-6 col-lg-4">
+        <%= image_tag("stack-2.svg", alt: " ", size: "80x150", class: "mt-2 mb-4") %>
+        <h3 class="h4">We link software and science</h3>
+        <p>We match mentions of open-source projects in publications to the code and people behind them, uncovering the invisible infrastructure of modern research</p>
+      </div><div class="col-12 col-md-6 col-lg-4">
+        <%= image_tag("stack-3.svg", alt: " ", size: "80x150", class: "mt-2 mb-4") %>
+        <h3 class="h4">We reveal the bigger picture</h3>
+        <p>Showing where science depends on fragile or under-maintained software, helping funders, institutions, and communities invest where it matters most.</p>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="generic-home__ecosystems-banner grey-bg my-5">
   <div class="container">
     <div class="row">
