@@ -1,55 +1,93 @@
-<div class="card mb-3 project d-flex" id="project_<%= project.id %>">
-  <div class="card-body pb-1">
-    <div class="d-flex">
-      
-      <div class="flex-grow-1 ms-3 text-break">
-        <h5 class='card-title'>
-          <%= link_to project, project_path(project) %>
-        </h5>
-      
-        <p class="card-subtitle mb-2 text-muted">
-          <%= project.description %>
-        </p>
+<div class="card mb-4 pb-4 listing d-flex flex-row align-items-start" id="project_<%= project.id %>">
+  <div class="flex-shrink-0 mt-1 ms-3 me-3">
+    <img src="<%= project.avatar_url %>" class="rounded" height="56" width="56" onerror="this.style.display='none'">
+  </div>
+
+  <div class="card-body p-0">
+    <% if project.category.present? %>
+      <span class="listing__badge badge bg-primary">
+        <%= project.category %>
+      </span>
+    <% end %>
+
+
+    <% if project.last_synced_at.present? %>
+      <div class="text-muted float-end listing__time">
+        <span title="<%= project.last_synced_at.utc.strftime('%Y-%m-%d %H:%M:%S UTC') %>">
+          Updated <%= time_ago_in_words(project.last_synced_at) %> ago
+        </span>
+      </div>
+    <% end %>
+
+
+    <h3 class="card-title listing__title mt-3">
+      <%= link_to project_path(project) do %>
+        <%= project.respond_to?(:name) && project.name.present? ? project.name : project.to_s %>
+        <span class="listing__meta">
+          <% if project.sub_category.present? %> — <%= project.sub_category %><% end %>
+          <% if project.score && project.score.finite? %> • Rank <%= project.score.round(1) %><% end %>
+          <% if project.science_score.present? %> • Science <%= number_with_precision(project.science_score, precision: 0) %>%<% end %>
+        </span>
+      <% end %>
+    </h3>
+
+    <% if project.description.present? %>
+      <p class="text-muted mt-2 mb-0 small"><%= project.description %></p>
+    <% end %>
+
+
+    <div class="mt-3 listing__details">
+      <div class="d-flex align-items-start flex-wrap">
 
         <% if project.keywords.any? %>
-          <p>
-            <% project.keywords.each do |keyword| %>
-              <span class="badge bg-light text-dark">
-                <%= link_to keyword, url_for(keyword: keyword) %>
-              </span>
-            <% end %>
-          </p>
-        <% end %>
-        
-        <% if project.fields.any? %>
-          <p>
-            <% project.all_fields_with_confidence.each do |field, confidence| %>
-              <span class="badge bg-<%= confidence > 0.7 ? 'info' : confidence > 0.5 ? 'secondary' : 'light' %>">
-                <%= field.name %>
-                <% if confidence < 0.5 %>
-                  <small>(<%= (confidence * 100).round(0) %>%)</small>
-                <% end %>
-              </span>
-            <% end %>
-          </p>
+          <div class="d-flex align-items-start me-4 mb-2">
+            
+            <div>
+              <% project.keywords.each do |keyword| %>
+                <span class="badge bg-light text-dark me-1 mb-2">
+                  <%= link_to keyword, url_for(keyword: keyword), class: 'text-reset text-decoration-none' %>
+                </span>
+              <% end %>
+            </div>
+          </div>
         <% end %>
 
-        <% if project.last_synced_at %>
-        <p class="card-subtitle mb-2 text-muted"><i><small>
-          <% if project.category %>
-            <%= project.category %> - <%= project.sub_category %> -
-          <% end %>
-          Last synced: <%= project.last_synced_at.strftime("%d %b %Y") %>
-          - Ranking: <%= project.score.finite? ? project.score.round(1) : 0 %>
-          <% if project.science_score.present? %>
-            - Science Score: <%= number_with_precision(project.science_score, precision: 0) %>%
-          <% end %>
-        </small></i></p>
+
+        <% if project.fields.any? %>
+          <div class="d-flex align-items-start me-4 mb-2">
+            <%= bootstrap_icon 'layers', width: 18, height: 18, class: 'flex-shrink-0 me-2' %>
+            <div>
+              <% project.all_fields_with_confidence.each do |field, confidence| %>
+                <% badge =
+                    if confidence > 0.7
+                      'info'
+                    elsif confidence > 0.5
+                      'secondary'
+                    else
+                      'light'
+                    end %>
+                <span class="badge bg-<%= badge %> me-1 mb-2">
+                  <%= field.name %>
+                  <% if confidence < 0.5 %>
+                    <small>(<%= (confidence * 100).round(0) %>%)</small>
+                  <% end %>
+                </span>
+              <% end %>
+            </div>
+          </div>
         <% end %>
+
+
+        <% if project.category.present? || project.sub_category.present? %>
+          <div class="d-flex align-items-start me-4 mb-2">
+            <%= bootstrap_icon 'collection', width: 18, height: 18, class: 'flex-shrink-0 me-2' %>
+            <span class="text-muted">
+              <%= [project.category, project.sub_category].compact.join(' · ') %>
+            </span>
+          </div>
+        <% end %>
+
       </div>
-      <div class="flex-shrink-0">
-        <img src="<%= project.avatar_url %>" class="rounded" height='40' width='40' onerror="this.style.display='none'">
-      </div>  
     </div>
   </div>
 </div>

@@ -5,35 +5,73 @@
     <div class="row">
       <div class="col py-5">
         <h1 class="display-1 mb-3">Open Source in Research</h1>
-        <h2 class="lead mb-4">Uncovering the software underpinning scientific research</h2>
+        <h2 class="lead mb-5">Uncovering the software underpinning scientific research</h2>
+        <h3 class="h4 mb-3">Browse our data by</h3>
+        <a href="#" class="btn btn-primary rounded-pill me-3 px-5 fw-normal">Projects</a> 
+        <%= link_to "Fields", fields_path, class: "btn btn-primary rounded-pill me-3 px-5 fw-normal" %>
+        <%= link_to "Institutions", institutional_owners_path, class: "btn btn-primary rounded-pill me-3 px-5 fw-normal" %>
+        <%= link_to "JOSS papers", joss_projects_path, class: "btn btn-primary rounded-pill me-3 px-5 fw-normal" %>
       </div>
     </div>
   </div>
 </div>
-<div class="container mt-4">
+
+<div class="container mt-5">
   <% if @stats.present? %>
-    <h2>Our data</h2>
+    <h2>Data coverage</h2>
     <%= render 'stats', stats: @stats %>
   <% end %>
 
-    <ul class="nav nav-tabs my-3">
-      <li class="nav-item">
-        <h2>Projects</h2>
-      </li>
-      <li class="nav-item ms-auto">
-        <div class="dropdown">
-          <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            Sort
-          </button>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item <%= 'active' if params[:sort] == 'last_synced_at' %>" href="<%= url_for(sort: 'last_synced_at', order: 'desc') %>">Recently synced</a></li>
-            <li><a class="dropdown-item <%= 'active' if params[:sort] == 'score' %>" href="<%= url_for(sort: 'score', order: 'desc') %>">Ranking</a></li>
-            <li><a class="dropdown-item <%= 'active' if params[:sort] == 'science_score' %>" href="<%= url_for(sort: 'science_score', order: 'desc') %>">Science Score</a></li>
-          </ul>
-        </div>
-      </li>
-    </ul>
+  <div class="generic-home__benefits py-5">
+    <h2>How it works</h2>
+    <div class="row mb-5">
+      <div class="col-12 col-md-12 col-lg-4">
+        <%= image_tag("stack-1.svg", alt: " ", size: "80x150", class: "mt-2 mb-4") %>
+        <h3 class="h4">We collect research data</h3>
+        <p>Pulling in millions of papers and metadata from sources like Crossref and OpenAlex, so we can see how research is built</p> 
+      </div>
+      <div class="col-12 col-md-6 col-lg-4">
+        <%= image_tag("stack-2.svg", alt: " ", size: "80x150", class: "mt-2 mb-4") %>
+        <h3 class="h4">We link software and science</h3>
+        <p>We match mentions of open-source projects in publications to the code and people behind them, uncovering the invisible infrastructure of modern research</p>
+      </div><div class="col-12 col-md-6 col-lg-4">
+        <%= image_tag("stack-3.svg", alt: " ", size: "80x150", class: "mt-2 mb-4") %>
+        <h3 class="h4">We reveal the bigger picture</h3>
+        <p>Showing where science depends on fragile or under-maintained software, helping funders, institutions, and communities invest where it matters most.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="generic-home__ecosystems-banner grey-bg my-5">
+  <div class="container">
+    <div class="row">
+      <div class="col-12 col-lg-4">
+        <h2 class="mb-4 mt-5">Part of the Ecosyste.ms Platform</h2>
+        <p class="mb-4">We provide this essential service at no cost as part of the broader ecosyste.ms initiative to support and secure critical digital infrastructure</p>
+        <p><a href="https://ecosyste.ms" class="spesh-link mb-5">Find out more</a></p>
+      </div>
+    </div>
+  </div>
+</div>
 
+<div class="container">
+  <ul class="nav nav-tabs my-3">
+    <li class="nav-item">
+      <h2>Projects</h2>
+    </li>
+    <li class="nav-item ms-auto">
+      <div class="dropdown">
+        <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          Sort
+        </button>
+        <ul class="dropdown-menu">
+          <li><a class="dropdown-item <%= 'active' if params[:sort] == 'last_synced_at' %>" href="<%= url_for(sort: 'last_synced_at', order: 'desc') %>">Recently synced</a></li>
+          <li><a class="dropdown-item <%= 'active' if params[:sort] == 'score' %>" href="<%= url_for(sort: 'score', order: 'desc') %>">Ranking</a></li>
+          <li><a class="dropdown-item <%= 'active' if params[:sort] == 'science_score' %>" href="<%= url_for(sort: 'science_score', order: 'desc') %>">Science Score</a></li>
+        </ul>
+      </div>
+    </li>
+  </ul>
   <%= render @projects %>
   <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>  
 </div>
