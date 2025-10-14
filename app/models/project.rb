@@ -1191,6 +1191,15 @@ class Project < ApplicationRecord
     with_readme_count = Project.with_readme.count
     with_packages_count = Project.with_packages.count
 
+    # Citation and metadata file counts
+    with_citation_count = Project.where.not(citation_file: nil).count
+    with_codemeta_count = Project.where("repository IS NOT NULL")
+                                 .where("(repository::jsonb->'metadata'->'files')::jsonb ? 'codemeta'")
+                                 .count
+
+    # Mentions count (projects cited in papers)
+    with_mentions_count = Project.joins(:mentions).distinct.count
+
     # JOSS stats
     joss_count = Project.with_joss.count
 
@@ -1216,6 +1225,9 @@ class Project < ApplicationRecord
       projects_with_repository: with_repo_count,
       projects_with_readme: with_readme_count,
       projects_with_packages: with_packages_count,
+      projects_with_citation_file: with_citation_count,
+      projects_with_codemeta: with_codemeta_count,
+      projects_with_mentions: with_mentions_count,
       joss_projects: joss_count,
       institutional_owners: institutional_owners_count,
       score_distribution: score_distribution,
