@@ -4,17 +4,7 @@ class ProjectsController < ApplicationController
   end
 
   def index
-    # Cache stats for 6 hours since they don't change that frequently
-    # Use cache in all environments where it's configured (not just production)
-    @stats = if Rails.cache.respond_to?(:fetch)
-      Rails.cache.fetch('homepage_stats', expires_in: 6.hours) do
-        Project.stats_summary
-      end
-    else
-      Project.stats_summary
-    end
-
-    @scope = Project.where('science_score > 0')
+    @scope = Project.includes(project_fields: :field).where('science_score > 0')
 
     if params[:keyword].present?
       @scope = @scope.keyword(params[:keyword])

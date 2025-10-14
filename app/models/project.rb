@@ -664,8 +664,8 @@ class Project < ApplicationRecord
   end
   
   def all_fields_with_confidence
-    project_fields.includes(:field)
-                  .by_confidence
+    project_fields.to_a
+                  .sort_by { |pf| -pf.confidence_score }
                   .map { |pf| [pf.field, pf.confidence_score] }
   end
   

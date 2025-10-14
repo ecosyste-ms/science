@@ -9,27 +9,5 @@ class HomeController < ApplicationController
     else
       Project.stats_summary
     end
-
-    @scope = Project.where('science_score > 0')
-
-    if params[:keyword].present?
-      @scope = @scope.keyword(params[:keyword])
-    end
-
-    if params[:owner].present?
-      @scope = @scope.owner(params[:owner])
-    end
-
-    if params[:language].present?
-      @scope = @scope.language(params[:language])
-    end
-
-    if params[:sort]
-      @scope = @scope.order("#{params[:sort]} #{params[:order]}")
-    else
-      @scope = @scope.order(Arel.sql('(science_score + COALESCE(score, 0)) DESC'))
-    end
-
-    @pagy, @projects = pagy(@scope)
   end
 end
