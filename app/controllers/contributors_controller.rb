@@ -1,6 +1,6 @@
 class ContributorsController < ApplicationController
   def index
-    scope = Contributor.display.order('reviewed_projects_count DESC')
+    scope = Contributor.display.order('last_synced_at DESC')
     @pagy, @contributors = pagy(scope)
   end
 

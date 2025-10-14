@@ -107,7 +107,6 @@ rake projects:discover                       # Auto-discover via topics and keyw
 
 ```bash
 rake projects:sync                           # Sync least recently synced projects (500 at a time)
-rake projects:sync_reviewed                  # Sync reviewed projects
 rake projects:sync_dependencies              # Update dependency information across projects
 ```
 

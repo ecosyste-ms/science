@@ -113,24 +113,8 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_select ".card-title", text: "Popular Scientific Projects"
   end
 
-  test "should get dependencies" do
-    # The dependencies action needs the dependencies column with proper format
-    @project.update(dependencies: [{
-      "dependencies" => [
-        { "ecosystem" => "npm", "package_name" => "react", "direct" => true }
-      ]
-    }])
-    get dependencies_projects_url
-    assert_response :success
-  end
-
   test "should get packages" do
     get packages_projects_url
-    assert_response :success
-  end
-
-  test "should get review" do
-    get review_projects_url
     assert_response :success
   end
 

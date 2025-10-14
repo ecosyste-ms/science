@@ -139,13 +139,4 @@ class Api::V1::IssuesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, actual_response.length
     assert_equal 'Climate Issue', actual_response[0]['title']
   end
-
-  test 'should get openclimateaction projects' do
-    get openclimateaction_api_v1_issues_path
-    assert_response :success
-
-    actual_response = JSON.parse(@response.body)
-    assert_not_nil actual_response
-    assert_instance_of Array, actual_response
-  end
 end

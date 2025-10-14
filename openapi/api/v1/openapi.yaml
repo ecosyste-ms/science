@@ -208,47 +208,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Issue"
-  /issues/openclimateaction:
-    get:
-      description: get issues for openclimateaction
-      operationId: getOpenClimateActionIssues
-      tags:
-        - issues
-      parameters:
-        - name: page
-          in: query
-          description: pagination page number
-          required: false
-          schema:
-            type: integer
-        - name: per_page
-          in: query
-          description: Number of records to return
-          required: false
-          schema:
-            type: integer
-        - name: sort
-          in: query
-          description: The field to sort by
-          required: false
-          schema:
-            type: string
-        - name: order
-          in: query
-          description: The sort order (asc or desc)
-          required: false
-          schema:
-            type: string
-            enum: [asc, desc]
-      responses:
-        200:
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Issue"
 components:
   schemas:
     Project:

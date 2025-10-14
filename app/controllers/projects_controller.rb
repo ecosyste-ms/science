@@ -100,29 +100,6 @@ class ProjectsController < ApplicationController
     params.require(:project).permit(:url, :name, :description)
   end
 
-  def dependencies
-    # Cache dependencies aggregation for 2 hours
-    @dependencies = if Rails.cache.respond_to?(:fetch)
-      Rails.cache.fetch('dependencies_aggregation', expires_in: 2.hours) do
-        Project.all.map(&:dependency_packages).flatten(1).group_by(&:itself).transform_values(&:count).sort_by{|k,v| v}.reverse
-      end
-    else
-      Project.all.map(&:dependency_packages).flatten(1).group_by(&:itself).transform_values(&:count).sort_by{|k,v| v}.reverse
-    end
-
-    # Cache ecosystem counts for 2 hours
-    @ecosystem_counts = if Rails.cache.respond_to?(:fetch)
-      Rails.cache.fetch('dependency_ecosystem_counts', expires_in: 2.hours) do
-        Dependency.group(:ecosystem).count.sort_by{|k,v| v}.reverse
-      end
-    else
-      Dependency.group(:ecosystem).count.sort_by{|k,v| v}.reverse
-    end
-
-    @dependency_records = Dependency.where('count > 1').includes(:project)
-    @packages = []
-  end
-
   def packages
     @projects = Project.packages_sorted
   end

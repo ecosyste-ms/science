@@ -55,7 +55,6 @@ class Issue < ApplicationRecord
   "help-wanted",
   "i-good-first-issue",
   "issue type: good first issue",
-  "open climate action",
   "question & help wanted",
   "status --- good first issue",
   "status --- help wanted :heart:",
