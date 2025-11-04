@@ -41,6 +41,7 @@ class Project < ApplicationRecord
   scope :with_readme, -> { where.not(readme: nil) }
   scope :without_readme, -> { where(readme: nil) }
   scope :with_codemeta_file, -> { where("repository IS NOT NULL").where("(repository::jsonb->'metadata'->'files'->>'codemeta') IS NOT NULL") }
+  scope :with_codemeta, -> { where.not(codemeta: nil) }
 
   scope :with_keywords_from_contributors, -> { where.not(keywords_from_contributors: []) }
   scope :without_keywords_from_contributors, -> { where(keywords_from_contributors: []) }
@@ -282,6 +283,7 @@ class Project < ApplicationRecord
     fetch_issue_stats
     sync_issues
     fetch_citation_file
+    fetch_codemeta
     sync_releases
     update_committers
     update_keywords_from_contributors
@@ -1667,6 +1669,14 @@ class Project < ApplicationRecord
     repository['metadata']['files']['codemeta']
   end
 
+  def codemeta_json
+    return nil unless codemeta.present?
+    JSON.parse(codemeta)
+  rescue JSON::ParserError => e
+    puts "Error parsing codemeta JSON for project #{id} (#{url}): #{e.message}"
+    nil
+  end
+
   def download_url
     return unless repository.present?
     repository['download_url']
@@ -2320,5 +2330,225 @@ class Project < ApplicationRecord
   rescue => e
     puts "Error fetching paper from #{paper_url}: #{e.message}"
     nil
+  end
+
+  def self.analyze_codemeta_patterns
+    puts "Analyzing CodeMeta patterns across projects..."
+    puts "=" * 80
+
+    projects_with_codemeta = Project.where.not(codemeta: nil)
+    total_projects = projects_with_codemeta.count
+
+    puts "\nTotal projects with codemeta data: #{total_projects}"
+    return if total_projects == 0
+
+    # Data collection
+    all_keywords = []
+    all_categories = []
+    all_subcategories = []
+
+    keywords_by_project = []
+    categories_by_project = []
+
+    namespaced_keywords = { colon: [], slash: [], dot: [] }
+    parse_errors = 0
+
+    projects_with_codemeta.find_each do |project|
+      data = project.codemeta_json
+
+      if data.nil?
+        parse_errors += 1
+        next
+      end
+
+      # Extract keywords
+      keywords = extract_array_or_string(data['keywords'])
+      if keywords.any?
+        all_keywords += keywords
+        keywords_by_project << keywords.length
+
+        # Analyze keyword patterns (only for string keywords)
+        keywords.each do |kw|
+          next unless kw.is_a?(String)
+          namespaced_keywords[:colon] << kw if kw.include?(':')
+          namespaced_keywords[:slash] << kw if kw.include?('/')
+          namespaced_keywords[:dot] << kw if kw.match?(/\w+\.\w+/)
+        end
+      end
+
+      # Extract applicationCategory
+      category = extract_array_or_string(data['applicationCategory'])
+      if category.any?
+        all_categories += category
+        categories_by_project << category
+      end
+
+      # Extract applicationSubCategory
+      subcategory = extract_array_or_string(data['applicationSubCategory'])
+      all_subcategories += subcategory if subcategory.any?
+    end
+
+    puts "\n" + "=" * 80
+    puts "KEYWORDS ANALYSIS"
+    puts "=" * 80
+
+    if all_keywords.any?
+      analyze_keywords(all_keywords, keywords_by_project, namespaced_keywords)
+    else
+      puts "No keywords found in codemeta data"
+    end
+
+    puts "\n" + "=" * 80
+    puts "APPLICATION CATEGORY ANALYSIS"
+    puts "=" * 80
+
+    if all_categories.any?
+      analyze_categories(all_categories, categories_by_project, "applicationCategory")
+    else
+      puts "No applicationCategory values found in codemeta data"
+    end
+
+    puts "\n" + "=" * 80
+    puts "APPLICATION SUBCATEGORY ANALYSIS"
+    puts "=" * 80
+
+    if all_subcategories.any?
+      analyze_categories(all_subcategories, [], "applicationSubCategory")
+    else
+      puts "No applicationSubCategory values found in codemeta data"
+    end
+
+    puts "\n" + "=" * 80
+    puts "SUMMARY & RECOMMENDATIONS"
+    puts "=" * 80
+
+    puts "\nParse errors: #{parse_errors}" if parse_errors > 0
+
+    # Recommendations
+    puts "\nKey Findings:"
+    if namespaced_keywords.values.flatten.any?
+      puts "✓ Some projects ARE using structured/namespaced keywords"
+      puts "  - #{namespaced_keywords[:colon].length} keywords with colons (e.g., 'domain:value')"
+      puts "  - #{namespaced_keywords[:slash].length} keywords with slashes (e.g., 'category/value')"
+      puts "  - #{namespaced_keywords[:dot].length} keywords with dots (e.g., 'namespace.value')"
+    else
+      puts "✗ No structured/namespaced keywords found"
+      puts "  Projects are using simple, unstructured keywords"
+    end
+
+    if all_categories.any?
+      category_types = categories_by_project.map { |cats| cats.is_a?(Array) ? cats.length : 1 }
+      avg_categories = category_types.sum.to_f / category_types.length
+      puts "\n✓ applicationCategory is being used (avg #{avg_categories.round(1)} per project)"
+      if avg_categories > 1.2
+        puts "  Most projects use multiple categories (arrays)"
+      else
+        puts "  Most projects use single category values"
+      end
+    else
+      puts "\n✗ applicationCategory is rarely used"
+    end
+
+    puts "\n" + "=" * 80
+  end
+
+  def self.extract_array_or_string(value)
+    return [] if value.nil?
+
+    values = value.is_a?(Array) ? value : [value]
+
+    # Flatten and convert to strings, handling various types
+    values.flat_map do |v|
+      case v
+      when String
+        v
+      when Hash
+        # Handle structured keywords (e.g., {"name": "keyword"} or URL objects)
+        v['name'] || v['@value'] || v['value'] || v.to_s
+      else
+        v.to_s if v.present?
+      end
+    end.compact
+  end
+
+  def self.analyze_keywords(all_keywords, keywords_by_project, namespaced_keywords)
+    puts "\nTotal keywords: #{all_keywords.length}"
+    puts "Unique keywords: #{all_keywords.uniq.length}"
+    puts "Average keywords per project: #{(all_keywords.length.to_f / keywords_by_project.length).round(2)}"
+
+    # Top keywords
+    keyword_counts = all_keywords.group_by(&:itself).transform_values(&:count).sort_by { |k, v| -v }
+    puts "\nTop 50 most common keywords:"
+    keyword_counts.first(50).each_with_index do |(keyword, count), index|
+      puts "  #{index + 1}. #{keyword} (#{count} projects)"
+    end
+
+    # Structured keywords analysis
+    puts "\n" + "-" * 80
+    puts "STRUCTURED KEYWORDS ANALYSIS"
+    puts "-" * 80
+
+    total_projects_with_namespaced = [
+      namespaced_keywords[:colon].map { |kw| kw.split(':').first }.uniq,
+      namespaced_keywords[:slash].map { |kw| kw.split('/').first }.uniq,
+      namespaced_keywords[:dot].map { |kw| kw.split('.').first }.uniq
+    ].flatten.uniq.length
+
+    puts "\nProjects using structured keywords: #{total_projects_with_namespaced}"
+
+    if namespaced_keywords[:colon].any?
+      puts "\nColon-separated keywords (#{namespaced_keywords[:colon].length} total):"
+      colon_examples = namespaced_keywords[:colon].uniq.first(10)
+      colon_examples.each { |kw| puts "  - #{kw}" }
+
+      # Analyze namespaces
+      namespaces = namespaced_keywords[:colon].map { |kw| kw.split(':').first }.group_by(&:itself).transform_values(&:count).sort_by { |k, v| -v }
+      puts "\n  Common namespaces:"
+      namespaces.first(10).each { |ns, count| puts "    #{ns}: #{count} keywords" }
+    end
+
+    if namespaced_keywords[:slash].any?
+      puts "\nSlash-separated keywords (#{namespaced_keywords[:slash].length} total):"
+      slash_examples = namespaced_keywords[:slash].uniq.first(10)
+      slash_examples.each { |kw| puts "  - #{kw}" }
+    end
+
+    if namespaced_keywords[:dot].any?
+      puts "\nDot-separated keywords (#{namespaced_keywords[:dot].length} total):"
+      dot_examples = namespaced_keywords[:dot].uniq.first(10)
+      dot_examples.each { |kw| puts "  - #{kw}" }
+    end
+  end
+
+  def self.analyze_categories(all_categories, categories_by_project, label)
+    puts "\nTotal #{label} values: #{all_categories.length}"
+    puts "Unique #{label} values: #{all_categories.uniq.length}"
+
+    # Check if mostly URLs or text
+    url_count = all_categories.count { |cat| cat.to_s.start_with?('http://') || cat.to_s.start_with?('https://') }
+    puts "URL-based values: #{url_count} (#{(url_count.to_f / all_categories.length * 100).round(1)}%)"
+    puts "Text-based values: #{all_categories.length - url_count} (#{((all_categories.length - url_count).to_f / all_categories.length * 100).round(1)}%)"
+
+    # Top categories
+    category_counts = all_categories.group_by(&:itself).transform_values(&:count).sort_by { |k, v| -v }
+    puts "\nTop 50 most common values:"
+    category_counts.first(50).each_with_index do |(category, count), index|
+      display_value = category.to_s.length > 80 ? category.to_s[0..77] + "..." : category.to_s
+      puts "  #{index + 1}. #{display_value} (#{count} projects)"
+    end
+
+    # Distribution analysis
+    puts "\nDistribution:"
+    top_10_count = category_counts.first(10).sum { |k, v| v }
+    puts "  Top 10 values account for: #{(top_10_count.to_f / all_categories.length * 100).round(1)}% of all values"
+
+    singleton_count = category_counts.count { |k, v| v == 1 }
+    puts "  Values appearing only once: #{singleton_count} (#{(singleton_count.to_f / category_counts.length * 100).round(1)}%)"
+
+    if categories_by_project.any?
+      multi_category_projects = categories_by_project.count { |cats| cats.is_a?(Array) && cats.length > 1 }
+      puts "\nUsage pattern:"
+      puts "  Projects with multiple values: #{multi_category_projects} (#{(multi_category_projects.to_f / categories_by_project.length * 100).round(1)}%)"
+    end
   end
 end
