@@ -1,0 +1,16 @@
+<% codemeta_data = @project.codemeta_json %>
+<% if codemeta_data.present? %>
+  <div class="mb-4">
+    <h3 class="mb-3">
+      CodeMeta
+      <small class="text-muted">
+        (<%= link_to @project.codemeta_file_name || 'codemeta.json', @project.blob_url(@project.codemeta_file_name || 'codemeta.json'), target: :_blank, class: 'text-decoration-none' %>)
+      </small>
+    </h3>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <pre class="mb-0" style="max-height: 600px; overflow-y: auto;"><code><%= JSON.pretty_generate(codemeta_data) %></code></pre>
+      </div>
+    </div>
+  </div>
+<% end %>
