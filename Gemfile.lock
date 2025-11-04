@@ -397,7 +397,7 @@ GEM
       unf_ext
     unf_ext (0.0.9.1)
     unicode_utils (1.4.0)
-    uri (1.1.0)
+    uri (1.1.1)
     useragent (0.16.11)
     web-console (4.2.1)
       actionview (>= 6.0.0)
@@ -644,7 +644,7 @@ CHECKSUMS
   unf (0.1.4) sha256=4999517a531f2a955750f8831941891f6158498ec9b6cb1c81ce89388e63022e
   unf_ext (0.0.9.1) sha256=926114a858934126c6bbfd3254347dadb5dae354711869368c0f75e3765fc6e9
   unicode_utils (1.4.0) sha256=b922d0cf2313b6b7136ada6645ce7154ffc86418ca07d53b058efe9eb72f2a40
-  uri (1.1.0) sha256=e23a2061c1e924efa2cc3016f517f888e7c866c0d7f6531f5cded089f2b9e625
+  uri (1.1.1) sha256=379fa58d27ffb1387eaada68c749d1426738bd0f654d812fcc07e7568f5c57c6
   useragent (0.16.11) sha256=700e6413ad4bb954bb63547fa098dddf7b0ebe75b40cc6f93b8d54255b173844
   web-console (4.2.1) sha256=e7bcf37a10ea2b4ec4281649d1cee461b32232d0a447e82c786e6841fd22fe20
   webmock (3.26.1) sha256=4f696fb57c90a827c20aadb2d4f9058bbff10f7f043bd0d4c3f58791143b1cd7
