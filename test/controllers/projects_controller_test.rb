@@ -287,4 +287,60 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_equal joss_high.id, projects.first.id
     assert_equal joss_low.id, projects.second.id
   end
+
+  test "should export project with citation_file to bibtex" do
+    cff_content = <<~CFF
+      cff-version: 1.2.0
+      message: "If you use this software, please cite it as below."
+      title: "ggplot2"
+      authors:
+        - family-names: "Wickham"
+          given-names: "Hadley"
+    CFF
+    @project.update(citation_file: cff_content)
+
+    get export_project_url(@project), params: { format: 'bibtex' }
+
+    assert_response :success
+    assert_equal 'application/x-bibtex', response.media_type
+    assert_match(/@software/, response.body)
+  end
+
+  test "should export project with citation_file to apalike" do
+    cff_content = <<~CFF
+      cff-version: 1.2.0
+      title: "ggplot2"
+      authors:
+        - family-names: "Wickham"
+          given-names: "Hadley"
+    CFF
+    @project.update(citation_file: cff_content)
+
+    get export_project_url(@project), params: { format: 'apalike' }
+
+    assert_response :success
+    assert_equal 'text/plain', response.media_type
+  end
+
+  test "should return not found for project without citation metadata" do
+    get export_project_url(@project), params: { format: 'bibtex' }
+
+    assert_response :not_found
+  end
+
+  test "should support bibtex and apalike export formats" do
+    cff_content = <<~CFF
+      cff-version: 1.2.0
+      title: "ggplot2"
+      authors:
+        - family-names: "Wickham"
+          given-names: "Hadley"
+    CFF
+    @project.update(citation_file: cff_content)
+
+    %w[bibtex apalike].each do |format|
+      get export_project_url(@project), params: { format: format }
+      assert_response :success
+    end
+  end
 end

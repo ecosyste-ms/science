@@ -560,4 +560,112 @@ class ProjectTest < ActiveSupport::TestCase
     assert_equal names, names.uniq
     assert_equal names, names.sort
   end
+
+  test "cff_to_codemeta converts citation file to codemeta format" do
+    project = Project.create!(url: 'https://github.com/test/cff-project')
+    cff_content = <<~CFF
+      cff-version: 1.2.0
+      message: "If you use this software, please cite it as below."
+      title: "Test Software"
+      authors:
+        - family-names: "Doe"
+          given-names: "John"
+          email: "john@example.com"
+      abstract: "A test software package"
+      version: "1.0.0"
+      license: MIT
+      repository-code: "https://github.com/test/cff-project"
+      keywords:
+        - testing
+        - software
+    CFF
+    project.update(citation_file: cff_content)
+
+    codemeta = project.cff_to_codemeta
+
+    assert_not_nil codemeta
+    assert_equal "Test Software", codemeta["name"]
+    assert_equal "A test software package", codemeta["description"]
+    assert_equal "1.0.0", codemeta["softwareVersion"]
+    assert_equal "https://github.com/test/cff-project", codemeta["codeRepository"]
+    assert_includes codemeta["keywords"], "testing"
+  end
+
+  test "exportable_metadata returns codemeta when available" do
+    project = Project.create!(url: 'https://github.com/test/exportable')
+    codemeta_json = { "@type" => "SoftwareSourceCode", "name" => "Test" }
+    project.update(codemeta: codemeta_json.to_json)
+
+    metadata = project.exportable_metadata
+
+    assert_not_nil metadata
+    assert_equal "Test", metadata["name"]
+  end
+
+  test "exportable_metadata falls back to converted CFF" do
+    project = Project.create!(url: 'https://github.com/test/fallback')
+    cff_content = <<~CFF
+      cff-version: 1.2.0
+      title: "Fallback Test"
+      authors:
+        - family-names: "Smith"
+          given-names: "Jane"
+    CFF
+    project.update(citation_file: cff_content)
+
+    metadata = project.exportable_metadata
+
+    assert_not_nil metadata
+    assert_equal "Fallback Test", metadata["name"]
+  end
+
+  test "exportable_metadata returns nil when no metadata available" do
+    project = Project.create!(url: 'https://github.com/test/no-metadata')
+
+    metadata = project.exportable_metadata
+
+    assert_nil metadata
+  end
+
+  test "export_citation generates bibtex from CFF" do
+    project = Project.create!(url: 'https://github.com/test/export')
+    cff_content = <<~CFF
+      cff-version: 1.2.0
+      title: "Export Test"
+      authors:
+        - family-names: "Author"
+          given-names: "Test"
+    CFF
+    project.update(citation_file: cff_content)
+
+    bibtex = project.export_citation(format: 'bibtex')
+
+    assert_not_nil bibtex
+    assert_match(/@software/, bibtex)
+  end
+
+  test "export_citation generates apalike from CFF" do
+    project = Project.create!(url: 'https://github.com/test/export-apa')
+    cff_content = <<~CFF
+      cff-version: 1.2.0
+      title: "Export Test"
+      authors:
+        - family-names: "Author"
+          given-names: "Test"
+    CFF
+    project.update(citation_file: cff_content)
+
+    apalike = project.export_citation(format: 'apalike')
+
+    assert_not_nil apalike
+    assert_match(/Export Test/, apalike)
+  end
+
+  test "export_citation returns nil when no metadata available" do
+    project = Project.create!(url: 'https://github.com/test/no-export')
+
+    result = project.export_citation(format: 'bibtex')
+
+    assert_nil result
+  end
 end

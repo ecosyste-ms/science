@@ -42,6 +42,9 @@ Rails.application.routes.draw do
       get :search
       get :joss
     end
+    member do
+      get :export
+    end
     resources :releases, only: [:index, :show]
   end
 

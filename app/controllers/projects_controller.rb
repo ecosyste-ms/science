@@ -3,6 +3,30 @@ class ProjectsController < ApplicationController
     @project = Project.includes(:host, :owner_record, papers: :mentions).find(params[:id])
   end
 
+  def export
+    @project = Project.find(params[:id])
+    format = params[:format] || 'bibtex'
+
+    exported_content = @project.export_citation(format: format)
+
+    if exported_content
+      send_data exported_content,
+                filename: "#{@project.name || @project.id}.#{format}",
+                type: mime_type_for_format(format),
+                disposition: 'attachment'
+    else
+      render plain: 'No citation metadata available for this project', status: :not_found
+    end
+  end
+
+  def mime_type_for_format(format)
+    case format
+    when 'bibtex' then 'application/x-bibtex'
+    when 'apalike', 'apa' then 'text/plain'
+    else 'text/plain'
+    end
+  end
+
   def index
     @scope = Project.includes(project_fields: :field).where('science_score > 0')
 

@@ -51,4 +51,45 @@ class Api::V1::ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_includes json_response, 'science-pkg'
     assert_not_includes json_response, 'nonscience-pkg'
   end
+
+  test "GET show includes export URLs when citation_file is present" do
+    cff_content = <<~CFF
+      cff-version: 1.2.0
+      title: "Test Project"
+      authors:
+        - family-names: "Doe"
+          given-names: "John"
+    CFF
+    project = Project.create!(
+      url: 'https://github.com/test/with-citation',
+      name: 'Test Project',
+      science_score: 50,
+      citation_file: cff_content
+    )
+
+    get api_v1_project_url(project)
+
+    assert_response :success
+    json_response = JSON.parse(response.body)
+    assert json_response['bibtex_url'].present?
+    assert json_response['apalike_url'].present?
+    assert_match(/export/, json_response['bibtex_url'])
+    assert_match(/bibtex/, json_response['bibtex_url'])
+    assert_match(/apalike/, json_response['apalike_url'])
+  end
+
+  test "GET show excludes export URLs when citation_file is absent" do
+    project = Project.create!(
+      url: 'https://github.com/test/without-citation',
+      name: 'Test Project',
+      science_score: 50
+    )
+
+    get api_v1_project_url(project)
+
+    assert_response :success
+    json_response = JSON.parse(response.body)
+    assert_nil json_response['bibtex_url']
+    assert_nil json_response['apalike_url']
+  end
 end
