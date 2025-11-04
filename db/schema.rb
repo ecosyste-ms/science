@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_10_07_075104) do
+ActiveRecord::Schema[8.0].define(version: 2025_11_04_152721) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -211,6 +211,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_07_075104) do
     t.integer "mentions_count", default: 0
     t.integer "host_id"
     t.integer "owner_id"
+    t.text "codemeta"
     t.index ["category", "sub_category"], name: "index_projects_on_category_and_sub_category", where: "((category IS NOT NULL) AND (sub_category IS NOT NULL))"
     t.index ["collection_id"], name: "index_projects_on_collection_id"
     t.index ["host_id"], name: "index_projects_on_host_id"

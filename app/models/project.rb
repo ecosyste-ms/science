@@ -40,6 +40,7 @@ class Project < ApplicationRecord
   scope :with_packages, -> { where.not(packages: [nil, []]) }
   scope :with_readme, -> { where.not(readme: nil) }
   scope :without_readme, -> { where(readme: nil) }
+  scope :with_codemeta_file, -> { where("repository IS NOT NULL").where("(repository::jsonb->'metadata'->'files'->>'codemeta') IS NOT NULL") }
 
   scope :with_keywords_from_contributors, -> { where.not(keywords_from_contributors: []) }
   scope :without_keywords_from_contributors, -> { where(keywords_from_contributors: []) }
@@ -1193,9 +1194,7 @@ class Project < ApplicationRecord
 
     # Citation and metadata file counts
     with_citation_count = Project.where.not(citation_file: nil).count
-    with_codemeta_count = Project.where("repository IS NOT NULL")
-                                 .where("(repository::jsonb->'metadata'->'files')::jsonb ? 'codemeta'")
-                                 .count
+    with_codemeta_count = Project.with_codemeta_file.count
 
     # Mentions count (projects cited in papers)
     with_mentions_count = Project.joins(:mentions).distinct.count
@@ -1661,6 +1660,13 @@ class Project < ApplicationRecord
     repository['metadata']['files']['citation']
   end
 
+  def codemeta_file_name
+    return unless repository.present?
+    return unless repository['metadata'].present?
+    return unless repository['metadata']['files'].present?
+    repository['metadata']['files']['codemeta']
+  end
+
   def download_url
     return unless repository.present?
     repository['download_url']
@@ -1681,6 +1687,20 @@ class Project < ApplicationRecord
   def load_readme
     return unless download_url.present?
     conn = Faraday.new(url: archive_url(readme_file_name)) do |faraday|
+      faraday.response :follow_redirects
+      faraday.adapter Faraday.default_adapter
+      faraday.headers['User-Agent'] = 'explore.market.dev'
+    end
+    response = conn.get
+    return unless response.success?
+    json = JSON.parse(response.body)
+    json['contents'].gsub("\u0000", '').encode('UTF-8', invalid: :replace, undef: :replace, replace: '')
+  end
+
+  def load_codemeta
+    return unless download_url.present?
+    return unless codemeta_file_name.present?
+    conn = Faraday.new(url: archive_url(codemeta_file_name)) do |faraday|
       faraday.response :follow_redirects
       faraday.adapter Faraday.default_adapter
       faraday.headers['User-Agent'] = 'explore.market.dev'
@@ -1714,18 +1734,37 @@ class Project < ApplicationRecord
   
   def load_readme_fallback
     return unless repository.present?
-    
+
     file_name = readme_file_name.presence || 'README.md'
     url = raw_url(file_name)
-    
+
     return unless url.present?
-    
+
     conn = Faraday.new(url: url) do |faraday|
       faraday.response :follow_redirects
       faraday.request :retry, max: 3, interval: 0.5, interval_randomness: 0.5, backoff_factor: 2
       faraday.adapter Faraday.default_adapter
     end
-  
+
+    response = conn.get
+    return unless response.success?
+    response.body.gsub("\u0000", '').encode('UTF-8', invalid: :replace, undef: :replace, replace: '')
+  end
+
+  def load_codemeta_fallback
+    return unless repository.present?
+
+    file_name = codemeta_file_name.presence || 'codemeta.json'
+    url = raw_url(file_name)
+
+    return unless url.present?
+
+    conn = Faraday.new(url: url) do |faraday|
+      faraday.response :follow_redirects
+      faraday.request :retry, max: 3, interval: 0.5, interval_randomness: 0.5, backoff_factor: 2
+      faraday.adapter Faraday.default_adapter
+    end
+
     response = conn.get
     return unless response.success?
     response.body.gsub("\u0000", '').encode('UTF-8', invalid: :replace, undef: :replace, replace: '')
@@ -1733,13 +1772,49 @@ class Project < ApplicationRecord
 
   def fetch_readme_fallback
     return unless repository.present?
-    
+
     readme_content = load_readme_fallback
     return unless readme_content.present?
     self.readme = readme_content
     self.save if changed?
   rescue => e
     puts "Error fetching fallback readme for project #{self.id} (#{self.url})"
+    puts "  repository_url: #{repository_url}"
+    puts "  Error: #{e.class} - #{e.message}"
+    puts "  Backtrace:"
+    puts e.backtrace.first(5)
+  end
+
+  def fetch_codemeta
+    return unless repository.present?
+
+    if codemeta_file_name.blank? || download_url.blank?
+      fetch_codemeta_fallback
+    else
+      codemeta_content = load_codemeta
+      if codemeta_content.present?
+        self.codemeta = codemeta_content
+        self.save if changed?
+      else
+        fetch_codemeta_fallback
+      end
+    end
+  rescue => e
+    puts "Error fetching codemeta for #{repository_url}"
+    puts e.message
+    puts e.backtrace
+    fetch_codemeta_fallback
+  end
+
+  def fetch_codemeta_fallback
+    return unless repository.present?
+
+    codemeta_content = load_codemeta_fallback
+    return unless codemeta_content.present?
+    self.codemeta = codemeta_content
+    self.save if changed?
+  rescue => e
+    puts "Error fetching fallback codemeta for project #{self.id} (#{self.url})"
     puts "  repository_url: #{repository_url}"
     puts "  Error: #{e.class} - #{e.message}"
     puts "  Backtrace:"
