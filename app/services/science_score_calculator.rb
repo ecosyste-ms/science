@@ -166,13 +166,13 @@ class ScienceScoreCalculator
 
   def check_codemeta_file
     has_codemeta = false
-    
-    if project.repository.present? && 
-       project.repository['metadata'].present? && 
+
+    if project.repository.present? &&
+       project.repository['metadata'].present? &&
        project.repository['metadata']['files'].present?
-      
+
       files = project.repository['metadata']['files']
-      has_codemeta = files.keys.any? { |k| k.to_s.downcase.include?('codemeta') }
+      has_codemeta = files.any? { |k, v| k.to_s.downcase.include?('codemeta') && v.present? }
     end
 
     {
@@ -184,13 +184,13 @@ class ScienceScoreCalculator
 
   def check_zenodo_file
     has_zenodo = false
-    
-    if project.repository.present? && 
-       project.repository['metadata'].present? && 
+
+    if project.repository.present? &&
+       project.repository['metadata'].present? &&
        project.repository['metadata']['files'].present?
-      
+
       files = project.repository['metadata']['files']
-      has_zenodo = files.keys.any? { |k| k.to_s.downcase.include?('zenodo') }
+      has_zenodo = files.any? { |k, v| k.to_s.downcase.include?('zenodo') && v.present? }
     end
 
     {
