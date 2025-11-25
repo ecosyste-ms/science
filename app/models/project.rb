@@ -2632,4 +2632,217 @@ class Project < ApplicationRecord
       puts "  Projects with multiple values: #{multi_category_projects} (#{(multi_category_projects.to_f / categories_by_project.length * 100).round(1)}%)"
     end
   end
+
+  def clone_and_analyze_codemeta(base_dir: nil)
+    return [] unless repository.present?
+
+    clone_url = repository['clone_url'] || "#{url}.git"
+    repo_name = url.split('/').last(2).join('_')
+
+    base_dir ||= Dir.mktmpdir('codemeta_research')
+    repo_path = File.join(base_dir, repo_name)
+
+    results = []
+
+    begin
+      # Clone if not already present
+      unless Dir.exist?(repo_path)
+        puts "Cloning #{url}..."
+        system("git clone --quiet #{clone_url} #{repo_path}")
+        unless $?.success?
+          return [{ error: "Failed to clone repository", release_tag: nil }]
+        end
+      end
+
+      # Get all tags from git
+      tags = []
+      Dir.chdir(repo_path) do
+        # Fetch latest tags
+        system("git fetch --tags --quiet 2>/dev/null")
+
+        # Get tags sorted by creation date
+        tag_output = `git tag --sort=creatordate`
+        tags = tag_output.split("\n").map(&:strip).reject(&:empty?)
+      end
+
+      if tags.empty?
+        return [{ error: "No tags found in repository", release_tag: nil }]
+      end
+
+      puts "  Found #{tags.count} tags"
+
+      # Analyze each tag
+      tags.each do |tag|
+        puts "  Checking tag #{tag}..."
+
+        result = {
+          project_id: id,
+          project_url: url,
+          release_tag: tag,
+          release_date: nil,
+          codemeta_exists: false,
+          codemeta_version: nil,
+          version_matches_tag: nil,
+          codemeta_file_path: nil,
+          error: nil
+        }
+
+        begin
+          # Get tag date
+          Dir.chdir(repo_path) do
+            tag_date = `git log -1 --format=%aI #{tag} 2>/dev/null`.strip
+            result[:release_date] = Time.parse(tag_date) if tag_date.present?
+          rescue ArgumentError
+            # Invalid date, leave as nil
+          end
+
+          # Checkout the tag
+          Dir.chdir(repo_path) do
+            system("git checkout --quiet #{tag} 2>/dev/null")
+            unless $?.success?
+              result[:error] = "Failed to checkout tag"
+              results << result
+              next
+            end
+
+            # Look for codemeta files (order matters - prefer .json over .jsonld)
+            codemeta_paths = ['codemeta.json', '.codemeta.json']
+            codemeta_paths.each do |path|
+              if File.exist?(path)
+                result[:codemeta_exists] = true
+                result[:codemeta_file_path] = path
+
+                # Parse and extract version
+                begin
+                  data = JSON.parse(File.read(path))
+                  codemeta_version = data['version'] || data['softwareVersion']
+
+                  if codemeta_version.present?
+                    result[:codemeta_version] = codemeta_version
+
+                    # Normalize and compare versions
+                    normalized_codemeta = normalize_version_string(codemeta_version)
+                    normalized_tag = normalize_version_string(tag)
+                    result[:version_matches_tag] = (normalized_codemeta == normalized_tag)
+                  end
+                rescue JSON::ParserError => e
+                  result[:error] = "JSON parse error: #{e.message}"
+                end
+
+                break
+              end
+            end
+          end
+        rescue => e
+          result[:error] = e.message
+        end
+
+        results << result
+      end
+
+    rescue => e
+      results << { error: "Repository clone error: #{e.message}", release_tag: nil }
+    end
+
+    results
+  end
+
+  def normalize_version_string(version_string)
+    return nil if version_string.blank?
+    version_string.to_s.strip.downcase.gsub(/^v/, '').gsub(/^version[-_\s]*/i, '')
+  end
+
+  def analyze_codemeta_history(base_dir: nil)
+    return [] unless repository.present?
+
+    clone_url = repository['clone_url'] || "#{url}.git"
+    repo_name = url.split('/').last(2).join('_')
+
+    base_dir ||= Dir.mktmpdir('codemeta_research')
+    repo_path = File.join(base_dir, repo_name)
+
+    results = []
+
+    begin
+      # Clone if not already present
+      unless Dir.exist?(repo_path)
+        puts "Cloning #{url}..."
+        system("git clone --quiet #{clone_url} #{repo_path}")
+        unless $?.success?
+          return [{ error: "Failed to clone repository" }]
+        end
+      end
+
+      # Look for codemeta files
+      codemeta_paths = ['codemeta.json', '.codemeta.json']
+
+      Dir.chdir(repo_path) do
+        system("git fetch --quiet 2>/dev/null")
+
+        codemeta_paths.each do |file_path|
+          # Check if file exists in current HEAD
+          next unless system("git cat-file -e HEAD:#{file_path} 2>/dev/null")
+
+          puts "  Analyzing history of #{file_path}..."
+
+          # Get full git log for this file
+          log_output = `git log --follow --format="%H|%aI|%an|%ae|%s" -- #{file_path}`
+
+          log_output.split("\n").each do |line|
+            parts = line.split("|", 5)
+            next if parts.length < 5
+
+            commit_hash = parts[0]
+            commit_date = parts[1]
+            author_name = parts[2]
+            author_email = parts[3]
+            commit_message = parts[4]
+
+            # Get the file content at this commit
+            file_content = `git show #{commit_hash}:#{file_path} 2>/dev/null`
+
+            codemeta_version = nil
+            codemeta_data = nil
+            parse_error = nil
+
+            if file_content.present?
+              begin
+                codemeta_data = JSON.parse(file_content)
+                codemeta_version = codemeta_data['version'] || codemeta_data['softwareVersion']
+              rescue JSON::ParserError => e
+                parse_error = e.message
+              end
+            end
+
+            result = {
+              project_id: id,
+              project_url: url,
+              file_path: file_path,
+              commit_hash: commit_hash,
+              commit_date: Time.parse(commit_date),
+              author_name: author_name,
+              author_email: author_email,
+              commit_message: commit_message,
+              codemeta_version: codemeta_version,
+              parse_error: parse_error
+            }
+
+            results << result
+          end
+
+          # Only analyze the first file we find
+          break if results.any?
+        end
+      end
+
+      if results.empty?
+        results << { error: "No codemeta file found in repository history" }
+      end
+
+    rescue => e
+      results << { error: "Repository analysis error: #{e.message}" }
+    end
+
+    results
+  end
 end
