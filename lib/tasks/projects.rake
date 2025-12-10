@@ -97,4 +97,17 @@ namespace :projects do
   task :import_ost => :environment do
     Project.import_from_ost
   end
+
+  desc 'export keywords from JOSS projects to CSV'
+  task :export_joss_keywords => :environment do
+    projects = Project.with_joss
+
+    puts CSV.generate_line(['url', 'name', 'joss_tags', 'repository_topics', 'combined_keywords'])
+    projects.find_each do |project|
+      joss_tags = project.joss_metadata['tags']&.split(',')&.map(&:strip)&.join('; ') || ''
+      repo_topics = project.repository&.dig('topics')&.join('; ') || ''
+      combined = project.keywords&.join('; ') || ''
+      puts CSV.generate_line([project.url, project.name, joss_tags, repo_topics, combined])
+    end
+  end
 end
