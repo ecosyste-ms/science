@@ -148,4 +148,76 @@ class ProjectsController < ApplicationController
     @pagy, @projects = pagy(@scope)
   end
 
+  def codemeta
+    @scope = Project.with_codemeta_file
+
+    if params[:keyword].present?
+      @scope = @scope.keyword(params[:keyword])
+    end
+
+    if params[:language].present?
+      @scope = @scope.language(params[:language])
+    end
+
+    if params[:sort]
+      @scope = @scope.order("#{params[:sort]} #{params[:order]}")
+    else
+      @scope = @scope.order(Arel.sql('(science_score + COALESCE(score, 0)) DESC'))
+    end
+
+    @pagy, @projects = pagy(@scope)
+  end
+
+  def citation
+    @scope = Project.with_citation_file
+
+    if params[:keyword].present?
+      @scope = @scope.keyword(params[:keyword])
+    end
+
+    if params[:language].present?
+      @scope = @scope.language(params[:language])
+    end
+
+    if params[:sort]
+      @scope = @scope.order("#{params[:sort]} #{params[:order]}")
+    else
+      @scope = @scope.order(Arel.sql('(science_score + COALESCE(score, 0)) DESC'))
+    end
+
+    @pagy, @projects = pagy(@scope)
+  end
+
+  def codemeta_csv
+    projects = Project.with_codemeta_file
+
+    csv_data = CSV.generate(headers: true) do |csv|
+      csv << ['repository_url', 'codemeta_file_path']
+      projects.find_each do |project|
+        csv << [project.repository_url, project.codemeta_file_name]
+      end
+    end
+
+    send_data csv_data,
+              filename: "projects_with_codemeta_#{Date.current}.csv",
+              type: 'text/csv',
+              disposition: 'attachment'
+  end
+
+  def citation_csv
+    projects = Project.with_citation_file
+
+    csv_data = CSV.generate(headers: true) do |csv|
+      csv << ['repository_url', 'citation_file_path']
+      projects.find_each do |project|
+        csv << [project.repository_url, project.citation_file_name]
+      end
+    end
+
+    send_data csv_data,
+              filename: "projects_with_citation_#{Date.current}.csv",
+              type: 'text/csv',
+              disposition: 'attachment'
+  end
+
 end

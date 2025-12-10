@@ -343,4 +343,201 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       assert_response :success
     end
   end
+
+  test "should get codemeta" do
+    get codemeta_projects_url
+    assert_response :success
+  end
+
+  test "codemeta lists only projects with codemeta file in repository metadata" do
+    project_with_codemeta = Project.create!(
+      url: "https://github.com/test/codemeta-project",
+      name: "codemeta-project",
+      science_score: 85,
+      repository: { "metadata" => { "files" => { "codemeta" => "codemeta.json" } } }
+    )
+
+    project_without_codemeta = Project.create!(
+      url: "https://github.com/test/no-codemeta",
+      name: "no-codemeta",
+      science_score: 60,
+      repository: { "metadata" => { "files" => {} } }
+    )
+
+    get codemeta_projects_url
+    assert_response :success
+
+    projects = assigns(:projects)
+
+    assert_includes projects, project_with_codemeta
+    assert_not_includes projects, project_without_codemeta
+  end
+
+  test "codemeta projects are sorted by combined score" do
+    codemeta_low = Project.create!(
+      url: "https://github.com/test/codemeta-low",
+      name: "codemeta-low",
+      science_score: 85,
+      score: 5,
+      repository: { "metadata" => { "files" => { "codemeta" => "codemeta.json" } } }
+    )
+
+    codemeta_high = Project.create!(
+      url: "https://github.com/test/codemeta-high",
+      name: "codemeta-high",
+      science_score: 85,
+      score: 50,
+      repository: { "metadata" => { "files" => { "codemeta" => "codemeta.json" } } }
+    )
+
+    get codemeta_projects_url
+    assert_response :success
+
+    projects = assigns(:projects)
+
+    assert_equal codemeta_high.id, projects.first.id
+    assert_equal codemeta_low.id, projects.second.id
+  end
+
+  test "should get citation" do
+    get citation_projects_url
+    assert_response :success
+  end
+
+  test "citation lists only projects with citation_file" do
+    cff_content = <<~CFF
+      cff-version: 1.2.0
+      title: "Test Project"
+      authors:
+        - family-names: "Doe"
+          given-names: "John"
+    CFF
+
+    project_with_citation = Project.create!(
+      url: "https://github.com/test/citation-project",
+      name: "citation-project",
+      science_score: 85,
+      citation_file: cff_content
+    )
+
+    project_without_citation = Project.create!(
+      url: "https://github.com/test/no-citation",
+      name: "no-citation",
+      science_score: 60
+    )
+
+    get citation_projects_url
+    assert_response :success
+
+    projects = assigns(:projects)
+
+    assert_includes projects, project_with_citation
+    assert_not_includes projects, project_without_citation
+  end
+
+  test "citation projects are sorted by combined score" do
+    cff_content = <<~CFF
+      cff-version: 1.2.0
+      title: "Test"
+      authors:
+        - family-names: "Test"
+          given-names: "Test"
+    CFF
+
+    citation_low = Project.create!(
+      url: "https://github.com/test/citation-low",
+      name: "citation-low",
+      science_score: 85,
+      score: 5,
+      citation_file: cff_content
+    )
+
+    citation_high = Project.create!(
+      url: "https://github.com/test/citation-high",
+      name: "citation-high",
+      science_score: 85,
+      score: 50,
+      citation_file: cff_content
+    )
+
+    get citation_projects_url
+    assert_response :success
+
+    projects = assigns(:projects)
+
+    assert_equal citation_high.id, projects.first.id
+    assert_equal citation_low.id, projects.second.id
+  end
+
+  test "should get codemeta_csv" do
+    Project.create!(
+      url: "https://github.com/test/csv-codemeta",
+      name: "csv-codemeta",
+      science_score: 85,
+      repository: { "metadata" => { "files" => { "codemeta" => "codemeta.json" } } }
+    )
+
+    get codemeta_csv_projects_url
+    assert_response :success
+    assert_equal 'text/csv', response.media_type
+    assert_match(/repository_url,codemeta_file_path/, response.body)
+  end
+
+  test "codemeta_csv includes repository url and file path" do
+    project = Project.create!(
+      url: "https://github.com/test/csv-codemeta-check",
+      name: "csv-codemeta-check",
+      science_score: 85,
+      repository: { "full_name" => "test/csv-codemeta-check", "metadata" => { "files" => { "codemeta" => "codemeta.json" } } }
+    )
+
+    get codemeta_csv_projects_url
+    assert_response :success
+    assert_match(/codemeta\.json/, response.body)
+  end
+
+  test "should get citation_csv" do
+    cff_content = <<~CFF
+      cff-version: 1.2.0
+      title: "Test"
+      authors:
+        - family-names: "Test"
+          given-names: "Test"
+    CFF
+
+    Project.create!(
+      url: "https://github.com/test/csv-citation",
+      name: "csv-citation",
+      science_score: 85,
+      citation_file: cff_content,
+      repository: { "metadata" => { "files" => { "citation" => "CITATION.cff" } } }
+    )
+
+    get citation_csv_projects_url
+    assert_response :success
+    assert_equal 'text/csv', response.media_type
+    assert_match(/repository_url,citation_file_path/, response.body)
+  end
+
+  test "citation_csv includes repository url and file path" do
+    cff_content = <<~CFF
+      cff-version: 1.2.0
+      title: "Test"
+      authors:
+        - family-names: "Test"
+          given-names: "Test"
+    CFF
+
+    project = Project.create!(
+      url: "https://github.com/test/csv-citation-check",
+      name: "csv-citation-check",
+      science_score: 85,
+      citation_file: cff_content,
+      repository: { "full_name" => "test/csv-citation-check", "metadata" => { "files" => { "citation" => "CITATION.cff" } } }
+    )
+
+    get citation_csv_projects_url
+    assert_response :success
+    assert_match(/CITATION\.cff/, response.body)
+  end
 end
