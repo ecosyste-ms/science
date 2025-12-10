@@ -43,8 +43,10 @@ Rails.application.routes.draw do
       get :joss
       get :codemeta
       get :citation
+      get :zenodo
       get :codemeta_csv
       get :citation_csv
+      get :zenodo_csv
     end
     member do
       get :export

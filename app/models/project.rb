@@ -43,6 +43,7 @@ class Project < ApplicationRecord
   scope :with_codemeta_file, -> { where("repository IS NOT NULL").where("(repository::jsonb->'metadata'->'files'->>'codemeta') IS NOT NULL") }
   scope :with_codemeta, -> { where.not(codemeta: nil) }
   scope :with_citation_file, -> { where.not(citation_file: nil) }
+  scope :with_zenodo_file, -> { where("repository IS NOT NULL").where("(repository::jsonb->'metadata'->'files'->>'zenodo') IS NOT NULL") }
 
   scope :with_keywords_from_contributors, -> { where.not(keywords_from_contributors: []) }
   scope :without_keywords_from_contributors, -> { where(keywords_from_contributors: []) }
@@ -1198,9 +1199,7 @@ class Project < ApplicationRecord
     # Citation and metadata file counts
     with_citation_count = Project.where.not(citation_file: nil).count
     with_codemeta_count = Project.with_codemeta_file.count
-
-    # Mentions count (projects cited in papers)
-    with_mentions_count = Project.joins(:mentions).distinct.count
+    with_zenodo_count = Project.with_zenodo_file.count
 
     # JOSS stats
     joss_count = Project.with_joss.count
@@ -1229,7 +1228,7 @@ class Project < ApplicationRecord
       projects_with_packages: with_packages_count,
       projects_with_citation_file: with_citation_count,
       projects_with_codemeta: with_codemeta_count,
-      projects_with_mentions: with_mentions_count,
+      projects_with_zenodo: with_zenodo_count,
       joss_projects: joss_count,
       institutional_owners: institutional_owners_count,
       score_distribution: score_distribution,
@@ -1668,6 +1667,13 @@ class Project < ApplicationRecord
     return unless repository['metadata'].present?
     return unless repository['metadata']['files'].present?
     repository['metadata']['files']['codemeta']
+  end
+
+  def zenodo_file_name
+    return unless repository.present?
+    return unless repository['metadata'].present?
+    return unless repository['metadata']['files'].present?
+    repository['metadata']['files']['zenodo']
   end
 
   def codemeta_json

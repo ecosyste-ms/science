@@ -540,4 +540,86 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match(/CITATION\.cff/, response.body)
   end
+
+  test "should get zenodo" do
+    get zenodo_projects_url
+    assert_response :success
+  end
+
+  test "zenodo lists only projects with zenodo file in repository metadata" do
+    project_with_zenodo = Project.create!(
+      url: "https://github.com/test/zenodo-project",
+      name: "zenodo-project",
+      science_score: 85,
+      repository: { "metadata" => { "files" => { "zenodo" => ".zenodo.json" } } }
+    )
+
+    project_without_zenodo = Project.create!(
+      url: "https://github.com/test/no-zenodo",
+      name: "no-zenodo",
+      science_score: 60,
+      repository: { "metadata" => { "files" => {} } }
+    )
+
+    get zenodo_projects_url
+    assert_response :success
+
+    projects = assigns(:projects)
+
+    assert_includes projects, project_with_zenodo
+    assert_not_includes projects, project_without_zenodo
+  end
+
+  test "zenodo projects are sorted by combined score" do
+    zenodo_low = Project.create!(
+      url: "https://github.com/test/zenodo-low",
+      name: "zenodo-low",
+      science_score: 85,
+      score: 5,
+      repository: { "metadata" => { "files" => { "zenodo" => ".zenodo.json" } } }
+    )
+
+    zenodo_high = Project.create!(
+      url: "https://github.com/test/zenodo-high",
+      name: "zenodo-high",
+      science_score: 85,
+      score: 50,
+      repository: { "metadata" => { "files" => { "zenodo" => ".zenodo.json" } } }
+    )
+
+    get zenodo_projects_url
+    assert_response :success
+
+    projects = assigns(:projects)
+
+    assert_equal zenodo_high.id, projects.first.id
+    assert_equal zenodo_low.id, projects.second.id
+  end
+
+  test "should get zenodo_csv" do
+    Project.create!(
+      url: "https://github.com/test/csv-zenodo",
+      name: "csv-zenodo",
+      science_score: 85,
+      repository: { "metadata" => { "files" => { "zenodo" => ".zenodo.json" } } }
+    )
+
+    get zenodo_csv_projects_url
+    assert_response :success
+    assert_equal 'text/csv', response.media_type
+    assert_match(/repository_url,zenodo_file_path/, response.body)
+  end
+
+  test "zenodo_csv includes repository url and file path" do
+    project = Project.create!(
+      url: "https://github.com/test/csv-zenodo-check",
+      name: "csv-zenodo-check",
+      science_score: 85,
+      repository: { "full_name" => "test/csv-zenodo-check", "metadata" => { "files" => { "zenodo" => ".zenodo.json" } } }
+    )
+
+    get zenodo_csv_projects_url
+    assert_response :success
+    assert_match(/\.zenodo\.json/, response.body)
+  end
 end
