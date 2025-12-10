@@ -97,25 +97,31 @@
           <div class="segment seg-d" style="--w: <%= (@stats[:scored_projects].to_f / @stats[:total_projects] * 100).round %>%"></div>
         </div>
         <div class="d-flex justify-content-between mt-4 mb-1">
-          <span>With CITATION.cff</span>
-          <span><%= number_with_delimiter(@stats[:projects_with_citation_file]) %> / <%= number_with_delimiter(@stats[:total_projects]) %></span>
+          <%= link_to citation_projects_path, class: 'd-flex justify-content-between w-100 text-decoration-none text-reset' do %>
+            <span>With CITATION.cff</span>
+            <span><%= number_with_delimiter(@stats[:projects_with_citation_file]) %> / <%= number_with_delimiter(@stats[:total_projects]) %></span>
+          <% end %>
         </div>
         <div class="stacked-bar bg-light mb-3">
           <div class="segment seg-e" style="--w: <%= (@stats[:projects_with_citation_file].to_f / @stats[:total_projects] * 100).round %>%"></div>
         </div>
         <div class="d-flex justify-content-between mt-4 mb-1">
-          <span>With codemeta.json</span>
-          <span><%= number_with_delimiter(@stats[:projects_with_codemeta]) %> / <%= number_with_delimiter(@stats[:total_projects]) %></span>
+          <%= link_to codemeta_projects_path, class: 'd-flex justify-content-between w-100 text-decoration-none text-reset' do %>
+            <span>With codemeta.json</span>
+            <span><%= number_with_delimiter(@stats[:projects_with_codemeta]) %> / <%= number_with_delimiter(@stats[:total_projects]) %></span>
+          <% end %>
         </div>
         <div class="stacked-bar bg-light mb-3">
           <div class="segment seg-f" style="--w: <%= (@stats[:projects_with_codemeta].to_f / @stats[:total_projects] * 100).round %>%"></div>
         </div>
         <div class="d-flex justify-content-between mt-4 mb-1">
-          <span>With Mentions</span>
-          <span><%= number_with_delimiter(@stats[:projects_with_mentions]) %> / <%= number_with_delimiter(@stats[:total_projects]) %></span>
+          <%= link_to zenodo_projects_path, class: 'd-flex justify-content-between w-100 text-decoration-none text-reset' do %>
+            <span>With .zenodo.json</span>
+            <span><%= number_with_delimiter(@stats[:projects_with_zenodo]) %> / <%= number_with_delimiter(@stats[:total_projects]) %></span>
+          <% end %>
         </div>
         <div class="stacked-bar bg-light mb-3">
-          <div class="segment seg-g" style="--w: <%= (@stats[:projects_with_mentions].to_f / @stats[:total_projects] * 100).round %>%"></div>
+          <div class="segment seg-g" style="--w: <%= (@stats[:projects_with_zenodo].to_f / @stats[:total_projects] * 100).round %>%"></div>
         </div>
       </div>
     </div>
