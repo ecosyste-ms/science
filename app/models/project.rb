@@ -44,6 +44,7 @@ class Project < ApplicationRecord
   scope :with_codemeta, -> { where.not(codemeta: nil) }
   scope :with_citation_file, -> { where.not(citation_file: nil) }
   scope :with_zenodo_file, -> { where("repository IS NOT NULL").where("(repository::jsonb->'metadata'->'files'->>'zenodo') IS NOT NULL") }
+  scope :with_zenodo, -> { where.not(zenodo: nil) }
 
   scope :with_keywords_from_contributors, -> { where.not(keywords_from_contributors: []) }
   scope :without_keywords_from_contributors, -> { where(keywords_from_contributors: []) }
@@ -286,6 +287,7 @@ class Project < ApplicationRecord
     sync_issues
     fetch_citation_file
     fetch_codemeta
+    fetch_zenodo_file
     sync_releases
     update_committers
     update_keywords_from_contributors
@@ -1684,6 +1686,14 @@ class Project < ApplicationRecord
     nil
   end
 
+  def zenodo_json
+    return nil unless zenodo.present?
+    JSON.parse(zenodo)
+  rescue JSON::ParserError => e
+    puts "Error parsing zenodo JSON for project #{id} (#{url}): #{e.message}"
+    nil
+  end
+
   def citation_cff
     return nil unless citation_file.present?
     CFF::Index.read(citation_file)
@@ -1944,6 +1954,20 @@ class Project < ApplicationRecord
     puts "Error fetching citation file for #{repository_url}"
   end
 
+  def fetch_zenodo_file
+    return unless repository.present?
+    return unless zenodo_file_name.present?
+    return unless download_url.present?
+    conn = ecosystem_http_client(archive_url(zenodo_file_name))
+    response = conn.get
+    return unless response.success?
+    json = JSON.parse(response.body)
+
+    self.zenodo = json['contents']
+    self.save
+  rescue
+    puts "Error fetching zenodo file for #{repository_url}"
+  end
 
   def parse_citation_file
     return unless citation_file.present?

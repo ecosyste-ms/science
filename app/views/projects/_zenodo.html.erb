@@ -1,0 +1,16 @@
+<% zenodo_data = @project.zenodo_json %>
+<% if zenodo_data.present? %>
+  <div class="mb-4">
+    <h3 class="mb-3">
+      Zenodo
+      <small class="text-muted">
+        (<%= link_to @project.zenodo_file_name || '.zenodo.json', @project.blob_url(@project.zenodo_file_name || '.zenodo.json'), target: :_blank, class: 'text-decoration-none' %>)
+      </small>
+    </h3>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <pre class="mb-0" style="max-height: 600px; overflow-y: auto;"><code><%= JSON.pretty_generate(zenodo_data) %></code></pre>
+      </div>
+    </div>
+  </div>
+<% end %>
