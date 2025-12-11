@@ -72,4 +72,4 @@ group :test do
 end
 
 gem "bootstrap-icons-helper", "~> 2.0"
-gem "connection_pool",  "<4"
+gem "connection_pool", "<3"
