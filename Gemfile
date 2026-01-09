@@ -67,7 +67,7 @@ group :test do
   gem "webmock"
   gem "mocha"
   gem "rails-controller-testing"
-  gem "minitest", "~> 5"
+  gem "minitest", "~> 6"
 end
 
 gem "bootstrap-icons-helper", "~> 2.0"
