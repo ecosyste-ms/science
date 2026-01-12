@@ -67,8 +67,6 @@ group :test do
   gem "webmock"
   gem "mocha"
   gem "rails-controller-testing"
-  gem "minitest", "~> 6"
 end
 
 gem "bootstrap-icons-helper", "~> 2.0"
-gem "connection_pool", "<3"
