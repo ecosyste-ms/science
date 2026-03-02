@@ -4,11 +4,11 @@ class Api::V1::ProjectsController < Api::V1::ApplicationController
 
 
     if params[:sort].present? || params[:order].present?
-      sort = params[:sort].presence || 'projects.updated_at'
+      sort = sanitize_sort(Project.sortable_columns, default: 'projects.updated_at')
       if params[:order] == 'asc'
-        @projects = @projects.order(Arel.sql(sort).asc.nulls_last)
+        @projects = @projects.order(sort.asc.nulls_last)
       else
-        @projects = @projects.order(Arel.sql(sort).desc.nulls_last)
+        @projects = @projects.order(sort.desc.nulls_last)
       end
     end
 

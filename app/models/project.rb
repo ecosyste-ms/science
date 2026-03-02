@@ -7,6 +7,17 @@ require 'github/markup'
 class Project < ApplicationRecord
   include EcosystemApiClient
 
+  def self.sortable_columns
+    {
+      'projects.updated_at' => 'projects.updated_at',
+      'projects.created_at' => 'projects.created_at',
+      'updated_at' => 'updated_at',
+      'created_at' => 'created_at',
+      'last_synced_at' => 'last_synced_at',
+      'name' => 'name',
+    }
+  end
+
   validates :url, presence: true, uniqueness: { case_sensitive: false }
 
   belongs_to :host, optional: true
