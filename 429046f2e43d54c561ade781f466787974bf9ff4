@@ -1,0 +1,31 @@
+app/controllers/hosts_controller.rb
+  81b71850e60824e5 2-3
+app/models/host.rb
+  81b71850e60824e5 5-24
+test/models/host_test.rb
+  81b71850e60824e5 32-71
+app/controllers/application_controller.rb
+  81b71850e60824e5 9-26
+app/controllers/owners_controller.rb
+  81b71850e60824e5 2-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.8",
+  "base_commit_sha": "429046f2e43d54c561ade781f466787974bf9ff4",
+  "prompts": {
+    "81b71850e60824e5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f7001e13-a462-43a7-8943-9e6ae06e2a4b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt <andrewnez@gmail.com>",
+      "messages": [],
+      "total_additions": 82,
+      "total_deletions": 4,
+      "accepted_lines": 82,
+      "overriden_lines": 0
+    }
+  }
+}
