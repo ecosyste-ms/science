@@ -1,17 +1,17 @@
 class OwnersController < ApplicationController
+  before_action :find_host, only: [:index, :show]
+
   def institutional
     scope = Owner.institutional.includes(:host).order('projects_count DESC')
     @pagy, @owners = pagy(scope)
   end
 
   def index
-    @host = Host.find_by_name!(params[:host_id])
     scope = @host.owners.order('projects_count DESC')
     @pagy, @owners = pagy(scope)
   end
 
   def show
-    @host = Host.find_by_name!(params[:host_id])
     @owner = params[:id]
     @owner_record = @host.owners.find_by('lower(login) = ?', @owner.downcase)
     raise ActiveRecord::RecordNotFound unless @owner_record

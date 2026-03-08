@@ -1,10 +1,11 @@
 class HostsController < ApplicationController
+  before_action :find_host_by_id, only: [:show]
+
   def index
     @hosts = Host.order('repositories_count DESC')
   end
 
   def show
-    @host = Host.find_by_name!(params[:id])
     @scope = @host.projects.where('science_score > 0')
 
     if params[:sort]
