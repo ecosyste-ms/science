@@ -1,6 +1,6 @@
 class IssuesController < ApplicationController
   def index
-    scope = Issue.good_first_issue.joins(:project).includes(:project)
+    scope = Issue.good_first_issue.joins(:project).merge(Project.visible).includes(:project)
 
     # Apply filters if provided
     scope = scope.joins(:project).where(projects: { category: params[:category] }) if params[:category].present?

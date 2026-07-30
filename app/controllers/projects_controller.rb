@@ -1,10 +1,10 @@
 class ProjectsController < ApplicationController
   def show
-    @project = Project.includes(:host, :owner_record, papers: :mentions).find(params[:id])
+    @project = Project.visible.includes(:host, :owner_record, papers: :mentions).find(params[:id])
   end
 
   def export
-    @project = Project.find(params[:id])
+    @project = Project.visible.find(params[:id])
     format = params[:format] || 'bibtex'
 
     exported_content = @project.export_citation(format: format)
@@ -28,7 +28,7 @@ class ProjectsController < ApplicationController
   end
 
   def index
-    @scope = Project.includes(project_fields: :field).where('science_score > 0')
+    @scope = Project.visible.includes(project_fields: :field).where('science_score > 0')
 
     if params[:keyword].present?
       @scope = @scope.keyword(params[:keyword])
@@ -52,7 +52,7 @@ class ProjectsController < ApplicationController
   end
 
   def search
-    @scope = Project.where('science_score > 0')
+    @scope = Project.visible.where('science_score > 0')
 
     if params[:q].present?
       @scope = @scope.where("url ILIKE ?", "%#{params[:q]}%")
@@ -77,7 +77,7 @@ class ProjectsController < ApplicationController
   end
 
   def review
-    @scope = Project.matching_criteria
+    @scope = Project.visible.matching_criteria
 
     if params[:keyword].present?
       @scope = @scope.keyword(params[:keyword])
@@ -108,6 +108,8 @@ class ProjectsController < ApplicationController
     # Check for existing project first
     existing_project = Project.find_by(url: params[:project][:url].downcase)
     if existing_project
+      raise ActiveRecord::RecordNotFound if existing_project.hidden_owner?
+
       redirect_to existing_project
     else
       @project = Project.new(project_params)
@@ -129,7 +131,7 @@ class ProjectsController < ApplicationController
   end
 
   def joss
-    @scope = Project.where("joss_metadata IS NOT NULL")
+    @scope = Project.visible.where("joss_metadata IS NOT NULL")
 
     if params[:keyword].present?
       @scope = @scope.keyword(params[:keyword])
@@ -149,7 +151,7 @@ class ProjectsController < ApplicationController
   end
 
   def codemeta
-    @scope = Project.with_codemeta_file
+    @scope = Project.visible.with_codemeta_file
 
     if params[:keyword].present?
       @scope = @scope.keyword(params[:keyword])
@@ -169,7 +171,7 @@ class ProjectsController < ApplicationController
   end
 
   def citation
-    @scope = Project.with_citation_file
+    @scope = Project.visible.with_citation_file
 
     if params[:keyword].present?
       @scope = @scope.keyword(params[:keyword])
@@ -189,7 +191,7 @@ class ProjectsController < ApplicationController
   end
 
   def codemeta_csv
-    projects = Project.with_codemeta_file
+    projects = Project.visible.with_codemeta_file
 
     csv_data = CSV.generate(headers: true) do |csv|
       csv << ['repository_url', 'codemeta_file_path']
@@ -205,7 +207,7 @@ class ProjectsController < ApplicationController
   end
 
   def citation_csv
-    projects = Project.with_citation_file
+    projects = Project.visible.with_citation_file
 
     csv_data = CSV.generate(headers: true) do |csv|
       csv << ['repository_url', 'citation_file_path']
@@ -221,7 +223,7 @@ class ProjectsController < ApplicationController
   end
 
   def zenodo
-    @scope = Project.with_zenodo_file
+    @scope = Project.visible.with_zenodo_file
 
     if params[:keyword].present?
       @scope = @scope.keyword(params[:keyword])
@@ -241,7 +243,7 @@ class ProjectsController < ApplicationController
   end
 
   def zenodo_csv
-    projects = Project.with_zenodo_file
+    projects = Project.visible.with_zenodo_file
 
     csv_data = CSV.generate(headers: true) do |csv|
       csv << ['repository_url', 'zenodo_file_path']

@@ -16,6 +16,16 @@ class Contributor < ApplicationRecord
   scope :with_funding_links, -> { where("LENGTH(profile ->> 'funding_links') > 2") }
 
   scope :ignored_emails, -> { where.not(email: IGNORED_EMAILS) }
+  scope :visible, -> {
+    where(<<~SQL.squish)
+      NOT EXISTS (
+        SELECT 1
+        FROM owners
+        WHERE owners.hidden = TRUE
+          AND lower(owners.login) = lower(COALESCE(contributors.login, contributors.profile ->> 'login'))
+      )
+    SQL
+  }
 
   scope :category, ->(category) { where("categories @> ARRAY[?]::varchar[]", category) }
   scope :sub_category, ->(sub_category) { where("sub_categories @> ARRAY[?]::varchar[]", sub_category) }
@@ -50,6 +60,7 @@ class Contributor < ApplicationRecord
   end
 
   def fetch_profile
+    return if owner_hidden?
     return if repos_api_url.blank?
     
     response = self.class.ecosystem_http_get(repos_api_url)
@@ -60,6 +71,7 @@ class Contributor < ApplicationRecord
   end
 
   def import_repos
+    return if owner_hidden?
     return if repos_api_url.blank?
 
     response = self.class.ecosystem_http_get("#{repos_api_url}/repositories?per_page=1000")
@@ -76,5 +88,12 @@ class Contributor < ApplicationRecord
 
   def owned_projects
     Project.owner(login)
+  end
+
+  def owner_hidden?
+    owner_login = login.presence || profile['login']
+    return false if owner_login.blank?
+
+    Owner.hidden.where('lower(login) = ?', owner_login.downcase).exists?
   end
 end

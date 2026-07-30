@@ -19,6 +19,7 @@ class Project < ApplicationRecord
   end
 
   validates :url, presence: true, uniqueness: { case_sensitive: false }
+  validate :owner_not_hidden
 
   belongs_to :host, optional: true
   belongs_to :owner_record, class_name: 'Owner', foreign_key: 'owner_id', optional: true
@@ -32,9 +33,14 @@ class Project < ApplicationRecord
   has_many :fields, through: :project_fields
   has_many :mentions, dependent: :destroy
   has_many :papers, through: :mentions
+  has_many :dependency_records, class_name: 'Dependency', dependent: :nullify
+  has_many :votes, dependent: :delete_all
 
   has_many :good_first_issues, -> { good_first_issue }, class_name: 'Issue'
 
+  scope :visible, -> {
+    where(owner_id: nil).or(where.not(owner_id: Owner.hidden.select(:id)))
+  }
   scope :active, -> { where("(repository ->> 'archived') = ?", 'false') }
   scope :archived, -> { where("(repository ->> 'archived') = ?", 'true') }
 
@@ -64,6 +70,44 @@ class Project < ApplicationRecord
   scope :scientific, -> { where('science_score >= ?', 20) }
   scope :highly_scientific, -> { where('science_score >= ?', 75) }
   scope :should_sync, -> { where('last_synced_at IS NULL OR science_score IS NULL OR science_score > 0') }
+
+  def self.for_owner(host, login)
+    normalized_login = login.downcase
+    owner_ids = host.owners.where('lower(login) = ?', normalized_login).select(:id)
+
+    scope = unscoped.where(owner_id: owner_ids)
+    scope = scope.or(
+      unscoped.where(host_id: host.id).where(
+        "lower(repository ->> 'owner') = :login OR lower(owner ->> 'login') = :login",
+        login: normalized_login
+      )
+    )
+
+    host_urls = [host.url]
+    host_urls << 'https://github.com' if host.name.casecmp?('GitHub')
+    host_urls.compact.map { |url| url.downcase.chomp('/') }.uniq.each do |host_url|
+      escaped_login = sanitize_sql_like(normalized_login)
+      scope = scope.or(unscoped.where('lower(url) LIKE ?', "#{host_url}/#{escaped_login}/%"))
+    end
+
+    scope
+  end
+
+  def self.owner_details_from_url(url)
+    uri = URI.parse(url.to_s)
+    return [nil, nil] if uri.host.blank?
+
+    if uri.host.downcase.end_with?('.github.io')
+      return [Host.find_by_name('GitHub'), uri.host.split('.').first]
+    end
+
+    owner_login = uri.path.split('/').reject(&:blank?).first
+    owner_host = Host.find_by_name(uri.host)
+    owner_host ||= Host.find_by_name(uri.host.split('.').first)
+    [owner_host, owner_login]
+  rescue URI::InvalidURIError
+    [nil, nil]
+  end
 
   def self.import_from_csv(url)
     conn = Faraday.new(url: url) do |faraday|
@@ -281,12 +325,16 @@ class Project < ApplicationRecord
   end
 
   def sync
+    return if hidden_owner?
+
     check_url
     return unless self.persisted?
     fetch_repository
     find_or_create_host
     fetch_owner
     find_or_create_owner
+    return if hidden_owner?
+
     fetch_dependencies
     fetch_packages
     import_mentions
@@ -309,6 +357,9 @@ class Project < ApplicationRecord
   end
 
   def sync_async
+    return if hidden_owner?
+    return unless persisted?
+
     SyncProjectWorker.perform_async(id)
   end
 
@@ -458,10 +509,15 @@ class Project < ApplicationRecord
     return unless host.present?
     return unless owner_data['login'].present?
 
-    owner_record = Owner.find_or_initialize_by(
-      host: host,
-      login: owner_data['login'].downcase
-    )
+    owner_record = host.owners.find_by('lower(login) = ?', owner_data['login'].downcase)
+    if owner_record&.hidden? || owner_data['hidden'] == true
+      owner_record ||= host.owners.build(login: owner_data['login'].downcase)
+      owner_record.hide!
+      self.update_column(:owner_id, owner_record.id)
+      return owner_record
+    end
+
+    owner_record ||= host.owners.build(login: owner_data['login'].downcase)
 
     owner_record.assign_attributes(
       name: owner_data['name'],
@@ -480,7 +536,7 @@ class Project < ApplicationRecord
       total_stars: owner_data['total_stars'],
       followers: owner_data['followers'],
       following: owner_data['following'],
-      hidden: owner_data['hidden']
+      hidden: owner_record.hidden? ? true : owner_data['hidden']
     )
     owner_record.save
 
@@ -746,6 +802,28 @@ class Project < ApplicationRecord
   def owner_name
     return unless repository.present?
     repository['owner']
+  end
+
+  def hidden_owner?
+    return true if owner_record&.hidden?
+
+    owner_data = read_attribute(:owner)
+    return true if owner_data.is_a?(Hash) && owner_data['hidden'] == true
+
+    repository_data = read_attribute(:repository)
+    url_host, url_login = self.class.owner_details_from_url(url)
+    owner_host = host || url_host
+    owner_login = owner_data['login'] if owner_data.is_a?(Hash)
+    owner_login ||= repository_data['owner'] if repository_data.is_a?(Hash)
+    owner_login ||= url_login
+
+    return false if owner_host.nil? || owner_login.blank?
+
+    owner_host.owners.hidden.where('lower(login) = ?', owner_login.downcase).exists?
+  end
+
+  def owner_not_hidden
+    errors.add(:url, 'belongs to a hidden owner') if hidden_owner?
   end
 
   def avatar_url
@@ -1095,7 +1173,7 @@ class Project < ApplicationRecord
     # Extract unique GitHub owner names from projects with reasonable science score
     owners = []
     
-    scope = Project.with_repository
+    scope = Project.visible.with_repository
     scope = scope.where('science_score >= ?', min_science_score) if min_science_score > 0
     
     scope.find_each do |project|
@@ -1170,7 +1248,8 @@ class Project < ApplicationRecord
 
   def self.packages_sorted_ids
     Rails.cache.fetch('packages_projects_ids', expires_in: 2.hours) do
-      with_packages
+      visible
+        .with_packages
         .where('science_score > 0')
         .sort_by { |p| p.packages.sum { |pkg| pkg['downloads'] || 0 } }
         .reverse
@@ -1180,7 +1259,7 @@ class Project < ApplicationRecord
 
   def self.packages_sorted
     project_ids = packages_sorted_ids
-    Project.where(id: project_ids).index_by(&:id).values_at(*project_ids).compact
+    Project.visible.where(id: project_ids).index_by(&:id).values_at(*project_ids).compact
   end
 
   def self.all_package_and_project_names
@@ -1193,35 +1272,36 @@ class Project < ApplicationRecord
   end
 
   def self.stats_summary
-    total_projects = Project.count
-    scored_projects = Project.where.not(science_score: nil).count
+    scope = Project.visible
+    total_projects = scope.count
+    scored_projects = scope.where.not(science_score: nil).count
 
     # Science score distribution
-    score_distribution = Project.group(:science_score).count
-    scientific_count = Project.scientific.count
-    highly_scientific_count = Project.highly_scientific.count
+    score_distribution = scope.group(:science_score).count
+    scientific_count = scope.scientific.count
+    highly_scientific_count = scope.highly_scientific.count
 
     # Calculate averages for scored projects
-    median_score = Project.where.not(science_score: nil).median(:science_score) rescue nil
+    median_score = scope.where.not(science_score: nil).median(:science_score) rescue nil
 
     # Repository stats
-    with_repo_count = Project.with_repository.count
-    with_readme_count = Project.with_readme.count
-    with_packages_count = Project.with_packages.count
+    with_repo_count = scope.with_repository.count
+    with_readme_count = scope.with_readme.count
+    with_packages_count = scope.with_packages.count
 
     # Citation and metadata file counts
-    with_citation_count = Project.where.not(citation_file: nil).count
-    with_codemeta_count = Project.with_codemeta_file.count
-    with_zenodo_count = Project.with_zenodo_file.count
+    with_citation_count = scope.where.not(citation_file: nil).count
+    with_codemeta_count = scope.with_codemeta_file.count
+    with_zenodo_count = scope.with_zenodo_file.count
 
     # JOSS stats
-    joss_count = Project.with_joss.count
+    joss_count = scope.with_joss.count
 
     # Institutional owners stats
     institutional_owners_count = Owner.institutional.count
 
     # Language distribution (top 10)
-    language_distribution = Project.with_repository
+    language_distribution = scope.with_repository
       .where('science_score > 0')
       .where.not(repository: nil)
       .where("repository->>'language' IS NOT NULL")
@@ -2323,23 +2403,16 @@ class Project < ApplicationRecord
   end
 
   def self.category_tree
-    sql = <<-SQL
-      SELECT category, sub_category, COUNT(*)
-      FROM projects
-      WHERE 1=1 
-      GROUP BY category, sub_category
-    SQL
+    results = visible.group(:category, :sub_category).count
 
-    results = ActiveRecord::Base.connection.execute(sql)
-
-    results.group_by { |row| row['category'] }.map do |category, rows|
+    results.group_by { |(category, _), _| category }.map do |category, rows|
       {
         category: category,
-        count: rows.sum { |row| row['count'] },
-        sub_categories: rows.map do |row|
+        count: rows.sum { |_, count| count },
+        sub_categories: rows.map do |(_, sub_category), count|
           {
-            sub_category: row['sub_category'],
-            count: row['count']
+            sub_category: sub_category,
+            count: count
           }
         end
       }

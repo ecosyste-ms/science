@@ -25,7 +25,7 @@
     <div class="col-md-3">
       <div class="card text-center">
         <div class="card-body">
-          <h3 class="text-success"><%= ProjectField.distinct.count(:project_id) %></h3>
+          <h3 class="text-success"><%= ProjectField.joins(:project).merge(Project.visible).distinct.count(:project_id) %></h3>
           <p class="text-muted mb-0">Classified Projects</p>
         </div>
       </div>
@@ -33,7 +33,7 @@
     <div class="col-md-3">
       <div class="card text-center">
         <div class="card-body">
-          <h3 class="text-info"><%= (ProjectField.average(:confidence_score) * 100).round(1) %>%</h3>
+          <h3 class="text-info"><%= (ProjectField.joins(:project).merge(Project.visible).average(:confidence_score) * 100).round(1) %>%</h3>
           <p class="text-muted mb-0">Avg Confidence</p>
         </div>
       </div>
@@ -41,7 +41,7 @@
     <div class="col-md-3">
       <div class="card text-center">
         <div class="card-body">
-          <h3 class="text-warning"><%= Project.joins(:project_fields).group('projects.id').having('COUNT(project_fields.id) > 1').count.size %></h3>
+          <h3 class="text-warning"><%= Project.visible.joins(:project_fields).group('projects.id').having('COUNT(project_fields.id) > 1').count.size %></h3>
           <p class="text-muted mb-0">Multi-field Projects</p>
         </div>
       </div>

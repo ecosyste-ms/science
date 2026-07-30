@@ -7,16 +7,16 @@ class OwnersController < ApplicationController
   end
 
   def index
-    scope = @host.owners.order('projects_count DESC')
+    scope = @host.owners.visible.order('projects_count DESC')
     @pagy, @owners = pagy(scope)
   end
 
   def show
     @owner = params[:id]
     @owner_record = @host.owners.find_by('lower(login) = ?', @owner.downcase)
-    raise ActiveRecord::RecordNotFound unless @owner_record
+    raise ActiveRecord::RecordNotFound if @owner_record.nil? || @owner_record.hidden?
 
-    @scope = Project.where(owner_record: @owner_record).where('science_score > 0')
+    @scope = Project.visible.where(owner_record: @owner_record).where('science_score > 0')
 
     if params[:sort]
       @scope = @scope.order("#{params[:sort]} #{params[:order]}")

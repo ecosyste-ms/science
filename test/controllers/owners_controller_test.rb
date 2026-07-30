@@ -57,4 +57,25 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "h1", /Institutional Owners/
   end
+
+  test "hidden owners are excluded from the index" do
+    host = Host.create!(name: "GitHub")
+    Owner.create!(host: host, login: "visible-owner")
+    Owner.create!(host: host, login: "hidden-owner", hidden: true)
+
+    get host_owners_url(host.name)
+
+    assert_response :success
+    assert_match "visible-owner", response.body
+    assert_no_match "hidden-owner", response.body
+  end
+
+  test "hidden owner returns 404" do
+    host = Host.create!(name: "GitHub")
+    Owner.create!(host: host, login: "HIDDEN-OWNER", hidden: true)
+
+    get host_owner_url(host.name, "hidden-owner")
+
+    assert_response :not_found
+  end
 end

@@ -6,7 +6,7 @@ class HostsController < ApplicationController
   end
 
   def show
-    @scope = @host.projects.where('science_score > 0')
+    @scope = @host.projects.visible.where('science_score > 0')
 
     if params[:sort]
       @scope = @scope.order("#{params[:sort]} #{params[:order]}")

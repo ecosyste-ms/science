@@ -10,11 +10,13 @@ class Owner < ApplicationRecord
   validates :login, uniqueness: { scope: :host_id, case_sensitive: false }
   validates :uuid, uniqueness: { scope: :host_id }, allow_nil: true
 
+  scope :hidden, -> { where(hidden: true) }
+  scope :visible, -> { where(hidden: [false, nil]) }
   scope :organizations, -> { where(kind: 'organization') }
   scope :institutional, -> {
     # Build SQL conditions to match any academic domain
     conditions = ACADEMIC_DOMAINS.map { |domain| "LOWER(website) LIKE '%#{sanitize_sql_like(domain)}%'" }.join(' OR ')
-    organizations.where("website IS NOT NULL AND website != '' AND (#{conditions})")
+    organizations.visible.where("website IS NOT NULL AND website != '' AND (#{conditions})")
   }
 
   def institutional?
@@ -25,6 +27,27 @@ class Owner < ApplicationRecord
     return false unless domain
 
     ACADEMIC_DOMAINS.any? { |academic_domain| domain.include?(academic_domain) }
+  end
+
+  def hide!
+    update!(
+      hidden: true,
+      name: nil,
+      uuid: nil,
+      description: nil,
+      email: nil,
+      website: nil,
+      location: nil,
+      twitter: nil,
+      company: nil,
+      icon_url: nil,
+      repositories_count: 0,
+      last_synced_at: nil,
+      metadata: {},
+      total_stars: nil,
+      followers: nil,
+      following: nil
+    )
   end
 
   def extract_domain(url)
