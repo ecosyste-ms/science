@@ -1,6 +1,6 @@
 class Api::V1::ProjectsController < Api::V1::ApplicationController
   def index
-    @projects = Project.all.where.not(last_synced_at: nil)
+    @projects = Project.visible.where.not(last_synced_at: nil)
 
 
     if params[:sort].present? || params[:order].present?
@@ -16,30 +16,32 @@ class Api::V1::ProjectsController < Api::V1::ApplicationController
   end
 
   def show
-    @project = Project.find(params[:id])
+    @project = Project.visible.find(params[:id])
   end
 
   def lookup
-    @project = Project.find_by(url: params[:url].downcase)
+    @project = Project.visible.find_by(url: params[:url].downcase)
     if @project.nil?
       @project = Project.create(url: params[:url].downcase)
+      raise ActiveRecord::RecordNotFound unless @project.persisted?
+
       @project.sync_async
     end
     @project.sync_async if @project.last_synced_at.nil? || @project.last_synced_at < 1.day.ago
   end
 
   def ping
-    @project = Project.find(params[:id])
+    @project = Project.visible.find(params[:id])
     @project.sync_async
     render json: { message: 'pong' }
   end
 
   def packages
-    @projects = Project.active.select{|p| p.packages.present? }.sort_by{|p| p.packages.sum{|p| p['downloads'] || 0 } }.reverse
+    @projects = Project.visible.active.select{|p| p.packages.present? }.sort_by{|p| p.packages.sum{|p| p['downloads'] || 0 } }.reverse
   end
 
   def search
-    @scope = Project
+    @scope = Project.visible
 
     if params[:q].present?
       @scope = @scope.where("url ILIKE ?", "%#{params[:q]}%")

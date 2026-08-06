@@ -490,6 +490,69 @@ class ProjectTest < ActiveSupport::TestCase
     assert_nil project.owner_id
   end
 
+  test "does not create a project for a hidden owner" do
+    host = Host.create!(name: "GitHub", url: "https://github.com")
+    Owner.create!(host: host, login: "hidden-owner", hidden: true)
+
+    project = Project.new(url: "https://github.com/HIDDEN-OWNER/project")
+
+    assert_not project.valid?
+    assert_includes project.errors[:url], "belongs to a hidden owner"
+  end
+
+  test "visible excludes projects belonging to hidden owners" do
+    host = Host.create!(name: "GitHub", url: "https://github.com")
+    owner = Owner.create!(host: host, login: "hidden-owner")
+    project = Project.create!(
+      host: host,
+      owner_record: owner,
+      url: "https://github.com/hidden-owner/project"
+    )
+    owner.update!(hidden: true)
+
+    assert_not_includes Project.visible, project
+  end
+
+  test "visible includes projects without an owner record" do
+    project = Project.create!(url: "https://github.com/unknown-owner/project")
+
+    assert_includes Project.visible, project
+  end
+
+  test "does not enqueue or sync projects belonging to hidden owners" do
+    host = Host.create!(name: "GitHub", url: "https://github.com")
+    owner = Owner.create!(host: host, login: "hidden-owner")
+    project = Project.create!(
+      host: host,
+      owner_record: owner,
+      url: "https://github.com/hidden-owner/project"
+    )
+    owner.update!(hidden: true)
+
+    assert_no_difference -> { SyncProjectWorker.jobs.size } do
+      project.sync_async
+    end
+    assert_not_requested :get, project.url
+    assert_nil project.sync
+  end
+
+  test "find_or_create_owner preserves a hidden tombstone" do
+    host = Host.create!(name: "GitHub")
+    owner = Owner.create!(host: host, login: "hidden-owner", hidden: true)
+    project = Project.create!(url: "https://github.com/other-owner/project", host: host)
+    project.update_column(:owner, {
+      "login" => "hidden-owner",
+      "hidden" => false,
+      "name" => "Hidden Owner"
+    })
+
+    project.find_or_create_owner
+
+    assert owner.reload.hidden?
+    assert_nil owner.name
+    assert_equal owner, project.reload.owner_record
+  end
+
   test "packages_sorted_ids returns cached sorted project ids" do
     project1 = Project.create!(
       url: 'https://github.com/test/project1',

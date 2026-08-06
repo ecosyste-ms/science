@@ -1,7 +1,7 @@
 class Api::V1::IssuesController < Api::V1::ApplicationController
   def index
     scope = Issue.where(pull_request: false, state: 'open').includes(:project)
-    scope = scope.joins(:project).good_first_issue
+    scope = scope.joins(:project).merge(Project.visible).good_first_issue
 
     # Apply filters if provided
     scope = scope.joins(:project).where(projects: { category: params[:category] }) if params[:category].present?

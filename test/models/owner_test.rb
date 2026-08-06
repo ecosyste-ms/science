@@ -7,6 +7,24 @@ class OwnerTest < ActiveSupport::TestCase
     assert owner.valid?
   end
 
+  test "visible scope excludes hidden owners" do
+    host = Host.create!(name: "GitHub")
+    visible_owner = Owner.create!(host: host, login: "visible", hidden: false)
+    hidden_owner = Owner.create!(host: host, login: "hidden", hidden: true)
+
+    assert_includes Owner.visible, visible_owner
+    assert_not_includes Owner.visible, hidden_owner
+  end
+
+  test "hidden scope only includes hidden owners" do
+    host = Host.create!(name: "GitHub")
+    visible_owner = Owner.create!(host: host, login: "visible", hidden: false)
+    hidden_owner = Owner.create!(host: host, login: "hidden", hidden: true)
+
+    assert_includes Owner.hidden, hidden_owner
+    assert_not_includes Owner.hidden, visible_owner
+  end
+
   test "requires login" do
     host = Host.create!(name: "GitHub")
     owner = Owner.new(host: host)

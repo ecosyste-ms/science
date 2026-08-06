@@ -67,6 +67,24 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "hidden owner project returns 404 from html and api" do
+    host = Host.create!(name: "GitHub", url: "https://github.com")
+    owner = Owner.create!(host: host, login: "hidden-owner")
+    project = Project.create!(
+      host: host,
+      owner_record: owner,
+      url: "https://github.com/hidden-owner/project",
+      science_score: 50
+    )
+    owner.update!(hidden: true)
+
+    get project_url(project)
+    assert_response :not_found
+
+    get api_v1_project_url(project), as: :json
+    assert_response :not_found
+  end
+
   test "should get search" do
     get search_projects_url
     assert_response :success

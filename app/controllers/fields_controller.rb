@@ -18,6 +18,8 @@ class FieldsController < ApplicationController
 
     # Get projects in this field with their confidence scores
     @pagy, @project_fields = pagy(@field.project_fields
+                                        .joins(:project)
+                                        .merge(Project.visible)
                                         .includes(:project)
                                         .order(confidence_score: :desc),
                                   items: 20)
@@ -49,9 +51,10 @@ class FieldsController < ApplicationController
     field_stats = {}
 
     # Get counts per field
-    counts = ProjectField.group(:field_id).count
+    visible_project_fields = ProjectField.joins(:project).merge(Project.visible)
+    counts = visible_project_fields.group(:field_id).count
     # Get averages per field
-    averages = ProjectField.group(:field_id).average(:confidence_score)
+    averages = visible_project_fields.group(:field_id).average(:confidence_score)
 
     Field.all.each do |field|
       project_count = counts[field.id] || 0
@@ -65,12 +68,13 @@ class FieldsController < ApplicationController
   end
 
   def calculate_field_show_stats(field)
+    project_fields = field.project_fields.joins(:project).merge(Project.visible)
     {
-      total_projects: field.project_fields.count,
-      avg_confidence: field.project_fields.average(:confidence_score)&.round(2),
-      high_confidence_count: field.project_fields.where('confidence_score >= ?', 0.7).count,
-      medium_confidence_count: field.project_fields.where('confidence_score >= ? AND confidence_score < ?', 0.5, 0.7).count,
-      low_confidence_count: field.project_fields.where('confidence_score < ?', 0.5).count
+      total_projects: project_fields.count,
+      avg_confidence: project_fields.average(:confidence_score)&.round(2),
+      high_confidence_count: project_fields.where('confidence_score >= ?', 0.7).count,
+      medium_confidence_count: project_fields.where('confidence_score >= ? AND confidence_score < ?', 0.5, 0.7).count,
+      low_confidence_count: project_fields.where('confidence_score < ?', 0.5).count
     }
   end
 
@@ -78,7 +82,7 @@ class FieldsController < ApplicationController
     return [] unless field.project_fields.any?
 
     keyword_counts = Hash.new(0)
-    field.projects.limit(100).each do |project|
+    field.projects.merge(Project.visible).limit(100).each do |project|
       if project.keywords.present? && project.keywords.is_a?(Array)
         project.keywords.each do |keyword|
           keyword_counts[keyword.to_s] += 1 if keyword.present?
