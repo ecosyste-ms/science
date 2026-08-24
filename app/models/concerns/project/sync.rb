@@ -552,6 +552,7 @@ module Project::Sync
     return unless response.success?
     
     issues_json = JSON.parse(response.body)
+    return unless issues_json.is_a?(Array)
 
     # TODO pagination
     # TODO upsert (plus unique index)

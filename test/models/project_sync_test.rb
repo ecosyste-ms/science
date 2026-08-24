@@ -277,6 +277,18 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_nil p.sync
   end
 
+  test "sync_issues returns early when issues list response is not an array" do
+    p = build_project
+    stub_request(:get, p.issues_api_url).to_return(
+      status: 200,
+      body: { issues_url: "https://issues.ecosyste.ms/api/v1/hosts/GitHub/repositories/numpy/numpy/issues" }.to_json
+    )
+    stub_request(:get, %r{issues\.ecosyste\.ms/api/v1/hosts/GitHub/repositories/numpy/numpy/issues})
+      .to_return(status: 200, body: { error: "rate limited" }.to_json)
+    assert_nothing_raised { p.sync_issues }
+    assert_equal 0, p.issues.count
+  end
+
   test "sync_issues creates issue records from issues api" do
     p = build_project
     stub_request(:get, p.issues_api_url).to_return(
