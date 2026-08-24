@@ -90,6 +90,7 @@ class ScienceScoreCalculator
       has_institutional_owner: check_institutional_owner,
       has_scientific_registry: check_scientific_registry,
       has_scientific_dependencies: check_scientific_dependencies,
+      has_research_tooling: check_research_tooling,
       negative_indicators: check_negative_indicators,
       has_joss_paper: check_joss_paper
     }
@@ -138,6 +139,7 @@ class ScienceScoreCalculator
         has_institutional_owner: 0.10,
         has_scientific_registry: 0.07,
         has_scientific_dependencies: 0.0,
+        has_research_tooling: 0.0,
         joss_vocabulary_similarity: 0.13
       }
 
@@ -300,6 +302,41 @@ class ScienceScoreCalculator
       description: "Scientific dependencies",
       details: matches.any? ? "#{matches.length} matched: #{matches.first(5).map { |e, n| "#{e}:#{n}" }.join(', ')}" : nil,
       matches: matches.length,
+    }
+  end
+
+  RESEARCH_DOMAINS = %w[research bioinformatics scientific-computing high-performance-computing].freeze
+
+  RESEARCH_TOOLS = {
+    strong: %w[Snakemake Nextflow nf-core nf-test MultiQC Dockstore],
+    high: ['Quarto', 'R Markdown', 'knitr', 'DVC', 'targets', 'ASV', 'Fortitude'],
+    moderate: %w[Jupyter MyST-Parser BenchmarkTools.jl Documenter.jl roxygen2 pkgdown covr testthat renv],
+  }.freeze
+
+  def check_research_tooling
+    return { present: false, description: "Research tooling", details: nil } unless project.brief.present?
+    return { present: false, description: "Research tooling", details: "scan error: #{project.brief['error']}" } if project.brief['error']
+
+    tools = (project.brief['tools'] || {}).values.flatten
+    domains = tools.flat_map { |t| t.dig('taxonomy', 'domain') || [] }.uniq
+    if (domains & RESEARCH_DOMAINS).any?
+      return {
+        present: true,
+        strength: 1.0,
+        description: "Research tooling",
+        details: "Tools tagged domain: #{(domains & RESEARCH_DOMAINS).join(', ')}",
+      }
+    end
+
+    names = tools.map { |t| t['name'] }.compact
+    tier, matches = RESEARCH_TOOLS.lazy.map { |k, v| [k, names & v] }.find { |_, m| m.any? }
+    strength = { strong: 1.0, high: 0.7, moderate: 0.4 }[tier]
+
+    {
+      present: matches.present?,
+      strength: strength,
+      description: "Research tooling",
+      details: matches.present? ? "Detected: #{matches.join(', ')}" : nil,
     }
   end
 
