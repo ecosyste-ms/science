@@ -730,7 +730,7 @@ class Project < ApplicationRecord
 
     result["email"] = person.email if person.email.present?
     result["@id"] = person.orcid if person.orcid.present?
-    result["affiliation"] = person.affiliation if person.affiliation.present?
+    result["affiliation"] = person.affiliation if person.respond_to?(:affiliation) && person.affiliation.present?
     result
   end
 
