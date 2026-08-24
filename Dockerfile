@@ -35,7 +35,7 @@ RUN apk add --no-cache \
 
 ARG BRIEF_VERSION=0.12.0
 RUN ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/') \
- && curl -sSL "https://github.com/git-pkgs/brief/releases/download/v${BRIEF_VERSION}/brief_${BRIEF_VERSION}_linux_${ARCH}.tar.gz" \
+ && wget -qO- "https://github.com/git-pkgs/brief/releases/download/v${BRIEF_VERSION}/brief_${BRIEF_VERSION}_linux_${ARCH}.tar.gz" \
     | tar -xz -C /usr/local/bin brief \
  && brief --version
 
