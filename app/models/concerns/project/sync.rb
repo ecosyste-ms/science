@@ -1,3 +1,5 @@
+require 'open3'
+
 module Project::Sync
   extend ActiveSupport::Concern
 
@@ -537,6 +539,34 @@ module Project::Sync
     return unless repository.present?
     "#{repository['html_url']}/raw/#{repository['default_branch']}/#{path}"
   end 
+
+  def fetch_brief
+    return unless repository.present?
+
+    clone_url = repository['clone_url'].presence || repository_url
+    cmd = ['brief', '-json', '-depth', '1', clone_url]
+    out, err, status = Open3.capture3(*cmd)
+    unless status.success?
+      Rails.logger.warn "brief failed for #{repository_url}: #{err.to_s.lines.last&.strip}"
+      return
+    end
+
+    data = JSON.parse(out)
+    self.brief = {
+      'version' => data['version'],
+      'languages' => data['languages'],
+      'package_managers' => data['package_managers'],
+      'tools' => data['tools'],
+      'resources' => data['resources'],
+      'manifests' => data['manifests'],
+      'lines' => data['lines'],
+    }
+    save
+  rescue Errno::ENOENT
+    Rails.logger.warn "brief binary not found; skipping fetch_brief for #{repository_url}"
+  rescue JSON::ParserError => e
+    Rails.logger.warn "brief output not JSON for #{repository_url}: #{e.message}"
+  end
 
   def sync_issues
     return unless repository.present?

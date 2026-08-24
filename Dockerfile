@@ -33,6 +33,12 @@ RUN apk add --no-cache \
  && pip install docutils \
  && npm install -g repomix
 
+ARG BRIEF_VERSION=0.11.0
+RUN ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/') \
+ && curl -sSL "https://github.com/git-pkgs/brief/releases/download/v${BRIEF_VERSION}/brief_${BRIEF_VERSION}_linux_${ARCH}.tar.gz" \
+    | tar -xz -C /usr/local/bin brief \
+ && brief --version
+
 ENV LD_PRELOAD=/usr/lib/libjemalloc.so.2
 ENV RUBY_YJIT_ENABLE=1
 

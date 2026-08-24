@@ -266,6 +266,32 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     assert_equal 0.7, result[:strength]
   end
 
+  test "check_research_tooling detects tools by taxonomy domain" do
+    @project.brief = { "tools" => { "build" => [{ "name" => "Snakemake", "taxonomy" => { "domain" => ["research"] } }] } }
+    result = ScienceScoreCalculator.new(@project).check_research_tooling
+    assert result[:present]
+    assert_equal 1.0, result[:strength]
+    assert_match "domain: research", result[:details]
+  end
+
+  test "check_research_tooling falls back to name matching by tier" do
+    @project.brief = { "tools" => { "docs" => [{ "name" => "Quarto" }] } }
+    result = ScienceScoreCalculator.new(@project).check_research_tooling
+    assert result[:present]
+    assert_equal 0.7, result[:strength]
+
+    @project.brief = { "tools" => { "environment" => [{ "name" => "Jupyter" }] } }
+    result = ScienceScoreCalculator.new(@project).check_research_tooling
+    assert_equal 0.4, result[:strength]
+
+    @project.brief = { "tools" => { "test" => [{ "name" => "pytest" }] } }
+    refute ScienceScoreCalculator.new(@project).check_research_tooling[:present]
+  end
+
+  test "check_research_tooling absent when no brief data" do
+    refute ScienceScoreCalculator.new(@project).check_research_tooling[:present]
+  end
+
   test "check_negative_indicators detects strong topics" do
     @project.repository = { 'topics' => ['awesome-list', 'python'] }
     result = ScienceScoreCalculator.new(@project).check_negative_indicators

@@ -96,6 +96,15 @@ namespace :projects do
     Project.sync_dependencies
   end
 
+  desc 'run brief against projects without brief data (LIMIT=100)'
+  task :fetch_brief => :environment do
+    limit = (ENV['LIMIT'] || 100).to_i
+    Project.with_repository.where(brief: nil).where('science_score > 0').limit(limit).find_each do |project|
+      puts project.url
+      project.fetch_brief
+    end
+  end
+
   desc 'import reviewed projects from OST (Open Sustainable Technology)'
   task :import_ost => :environment do
     Project.import_from_ost
