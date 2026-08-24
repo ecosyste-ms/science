@@ -1,4 +1,5 @@
 require 'csv'
+require 'codemeta_research'
 
 namespace :codemeta_research do
   desc 'Export detailed codemeta analysis to CSV (pipe to file)'
@@ -269,7 +270,7 @@ namespace :codemeta_research do
       processed += 1
       $stderr.puts "[#{processed}/#{total}] Analyzing #{project.url}..."
 
-      results = project.clone_and_analyze_codemeta(base_dir: base_dir)
+      results = CodemetaResearch.clone_and_analyze(project, base_dir: base_dir)
 
       results.each do |result|
         csv << [
@@ -320,7 +321,7 @@ namespace :codemeta_research do
       processed += 1
       $stderr.puts "[#{processed}/#{total}] Analyzing history of #{project.url}..."
 
-      results = project.analyze_codemeta_history(base_dir: base_dir)
+      results = CodemetaResearch.analyze_history(project, base_dir: base_dir)
 
       results.each do |result|
         csv << [
@@ -344,8 +345,7 @@ namespace :codemeta_research do
   end
 
   def normalize_version(version_string)
-    return nil if version_string.blank?
-    version_string.to_s.strip.downcase.gsub(/^v/, '').gsub(/^version[-_\s]*/i, '')
+    CodemetaResearch.normalize_version(version_string)
   end
 
   def percentage(numerator, denominator)
