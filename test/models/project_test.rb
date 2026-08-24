@@ -1,6 +1,28 @@
 require 'test_helper'
 
 class ProjectTest < ActiveSupport::TestCase
+  test "issue_associations handles missing sub-keys in issues_stats" do
+    p = Project.new(url: "https://github.com/x/y", issues_stats: { 'issue_author_associations_count' => { 'OWNER' => 1 } })
+    assert_equal ['OWNER'], p.issue_associations
+
+    p.issues_stats = { 'other' => 1 }
+    assert_equal [], p.issue_associations
+
+    p.issues_stats = nil
+    assert_equal [], p.issue_associations
+  end
+
+  test "issues_this_year? and pull_requests_this_year? handle missing bot counts" do
+    p = Project.new(url: "https://github.com/x/y", issues_stats: { 'past_year_issues_count' => 5, 'past_year_pull_requests_count' => 3 })
+    assert p.issues_this_year?
+    assert p.pull_requests_this_year?
+  end
+
+  test "commiter_domains handles committers with nil email" do
+    p = Project.new(url: "https://github.com/x/y", commits: { 'committers' => [{ 'email' => nil }, { 'email' => 'a@stanford.edu' }] })
+    assert_equal [['stanford.edu', 1]], p.commiter_domains
+  end
+
   test "update_science_score sets science_score attribute" do
     project = Project.create!(url: 'https://github.com/test/science-project')
     project.repository = {

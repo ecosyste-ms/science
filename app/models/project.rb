@@ -342,7 +342,7 @@ class Project < ApplicationRecord
 
   def issue_associations
     return [] unless issues_stats.present?
-    (issues_stats['issue_author_associations_count'].keys + issues_stats['pull_request_author_associations_count'].keys).uniq
+    ((issues_stats['issue_author_associations_count'] || {}).keys + (issues_stats['pull_request_author_associations_count'] || {}).keys).uniq
   end
 
   def external_users?
@@ -391,13 +391,13 @@ class Project < ApplicationRecord
   def issues_this_year?
     return false unless issues_stats.present?
     return false unless issues_stats['past_year_issues_count'].present?
-    (issues_stats['past_year_issues_count'] - issues_stats['past_year_bot_issues_count']) > 0
+    (issues_stats['past_year_issues_count'] - (issues_stats['past_year_bot_issues_count'] || 0)) > 0
   end
 
   def pull_requests_this_year?
     return false unless issues_stats.present?
     return false unless issues_stats['past_year_pull_requests_count'].present?
-    (issues_stats['past_year_pull_requests_count'] - issues_stats['past_year_bot_pull_requests_count']) > 0
+    (issues_stats['past_year_pull_requests_count'] - (issues_stats['past_year_bot_pull_requests_count'] || 0)) > 0
   end
 
   def archived?
@@ -523,7 +523,7 @@ class Project < ApplicationRecord
   def commiter_domains
     return unless commits.present?
     return unless commits['committers'].present?
-    commits['committers'].map{|c| c['email'].split('@')[1].try(:downcase) }.reject{|e| e.nil? || ignored_domains.include?(e) || e.ends_with?('.local') || e.split('.').length ==1  }.group_by(&:itself).transform_values(&:count).sort_by{|k,v| v}.reverse
+    commits['committers'].map{|c| c['email'].to_s.split('@')[1].try(:downcase) }.reject{|e| e.nil? || ignored_domains.include?(e) || e.ends_with?('.local') || e.split('.').length ==1  }.group_by(&:itself).transform_values(&:count).sort_by{|k,v| v}.reverse
   end
 
   def filtered_commiter_domains
