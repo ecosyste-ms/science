@@ -23,4 +23,13 @@ class HostsControllerTest < ActionDispatch::IntegrationTest
     get host_url("nonexistent")
     assert_response :not_found
   end
+
+  test "show falls back to science_score for unknown sort column" do
+    host = Host.create!(name: "GitHub", url: "https://github.com")
+    get host_url(host.name), params: { sort: 'pg_sleep(1)', order: 'nope' }
+    assert_response :success
+    sql = assigns(:scope).to_sql
+    assert_match 'ORDER BY science_score DESC NULLS LAST', sql
+    assert_no_match 'pg_sleep', sql
+  end
 end

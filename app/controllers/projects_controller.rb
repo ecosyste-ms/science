@@ -19,14 +19,6 @@ class ProjectsController < ApplicationController
     end
   end
 
-  def mime_type_for_format(format)
-    case format
-    when 'bibtex' then 'application/x-bibtex'
-    when 'apalike', 'apa' then 'text/plain'
-    else 'text/plain'
-    end
-  end
-
   def index
     @scope = Project.visible.includes(project_fields: :field).where('science_score > 0')
 
@@ -42,11 +34,7 @@ class ProjectsController < ApplicationController
       @scope = @scope.language(params[:language])
     end
 
-    if params[:sort]
-      @scope = @scope.order("#{params[:sort]} #{params[:order]}")
-    else
-      @scope = @scope.order(Arel.sql('(science_score + COALESCE(score, 0)) DESC'))
-    end
+    @scope = apply_project_sort(@scope)
 
     @pagy, @projects = pagy(@scope)
   end
@@ -76,56 +64,6 @@ class ProjectsController < ApplicationController
     @results = ProjectSearch.new(@query, 20).search if @query.present?
   end
 
-  def review
-    @scope = Project.visible.matching_criteria
-
-    if params[:keyword].present?
-      @scope = @scope.keyword(params[:keyword])
-    end
-
-    if params[:owner].present?
-      @scope = @scope.owner(params[:owner])
-    end
-
-    if params[:language].present?
-      @scope = @scope.language(params[:language])
-    end
-
-    if params[:sort]
-      @scope = @scope.order("#{params[:sort]} #{params[:order]}")
-    else
-      @scope = @scope.order('created_at DESC')
-    end
-
-    @pagy, @projects = pagy(@scope)
-  end
-
-  def new
-    @project = Project.new
-  end
-
-  def create
-    # Check for existing project first
-    existing_project = Project.find_by(url: params[:project][:url].downcase)
-    if existing_project
-      raise ActiveRecord::RecordNotFound if existing_project.hidden_owner?
-
-      redirect_to existing_project
-    else
-      @project = Project.new(project_params)
-      if @project.save
-        @project.sync_async
-        redirect_to @project
-      else
-        render 'new'
-      end
-    end
-  end
-
-  def project_params
-    params.require(:project).permit(:url, :name, :description)
-  end
-
   def packages
     @projects = Project.packages_sorted
   end
@@ -141,11 +79,7 @@ class ProjectsController < ApplicationController
       @scope = @scope.language(params[:language])
     end
 
-    if params[:sort]
-      @scope = @scope.order("#{params[:sort]} #{params[:order]}")
-    else
-      @scope = @scope.order(Arel.sql('(science_score + COALESCE(score, 0)) DESC'))
-    end
+    @scope = apply_project_sort(@scope)
 
     @pagy, @projects = pagy(@scope)
   end
@@ -161,11 +95,7 @@ class ProjectsController < ApplicationController
       @scope = @scope.language(params[:language])
     end
 
-    if params[:sort]
-      @scope = @scope.order("#{params[:sort]} #{params[:order]}")
-    else
-      @scope = @scope.order(Arel.sql('(science_score + COALESCE(score, 0)) DESC'))
-    end
+    @scope = apply_project_sort(@scope)
 
     @pagy, @projects = pagy(@scope)
   end
@@ -181,11 +111,7 @@ class ProjectsController < ApplicationController
       @scope = @scope.language(params[:language])
     end
 
-    if params[:sort]
-      @scope = @scope.order("#{params[:sort]} #{params[:order]}")
-    else
-      @scope = @scope.order(Arel.sql('(science_score + COALESCE(score, 0)) DESC'))
-    end
+    @scope = apply_project_sort(@scope)
 
     @pagy, @projects = pagy(@scope)
   end
@@ -233,11 +159,7 @@ class ProjectsController < ApplicationController
       @scope = @scope.language(params[:language])
     end
 
-    if params[:sort]
-      @scope = @scope.order("#{params[:sort]} #{params[:order]}")
-    else
-      @scope = @scope.order(Arel.sql('(science_score + COALESCE(score, 0)) DESC'))
-    end
+    @scope = apply_project_sort(@scope)
 
     @pagy, @projects = pagy(@scope)
   end
@@ -258,4 +180,20 @@ class ProjectsController < ApplicationController
               disposition: 'attachment'
   end
 
+  def apply_project_sort(scope)
+    if params[:sort].present? || params[:order].present?
+      sort = sanitize_sort(Project.sortable_columns, default: 'science_score')
+      scope.order(sort.public_send(sanitize_order).nulls_last)
+    else
+      scope.order(Arel.sql('(science_score + COALESCE(score, 0)) DESC'))
+    end
+  end
+
+  def mime_type_for_format(format)
+    case format
+    when 'bibtex' then 'application/x-bibtex'
+    when 'apalike', 'apa' then 'text/plain'
+    else 'text/plain'
+    end
+  end
 end

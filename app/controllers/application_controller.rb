@@ -29,4 +29,8 @@ class ApplicationController < ActionController::Base
     sql = allowed_columns[sort_param] || allowed_columns[default] || default
     Arel.sql(sql)
   end
+
+  def sanitize_order(default: :desc)
+    params[:order].to_s.downcase == 'asc' ? :asc : default
+  end
 end

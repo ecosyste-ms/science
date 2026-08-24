@@ -70,6 +70,18 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
     assert_no_match "hidden-owner", response.body
   end
 
+  test "show falls back to science_score for unknown sort column" do
+    host = Host.create!(name: "GitHub")
+    owner = Owner.create!(host: host, login: "testuser")
+    Project.create!(url: "https://github.com/testuser/repo", owner_record: owner, science_score: 5.0)
+
+    get host_owner_url(host.name, owner.login), params: { sort: 'pg_sleep(1)', order: 'nope' }
+    assert_response :success
+    sql = assigns(:scope).to_sql
+    assert_match 'ORDER BY science_score DESC NULLS LAST', sql
+    assert_no_match 'pg_sleep', sql
+  end
+
   test "hidden owner returns 404" do
     host = Host.create!(name: "GitHub")
     Owner.create!(host: host, login: "HIDDEN-OWNER", hidden: true)

@@ -136,37 +136,20 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "should get new" do
-    get new_project_url
+  test "index sorts by allowlisted column" do
+    low = Project.create!(url: "https://github.com/test/low-score", science_score: 10)
+    get projects_url, params: { sort: 'science_score', order: 'asc' }
     assert_response :success
+    projects = assigns(:projects)
+    assert_equal low.id, projects.first.id
   end
 
-  test "should create project" do
-    assert_difference("Project.count") do
-      post projects_url, params: { 
-        project: { 
-          url: "https://github.com/matplotlib/matplotlib",
-          name: "matplotlib",
-          description: "Plotting library for Python"
-        } 
-      }
-    end
-    assert_redirected_to project_url(Project.last)
-  end
-
-  test "should not create duplicate project with same url" do
-    # The controller downcases the URL to check for duplicates
-    assert_no_difference("Project.count") do
-      post projects_url, params: { 
-        project: { 
-          url: @project.url,
-          name: "duplicate",
-          description: "duplicate project"
-        } 
-      }
-    end
-    # The controller redirects to the existing project
-    assert_redirected_to project_url(@project)
+  test "index falls back to science_score for unknown sort column" do
+    get projects_url, params: { sort: 'pg_sleep(1)', order: 'nope' }
+    assert_response :success
+    sql = assigns(:scope).to_sql
+    assert_match 'ORDER BY science_score DESC NULLS LAST', sql
+    assert_no_match 'pg_sleep', sql
   end
 
   test "index only shows projects with science_score > 0" do

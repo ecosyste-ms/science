@@ -15,6 +15,8 @@ class Project < ApplicationRecord
       'created_at' => 'created_at',
       'last_synced_at' => 'last_synced_at',
       'name' => 'name',
+      'score' => 'score',
+      'science_score' => 'science_score',
     }
   end
 
@@ -792,11 +794,6 @@ class Project < ApplicationRecord
   def events_score
     return 0 unless events.present?
     0
-  end
-
-  def language
-    return unless repository.present?
-    repository['language']
   end
 
   def owner_name
