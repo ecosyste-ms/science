@@ -20,23 +20,8 @@ class ProjectsController < ApplicationController
   end
 
   def index
-    @scope = Project.visible.includes(project_fields: :field).where('science_score > 0')
-
-    if params[:keyword].present?
-      @scope = @scope.keyword(params[:keyword])
-    end
-
-    if params[:owner].present?
-      @scope = @scope.owner(params[:owner])
-    end
-
-    if params[:language].present?
-      @scope = @scope.language(params[:language])
-    end
-
-    @scope = apply_project_sort(@scope)
-
-    @pagy, @projects = pagy(@scope)
+    scope = Project.visible.includes(project_fields: :field).where('science_score > 0')
+    filtered_project_list(scope)
   end
 
   def search
@@ -69,113 +54,51 @@ class ProjectsController < ApplicationController
   end
 
   def joss
-    @scope = Project.visible.where("joss_metadata IS NOT NULL")
-
-    if params[:keyword].present?
-      @scope = @scope.keyword(params[:keyword])
-    end
-
-    if params[:language].present?
-      @scope = @scope.language(params[:language])
-    end
-
-    @scope = apply_project_sort(@scope)
-
-    @pagy, @projects = pagy(@scope)
+    filtered_project_list(Project.visible.with_joss)
   end
 
   def codemeta
-    @scope = Project.visible.with_codemeta_file
-
-    if params[:keyword].present?
-      @scope = @scope.keyword(params[:keyword])
-    end
-
-    if params[:language].present?
-      @scope = @scope.language(params[:language])
-    end
-
-    @scope = apply_project_sort(@scope)
-
-    @pagy, @projects = pagy(@scope)
+    filtered_project_list(Project.visible.with_codemeta_file)
   end
 
   def citation
-    @scope = Project.visible.with_citation_file
-
-    if params[:keyword].present?
-      @scope = @scope.keyword(params[:keyword])
-    end
-
-    if params[:language].present?
-      @scope = @scope.language(params[:language])
-    end
-
-    @scope = apply_project_sort(@scope)
-
-    @pagy, @projects = pagy(@scope)
-  end
-
-  def codemeta_csv
-    projects = Project.visible.with_codemeta_file
-
-    csv_data = CSV.generate(headers: true) do |csv|
-      csv << ['repository_url', 'codemeta_file_path']
-      projects.find_each do |project|
-        csv << [project.repository_url, project.codemeta_file_name]
-      end
-    end
-
-    send_data csv_data,
-              filename: "projects_with_codemeta_#{Date.current}.csv",
-              type: 'text/csv',
-              disposition: 'attachment'
-  end
-
-  def citation_csv
-    projects = Project.visible.with_citation_file
-
-    csv_data = CSV.generate(headers: true) do |csv|
-      csv << ['repository_url', 'citation_file_path']
-      projects.find_each do |project|
-        csv << [project.repository_url, project.citation_file_name]
-      end
-    end
-
-    send_data csv_data,
-              filename: "projects_with_citation_#{Date.current}.csv",
-              type: 'text/csv',
-              disposition: 'attachment'
+    filtered_project_list(Project.visible.with_citation_file)
   end
 
   def zenodo
-    @scope = Project.visible.with_zenodo_file
+    filtered_project_list(Project.visible.with_zenodo_file)
+  end
 
-    if params[:keyword].present?
-      @scope = @scope.keyword(params[:keyword])
-    end
+  def codemeta_csv
+    send_project_csv(Project.visible.with_codemeta_file, 'codemeta', :codemeta_file_name)
+  end
 
-    if params[:language].present?
-      @scope = @scope.language(params[:language])
-    end
-
-    @scope = apply_project_sort(@scope)
-
-    @pagy, @projects = pagy(@scope)
+  def citation_csv
+    send_project_csv(Project.visible.with_citation_file, 'citation', :citation_file_name)
   end
 
   def zenodo_csv
-    projects = Project.visible.with_zenodo_file
+    send_project_csv(Project.visible.with_zenodo_file, 'zenodo', :zenodo_file_name)
+  end
 
+  def filtered_project_list(scope)
+    scope = scope.keyword(params[:keyword]) if params[:keyword].present?
+    scope = scope.owner(params[:owner]) if params[:owner].present?
+    scope = scope.language(params[:language]) if params[:language].present?
+    @scope = apply_project_sort(scope)
+    @pagy, @projects = pagy(@scope)
+  end
+
+  def send_project_csv(scope, name, file_column)
     csv_data = CSV.generate(headers: true) do |csv|
-      csv << ['repository_url', 'zenodo_file_path']
-      projects.find_each do |project|
-        csv << [project.repository_url, project.zenodo_file_name]
+      csv << ['repository_url', "#{name}_file_path"]
+      scope.find_each do |project|
+        csv << [project.repository_url, project.public_send(file_column)]
       end
     end
 
     send_data csv_data,
-              filename: "projects_with_zenodo_#{Date.current}.csv",
+              filename: "projects_with_#{name}_#{Date.current}.csv",
               type: 'text/csv',
               disposition: 'attachment'
   end
