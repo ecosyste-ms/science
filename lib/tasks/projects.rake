@@ -11,6 +11,9 @@ namespace :projects do
     Project.sync_least_recently_synced
   end
 
+  desc 'run all discovery importers'
+  task :import => %i[import_joss import_papers import_cran import_bioconductor import_conda_forge import_ost]
+
   desc 'import projects from JOSS'
   task :import_joss => :environment do
     Project.import_from_joss

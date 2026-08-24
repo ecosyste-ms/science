@@ -7,6 +7,14 @@
     {
       "command": "bundle exec rake projects:import",
       "schedule": "0 0 * * *"
+    },
+    {
+      "command": "bundle exec rake projects:sync",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "command": "bundle exec rake joss_idf:build_cache",
+      "schedule": "0 3 * * *"
     }
   ]
 }

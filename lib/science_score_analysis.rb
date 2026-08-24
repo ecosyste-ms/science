@@ -69,7 +69,7 @@ module ScienceScoreAnalysis
     nonjoss = fetch_non_joss(sample)
 
     puts "Looking up JOSS projects in science API..."
-    joss_features = joss_urls.map { |u| $stderr.print '.'; extract_features(api_get("/projects/lookup?url=#{CGI.escape(u)}")) }.reject(&:empty?)
+    joss_features = joss_urls.map { |u| $stderr.print '.'; extract_features(find_by_url(u)) }.reject(&:empty?)
     $stderr.puts
     nonjoss_features = nonjoss.map { |p| extract_features(p) }
 
@@ -132,6 +132,11 @@ module ScienceScoreAnalysis
 
   def api_get(path)
     get_json("#{API}#{path}")
+  end
+
+  def find_by_url(url)
+    results = api_get("/projects/search?q=#{CGI.escape(url)}&per_page=10") || []
+    results.find { |p| p['url'] == url }
   end
 
   def get_json(url)
