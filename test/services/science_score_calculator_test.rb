@@ -237,6 +237,15 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     assert half > 0
   end
 
+  test "check_scientific_dependencies fires when project's own package is in the list" do
+    @project.packages = [{ 'ecosystem' => 'pypi', 'name' => 'astropy' }]
+    @project.stubs(:dependency_packages).returns([])
+    result = ScienceScoreCalculator.new(@project).check_scientific_dependencies
+    assert result[:present]
+    assert_equal 1.0, result[:strength]
+    assert_match "Package is in the scientific dependency list", result[:details]
+  end
+
   test "check_scientific_dependencies scores by match count" do
     @project.stubs(:dependency_packages).returns([['pypi', 'astropy'], ['pypi', 'requests']])
     result = ScienceScoreCalculator.new(@project).check_scientific_dependencies

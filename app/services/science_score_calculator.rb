@@ -281,6 +281,20 @@ class ScienceScoreCalculator
   }.freeze
 
   def check_scientific_dependencies
+    own = (project.packages || []).map { |pkg| [pkg['ecosystem'], pkg['name']] }
+    self_match = own.any? do |ecosystem, name|
+      list = SCIENTIFIC_DEPENDENCIES[ecosystem.to_s.downcase]
+      list && list.include?(name.to_s.downcase)
+    end
+    if self_match
+      return {
+        present: true,
+        strength: 1.0,
+        description: "Scientific dependencies",
+        details: "Package is in the scientific dependency list",
+      }
+    end
+
     deps = project.dependency_packages
     return { present: false, description: "Scientific dependencies", details: nil } if deps.blank?
 
