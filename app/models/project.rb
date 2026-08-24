@@ -539,12 +539,7 @@ class Project < ApplicationRecord
   end
 
   def is_academic_domain?(domain)
-    return false unless domain.present?
-
-    # Check if domain contains any academic pattern
-    ScienceScoreCalculator::ACADEMIC_DOMAINS.any? do |pattern|
-      domain.include?(pattern)
-    end
+    ScienceScoreCalculator.academic_domain?(domain)
   end
 
   def ignored_domains

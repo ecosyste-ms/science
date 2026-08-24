@@ -150,6 +150,93 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     assert_not result[:present]
   end
 
+  test "academic_domain? matches suffixes on label boundaries" do
+    assert ScienceScoreCalculator.academic_domain?("stanford.edu")
+    assert ScienceScoreCalculator.academic_domain?("cs.stanford.edu")
+    assert ScienceScoreCalculator.academic_domain?("cam.ac.uk")
+    assert ScienceScoreCalculator.academic_domain?("something.mpg.de")
+    assert ScienceScoreCalculator.academic_domain?("nasa.gov")
+  end
+
+  test "academic_domain? matches label prefixes" do
+    assert ScienceScoreCalculator.academic_domain?("uni-hamburg.de")
+    assert ScienceScoreCalculator.academic_domain?("tu-berlin.de")
+    assert ScienceScoreCalculator.academic_domain?("univ-lyon1.fr")
+    assert ScienceScoreCalculator.academic_domain?("u-bordeaux.fr")
+  end
+
+  test "academic_domain? matches label words" do
+    assert ScienceScoreCalculator.academic_domain?("university.example")
+    assert ScienceScoreCalculator.academic_domain?("mail.college.example")
+  end
+
+  test "academic_domain? rejects substring false positives" do
+    refute ScienceScoreCalculator.academic_domain?("reduce.io")
+    refute ScienceScoreCalculator.academic_domain?("universal-robots.com")
+    refute ScienceScoreCalculator.academic_domain?("education.com")
+    refute ScienceScoreCalculator.academic_domain?("myuniversity.com")
+    refute ScienceScoreCalculator.academic_domain?("statu-quo.com")
+    refute ScienceScoreCalculator.academic_domain?("acme.com")
+    refute ScienceScoreCalculator.academic_domain?(nil)
+  end
+
+  test "check_academic_committers reports fraction as strength" do
+    @project.commits = {
+      'committers' => [
+        { 'name' => 'a', 'email' => 'a@stanford.edu', 'count' => 10 },
+        { 'name' => 'b', 'email' => 'b@gmail.com', 'count' => 5 },
+        { 'name' => 'c', 'email' => 'c@gmail.com', 'count' => 5 },
+        { 'name' => 'd', 'email' => 'd@gmail.com', 'count' => 5 },
+      ],
+    }
+    result = ScienceScoreCalculator.new(@project).check_academic_committers
+    assert result[:present]
+    assert_in_delta 0.25, result[:strength]
+  end
+
+  test "check_scientific_registry detects cran/bioconductor" do
+    @project.packages = [{ 'ecosystem' => 'cran', 'name' => 'ggplot2' }]
+    result = ScienceScoreCalculator.new(@project).check_scientific_registry
+    assert result[:present]
+    assert_equal "Published on cran", result[:details]
+
+    @project.packages = [{ 'ecosystem' => 'npm', 'name' => 'react' }]
+    refute ScienceScoreCalculator.new(@project).check_scientific_registry[:present]
+
+    @project.packages = nil
+    refute ScienceScoreCalculator.new(@project).check_scientific_registry[:present]
+  end
+
+  test "check_doi_in_readme classifies archive vs journal dois" do
+    @project.readme = "Archived at https://doi.org/10.5281/zenodo.12345 and published at https://doi.org/10.1038/s41586-020-1234"
+    result = ScienceScoreCalculator.new(@project).check_doi_in_readme
+    assert result[:present]
+    assert_equal 1, result[:archive_dois]
+    assert_equal 1, result[:journal_dois]
+    assert_match "1 journal, 1 archive", result[:details]
+  end
+
+  test "calculate_score applies strength multiplier for fractional signals" do
+    @project.commits = {
+      'committers' => [
+        { 'name' => 'a', 'email' => 'a@stanford.edu', 'count' => 1 },
+        { 'name' => 'b', 'email' => 'b@stanford.edu', 'count' => 1 },
+      ],
+    }
+    full = ScienceScoreCalculator.new(@project).calculate[:score]
+
+    @project.commits = {
+      'committers' => [
+        { 'name' => 'a', 'email' => 'a@stanford.edu', 'count' => 1 },
+        { 'name' => 'b', 'email' => 'b@gmail.com', 'count' => 1 },
+      ],
+    }
+    half = ScienceScoreCalculator.new(@project).calculate[:score]
+
+    assert full > half
+    assert half > 0
+  end
+
   test "check_institutional_owner returns false when no website" do
     host = Host.create!(name: 'GitHub')
     owner = Owner.create!(host: host, login: 'someorg', kind: 'organization')

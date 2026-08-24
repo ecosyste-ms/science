@@ -1,42 +1,44 @@
 class ScienceScoreCalculator
   attr_reader :project, :breakdown
 
-  ACADEMIC_DOMAINS = [
-    'edu', 'ac.uk', 'edu.au', 'edu.cn', 'edu.br', 'edu.mx', 'edu.ar', 
-    'edu.co', 'edu.in', 'ac.jp', 'ac.za', 'edu.sg', 'edu.hk', 'edu.my',
-    'edu.ph', 'edu.tw', 'edu.eg', 'edu.pk', 'edu.vn', 'edu.tr',
-    'univ', 'university', 'college', 'institute', 'academia',
-    # French academic institutions
-    'umontpellier.fr', 'sorbonne', 'cnrs.fr', 'inria.fr', 'inserm.fr', 
-    'pasteur.fr', 'polytechnique', 'centralesupelec.fr', 'ens.fr',
-    'univ-', 'u-', # Common French university prefixes
-    # German academic institutions  
-    'mpg.de', 'fraunhofer.de', 'helmholtz', 'uni-', 'tu-', 'fh-',
-    'dlr.de', 'fz-juelich.de', 'tum.de', 'rwth-aachen.de', 'dfki.de',
-    # Netherlands
-    'tudelft.nl', 'uva.nl', 'vu.nl', 'rug.nl', 'tue.nl', 'leiden',
-    # Swiss
-    'ethz.ch', 'epfl.ch', 'cern.ch', 'unige.ch', 'unibas.ch', 'psi.ch',
-    # Austrian
-    'ac.at', 'tuwien.ac.at', 'uibk.ac.at',
-    # Israeli
-    'ac.il', 'huji.ac.il', 'weizmann.ac.il', 'technion.ac.il',
-    # Indian IITs and research
-    'ac.in', 'iitb.ac.in', 'iiitd.ac.in', 'iitk.ac.in', 'iisc.ac.in',
-    # Other European
-    'embl', 'ebi.ac.uk', 'ku.dk', 'dtu.dk', 'kth.se', 'chalmers.se', 
-    'ntnu.no', 'uio.no', 'ucl.ac.uk', 'cam.ac.uk', 'ox.ac.uk', 'ic.ac.uk',
-    # Canadian
-    'utoronto.ca', 'ubc.ca', 'mcgill.ca', 'uwaterloo.ca', 'ualberta.ca',
-    # Australian/NZ  
-    'csiro.au', 'unsw.edu.au', 'anu.edu.au', 'unimelb.edu.au',
-    # US National Labs and Research
-    'nih.gov', 'nasa.gov', 'noaa.gov', 'usgs.gov', 'nist.gov',
-    'ornl.gov', 'lbl.gov', 'anl.gov', 'bnl.gov', 'fnal.gov',
-    'lanl.gov', 'llnl.gov', 'pnnl.gov', 'inl.gov',
-    # Research organizations
-    'ligo.org', 'ieee.org'
-  ]
+  ACADEMIC_DOMAIN_SUFFIXES = %w[
+    edu ac.uk edu.au edu.cn edu.br edu.mx edu.ar edu.co edu.in ac.jp ac.za
+    edu.sg edu.hk edu.my edu.ph edu.tw edu.eg edu.pk edu.vn edu.tr ac.at
+    ac.il ac.in ac.nz ac.kr ac.be
+    umontpellier.fr sorbonne-universite.fr cnrs.fr inria.fr inserm.fr
+    pasteur.fr polytechnique.fr polytechnique.edu centralesupelec.fr ens.fr
+    ens-lyon.fr
+    mpg.de fraunhofer.de helmholtz.de dlr.de fz-juelich.de tum.de
+    rwth-aachen.de dfki.de
+    tudelft.nl uva.nl vu.nl rug.nl tue.nl leidenuniv.nl
+    ethz.ch epfl.ch cern.ch unige.ch unibas.ch psi.ch
+    tuwien.ac.at uibk.ac.at
+    huji.ac.il weizmann.ac.il technion.ac.il
+    iitb.ac.in iiitd.ac.in iitk.ac.in iisc.ac.in
+    embl.de embl.org ebi.ac.uk ku.dk dtu.dk kth.se chalmers.se
+    ntnu.no uio.no ucl.ac.uk cam.ac.uk ox.ac.uk ic.ac.uk
+    utoronto.ca ubc.ca mcgill.ca uwaterloo.ca ualberta.ca
+    csiro.au unsw.edu.au anu.edu.au unimelb.edu.au
+    nih.gov nasa.gov noaa.gov usgs.gov nist.gov
+    ornl.gov lbl.gov anl.gov bnl.gov fnal.gov
+    lanl.gov llnl.gov pnnl.gov inl.gov sandia.gov nrel.gov slac.stanford.edu
+    ligo.org ieee.org
+  ].freeze
+
+  ACADEMIC_LABEL_PREFIXES = %w[univ- u- uni- tu- fh-].freeze
+
+  ACADEMIC_LABEL_WORDS = %w[university college institute academia].freeze
+
+  ACADEMIC_DOMAINS = (ACADEMIC_DOMAIN_SUFFIXES + ACADEMIC_LABEL_PREFIXES + ACADEMIC_LABEL_WORDS).freeze
+
+  def self.academic_domain?(domain)
+    return false unless domain.present?
+    domain = domain.downcase
+    return true if ACADEMIC_DOMAIN_SUFFIXES.any? { |s| domain == s || domain.end_with?(".#{s}") }
+    labels = domain.split('.')
+    return true if ACADEMIC_LABEL_PREFIXES.any? { |p| labels.any? { |l| l.start_with?(p) } }
+    ACADEMIC_LABEL_WORDS.any? { |w| labels.include?(w) }
+  end
 
   DOI_PATTERNS = [
     %r{10\.\d{4,}/[-._;()/:\w]+},
@@ -86,10 +88,10 @@ class ScienceScoreCalculator
       has_academic_links: check_academic_links,
       has_academic_committers: check_academic_committers,
       has_institutional_owner: check_institutional_owner,
+      has_scientific_registry: check_scientific_registry,
       has_joss_paper: check_joss_paper
     }
 
-    # Add JOSS IDF similarity for non-JOSS projects
     unless project.joss_metadata.present?
       @breakdown[:joss_vocabulary_similarity] = check_joss_vocabulary_similarity
     end
@@ -122,31 +124,28 @@ class ScienceScoreCalculator
       
       final_score = base_score + (bonus_weight * 100)
     else
-      # Non-JOSS projects use weighted scoring
-      total_weight = 0.0
       weighted_score = 0.0
 
       scoring_weights = {
-        has_citation_file: 0.18,
+        has_citation_file: 0.16,
         has_codemeta: 0.13,
-        has_zenodo: 0.13,
+        has_zenodo: 0.15,
         has_doi_in_readme: 0.13,
-        has_academic_links: 0.10,
-        has_academic_committers: 0.10,
-        has_institutional_owner: 0.08,
-        joss_vocabulary_similarity: 0.15
+        has_academic_links: 0.08,
+        has_academic_committers: 0.05,
+        has_institutional_owner: 0.10,
+        has_scientific_registry: 0.07,
+        joss_vocabulary_similarity: 0.13
       }
 
       @breakdown.each do |key, value|
-        if value[:present] && key != :has_joss_paper
-          weight = scoring_weights[key] || 0
-          weighted_score += weight
-          total_weight += weight
-        end
+        next if key == :has_joss_paper
+        next unless value[:present]
+        weight = scoring_weights[key] || 0
+        weighted_score += weight * (value[:strength] || 1.0)
       end
 
-      # Normalize to percentage
-      final_score = scoring_weights.values.sum > 0 ? (weighted_score / scoring_weights.values.sum) * 100 : 0
+      final_score = (weighted_score / scoring_weights.values.sum) * 100
     end
     
     {
@@ -200,42 +199,59 @@ class ScienceScoreCalculator
     }
   end
 
+  ARCHIVE_DOI_PREFIXES = %w[10.5281 10.6084].freeze
+
   def check_doi_in_readme
-    has_doi = false
-    doi_count = 0
-    sources = []
-    
-    # Check README for DOIs
+    dois = []
+
     if project.readme.present?
       readme_text = project.readme.downcase
       DOI_PATTERNS.each do |pattern|
-        matches = readme_text.scan(pattern)
-        if matches.any?
-          has_doi = true
-          doi_count += matches.length
-          sources << "README" unless sources.include?("README")
-        end
+        dois.concat(readme_text.scan(pattern))
       end
     end
-    
-    # Check JOSS metadata for DOI
+
     if project.joss_metadata.present? && project.joss_metadata['doi']
-      has_doi = true
-      doi_count += 1
-      sources << "JOSS metadata"
+      dois << project.joss_metadata['doi']
     end
-    
-    details = if has_doi
-      source_text = sources.join(" and ")
-      "Found #{doi_count} DOI reference(s) in #{source_text}"
-    else
-      nil
+
+    dois = dois.map { |d| d[%r{10\.\d{4,}/[-._;()/:\w]+}] }.compact.uniq
+    archive_dois, journal_dois = dois.partition do |d|
+      ARCHIVE_DOI_PREFIXES.any? { |prefix| d.include?(prefix) }
+    end
+
+    details = if dois.any?
+      parts = []
+      parts << "#{journal_dois.length} journal" if journal_dois.any?
+      parts << "#{archive_dois.length} archive" if archive_dois.any?
+      "Found #{dois.length} DOI reference(s) (#{parts.join(', ')})"
     end
 
     {
-      present: has_doi,
+      present: dois.any?,
       description: "DOI references",
-      details: details
+      details: details,
+      journal_dois: journal_dois.length,
+      archive_dois: archive_dois.length
+    }
+  end
+
+  SCIENTIFIC_REGISTRIES = %w[cran bioconductor].freeze
+
+  def check_scientific_registry
+    return { present: false, description: "Scientific package registry", details: nil } unless project.packages.present?
+
+    registries = project.packages.map do |pkg|
+      pkg['ecosystem'] || pkg.dig('registry', 'ecosystem') || pkg.dig('registry', 'name')
+    end.compact.map(&:downcase).uniq
+
+    matches = registries & SCIENTIFIC_REGISTRIES
+
+    {
+      present: matches.any?,
+      description: "Scientific package registry",
+      details: matches.any? ? "Published on #{matches.join(', ')}" : nil,
+      registries: registries
     }
   end
 
@@ -271,7 +287,7 @@ class ScienceScoreCalculator
       email_domain = committer['email'].split('@').last&.downcase
       next unless email_domain
       
-      if ACADEMIC_DOMAINS.any? { |domain| email_domain.include?(domain) }
+      if self.class.academic_domain?(email_domain)
         academic_committers << {
           name: committer['name'],
           domain: email_domain,
@@ -280,12 +296,14 @@ class ScienceScoreCalculator
       end
     end
 
-    percentage = total_committers > 0 ? (academic_committers.length.to_f / total_committers * 100).round(1) : 0
+    fraction = total_committers > 0 ? academic_committers.length.to_f / total_committers : 0.0
+    percentage = (fraction * 100).round(1)
 
     {
       present: academic_committers.any?,
+      strength: fraction,
       description: "Committers with academic emails",
-      details: academic_committers.any? ? 
+      details: academic_committers.any? ?
         "#{academic_committers.length} of #{total_committers} committers (#{percentage}%) from academic institutions" : nil,
       committers: academic_committers.take(5)
     }
@@ -315,8 +333,7 @@ class ScienceScoreCalculator
 
     return { present: false, description: "Institutional organization owner", details: nil } unless domain
 
-    # Check if domain matches any academic patterns
-    is_institutional = ACADEMIC_DOMAINS.any? { |academic_domain| domain.include?(academic_domain) }
+    is_institutional = self.class.academic_domain?(domain)
 
     {
       present: is_institutional,

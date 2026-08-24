@@ -6,13 +6,15 @@ class JossIdfAnalyzer
   # Cache JOSS corpus IDF values as class variable
   @@joss_idf_cache = nil
   @@joss_idf_timestamp = nil
+  @@indicators_cache = nil
   @@build_mutex = Mutex.new
   CACHE_DURATION = 24.hours
-  
+
   # Disk cache configuration
   CACHE_DIR = Rails.root.join('tmp', 'cache', 'joss_idf')
   CORPUS_CACHE_FILE = CACHE_DIR.join('corpus.json')
   IDF_CACHE_FILE = CACHE_DIR.join('idf_scores.json')
+  INDICATORS_CACHE_FILE = CACHE_DIR.join('scientific_indicators.json')
   LOCK_FILE = CACHE_DIR.join('.building.lock')
 
   class << self
@@ -123,31 +125,67 @@ class JossIdfAnalyzer
     end
 
     # Stage 3: Identify scientific indicator terms
-    # Terms with low-to-moderate IDF are common in JOSS (scientific indicators)
-    # Terms with high IDF are rare (project-specific)
-    def identify_scientific_indicators(percentile: 0.05)
-      idf_scores = calculate_joss_idf
-      
-      return {} if idf_scores.empty?
+    # Terms are selected by JOSS-vs-non-JOSS IDF difference: a term that is
+    # common in JOSS READMEs but rare in the general population is a signal.
+    # Falls back to raw JOSS IDF percentile if no non-JOSS sample is available.
+    def identify_scientific_indicators(force_refresh: false, non_joss_sample: 500, top_n: 300)
+      return @@indicators_cache if @@indicators_cache && !force_refresh
 
-      # Sort by IDF (ascending - lower IDF means more common in JOSS)
-      sorted_terms = idf_scores.sort_by { |_, score| score }
-      
-      # Get terms below the specified percentile (most common in JOSS)
-      # Using a much smaller percentile to focus on truly discriminative terms
-      # For small datasets, use a minimum of 5 terms
+      if !force_refresh && File.exist?(INDICATORS_CACHE_FILE)
+        begin
+          data = JSON.parse(File.read(INDICATORS_CACHE_FILE))
+          if Time.current - Time.parse(data['timestamp']) < 7.days
+            return @@indicators_cache = data['indicators']
+          end
+        rescue => e
+          Rails.logger.error "Error loading indicators cache: #{e.message}"
+        end
+      end
+
+      joss_idf = calculate_joss_idf
+      return {} if joss_idf.empty?
+
+      indicators = differential_indicators(joss_idf, non_joss_sample: non_joss_sample, top_n: top_n)
+      indicators = fallback_indicators(joss_idf) if indicators.empty?
+
+      FileUtils.mkdir_p(CACHE_DIR)
+      File.write(INDICATORS_CACHE_FILE, { timestamp: Time.current.iso8601, indicators: indicators }.to_json)
+
+      @@indicators_cache = indicators
+    end
+
+    def differential_indicators(joss_idf, non_joss_sample:, top_n:)
+      non_joss_projects = Project.where(joss_metadata: nil).with_readme.order('RANDOM()').limit(non_joss_sample)
+      non_joss_docs = non_joss_projects.map { |p| extract_project_text(p) }
+      return {} if non_joss_docs.empty?
+
+      non_joss_model = TfIdfSimilarity::TfIdfModel.new(non_joss_docs)
+      non_joss_terms = non_joss_docs.flat_map(&:terms).uniq.to_set
+      max_non_joss_idf = Math.log(non_joss_docs.length + 1)
+
+      exclude_patterns = %w[joss published https http githubcom badge statussvg svg png jpg gif www]
+
+      ranked = joss_idf.filter_map do |term, joss_score|
+        next if term.length < 4
+        next if exclude_patterns.any? { |p| term.include?(p) }
+        non_joss_score = non_joss_terms.include?(term) ? non_joss_model.idf(term) : max_non_joss_idf
+        diff = non_joss_score - joss_score
+        next if diff <= 0
+        [term, joss_score, diff]
+      end
+
+      ranked.sort_by { |_, _, diff| -diff }.first(top_n).to_h { |term, score, _| [term, score] }
+    end
+
+    def fallback_indicators(joss_idf, percentile: 0.05)
+      sorted_terms = joss_idf.sort_by { |_, score| score }
       cutoff_index = [(sorted_terms.length * percentile).to_i, [5, sorted_terms.length].min].max
-      scientific_terms = sorted_terms[0...cutoff_index]
-      
-      # Filter to keep meaningful scientific terms
-      # Exclude very generic terms and URLs/metadata
       exclude_patterns = %w[joss published https githubcom badge statussvg svg png jpg gif http www com org net]
-      
-      scientific_terms.select do |term, score|
-        term.length > 2 && 
-        score >= 1.0 && # Must appear in good portion of JOSS projects
-        score < 4.0 && # But not too rare
-        !exclude_patterns.any? { |pattern| term.include?(pattern) }
+
+      sorted_terms[0...cutoff_index].select do |term, score|
+        term.length > 2 &&
+          score >= 1.0 && score < 4.0 &&
+          !exclude_patterns.any? { |pattern| term.include?(pattern) }
       end.to_h
     end
 
@@ -242,6 +280,7 @@ class JossIdfAnalyzer
     def clear_cache!
       @@joss_idf_cache = nil
       @@joss_idf_timestamp = nil
+      @@indicators_cache = nil
       clear_disk_cache!
     end
     
@@ -286,6 +325,7 @@ class JossIdfAnalyzer
     def clear_disk_cache!
       FileUtils.rm_f(IDF_CACHE_FILE)
       FileUtils.rm_f(CORPUS_CACHE_FILE)
+      FileUtils.rm_f(INDICATORS_CACHE_FILE)
       puts "Cleared disk cache"
     end
     
@@ -335,7 +375,10 @@ class JossIdfAnalyzer
       # Also update memory cache
       @@joss_idf_cache = idf_scores
       @@joss_idf_timestamp = Time.current
-      
+
+      puts "Building scientific indicators..."
+      identify_scientific_indicators(force_refresh: true)
+
       puts "Successfully cached #{idf_scores.length} terms from #{total} JOSS projects"
       idf_scores
     end
