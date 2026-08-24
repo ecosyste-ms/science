@@ -80,7 +80,11 @@ class ProjectImportersTest < ActiveSupport::TestCase
   end
 
   test "import_org creates projects from host owner repositories" do
-    body = [{ html_url: "https://github.com/org/repo" }].to_json
+    Project.create!(url: "https://github.com/org/existing")
+    body = [
+      { html_url: "https://github.com/Org/Repo" },
+      { html_url: "https://github.com/Org/Existing" },
+    ].to_json
     stub_request(:get, %r{repos\.ecosyste\.ms/api/v1/hosts/GitHub/owners/org/repositories}).to_return(status: 200, body: body)
 
     assert_difference("Project.count", 1) { Project.import_org("GitHub", "org") }

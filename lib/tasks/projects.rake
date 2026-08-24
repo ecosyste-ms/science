@@ -8,7 +8,7 @@ namespace :projects do
 
   desc 'sync reviewed projects'
   task :sync_reviewed => :environment do
-    Project.sync_least_recently_synced_reviewed
+    Project.sync_least_recently_synced
   end
 
   desc 'import projects from JOSS'
