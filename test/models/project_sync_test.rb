@@ -284,8 +284,11 @@ class ProjectSyncTest < ActiveSupport::TestCase
       tools: { test: [{ name: "pytest" }] }, resources: {}, manifests: [], lines: {},
       dependencies: [{ name: "numpy" }], git: {}, stats: {}
     }.to_json
-    Open3.expects(:capture3).with("brief", "-json", "-depth", "1", "https://github.com/numpy/numpy.git")
-         .returns([output, "", stub(success?: true)])
+    Open3.expects(:capture3).with do |*args|
+      assert_equal "https://github.com/numpy/numpy.git", args.last
+      assert_includes args, "brief"
+      assert_includes args, "timeout"
+    end.returns([output, "", stub(success?: true)])
 
     p.fetch_brief
     assert_equal "0.11.0", p.reload.brief["version"]
@@ -306,11 +309,26 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_nil p.brief
   end
 
-  test "fetch_brief handles non-zero exit" do
+  test "fetch_brief records error on non-zero exit" do
     p = build_project
-    Open3.expects(:capture3).returns(["", "clone failed", stub(success?: false)])
+    Open3.expects(:capture3).returns(["", "fatal: clone failed", stub(success?: false, exitstatus: 128)])
     assert_nothing_raised { p.fetch_brief }
-    assert_nil p.brief
+    assert_equal "fatal: clone failed", p.reload.brief["error"]
+    assert p.brief["attempted_at"].present?
+  end
+
+  test "fetch_brief records timeout error" do
+    p = build_project
+    Open3.expects(:capture3).returns(["", "", stub(success?: false, exitstatus: 124)])
+    p.fetch_brief
+    assert_equal "timeout", p.reload.brief["error"]
+  end
+
+  test "fetch_brief records error on parse failure" do
+    p = build_project
+    Open3.expects(:capture3).returns(["not json", "", stub(success?: true)])
+    p.fetch_brief
+    assert_match "parse:", p.reload.brief["error"]
   end
 
   test "sync_issues returns early when issues list response is not an array" do

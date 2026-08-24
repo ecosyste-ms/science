@@ -540,15 +540,18 @@ module Project::Sync
     "#{repository['html_url']}/raw/#{repository['default_branch']}/#{path}"
   end 
 
+  BRIEF_TIMEOUT = 120
+
   def fetch_brief
     return unless repository.present?
 
     clone_url = repository['clone_url'].presence || repository_url
-    cmd = ['brief', '-json', '-depth', '1', clone_url]
+    cmd = ['timeout', '-k', '10', BRIEF_TIMEOUT.to_s, 'brief', '-json', '-depth', '1', clone_url]
     out, err, status = Open3.capture3(*cmd)
     unless status.success?
-      Rails.logger.warn "brief failed for #{repository_url}: #{err.to_s.lines.last&.strip}"
-      return
+      msg = status.exitstatus == 124 ? 'timeout' : err.to_s.lines.last&.strip
+      Rails.logger.warn "brief failed for #{repository_url}: #{msg}"
+      return record_brief_error(msg)
     end
 
     data = JSON.parse(out)
@@ -566,6 +569,11 @@ module Project::Sync
     Rails.logger.warn "brief binary not found; skipping fetch_brief for #{repository_url}"
   rescue JSON::ParserError => e
     Rails.logger.warn "brief output not JSON for #{repository_url}: #{e.message}"
+    record_brief_error("parse: #{e.message}")
+  end
+
+  def record_brief_error(msg)
+    update_column(:brief, { 'error' => msg.to_s[0, 500], 'attempted_at' => Time.now.utc.iso8601 })
   end
 
   def sync_issues

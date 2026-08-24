@@ -315,6 +315,7 @@ class ScienceScoreCalculator
 
   def check_research_tooling
     return { present: false, description: "Research tooling", details: nil } unless project.brief.present?
+    return { present: false, description: "Research tooling", details: "scan error: #{project.brief['error']}" } if project.brief['error']
 
     tools = (project.brief['tools'] || {}).values.flatten
     domains = tools.flat_map { |t| t.dig('taxonomy', 'domain') || [] }.uniq

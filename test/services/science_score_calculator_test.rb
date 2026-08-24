@@ -292,6 +292,13 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     refute ScienceScoreCalculator.new(@project).check_research_tooling[:present]
   end
 
+  test "check_research_tooling absent when brief scan errored" do
+    @project.brief = { "error" => "clone failed", "attempted_at" => Time.now.iso8601 }
+    result = ScienceScoreCalculator.new(@project).check_research_tooling
+    refute result[:present]
+    assert_match "scan error", result[:details]
+  end
+
   test "check_negative_indicators detects strong topics" do
     @project.repository = { 'topics' => ['awesome-list', 'python'] }
     result = ScienceScoreCalculator.new(@project).check_negative_indicators
