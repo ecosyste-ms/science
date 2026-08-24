@@ -237,6 +237,35 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     assert half > 0
   end
 
+  test "check_scientific_dependencies scores by match count" do
+    @project.stubs(:dependency_packages).returns([['pypi', 'astropy'], ['pypi', 'requests']])
+    result = ScienceScoreCalculator.new(@project).check_scientific_dependencies
+    assert result[:present]
+    assert_equal 0.4, result[:strength]
+    assert_equal 1, result[:matches]
+    assert_match 'pypi:astropy', result[:details]
+
+    @project.stubs(:dependency_packages).returns([['pypi', 'astropy'], ['pypi', 'scipy'], ['cran', 'sf']])
+    result = ScienceScoreCalculator.new(@project).check_scientific_dependencies
+    assert_equal 1.0, result[:strength]
+    assert_equal 3, result[:matches]
+  end
+
+  test "check_scientific_dependencies absent with no matches" do
+    @project.stubs(:dependency_packages).returns([['npm', 'react'], ['pypi', 'requests']])
+    refute ScienceScoreCalculator.new(@project).check_scientific_dependencies[:present]
+
+    @project.stubs(:dependency_packages).returns([])
+    refute ScienceScoreCalculator.new(@project).check_scientific_dependencies[:present]
+  end
+
+  test "check_scientific_dependencies matches case-insensitively across ecosystems" do
+    @project.stubs(:dependency_packages).returns([['PyPI', 'ASTROPY'], ['bioconductor', 'DESeq2']])
+    result = ScienceScoreCalculator.new(@project).check_scientific_dependencies
+    assert_equal 2, result[:matches]
+    assert_equal 0.7, result[:strength]
+  end
+
   test "check_negative_indicators detects strong topics" do
     @project.repository = { 'topics' => ['awesome-list', 'python'] }
     result = ScienceScoreCalculator.new(@project).check_negative_indicators

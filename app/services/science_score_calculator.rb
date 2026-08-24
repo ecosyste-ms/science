@@ -89,6 +89,7 @@ class ScienceScoreCalculator
       has_academic_committers: check_academic_committers,
       has_institutional_owner: check_institutional_owner,
       has_scientific_registry: check_scientific_registry,
+      has_scientific_dependencies: check_scientific_dependencies,
       negative_indicators: check_negative_indicators,
       has_joss_paper: check_joss_paper
     }
@@ -136,6 +137,7 @@ class ScienceScoreCalculator
         has_academic_committers: 0.05,
         has_institutional_owner: 0.10,
         has_scientific_registry: 0.07,
+        has_scientific_dependencies: 0.0,
         joss_vocabulary_similarity: 0.13
       }
 
@@ -241,6 +243,65 @@ class ScienceScoreCalculator
   end
 
   SCIENTIFIC_REGISTRIES = %w[cran bioconductor].freeze
+
+  SCIENTIFIC_DEPENDENCIES = {
+    'pypi' => %w[
+      scipy astropy biopython rdkit rdkit-pypi xarray mne pysam pymatgen qiskit
+      ase nibabel scikit-bio deap iris cf-units obspy sunpy healpy emcee corner
+      yt galpy pycbc cobra scanpy anndata mdanalysis openmm nilearn dipy
+      scikit-image scikit-allel pyscf gpaw cclib pint uncertainties sympy
+      networkx numba h5py netcdf4 zarr dask cartopy shapely geopandas rasterio
+      pyproj fiona pyvista vtk mayavi meshio fenics dolfinx firedrake
+    ],
+    'conda' => %w[
+      scipy astropy biopython rdkit xarray mne pysam pymatgen qiskit ase
+      nibabel obspy sunpy openmm nilearn scikit-image sympy numba h5py
+      netcdf4 zarr dask cartopy geopandas rasterio pyvista vtk fenics
+    ],
+    'cran' => %w[
+      sf terra raster stars ape phytools phangorn vegan ade4 seqinr
+      brms rstan rstanarm cmdstanr lavaan lme4 nlme mgcv survival
+      spatstat sp rgdal rgeos gstat deSolve
+    ],
+    'bioconductor' => %w[
+      deseq2 edger limma biostrings genomicranges summarizedexperiment
+      biocgenerics iranges s4vectors annotationdbi genomicfeatures
+      rtracklayer rsamtools variantannotation
+    ],
+    'julia' => %w[
+      differentialequations diffeqbase ordinarydiffeq flux turing jump
+      biosequences unitful measurements distributions statsbase
+      dataframes plots makie fftw dsp
+    ],
+    'cargo' => %w[
+      ndarray nalgebra bio rust-bio noodles polars
+    ],
+  }.freeze
+
+  def check_scientific_dependencies
+    deps = project.dependency_packages
+    return { present: false, description: "Scientific dependencies", details: nil } if deps.blank?
+
+    matches = deps.select do |ecosystem, name|
+      list = SCIENTIFIC_DEPENDENCIES[ecosystem.to_s.downcase]
+      list && list.include?(name.to_s.downcase)
+    end
+
+    strength = case matches.length
+               when 0 then 0.0
+               when 1 then 0.4
+               when 2 then 0.7
+               else 1.0
+               end
+
+    {
+      present: matches.any?,
+      strength: strength,
+      description: "Scientific dependencies",
+      details: matches.any? ? "#{matches.length} matched: #{matches.first(5).map { |e, n| "#{e}:#{n}" }.join(', ')}" : nil,
+      matches: matches.length,
+    }
+  end
 
   NEGATIVE_TOPICS_STRONG = %w[
     awesome awesome-list dotfiles homework homework-assignments
