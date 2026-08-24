@@ -89,6 +89,7 @@ class ScienceScoreCalculator
       has_academic_committers: check_academic_committers,
       has_institutional_owner: check_institutional_owner,
       has_scientific_registry: check_scientific_registry,
+      negative_indicators: check_negative_indicators,
       has_joss_paper: check_joss_paper
     }
 
@@ -139,13 +140,16 @@ class ScienceScoreCalculator
       }
 
       @breakdown.each do |key, value|
-        next if key == :has_joss_paper
+        next if key == :has_joss_paper || key == :negative_indicators
         next unless value[:present]
         weight = scoring_weights[key] || 0
         weighted_score += weight * (value[:strength] || 1.0)
       end
 
       final_score = (weighted_score / scoring_weights.values.sum) * 100
+
+      penalty = @breakdown.dig(:negative_indicators, :penalty) || 0.0
+      final_score *= (1.0 - penalty)
     end
     
     {
@@ -237,6 +241,49 @@ class ScienceScoreCalculator
   end
 
   SCIENTIFIC_REGISTRIES = %w[cran bioconductor].freeze
+
+  NEGATIVE_TOPICS_STRONG = %w[
+    awesome awesome-list dotfiles homework homework-assignments
+    interview interview-prep interview-questions interview-preparation
+    cheatsheet cheatsheets roadmap
+  ].freeze
+
+  NEGATIVE_TOPICS_WEAK = %w[
+    tutorial tutorials course courses template templates boilerplate
+    starter starter-kit example examples demo learning-exercise
+    portfolio personal-website blog
+  ].freeze
+
+  def check_negative_indicators
+    topics = (project.repository&.dig('topics') || []).map(&:downcase)
+    name = (project.repository&.dig('full_name') || project.url).to_s.downcase
+    description = project.description.to_s.downcase
+
+    matches = []
+    matches.concat((topics & NEGATIVE_TOPICS_STRONG).map { |t| [:strong, "topic:#{t}"] })
+    matches.concat((topics & NEGATIVE_TOPICS_WEAK).map { |t| [:weak, "topic:#{t}"] })
+    matches << [:strong, 'name:awesome-'] if name.match?(%r{/awesome-})
+    matches << [:weak, 'name:-template'] if name.match?(/-template\b/)
+    matches << [:weak, 'name:-example'] if name.match?(/-examples?\b/)
+    matches << [:weak, 'desc:list-of'] if description.match?(/\b(curated )?list of\b/)
+    matches << [:weak, 'fork'] if project.repository&.dig('fork') && !project.repository&.dig('source_name').nil?
+
+    tiers = matches.map(&:first)
+    penalty = if tiers.include?(:strong)
+      0.8
+    elsif tiers.include?(:weak)
+      0.5
+    else
+      0.0
+    end
+
+    {
+      present: matches.any?,
+      penalty: penalty,
+      description: "Non-research indicators",
+      details: matches.any? ? matches.map(&:last).join(', ') : nil
+    }
+  end
 
   def check_scientific_registry
     return { present: false, description: "Scientific package registry", details: nil } unless project.packages.present?

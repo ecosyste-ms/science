@@ -237,6 +237,57 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     assert half > 0
   end
 
+  test "check_negative_indicators detects strong topics" do
+    @project.repository = { 'topics' => ['awesome-list', 'python'] }
+    result = ScienceScoreCalculator.new(@project).check_negative_indicators
+    assert result[:present]
+    assert_equal 0.8, result[:penalty]
+    assert_match 'topic:awesome-list', result[:details]
+  end
+
+  test "check_negative_indicators detects weak topics" do
+    @project.repository = { 'topics' => ['tutorial'] }
+    result = ScienceScoreCalculator.new(@project).check_negative_indicators
+    assert result[:present]
+    assert_equal 0.5, result[:penalty]
+  end
+
+  test "check_negative_indicators detects awesome- name pattern" do
+    @project.repository = { 'full_name' => 'user/awesome-bioinformatics', 'topics' => [] }
+    result = ScienceScoreCalculator.new(@project).check_negative_indicators
+    assert result[:present]
+    assert_equal 0.8, result[:penalty]
+  end
+
+  test "check_negative_indicators absent for normal project" do
+    @project.repository = { 'topics' => ['bioinformatics', 'genomics'], 'full_name' => 'user/tool' }
+    result = ScienceScoreCalculator.new(@project).check_negative_indicators
+    refute result[:present]
+    assert_equal 0.0, result[:penalty]
+  end
+
+  test "negative_indicators penalty is applied to final score" do
+    @project.citation_file = 'x'
+    @project.readme = 'https://doi.org/10.1234/example'
+    base = ScienceScoreCalculator.new(@project).calculate[:score]
+
+    @project.repository = { 'topics' => ['awesome-list'] }
+    penalised = ScienceScoreCalculator.new(@project).calculate[:score]
+
+    assert_in_delta base * 0.2, penalised, 0.1
+  end
+
+  test "negative_indicators penalty does not apply to JOSS projects" do
+    @project.citation_file = 'x'
+    @project.joss_metadata = { 'title' => 'x' }
+    base = ScienceScoreCalculator.new(@project).calculate[:score]
+
+    @project.repository = { 'topics' => ['tutorial'] }
+    penalised = ScienceScoreCalculator.new(@project).calculate[:score]
+
+    assert_equal base, penalised
+  end
+
   test "check_institutional_owner returns false when no website" do
     host = Host.create!(name: 'GitHub')
     owner = Owner.create!(host: host, login: 'someorg', kind: 'organization')
