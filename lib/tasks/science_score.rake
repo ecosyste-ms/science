@@ -2,7 +2,7 @@ require 'faraday'
 require 'json'
 
 namespace :science_score do
-  SCIENCE_API = 'https://science.ecosyste.ms/api/v1'
+  SCIENCE_API = 'https://science.ecosyste.ms/api/v1' unless defined?(SCIENCE_API)
 
   desc 'Compare local ScienceScoreCalculator against a stratified sample from the prod API'
   task compare: :environment do

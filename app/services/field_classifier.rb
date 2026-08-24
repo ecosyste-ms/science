@@ -112,7 +112,7 @@ class FieldClassifier
     signals.each do |signal_type, score|
       weight = weights[signal_type] || 0
       total_score += score * weight
-      total_weight += weight if score > 0
+      total_weight += weight
     end
     
     # Normalize by actual weights used
