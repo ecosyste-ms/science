@@ -318,6 +318,98 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     refute ScienceScoreCalculator.new(@project).check_research_tooling[:present]
   end
 
+  test "calculate gives a strong Fortran project the research tooling bonus" do
+    @project.brief = { "languages" => [{ "name" => "Fortran" }], "tools" => {} }
+    @project.stubs(:joss_vocabulary_analysis).returns(score: 0, terms: [], model_id: nil)
+
+    result = ScienceScoreCalculator.new(@project).calculate
+
+    assert_equal 20.0, result[:score]
+    assert result[:breakdown][:has_research_tooling][:present]
+    assert_equal 1.0, result[:breakdown][:has_research_tooling][:strength]
+    assert_match "language: fortran", result[:breakdown][:has_research_tooling][:details]
+  end
+
+  test "calculate caps a mature Python toolchain below the scientific threshold" do
+    @project.brief = {
+      "languages" => [{ "name" => "Python" }],
+      "tools" => {
+        "docs" => [{ "name" => "Sphinx" }],
+        "test" => [{ "name" => "pytest" }],
+        "coverage" => [{ "name" => "coverage.py" }],
+        "lint" => [{ "name" => "Ruff" }],
+        "typecheck" => [{ "name" => "Pyright" }],
+      },
+    }
+    @project.stubs(:joss_vocabulary_analysis).returns(score: 0, terms: [], model_id: nil)
+
+    result = ScienceScoreCalculator.new(@project).calculate
+
+    assert_equal 8.0, result[:score]
+    assert_equal 0.4, result[:breakdown][:has_research_tooling][:strength]
+    assert_match "Python maturity", result[:breakdown][:has_research_tooling][:details]
+  end
+
+  test "calculate combines scientific vocabulary with mature Python tooling" do
+    JossVocabularyModel.create!(
+      term_weights: { "plasma" => 2.0, "simulation" => 1.5 },
+      config: { "top_terms" => 3, "evidence_threshold" => 3.0 },
+      source_counts: { "joss_projects" => 100, "background_projects" => 1_000 }
+    )
+    JossVocabularyAnalyzer.reset_cache!
+    @project.readme = "Plasma simulation software"
+    @project.brief = {
+      "languages" => [{ "name" => "Python" }],
+      "tools" => {
+        "docs" => [{ "name" => "Sphinx" }],
+        "test" => [{ "name" => "pytest" }],
+        "coverage" => [{ "name" => "coverage.py" }],
+      },
+    }
+
+    result = ScienceScoreCalculator.new(@project).calculate
+
+    assert_equal 21.0, result[:score]
+    assert result[:breakdown][:joss_vocabulary_similarity][:present]
+    assert_equal 0.4, result[:breakdown][:has_research_tooling][:strength]
+  end
+
+  test "check_research_tooling detects language-specific R and Julia combinations" do
+    @project.brief = {
+      "languages" => [{ "name" => "R" }],
+      "package_managers" => [],
+      "tools" => { "docs" => [{ "name" => "pkgdown" }] },
+    }
+    r_result = ScienceScoreCalculator.new(@project).check_research_tooling
+
+    assert_equal 1.0, r_result[:strength]
+    assert_match "R tooling", r_result[:details]
+
+    @project.brief = {
+      "languages" => [{ "name" => "Julia" }],
+      "package_managers" => [{ "name" => "Pkg" }],
+      "tools" => {},
+    }
+    julia_result = ScienceScoreCalculator.new(@project).check_research_tooling
+
+    assert_equal 1.0, julia_result[:strength]
+    assert_match "Julia tooling", julia_result[:details]
+  end
+
+  test "check_research_tooling does not treat a generic C++ build as research" do
+    @project.brief = {
+      "languages" => [{ "name" => "C++" }],
+      "tools" => {
+        "build" => [{ "name" => "CMake" }],
+        "format" => [{ "name" => "clang-format" }],
+      },
+    }
+
+    result = ScienceScoreCalculator.new(@project).check_research_tooling
+
+    refute result[:present]
+  end
+
   test "check_research_tooling absent when no brief data" do
     refute ScienceScoreCalculator.new(@project).check_research_tooling[:present]
   end

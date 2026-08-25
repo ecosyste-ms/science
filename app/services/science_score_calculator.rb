@@ -31,6 +31,8 @@ class ScienceScoreCalculator
 
   ACADEMIC_DOMAINS = (ACADEMIC_DOMAIN_SUFFIXES + ACADEMIC_LABEL_PREFIXES + ACADEMIC_LABEL_WORDS).freeze
 
+  RESEARCH_TOOLING_BONUS = 0.20
+
   def self.academic_domain?(domain)
     return false unless domain.present?
     domain = domain.downcase
@@ -151,6 +153,11 @@ class ScienceScoreCalculator
       end
 
       final_score = (weighted_score / scoring_weights.values.sum) * 100
+
+      research_tooling = @breakdown[:has_research_tooling]
+      if research_tooling[:present]
+        final_score += RESEARCH_TOOLING_BONUS * (research_tooling[:strength] || 1.0) * 100
+      end
 
       penalty = @breakdown.dig(:negative_indicators, :penalty) || 0.0
       final_score *= (1.0 - penalty)
@@ -322,36 +329,83 @@ class ScienceScoreCalculator
   RESEARCH_DOMAINS = %w[research bioinformatics scientific-computing high-performance-computing].freeze
 
   RESEARCH_TOOLS = {
-    strong: %w[Snakemake Nextflow nf-core nf-test MultiQC Dockstore],
-    high: ['Quarto', 'R Markdown', 'knitr', 'DVC', 'targets', 'ASV', 'Fortitude'],
-    moderate: %w[Jupyter MyST-Parser BenchmarkTools.jl Documenter.jl roxygen2 pkgdown covr testthat renv],
+    strong: %w[snakemake nextflow nf-core nf-test multiqc dockstore],
+    high: ['quarto', 'r markdown', 'knitr', 'dvc', 'targets', 'asv', 'fortitude'],
+    moderate: %w[jupyter myst-parser benchmarktools.jl documenter.jl roxygen2 pkgdown covr testthat renv],
   }.freeze
+
+  R_RESEARCH_TOOLS = %w[pkgdown knitr testthat roxygen2 covr renv targets].freeze
+  JULIA_RESEARCH_TOOLS = %w[documenter.jl benchmarktools.jl].freeze
+  JULIA_PACKAGE_MANAGERS = %w[pkg].freeze
+  PYTHON_MATURITY_CATEGORIES = %w[docs test coverage lint typecheck].freeze
+  PYTHON_MATURITY_THRESHOLD = 3
 
   def check_research_tooling
     return { present: false, description: "Research tooling", details: nil } unless project.brief.present?
     return { present: false, description: "Research tooling", details: "scan error: #{project.brief['error']}" } if project.brief['error']
 
-    tools = (project.brief['tools'] || {}).values.flatten
-    domains = tools.flat_map { |t| t.dig('taxonomy', 'domain') || [] }.uniq
-    if (domains & RESEARCH_DOMAINS).any?
-      return {
-        present: true,
-        strength: 1.0,
-        description: "Research tooling",
-        details: "Tools tagged domain: #{(domains & RESEARCH_DOMAINS).join(', ')}",
-      }
+    tools_by_category = project.brief['tools'].is_a?(Hash) ? project.brief['tools'] : {}
+    tools = tools_by_category.values.flatten.select { |tool| tool.is_a?(Hash) }
+    names = tools.filter_map { |tool| tool['name']&.downcase }.uniq
+    domains = tools.flat_map { |tool| Array(tool.dig('taxonomy', 'domain')) }.map(&:downcase).uniq
+    languages = brief_names('languages')
+    package_managers = brief_names('package_managers')
+    categories = tools_by_category.keys.map(&:downcase)
+    evidence = []
+
+    domain_matches = domains & RESEARCH_DOMAINS
+    domain_matches.each { |domain| evidence << [1.0, "domain: #{domain}"] }
+
+    (names & RESEARCH_TOOLS[:strong]).each do |name|
+      evidence << [1.0, "tool: #{name}"]
     end
 
-    names = tools.map { |t| t['name'] }.compact
-    tier, matches = RESEARCH_TOOLS.lazy.map { |k, v| [k, names & v] }.find { |_, m| m.any? }
-    strength = { strong: 1.0, high: 0.7, moderate: 0.4 }[tier]
+    if languages.any? { |language| language.include?('fortran') }
+      evidence << [1.0, "language: fortran"]
+    end
+
+    r_matches = names & R_RESEARCH_TOOLS
+    if languages.include?('r') && r_matches.any?
+      evidence << [1.0, "R tooling: #{r_matches.join(', ')}"]
+    end
+
+    julia_matches = names & JULIA_RESEARCH_TOOLS
+    julia_package_matches = package_managers & JULIA_PACKAGE_MANAGERS
+    if languages.include?('julia') && (julia_matches.any? || julia_package_matches.any?)
+      matches = julia_matches + julia_package_matches
+      evidence << [1.0, "Julia tooling: #{matches.join(', ')}"]
+    end
+
+    (names & RESEARCH_TOOLS[:high]).each do |name|
+      evidence << [0.7, "tool: #{name}"]
+    end
+
+    (names & RESEARCH_TOOLS[:moderate]).each do |name|
+      evidence << [0.4, "tool: #{name}"]
+    end
+
+    maturity_categories = categories & PYTHON_MATURITY_CATEGORIES
+    if languages.include?('python') && maturity_categories.length >= PYTHON_MATURITY_THRESHOLD
+      evidence << [0.4, "Python maturity: #{maturity_categories.join(', ')}"]
+    end
+
+    strength = evidence.map(&:first).max
+    strongest_evidence = evidence.select { |value, _| value == strength }.map(&:last).uniq
 
     {
-      present: matches.present?,
+      present: evidence.any?,
       strength: strength,
       description: "Research tooling",
-      details: matches.present? ? "Detected: #{matches.join(', ')}" : nil,
+      details: evidence.any? ? "Detected: #{strongest_evidence.join(', ')}" : nil,
+      evidence: evidence.map(&:last).uniq,
     }
+  end
+
+  def brief_names(key)
+    Array(project.brief[key]).filter_map do |item|
+      name = item.is_a?(Hash) ? item['name'] : item
+      name.to_s.downcase if name.present?
+    end.uniq
   end
 
   NEGATIVE_TOPICS_STRONG = %w[

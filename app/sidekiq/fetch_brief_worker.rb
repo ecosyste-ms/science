@@ -6,6 +6,10 @@ class FetchBriefWorker
 
   def perform(project_id)
     project = Project.where(brief: nil).find_by(id: project_id)
-    project&.fetch_brief
+    return unless project
+
+    project.fetch_brief
+    project.reload
+    project.update_science_score if project.brief.present?
   end
 end

@@ -10,15 +10,28 @@ class FetchBriefWorkerTest < ActiveSupport::TestCase
     assert_equal 3, FetchBriefWorker.get_sidekiq_options["retry"]
   end
 
-  test "fetches brief data for an unscanned project" do
+  test "stores Brief data and recalculates the science score" do
     project = Project.create!(
       url: "https://github.com/test/brief-worker",
       repository: { "clone_url" => "https://github.com/test/brief-worker.git" },
-      science_score: 20
+      science_score: 1
     )
-    Project.any_instance.expects(:fetch_brief).once
+    output = {
+      version: "0.12.0",
+      languages: [{ name: "Fortran" }],
+      package_managers: [],
+      tools: {},
+      resources: {},
+      manifests: [],
+      lines: {},
+    }.to_json
+    Open3.expects(:capture3).returns([output, "", stub(success?: true)])
 
     FetchBriefWorker.new.perform(project.id)
+
+    assert_equal "Fortran", project.reload.brief.dig("languages", 0, "name")
+    assert_equal 20.0, project.science_score
+    assert project.science_score_breakdown.dig(:breakdown, :has_research_tooling, :present)
   end
 
   test "skips a project that already has brief data" do
