@@ -1,6 +1,6 @@
 # Brief scanning
 
-Brief scans repository contents and stores a compact toolchain summary in `projects.brief`. A scan clones one repository, so the work runs on the dedicated `brief` Sidekiq queue. The `brief_worker` process has a concurrency of two and does not consume capacity from project sync jobs.
+Brief scans repository contents and stores a compact toolchain summary in `projects.brief`. `FetchBriefWorker` uses the `brief` Sidekiq queue because each scan clones a repository. The shared worker process polls `default` and `brief` at relative weights of five to one.
 
 The rake task accepts selection options through environment variables:
 
@@ -17,4 +17,4 @@ LIMIT=4000 COHORT=joss bundle exec rake projects:fetch_brief
 LIMIT=4000 COHORT=non_joss SHARD_COUNT=32 SHARD=0 bundle exec rake projects:fetch_brief
 ```
 
-The rake task only enqueues jobs. A `brief_worker` process must be running before the queue will drain. Successful scans store selected Brief fields. Clone, timeout, and parse failures store an error and attempt time in `projects.brief`, which keeps repeated cohort runs from retrying the same failed repository. Avoid enqueueing the same cohort again while its earlier jobs remain queued. A project has no `brief` value until its job starts, so concurrent task runs can enqueue duplicate jobs.
+The rake task only enqueues jobs. The application worker process must be running before the queue will drain. Successful scans store selected Brief fields. Clone, timeout, and parse failures store an error and attempt time in `projects.brief`, which keeps repeated cohort runs from retrying the same failed repository. Avoid enqueueing the same cohort again while its earlier jobs remain queued. A project has no `brief` value until its job starts, so concurrent task runs can enqueue duplicate jobs.

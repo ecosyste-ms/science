@@ -111,7 +111,7 @@ rake projects:sync_dependencies              # Update dependency information acr
 rake projects:fetch_brief                    # Enqueue repository scans on the Brief queue
 ```
 
-Brief scanning uses a separate Sidekiq process. See [docs/brief-scanning.md](docs/brief-scanning.md) for cohort and sharding options.
+Brief scanning uses a low-weight Sidekiq queue. See [docs/brief-scanning.md](docs/brief-scanning.md) for cohort and sharding options.
 
 #### JOSS Vocabulary Analysis
 

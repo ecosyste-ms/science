@@ -1,3 +1,4 @@
 ---
 :queues:
-  - default
+  - [default, 5]
+  - [brief, 1]
