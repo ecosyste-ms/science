@@ -633,6 +633,7 @@ class ProjectTest < ActiveSupport::TestCase
     assert owner.reload.hidden?
     assert_nil owner.name
     assert_equal owner, project.reload.owner_record
+    assert_equal 1, owner.projects_count
   end
 
   test "packages_sorted_ids returns cached sorted project ids" do

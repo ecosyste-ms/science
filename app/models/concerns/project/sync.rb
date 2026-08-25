@@ -216,7 +216,7 @@ module Project::Sync
     if owner_record&.hidden? || owner_data['hidden'] == true
       owner_record ||= host.owners.build(login: owner_data['login'].downcase)
       owner_record.hide!
-      self.update_column(:owner_id, owner_record.id)
+      update_attribute(:owner_id, owner_record.id)
       return owner_record
     end
 
@@ -243,7 +243,7 @@ module Project::Sync
     )
     owner_record.save
 
-    self.update_column(:owner_id, owner_record.id)
+    update_attribute(:owner_id, owner_record.id)
   rescue => e
     puts "Error finding or creating owner for #{repository_url}: #{e.message}"
   end

@@ -224,6 +224,22 @@ class ProjectSyncTest < ActiveSupport::TestCase
     owner = p.reload.owner_record
     assert_equal "numpy", owner.login
     assert_equal "NumPy", owner.name
+    assert_equal 1, owner.projects_count
+  end
+
+  test "find_or_create_owner moves project counts between owners" do
+    host = Host.create!(name: "GitHub", url: "https://github.com")
+    old_owner = Owner.create!(host: host, login: "old-owner")
+    project = build_project(
+      host: host,
+      owner_record: old_owner,
+      owner: { "login" => "new-owner", "name" => "New Owner" }
+    )
+
+    project.find_or_create_owner
+
+    assert_equal 0, old_owner.reload.projects_count
+    assert_equal 1, project.reload.owner_record.projects_count
   end
 
   test "find_or_create_owner classifies the website used by science scoring" do
@@ -296,6 +312,28 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_nil p.last_synced_at
     p.sync
     assert_not_nil p.reload.last_synced_at
+  end
+
+  test "sync creates an owner and increments its project count" do
+    host = Host.create!(name: "GitHub", url: "https://github.com")
+    project = build_project(
+      host: host,
+      owner: { "login" => "sync-owner", "name" => "Sync Owner", "kind" => "organization" }
+    )
+    %i[
+      check_url fetch_repository find_or_create_host fetch_owner fetch_dependencies
+      fetch_packages import_mentions fetch_readme combine_keywords fetch_commits
+      fetch_events fetch_issue_stats sync_issues fetch_citation_file fetch_codemeta
+      fetch_zenodo_file sync_releases update_committers update_keywords_from_contributors
+      update_score update_science_score ping
+    ].each { |method| project.stubs(method).returns(nil) }
+    project.stubs(:matching_criteria?).returns(false)
+
+    project.sync
+
+    owner = project.reload.owner_record
+    assert_equal "sync-owner", owner.login
+    assert_equal 1, owner.projects_count
   end
 
   test "sync returns early for hidden owner" do
