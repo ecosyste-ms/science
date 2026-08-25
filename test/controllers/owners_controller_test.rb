@@ -56,18 +56,28 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "institutional action shows only institutional owners" do
+  test "research organizations action shows classified organizations" do
+    create_research_organization_domain("research.example", source: "ror", version: "owners-controller")
+    ResearchOrganizationDomainMatcher.reset_cache!
+
     host = Host.create!(name: "GitHub")
     institutional_owner = Owner.create!(host: host, login: "stanford", kind: "organization", website: "stanford.edu")
+    ror_owner = Owner.create!(host: host, login: "ror-owner", kind: "organization", website: "research.example")
     regular_owner = Owner.create!(host: host, login: "mycompany", kind: "organization", website: "mycompany.com")
     user_owner = Owner.create!(host: host, login: "johndoe", kind: "user", website: "johndoe.com")
 
-    get institutional_owners_url
+    get research_organizations_url
     assert_response :success
-    assert_select "h1", /Institutional Owners/
+    assert_select "h1", /Research Organizations/
     assert_match institutional_owner.login, response.body
+    assert_match ror_owner.login, response.body
     assert_no_match regular_owner.login, response.body
     assert_no_match user_owner.login, response.body
+  end
+
+  test "institutional owners redirects to research organizations" do
+    get institutional_owners_url
+    assert_redirected_to research_organizations_url
   end
 
   test "hidden owners are excluded from the index" do

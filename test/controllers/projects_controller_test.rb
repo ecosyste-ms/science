@@ -17,6 +17,10 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
+  teardown do
+    ResearchOrganizationDomainMatcher.reset_cache!
+  end
+
   test "should get index" do
     get projects_url
     assert_response :success
@@ -157,6 +161,29 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     # The index action filters for science_score > 0
     # so non_science_project should not appear
+  end
+
+  test "index filters projects by classified research organization owners" do
+    create_research_organization_domain("research.example", source: "ror", version: "projects-controller")
+    create_research_organization_domain("manual.example", source: "manual", version: "projects-controller")
+    ResearchOrganizationDomainMatcher.reset_cache!
+
+    host = Host.create!(name: "GitHub", url: "https://github.com")
+    ror_owner = Owner.create!(host: host, login: "ror-owner", kind: "organization", website: "https://research.example")
+    manual_owner = Owner.create!(host: host, login: "manual-owner", kind: "organization", website: "https://manual.example")
+    other_owner = Owner.create!(host: host, login: "other-owner", kind: "organization", website: "https://other.example")
+    ror_project = Project.create!(url: "https://github.com/ror-owner/project", owner_record: ror_owner, science_score: 50)
+    manual_project = Project.create!(url: "https://github.com/manual-owner/project", owner_record: manual_owner, science_score: 50)
+    Project.create!(url: "https://github.com/other-owner/project", owner_record: other_owner, science_score: 50)
+
+    get projects_url, params: { research_organization: "true" }
+
+    assert_response :success
+    projects = assigns(:projects).to_a
+    assert_equal 2, projects.length
+    assert_includes projects, ror_project
+    assert_includes projects, manual_project
+    assert_select "a.btn-primary[aria-pressed='true']", text: "Research organizations"
   end
 
   test "search with pagination" do

@@ -85,6 +85,7 @@ class ProjectsController < ApplicationController
     scope = scope.keyword(params[:keyword]) if params[:keyword].present?
     scope = scope.owner(params[:owner]) if params[:owner].present?
     scope = scope.language(params[:language]) if params[:language].present?
+    scope = scope.with_research_organization_owner if params[:research_organization].present?
     @scope = apply_project_sort(scope)
     @pagy, @projects = pagy(@scope)
   end

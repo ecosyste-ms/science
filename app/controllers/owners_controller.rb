@@ -1,7 +1,7 @@
 class OwnersController < ApplicationController
   before_action :find_host, only: [:index, :show]
 
-  def institutional
+  def research_organizations
     scope = Owner.institutional.includes(:host).order('projects_count DESC')
     @pagy, @owners = pagy(scope)
   end

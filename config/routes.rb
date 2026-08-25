@@ -70,7 +70,8 @@ Rails.application.routes.draw do
 
   resources :exports, only: [:index], path: 'open-data'
 
-  get '/institutional-owners', to: 'owners#institutional', as: :institutional_owners
+  get '/research-organizations', to: 'owners#research_organizations', as: :research_organizations
+  get '/institutional-owners', to: redirect('/research-organizations'), as: :institutional_owners
 
   resources :hosts, constraints: { id: /.*/ }, only: [:index, :show] do
     resources :owners, only: [:index, :show]

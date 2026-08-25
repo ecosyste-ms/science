@@ -74,6 +74,7 @@ class Project < ApplicationRecord
   scope :without_keywords_from_contributors, -> { where(keywords_from_contributors: []) }
   
   scope :with_joss, -> { where.not(joss_metadata: nil) }
+  scope :with_research_organization_owner, -> { joins(:owner_record).merge(Owner.institutional) }
   scope :scientific, -> { where('science_score >= ?', 20) }
   scope :highly_scientific, -> { where('science_score >= ?', 75) }
   scope :should_sync, -> { where('last_synced_at IS NULL OR science_score IS NULL OR science_score > 0') }
