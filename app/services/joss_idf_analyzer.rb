@@ -145,13 +145,7 @@ class JossIdfAnalyzer
       joss_idf = calculate_joss_idf
       return {} if joss_idf.empty?
 
-      indicators = differential_indicators(joss_idf, non_joss_sample: non_joss_sample, top_n: top_n)
-      indicators = fallback_indicators(joss_idf) if indicators.empty?
-
-      FileUtils.mkdir_p(CACHE_DIR)
-      File.write(INDICATORS_CACHE_FILE, { timestamp: Time.current.iso8601, indicators: indicators }.to_json)
-
-      @@indicators_cache = indicators
+      @@indicators_cache = fallback_indicators(joss_idf)
     end
 
     def differential_indicators(joss_idf, non_joss_sample:, top_n:)
