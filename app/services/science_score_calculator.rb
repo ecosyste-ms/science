@@ -335,11 +335,12 @@ class ScienceScoreCalculator
 
   RESEARCH_TOOLS = {
     strong: %w[snakemake nextflow nf-core nf-test multiqc dockstore],
-    high: ['quarto', 'r markdown', 'knitr', 'dvc', 'targets', 'asv', 'fortitude'],
-    moderate: %w[jupyter myst-parser benchmarktools.jl documenter.jl roxygen2 pkgdown covr testthat renv],
+    high: %w[dvc asv fortitude],
+    moderate: ['quarto', 'r markdown', 'knitr', 'jupyter', 'myst-parser', 'benchmarktools.jl',
+               'documenter.jl', 'roxygen2', 'pkgdown', 'covr', 'testthat', 'renv', 'targets'],
   }.freeze
 
-  R_RESEARCH_TOOLS = %w[pkgdown knitr testthat roxygen2 covr renv targets].freeze
+  R_RESEARCH_TOOLS = %w[pkgdown testthat roxygen2 covr renv targets].freeze
   JULIA_RESEARCH_TOOLS = %w[documenter.jl benchmarktools.jl].freeze
   JULIA_PACKAGE_MANAGERS = %w[pkg].freeze
   PYTHON_MATURITY_CATEGORIES = %w[docs test coverage lint typecheck].freeze
@@ -370,15 +371,19 @@ class ScienceScoreCalculator
     end
 
     r_matches = names & R_RESEARCH_TOOLS
-    if languages.include?('r') && r_matches.any?
+    if languages.include?('r') && r_matches.length >= 2
       evidence << [0.7, "R tooling: #{r_matches.join(', ')}"]
+    elsif languages.include?('r') && r_matches.any?
+      evidence << [0.4, "R tooling: #{r_matches.join(', ')}"]
     end
 
     julia_matches = names & JULIA_RESEARCH_TOOLS
     julia_package_matches = package_managers & JULIA_PACKAGE_MANAGERS
-    if languages.include?('julia') && (julia_matches.any? || julia_package_matches.any?)
+    if languages.include?('julia') && julia_matches.any? && julia_package_matches.any?
       matches = julia_matches + julia_package_matches
       evidence << [0.7, "Julia tooling: #{matches.join(', ')}"]
+    elsif languages.include?('julia') && julia_package_matches.any?
+      evidence << [0.4, "Julia tooling: #{julia_package_matches.join(', ')}"]
     end
 
     (names & RESEARCH_TOOLS[:high]).each do |name|

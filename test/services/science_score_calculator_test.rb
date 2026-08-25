@@ -308,7 +308,7 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     @project.brief = { "tools" => { "docs" => [{ "name" => "Quarto" }] } }
     result = ScienceScoreCalculator.new(@project).check_research_tooling
     assert result[:present]
-    assert_equal 0.7, result[:strength]
+    assert_equal 0.4, result[:strength]
 
     @project.brief = { "tools" => { "environment" => [{ "name" => "Jupyter" }] } }
     result = ScienceScoreCalculator.new(@project).check_research_tooling
@@ -382,7 +382,9 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     @project.brief = {
       "languages" => [{ "name" => "R" }],
       "package_managers" => [],
-      "tools" => { "docs" => [{ "name" => "pkgdown" }] },
+      "tools" => {
+        "docs" => [{ "name" => "pkgdown" }, { "name" => "roxygen2" }],
+      },
     }
     r_result = ScienceScoreCalculator.new(@project).check_research_tooling
 
@@ -393,13 +395,56 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     @project.brief = {
       "languages" => [{ "name" => "Julia" }],
       "package_managers" => [{ "name" => "Pkg" }],
-      "tools" => {},
+      "tools" => { "docs" => [{ "name" => "Documenter.jl" }] },
     }
     julia_result = ScienceScoreCalculator.new(@project).check_research_tooling
 
     assert_equal 0.7, julia_result[:strength]
     assert_match "Julia tooling", julia_result[:details]
     assert_equal 14.0, ScienceScoreCalculator.new(@project).calculate[:score]
+  end
+
+  test "calculate requires vocabulary for standalone R authoring tools" do
+    @project.stubs(:joss_vocabulary_analysis).returns(score: 0, terms: [], model_id: nil)
+    @project.brief = {
+      "languages" => [{ "name" => "R" }],
+      "tools" => { "docs" => [{ "name" => "R Markdown" }, { "name" => "knitr" }] },
+    }
+
+    result = ScienceScoreCalculator.new(@project).calculate
+
+    assert_equal 0.0, result[:score]
+    assert_equal 0.4, result[:breakdown][:has_research_tooling][:strength]
+    assert_equal 0.0, result[:breakdown][:has_research_tooling][:score]
+  end
+
+  test "calculate requires vocabulary for one R package tool" do
+    @project.stubs(:joss_vocabulary_analysis).returns(score: 0, terms: [], model_id: nil)
+    @project.brief = {
+      "languages" => [{ "name" => "R" }],
+      "tools" => { "workflow" => [{ "name" => "targets" }] },
+    }
+
+    result = ScienceScoreCalculator.new(@project).calculate
+
+    assert_equal 0.0, result[:score]
+    assert_equal 0.4, result[:breakdown][:has_research_tooling][:strength]
+    assert_equal 0.0, result[:breakdown][:has_research_tooling][:score]
+  end
+
+  test "calculate requires vocabulary for Julia Pkg alone" do
+    @project.stubs(:joss_vocabulary_analysis).returns(score: 0, terms: [], model_id: nil)
+    @project.brief = {
+      "languages" => [{ "name" => "Julia" }],
+      "package_managers" => [{ "name" => "Pkg" }],
+      "tools" => {},
+    }
+
+    result = ScienceScoreCalculator.new(@project).calculate
+
+    assert_equal 0.0, result[:score]
+    assert_equal 0.4, result[:breakdown][:has_research_tooling][:strength]
+    assert_equal 0.0, result[:breakdown][:has_research_tooling][:score]
   end
 
   test "check_research_tooling does not treat a generic C++ build as research" do

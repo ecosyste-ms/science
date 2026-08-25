@@ -34,6 +34,32 @@ class FetchBriefWorkerTest < ActiveSupport::TestCase
     assert project.science_score_breakdown.dig(:breakdown, :has_research_tooling, :present)
   end
 
+  test "does not score standalone R authoring tools without scientific vocabulary" do
+    project = Project.create!(
+      url: "https://github.com/test/r-markdown-report",
+      repository: { "clone_url" => "https://github.com/test/r-markdown-report.git" },
+      science_score: 1
+    )
+    output = {
+      version: "0.12.0",
+      languages: [{ name: "R" }],
+      package_managers: [],
+      tools: { docs: [{ name: "R Markdown" }, { name: "knitr" }] },
+      resources: {},
+      manifests: [],
+      lines: {},
+    }.to_json
+    Open3.expects(:capture3).returns([output, "", stub(success?: true)])
+    JossVocabularyAnalyzer.stubs(:analyze_project).returns(score: 0, terms: [], model_id: nil)
+
+    FetchBriefWorker.new.perform(project.id)
+
+    project.reload
+    assert_equal 0.0, project.science_score
+    assert_equal 0.4, project.science_score_breakdown.dig(:breakdown, :has_research_tooling, :strength)
+    assert_equal 0.0, project.science_score_breakdown.dig(:breakdown, :has_research_tooling, :score)
+  end
+
   test "skips a project that already has brief data" do
     project = Project.create!(
       url: "https://github.com/test/already-scanned",
