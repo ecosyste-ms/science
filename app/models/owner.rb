@@ -1,6 +1,4 @@
 class Owner < ApplicationRecord
-  ACADEMIC_DOMAINS = ScienceScoreCalculator::ACADEMIC_DOMAINS
-
   belongs_to :host
   has_many :projects, foreign_key: 'owner_id'
 
@@ -13,20 +11,48 @@ class Owner < ApplicationRecord
   scope :hidden, -> { where(hidden: true) }
   scope :visible, -> { where(hidden: [false, nil]) }
   scope :organizations, -> { where(kind: 'organization') }
-  scope :institutional, -> {
-    # Build SQL conditions to match any academic domain
-    conditions = ACADEMIC_DOMAINS.map { |domain| "LOWER(website) LIKE '%#{sanitize_sql_like(domain)}%'" }.join(' OR ')
-    organizations.visible.where("website IS NOT NULL AND website != '' AND (#{conditions})")
-  }
+  scope :institutional, -> { organizations.visible.where.not(institutional_domain: nil) }
+
+  before_validation :classify_research_organization_domain,
+    if: -> { new_record? || will_save_change_to_website? || will_save_change_to_kind? }
+
+  def self.reclassify_research_organizations!(scope: all, progress: nil)
+    counts = { processed: 0, institutional: 0, updated: 0 }
+    scope.find_each(batch_size: 500) do |owner|
+      attributes = owner.research_organization_classification
+      changes = attributes.select { |key, value| owner.public_send(key) != value }
+      owner.update_columns(changes) if changes.any?
+      counts[:processed] += 1
+      counts[:updated] += 1 if changes.any?
+      counts[:institutional] += 1 if attributes.fetch(:institutional_domain).present?
+      progress&.call("Reclassified #{counts[:processed]} owners") if (counts[:processed] % 5_000).zero?
+    end
+    counts
+  end
 
   def institutional?
-    return false unless kind == 'organization'
-    return false unless website.present?
+    kind == 'organization' && institutional_domain.present?
+  end
 
-    domain = extract_domain(website)
-    return false unless domain
+  def institutional_match
+    return unless kind == 'organization'
 
-    ACADEMIC_DOMAINS.any? { |academic_domain| domain.include?(academic_domain) }
+    ResearchOrganizationDomainMatcher.match(website_domain)
+  end
+
+  def website_domain
+    ResearchOrganizationDomainMatcher.domain_from_url(website)
+  end
+
+  def classify_research_organization_domain
+    assign_attributes(research_organization_classification)
+  end
+
+  def research_organization_classification
+    match = kind == 'organization' ? ResearchOrganizationDomainMatcher.match(website_domain) : nil
+    {
+      institutional_domain: match&.fetch(:domain),
+    }
   end
 
   def hide!
@@ -50,12 +76,4 @@ class Owner < ApplicationRecord
     )
   end
 
-  def extract_domain(url)
-    begin
-      uri = URI.parse(url.start_with?('http') ? url : "https://#{url}")
-      uri.host&.downcase
-    rescue
-      url.gsub(/^(https?:\/\/)?(www\.)?/, '').split('/').first&.downcase
-    end
-  end
 end

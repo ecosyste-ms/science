@@ -438,6 +438,7 @@ DEPENDENCIES
   pagy (~> 9.4.0)
   pg
   pghero
+  public_suffix
   puma
   rack-cors
   rails (~> 8.1.1)

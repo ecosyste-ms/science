@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_25_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_25_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -140,6 +140,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_25_110000) do
     t.boolean "hidden"
     t.integer "host_id"
     t.string "icon_url"
+    t.citext "institutional_domain"
     t.string "kind"
     t.datetime "last_synced_at"
     t.string "location"
@@ -155,6 +156,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_25_110000) do
     t.string "website"
     t.index "host_id, lower((login)::text)", name: "index_owners_on_host_id_lower_login", unique: true
     t.index ["host_id", "uuid"], name: "index_owners_on_host_id_uuid", unique: true
+    t.index ["institutional_domain"], name: "index_owners_on_institutional_domain", where: "(institutional_domain IS NOT NULL)"
     t.index ["last_synced_at"], name: "index_owners_on_last_synced_at"
   end
 
@@ -249,6 +251,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_25_110000) do
     t.string "target_commitish"
     t.datetime "updated_at", null: false
     t.string "uuid"
+  end
+
+  create_table "research_organization_domains", force: :cascade do |t|
+    t.boolean "active", default: false, null: false
+    t.datetime "created_at", null: false
+    t.citext "domain", null: false
+    t.string "external_id", null: false
+    t.string "organization_name"
+    t.text "organization_types", default: [], null: false, array: true
+    t.datetime "published_at"
+    t.string "source", null: false
+    t.string "source_version", null: false
+    t.float "strength", default: 1.0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["domain"], name: "index_research_organization_domains_on_domain", where: "(active = true)"
+    t.index ["source", "active"], name: "index_research_organization_domains_on_source_and_active"
+    t.index ["source", "source_version", "domain", "external_id"], name: "index_research_domains_on_source_version_domain_id", unique: true
   end
 
   create_table "votes", force: :cascade do |t|

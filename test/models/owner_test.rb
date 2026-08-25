@@ -1,6 +1,17 @@
 require "test_helper"
 
 class OwnerTest < ActiveSupport::TestCase
+  def setup
+    %w[edu nasa.gov].each do |domain|
+      create_research_organization_domain(domain, version: "owner")
+    end
+    ResearchOrganizationDomainMatcher.reset_cache!
+  end
+
+  def teardown
+    ResearchOrganizationDomainMatcher.reset_cache!
+  end
+
   test "valid owner" do
     host = Host.create!(name: "GitHub")
     owner = Owner.new(host: host, login: "testuser")
@@ -88,6 +99,8 @@ class OwnerTest < ActiveSupport::TestCase
     owner = Owner.create!(host: host, login: "stanford", kind: "organization", website: "stanford.edu")
 
     assert owner.institutional?
+    assert_equal "edu", owner.institutional_domain
+    assert_equal "stanford.edu", owner.website_domain
   end
 
   test "institutional? returns true for org with gov domain" do
@@ -125,5 +138,14 @@ class OwnerTest < ActiveSupport::TestCase
 
     assert_includes Owner.organizations, org
     assert_not_includes Owner.organizations, user
+  end
+
+  test "institutional scope uses the stored classification" do
+    host = Host.create!(name: "GitHub")
+    institution = Owner.create!(host: host, login: "institution", kind: "organization", website: "nasa.gov")
+    company = Owner.create!(host: host, login: "company", kind: "organization", website: "example.com")
+
+    assert_includes Owner.institutional, institution
+    assert_not_includes Owner.institutional, company
   end
 end

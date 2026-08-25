@@ -1,6 +1,15 @@
 require "test_helper"
 
 class OwnersControllerTest < ActionDispatch::IntegrationTest
+  def setup
+    create_research_organization_domain("edu", version: "owners-controller")
+    ResearchOrganizationDomainMatcher.reset_cache!
+  end
+
+  def teardown
+    ResearchOrganizationDomainMatcher.reset_cache!
+  end
+
   test "should get index" do
     host = Host.create!(name: "GitHub")
     owner = Owner.create!(host: host, login: "testuser")
@@ -56,6 +65,9 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
     get institutional_owners_url
     assert_response :success
     assert_select "h1", /Institutional Owners/
+    assert_match institutional_owner.login, response.body
+    assert_no_match regular_owner.login, response.body
+    assert_no_match user_owner.login, response.body
   end
 
   test "hidden owners are excluded from the index" do

@@ -14,4 +14,18 @@ class AppJsonTest < ActiveSupport::TestCase
       },
     ], brief_crons
   end
+
+  test "research organization domains are refreshed weekly" do
+    config = JSON.parse(Rails.root.join("app.json").read)
+    crons = config.fetch("cron").select do |cron|
+      cron.fetch("command").include?("research_organizations:sync")
+    end
+
+    assert_equal [
+      {
+        "command" => "bundle exec rake research_organizations:sync",
+        "schedule" => "0 4 * * 1",
+      },
+    ], crons
+  end
 end

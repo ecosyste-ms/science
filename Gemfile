@@ -9,6 +9,7 @@ gem "secure_headers"
 gem "sprockets-rails"
 gem "pg"
 gem "puma"
+gem "public_suffix"
 gem "jbuilder"
 gem "bootsnap", require: false
 gem "sassc-rails"

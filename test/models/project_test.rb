@@ -1,6 +1,17 @@
 require 'test_helper'
 
 class ProjectTest < ActiveSupport::TestCase
+  def setup
+    %w[edu ac.uk ethz.ch nasa.gov].each do |domain|
+      create_research_organization_domain(domain, version: "project")
+    end
+    ResearchOrganizationDomainMatcher.reset_cache!
+  end
+
+  def teardown
+    ResearchOrganizationDomainMatcher.reset_cache!
+  end
+
   test "issue_associations handles missing sub-keys in issues_stats" do
     p = Project.new(url: "https://github.com/x/y", issues_stats: { 'issue_author_associations_count' => { 'OWNER' => 1 } })
     assert_equal ['OWNER'], p.issue_associations

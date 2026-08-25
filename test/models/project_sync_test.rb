@@ -226,6 +226,35 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_equal "NumPy", owner.name
   end
 
+  test "find_or_create_owner classifies the website used by science scoring" do
+    create_research_organization_domain(
+      "inbo.be",
+      source: "ror",
+      version: "sync",
+      external_id: "https://ror.org/00j54wy13",
+      organization_types: ["facility"]
+    )
+    ResearchOrganizationDomainMatcher.reset_cache!
+    host = Host.create!(name: "GitHub", url: "https://github.com")
+    project = build_project(
+      host: host,
+      owner: {
+        "login" => "INBO",
+        "name" => "Research Institute for Nature and Forest",
+        "kind" => "organization",
+        "website" => "https://www.inbo.be",
+      }
+    )
+
+    project.find_or_create_owner
+    result = ScienceScoreCalculator.new(project.reload).calculate
+
+    assert project.owner_record.institutional?
+    assert result[:breakdown][:has_institutional_owner][:present]
+  ensure
+    ResearchOrganizationDomainMatcher.reset_cache!
+  end
+
   test "find_or_create_owner reuses existing owner case-insensitively" do
     host = Host.create!(name: "GitHub")
     Owner.create!(host: host, login: "numpy")

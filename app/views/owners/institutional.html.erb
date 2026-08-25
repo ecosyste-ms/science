@@ -20,8 +20,8 @@
             <%= link_to host_owner_path(owner.host.name, owner.login) do %>
               <%= owner.name.present? ? owner.name : owner.login %>
               <span class="listing__meta">
-                <% if owner.website.present? %>
-                  • <%= owner.extract_domain(owner.website) %>
+                <% if owner.website_domain.present? %>
+                  • <%= owner.website_domain %>
                 <% end %>
               </span>
             <% end %>

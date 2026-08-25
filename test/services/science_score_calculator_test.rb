@@ -3,7 +3,15 @@ require 'test_helper'
 class ScienceScoreCalculatorTest < ActiveSupport::TestCase
   def setup
     JossVocabularyAnalyzer.reset_cache!
+    %w[edu ac.uk mpg.de nasa.gov].each do |domain|
+      create_research_organization_domain(domain, version: "calculator")
+    end
+    ResearchOrganizationDomainMatcher.reset_cache!
     @project = Project.create!(url: 'https://github.com/test/science-project')
+  end
+
+  def teardown
+    ResearchOrganizationDomainMatcher.reset_cache!
   end
 
   test "calculate detects scientific vocabulary through the public boundary" do
@@ -114,9 +122,8 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
 
   test "check_institutional_owner detects organization with edu domain" do
     host = Host.create!(name: 'GitHub')
-    owner = Owner.create!(host: host, login: 'stanford', kind: 'organization')
+    owner = Owner.create!(host: host, login: 'stanford', kind: 'organization', website: 'stanford.edu')
     @project.update(host: host, owner_record: owner)
-    @project.update_column(:owner, { 'website' => 'stanford.edu' })
 
     calculator = ScienceScoreCalculator.new(@project)
     result = calculator.check_institutional_owner
@@ -129,9 +136,8 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
 
   test "check_institutional_owner detects organization with gov domain" do
     host = Host.create!(name: 'GitHub')
-    owner = Owner.create!(host: host, login: 'nasa', kind: 'organization')
+    owner = Owner.create!(host: host, login: 'nasa', kind: 'organization', website: 'https://nasa.gov')
     @project.update(host: host, owner_record: owner)
-    @project.update_column(:owner, { 'website' => 'https://nasa.gov' })
 
     calculator = ScienceScoreCalculator.new(@project)
     result = calculator.check_institutional_owner
@@ -142,9 +148,8 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
 
   test "check_institutional_owner returns false for non-institutional domain" do
     host = Host.create!(name: 'GitHub')
-    owner = Owner.create!(host: host, login: 'mycompany', kind: 'organization')
+    owner = Owner.create!(host: host, login: 'mycompany', kind: 'organization', website: 'mycompany.com')
     @project.update(host: host, owner_record: owner)
-    @project.update_column(:owner, { 'website' => 'mycompany.com' })
 
     calculator = ScienceScoreCalculator.new(@project)
     result = calculator.check_institutional_owner
@@ -154,9 +159,8 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
 
   test "check_institutional_owner returns false for user owner" do
     host = Host.create!(name: 'GitHub')
-    owner = Owner.create!(host: host, login: 'johndoe', kind: 'user')
+    owner = Owner.create!(host: host, login: 'johndoe', kind: 'user', website: 'johndoe.edu')
     @project.update(host: host, owner_record: owner)
-    @project.update_column(:owner, { 'website' => 'johndoe.edu' })
 
     calculator = ScienceScoreCalculator.new(@project)
     result = calculator.check_institutional_owner
@@ -586,5 +590,29 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     result = calculator.check_institutional_owner
 
     assert_not result[:present]
+  end
+
+  test "calculate uses an active ROR owner domain through the scoring boundary" do
+    create_research_organization_domain(
+      "inbo.be",
+      source: "ror",
+      version: "calculator-ror",
+      external_id: "https://ror.org/00j54wy13",
+      organization_name: "Research Institute for Nature and Forest",
+      organization_types: ["facility"],
+      strength: 1.0
+    )
+    ResearchOrganizationDomainMatcher.reset_cache!
+    host = Host.create!(name: "GitHub")
+    owner = Owner.create!(host: host, login: "inbo", kind: "organization", website: "https://www.inbo.be")
+    @project.update!(host: host, owner_record: owner)
+
+    result = ScienceScoreCalculator.new(@project).calculate
+    signal = result[:breakdown][:has_institutional_owner]
+
+    assert signal[:present]
+    assert_equal "ror", signal[:source]
+    assert_equal "https://ror.org/00j54wy13", signal[:external_id]
+    assert_equal 10.0, result[:score]
   end
 end

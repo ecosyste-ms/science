@@ -1,46 +1,11 @@
 class ScienceScoreCalculator
   attr_reader :project, :breakdown
 
-  ACADEMIC_DOMAIN_SUFFIXES = %w[
-    edu ac.uk edu.au edu.cn edu.br edu.mx edu.ar edu.co edu.in ac.jp ac.za
-    edu.sg edu.hk edu.my edu.ph edu.tw edu.eg edu.pk edu.vn edu.tr ac.at
-    ac.il ac.in ac.nz ac.kr ac.be
-    umontpellier.fr sorbonne-universite.fr cnrs.fr inria.fr inserm.fr
-    pasteur.fr polytechnique.fr polytechnique.edu centralesupelec.fr ens.fr
-    ens-lyon.fr
-    mpg.de fraunhofer.de helmholtz.de dlr.de fz-juelich.de tum.de
-    rwth-aachen.de dfki.de
-    tudelft.nl uva.nl vu.nl rug.nl tue.nl leidenuniv.nl
-    ethz.ch epfl.ch cern.ch unige.ch unibas.ch psi.ch
-    tuwien.ac.at uibk.ac.at
-    huji.ac.il weizmann.ac.il technion.ac.il
-    iitb.ac.in iiitd.ac.in iitk.ac.in iisc.ac.in
-    embl.de embl.org ebi.ac.uk ku.dk dtu.dk kth.se chalmers.se
-    ntnu.no uio.no ucl.ac.uk cam.ac.uk ox.ac.uk ic.ac.uk
-    utoronto.ca ubc.ca mcgill.ca uwaterloo.ca ualberta.ca
-    csiro.au unsw.edu.au anu.edu.au unimelb.edu.au
-    nih.gov nasa.gov noaa.gov usgs.gov nist.gov
-    ornl.gov lbl.gov anl.gov bnl.gov fnal.gov
-    lanl.gov llnl.gov pnnl.gov inl.gov sandia.gov nrel.gov slac.stanford.edu
-    ligo.org ieee.org
-  ].freeze
-
-  ACADEMIC_LABEL_PREFIXES = %w[univ- u- uni- tu- fh-].freeze
-
-  ACADEMIC_LABEL_WORDS = %w[university college institute academia].freeze
-
-  ACADEMIC_DOMAINS = (ACADEMIC_DOMAIN_SUFFIXES + ACADEMIC_LABEL_PREFIXES + ACADEMIC_LABEL_WORDS).freeze
-
   RESEARCH_TOOLING_BONUS = 0.20
   SCIENTIFIC_DEPENDENCY_BONUS = 0.08
 
   def self.academic_domain?(domain)
-    return false unless domain.present?
-    domain = domain.downcase
-    return true if ACADEMIC_DOMAIN_SUFFIXES.any? { |s| domain == s || domain.end_with?(".#{s}") }
-    labels = domain.split('.')
-    return true if ACADEMIC_LABEL_PREFIXES.any? { |p| labels.any? { |l| l.start_with?(p) } }
-    ACADEMIC_LABEL_WORDS.any? { |w| labels.include?(w) }
+    ResearchOrganizationDomainMatcher.institutional?(domain)
   end
 
   DOI_PATTERNS = [
@@ -519,16 +484,20 @@ class ScienceScoreCalculator
       email_domain = committer['email'].split('@').last&.downcase
       next unless email_domain
       
-      if self.class.academic_domain?(email_domain)
+      match = ResearchOrganizationDomainMatcher.match(email_domain)
+      if match
         academic_committers << {
           name: committer['name'],
           domain: email_domain,
-          commits: committer['count']
+          commits: committer['count'],
+          source: match[:source],
+          strength: match[:strength],
         }
       end
     end
 
-    fraction = total_committers > 0 ? academic_committers.length.to_f / total_committers : 0.0
+    matched_strength = academic_committers.sum { |committer| committer.fetch(:strength) }
+    fraction = total_committers > 0 ? matched_strength / total_committers : 0.0
     percentage = (fraction * 100).round(1)
 
     {
@@ -545,32 +514,17 @@ class ScienceScoreCalculator
     return { present: false, description: "Institutional organization owner", details: nil } unless project.owner_record.present?
 
     owner = project.owner_record
-    owner_json = project.read_attribute(:owner)
-
-    # Check if owner is an organization
     return { present: false, description: "Institutional organization owner", details: nil } unless owner.kind == 'organization'
-
-    # Check if owner has a website
-    return { present: false, description: "Institutional organization owner", details: nil } unless owner_json && owner_json['website'].present?
-
-    website = owner_json['website'].downcase
-
-    # Extract domain from website URL
-    domain = begin
-      uri = URI.parse(website.start_with?('http') ? website : "https://#{website}")
-      uri.host
-    rescue
-      website.gsub(/^(https?:\/\/)?(www\.)?/, '').split('/').first
-    end
-
-    return { present: false, description: "Institutional organization owner", details: nil } unless domain
-
-    is_institutional = self.class.academic_domain?(domain)
+    match = owner.institutional_match
 
     {
-      present: is_institutional,
+      present: match.present?,
+      strength: match&.fetch(:strength),
       description: "Institutional organization owner",
-      details: is_institutional ? "Organization #{owner.login} has institutional domain (#{domain})" : nil
+      details: match ? "Organization #{owner.login} has institutional domain (#{owner.website_domain} via #{match.fetch(:domain)}, #{match.fetch(:source)})" : nil,
+      domain: match&.fetch(:domain),
+      source: match&.fetch(:source),
+      external_id: match&.fetch(:external_id),
     }
   end
 

@@ -25,6 +25,27 @@ class ActiveSupport::TestCase
   # fixtures :all
 
   # Add more helper methods to be used by all tests here...
+  def create_research_organization_domain(
+    domain,
+    source: "manual",
+    version: "test",
+    external_id: domain,
+    organization_name: nil,
+    organization_types: [],
+    strength: 1.0,
+    active: true
+  )
+    ResearchOrganizationDomain.create!(
+      domain: domain,
+      source: source,
+      source_version: version,
+      external_id: external_id,
+      organization_name: organization_name,
+      organization_types: organization_types,
+      strength: strength,
+      active: active
+    )
+  end
 end
 
 # Ensure WebMock blocks external connections by default, allowing localhost if needed (e.g., Capybara)
