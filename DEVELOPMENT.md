@@ -112,22 +112,20 @@ rake projects:sync_dependencies              # Update dependency information acr
 
 #### JOSS Vocabulary Analysis
 
-The platform uses TF-IDF analysis to compare projects against the corpus of peer-reviewed JOSS papers to calculate scientific vocabulary similarity:
+The application builds a reusable vocabulary model from JOSS project text and stores it in PostgreSQL. See [docs/joss-vocabulary.md](docs/joss-vocabulary.md) for the corpus, weighting, scoring, and cache behavior.
 
 ```bash
-rake joss_idf:build_cache                    # Build IDF corpus cache from JOSS papers (required first)
-rake joss_idf:stats                          # Show cache statistics and top scientific terms
-rake joss_idf:test                           # Test similarity scoring on sample projects
-rake joss_idf:clear_cache                    # Clear the corpus cache
+bundle exec rake joss_vocabulary:rebuild     # Build and activate a new model
+bundle exec rake joss_vocabulary:stats       # Show the active model and source counts
 ```
 
-**Note:** Run `rake joss_idf:build_cache` before calculating science scores for the first time. This builds a TF-IDF model from all JOSS papers to identify scientific vocabulary.
+Run `bundle exec rake joss_vocabulary:rebuild` once after the model-table migration. `app.json` schedules later rebuilds each Sunday.
 
 #### Example Import Workflow
 
 ```bash
-# 1. Build the JOSS vocabulary corpus (one-time setup)
-rake joss_idf:build_cache
+# 1. Build the JOSS vocabulary model (one-time setup)
+bundle exec rake joss_vocabulary:rebuild
 
 # 2. Import core scientific software
 rake projects:import_joss
@@ -142,8 +140,8 @@ rake projects:import_conda_forge
 # 4. Sync and analyze imported projects
 rake projects:sync
 
-# 5. Check JOSS vocabulary analysis statistics
-rake joss_idf:stats
+# 5. Check JOSS vocabulary model statistics
+bundle exec rake joss_vocabulary:stats
 ```
 
 ## Deployment

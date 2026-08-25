@@ -510,38 +510,24 @@ class ScienceScoreCalculator
   end
 
   def check_joss_vocabulary_similarity
-    # Calculate similarity score using JOSS IDF
-    similarity_score = begin
-      # Try to use cached full corpus, otherwise use limited sample
-      # This prevents multiple workers from trying to build full corpus simultaneously
-      if File.exist?(JossIdfAnalyzer::IDF_CACHE_FILE)
-        # Full corpus cache exists, use it
-        JossIdfAnalyzer.calculate_joss_idf
-      else
-        # No cache yet, use limited sample to avoid timeout in Sidekiq
-        JossIdfAnalyzer.calculate_joss_idf(limit: 500)
-      end
-      project.joss_idf_score
-    rescue => e
-      Rails.logger.error "Error calculating JOSS vocabulary similarity: #{e.message}"
-      0.0
-    end
-    
-    # Consider moderate similarity (>30%) as present for non-JOSS projects
+    analysis = project.joss_vocabulary_analysis
+    similarity_score = analysis[:score]
     threshold = 30.0
     has_similarity = similarity_score >= threshold
-    
+
     {
       present: has_similarity,
       description: "Scientific vocabulary similarity",
-      details: if similarity_score > 0
-        has_similarity ? 
-          "#{similarity_score.round(1)}% similarity to JOSS scientific vocabulary" : 
-          "Low similarity (#{similarity_score.round(1)}%) to scientific vocabulary"
+      details: if analysis[:model_id].nil?
+        "Scientific vocabulary model unavailable"
+      elsif analysis[:terms].any?
+        "Vocabulary score #{similarity_score.round(1)} from #{analysis[:terms].join(', ')}"
       else
-        "Unable to calculate vocabulary similarity"
+        "No scientific vocabulary matches"
       end,
-      score: similarity_score
+      score: similarity_score,
+      terms: analysis[:terms],
+      model_id: analysis[:model_id]
     }
   end
 end

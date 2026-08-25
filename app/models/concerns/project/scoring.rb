@@ -56,16 +56,16 @@ module Project::Scoring
   end
 
   def calculate_science_score_breakdown
-    # This method should only be called from background jobs
-    # It performs expensive calculations including JOSS IDF analysis
     calculator = ScienceScoreCalculator.new(self)
     calculator.calculate
   end
 
-  def joss_idf_score
-    # This method should only be called from background jobs via calculate_science_score_breakdown
-    # It may trigger expensive corpus building if cache is not available
-    JossIdfAnalyzer.score_project(self)
+  def joss_vocabulary_analysis
+    JossVocabularyAnalyzer.analyze_project(self)
+  end
+
+  def joss_vocabulary_score
+    joss_vocabulary_analysis[:score]
   end
 
   def score_parts

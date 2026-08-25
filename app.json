@@ -13,8 +13,8 @@
       "schedule": "*/10 * * * *"
     },
     {
-      "command": "bundle exec rake joss_idf:build_cache",
-      "schedule": "0 3 * * *"
+      "command": "bundle exec rake joss_vocabulary:rebuild",
+      "schedule": "0 3 * * 0"
     }
   ]
 }

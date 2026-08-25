@@ -2,7 +2,28 @@ require 'test_helper'
 
 class ScienceScoreCalculatorTest < ActiveSupport::TestCase
   def setup
+    JossVocabularyAnalyzer.reset_cache!
     @project = Project.create!(url: 'https://github.com/test/science-project')
+  end
+
+  test "calculate detects scientific vocabulary through the public boundary" do
+    model = JossVocabularyModel.create!(
+      term_weights: { "plasma" => 2.0, "simulation" => 1.5, "mpi4py" => 1.0 },
+      config: { "top_terms" => 3, "evidence_threshold" => 4.0 },
+      source_counts: { "joss_projects" => 100, "background_projects" => 1_000 }
+    )
+    @project.update!(
+      description: "Plasma simulation solver",
+      readme: "Sparse Fortran model using mpi4py"
+    )
+
+    result = ScienceScoreCalculator.new(@project).calculate
+    vocabulary = result[:breakdown][:joss_vocabulary_similarity]
+
+    assert vocabulary[:present]
+    assert_equal model.id, vocabulary[:model_id]
+    assert_equal %w[plasma simulation mpi4py], vocabulary[:terms]
+    assert result[:score] > 0
   end
 
   test "calculate returns score and breakdown" do

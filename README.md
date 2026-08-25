@@ -41,7 +41,7 @@ This project is part of [Ecosyste.ms](https://ecosyste.ms): Tools and open datas
 - **Quality Metrics**: Tracks maintenance, activity, dependencies, and community engagement
 
 ### Advanced Analytics
-- **JOSS Vocabulary Analysis**: Uses TF-IDF to compare projects against the corpus of peer-reviewed scientific software
+- **JOSS Vocabulary Analysis**: Compares project text with vocabulary enriched across peer-reviewed JOSS software
 - **Contributor Networks**: Maps academic institutions and research collaborations through email domain analysis
 - **Institutional Tracking**: Identifies and tracks contributions from universities, research labs, and academic organizations
 - **Dependency Mapping**: Visualizes how scientific packages interconnect
@@ -71,7 +71,7 @@ The default rate limit for the API is 5000/req per hour based on your IP address
 
 ## Development
 
-For development and deployment documentation, check out [DEVELOPMENT.md](DEVELOPMENT.md)
+For development and deployment documentation, see [DEVELOPMENT.md](DEVELOPMENT.md). More detailed project documentation is listed in [docs/README.md](docs/README.md).
 
 ## Contribute
 

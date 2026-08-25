@@ -56,10 +56,12 @@ class ProjectScoringTest < ActiveSupport::TestCase
     assert_equal 42, p.science_score_breakdown[:score]
   end
 
-  test "joss_idf_score delegates to JossIdfAnalyzer" do
+  test "joss_vocabulary_analysis delegates to JossVocabularyAnalyzer" do
     p = Project.new(url: "https://x")
-    JossIdfAnalyzer.expects(:score_project).with(p).returns(0.5)
-    assert_equal 0.5, p.joss_idf_score
+    analysis = { score: 42.0, terms: ["plasma"] }
+    JossVocabularyAnalyzer.expects(:analyze_project).with(p).returns(analysis)
+
+    assert_equal analysis, p.joss_vocabulary_analysis
   end
 
   test "instance calculate_idf delegates to class method with self" do

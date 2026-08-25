@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_24_152455) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_25_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -109,6 +109,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_152455) do
     t.string "user"
     t.string "uuid"
     t.index ["project_id"], name: "index_issues_on_project_id"
+  end
+
+  create_table "joss_vocabulary_models", force: :cascade do |t|
+    t.jsonb "config", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.jsonb "diagnostics", default: {}, null: false
+    t.jsonb "source_counts", default: {}, null: false
+    t.jsonb "term_weights", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_joss_vocabulary_models_on_created_at"
   end
 
   create_table "mentions", force: :cascade do |t|
