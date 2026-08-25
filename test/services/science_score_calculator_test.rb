@@ -296,6 +296,59 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     assert_equal 0.7, result[:strength]
   end
 
+  test "check_scientific_dependencies deduplicates packages across ecosystems" do
+    @project.stubs(:dependency_packages).returns([
+      ['conda', 'scipy'],
+      ['pypi', 'SCIPY'],
+      ['pypi', 'requests'],
+    ])
+
+    result = ScienceScoreCalculator.new(@project).check_scientific_dependencies
+
+    assert_equal 1, result[:matches]
+    assert_equal 0.4, result[:strength]
+    assert_equal "1 matched: conda:scipy", result[:details]
+  end
+
+  test "calculate adds points only for strong scientific dependency evidence" do
+    @project.stubs(:joss_vocabulary_analysis).returns(score: 0, terms: [], model_id: nil)
+    @project.stubs(:dependency_packages).returns([
+      ['pypi', 'astropy'],
+      ['pypi', 'scipy'],
+      ['cran', 'sf'],
+    ])
+
+    result = ScienceScoreCalculator.new(@project).calculate
+
+    assert_equal 8.0, result[:score]
+    assert_equal 8.0, result[:breakdown][:has_scientific_dependencies][:score]
+
+    @project.stubs(:dependency_packages).returns([
+      ['pypi', 'astropy'],
+      ['pypi', 'scipy'],
+    ])
+
+    result = ScienceScoreCalculator.new(@project).calculate
+
+    assert_equal 0.0, result[:score]
+    assert_equal 0.0, result[:breakdown][:has_scientific_dependencies][:score]
+  end
+
+  test "calculate applies negative indicators after the scientific dependency bonus" do
+    @project.repository = { 'topics' => ['awesome-list'] }
+    @project.stubs(:joss_vocabulary_analysis).returns(score: 0, terms: [], model_id: nil)
+    @project.stubs(:dependency_packages).returns([
+      ['pypi', 'astropy'],
+      ['pypi', 'scipy'],
+      ['cran', 'sf'],
+    ])
+
+    result = ScienceScoreCalculator.new(@project).calculate
+
+    assert_equal 1.6, result[:score]
+    assert_equal 8.0, result[:breakdown][:has_scientific_dependencies][:score]
+  end
+
   test "check_research_tooling detects tools by taxonomy domain" do
     @project.brief = { "tools" => { "build" => [{ "name" => "Snakemake", "taxonomy" => { "domain" => ["research"] } }] } }
     result = ScienceScoreCalculator.new(@project).check_research_tooling

@@ -40,6 +40,31 @@ class ProjectTest < ActiveSupport::TestCase
     assert project.science_score > 0
   end
 
+  test "update_science_score persists the scientific dependency bonus" do
+    project = Project.create!(
+      url: 'https://github.com/test/scientific-dependencies',
+      dependencies: [
+        {
+          'dependencies' => [
+            { 'direct' => true, 'ecosystem' => 'pypi', 'package_name' => 'astropy' },
+            { 'direct' => true, 'ecosystem' => 'pypi', 'package_name' => 'scipy' },
+            { 'direct' => true, 'ecosystem' => 'cran', 'package_name' => 'sf' },
+          ],
+        },
+      ]
+    )
+
+    project.update_science_score
+    project.reload
+
+    assert_equal 8.0, project.science_score
+    assert_equal 8.0, project.science_score_breakdown.dig(
+      :breakdown,
+      :has_scientific_dependencies,
+      :score
+    )
+  end
+
   test "calculate_science_score_breakdown returns score and breakdown" do
     project = Project.create!(url: 'https://github.com/test/science-project')
     project.repository = {

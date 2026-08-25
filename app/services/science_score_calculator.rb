@@ -32,6 +32,7 @@ class ScienceScoreCalculator
   ACADEMIC_DOMAINS = (ACADEMIC_DOMAIN_SUFFIXES + ACADEMIC_LABEL_PREFIXES + ACADEMIC_LABEL_WORDS).freeze
 
   RESEARCH_TOOLING_BONUS = 0.20
+  SCIENTIFIC_DEPENDENCY_BONUS = 0.08
 
   def self.academic_domain?(domain)
     return false unless domain.present?
@@ -161,6 +162,14 @@ class ScienceScoreCalculator
         bonus_applies = strength > 0.4 || vocabulary_present
         bonus = bonus_applies ? RESEARCH_TOOLING_BONUS * strength * 100 : 0.0
         research_tooling[:score] = bonus.round(2)
+        final_score += bonus
+      end
+
+      scientific_dependencies = @breakdown[:has_scientific_dependencies]
+      if scientific_dependencies[:present]
+        bonus_applies = scientific_dependencies[:strength] == 1.0
+        bonus = bonus_applies ? SCIENTIFIC_DEPENDENCY_BONUS * 100 : 0.0
+        scientific_dependencies[:score] = bonus.round(2)
         final_score += bonus
       end
 
@@ -313,7 +322,7 @@ class ScienceScoreCalculator
     matches = deps.select do |ecosystem, name|
       list = SCIENTIFIC_DEPENDENCIES[ecosystem.to_s.downcase]
       list && list.include?(name.to_s.downcase)
-    end
+    end.uniq { |_, name| name.to_s.downcase }
 
     strength = case matches.length
                when 0 then 0.0
