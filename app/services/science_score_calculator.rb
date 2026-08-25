@@ -156,7 +156,12 @@ class ScienceScoreCalculator
 
       research_tooling = @breakdown[:has_research_tooling]
       if research_tooling[:present]
-        final_score += RESEARCH_TOOLING_BONUS * (research_tooling[:strength] || 1.0) * 100
+        strength = research_tooling[:strength] || 1.0
+        vocabulary_present = @breakdown.dig(:joss_vocabulary_similarity, :present)
+        bonus_applies = strength > 0.4 || vocabulary_present
+        bonus = bonus_applies ? RESEARCH_TOOLING_BONUS * strength * 100 : 0.0
+        research_tooling[:score] = bonus.round(2)
+        final_score += bonus
       end
 
       penalty = @breakdown.dig(:negative_indicators, :penalty) || 0.0
@@ -366,14 +371,14 @@ class ScienceScoreCalculator
 
     r_matches = names & R_RESEARCH_TOOLS
     if languages.include?('r') && r_matches.any?
-      evidence << [1.0, "R tooling: #{r_matches.join(', ')}"]
+      evidence << [0.7, "R tooling: #{r_matches.join(', ')}"]
     end
 
     julia_matches = names & JULIA_RESEARCH_TOOLS
     julia_package_matches = package_managers & JULIA_PACKAGE_MANAGERS
     if languages.include?('julia') && (julia_matches.any? || julia_package_matches.any?)
       matches = julia_matches + julia_package_matches
-      evidence << [1.0, "Julia tooling: #{matches.join(', ')}"]
+      evidence << [0.7, "Julia tooling: #{matches.join(', ')}"]
     end
 
     (names & RESEARCH_TOOLS[:high]).each do |name|

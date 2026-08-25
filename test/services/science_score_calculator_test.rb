@@ -330,7 +330,8 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     assert_match "language: fortran", result[:breakdown][:has_research_tooling][:details]
   end
 
-  test "calculate caps a mature Python toolchain below the scientific threshold" do
+  test "calculate does not add Python maturity points without scientific vocabulary" do
+    @project.citation_file = "citation"
     @project.brief = {
       "languages" => [{ "name" => "Python" }],
       "tools" => {
@@ -345,8 +346,9 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
 
     result = ScienceScoreCalculator.new(@project).calculate
 
-    assert_equal 8.0, result[:score]
+    assert_equal 16.0, result[:score]
     assert_equal 0.4, result[:breakdown][:has_research_tooling][:strength]
+    assert_equal 0.0, result[:breakdown][:has_research_tooling][:score]
     assert_match "Python maturity", result[:breakdown][:has_research_tooling][:details]
   end
 
@@ -372,9 +374,11 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     assert_equal 21.0, result[:score]
     assert result[:breakdown][:joss_vocabulary_similarity][:present]
     assert_equal 0.4, result[:breakdown][:has_research_tooling][:strength]
+    assert_equal 8.0, result[:breakdown][:has_research_tooling][:score]
   end
 
   test "check_research_tooling detects language-specific R and Julia combinations" do
+    @project.stubs(:joss_vocabulary_analysis).returns(score: 0, terms: [], model_id: nil)
     @project.brief = {
       "languages" => [{ "name" => "R" }],
       "package_managers" => [],
@@ -382,8 +386,9 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     }
     r_result = ScienceScoreCalculator.new(@project).check_research_tooling
 
-    assert_equal 1.0, r_result[:strength]
+    assert_equal 0.7, r_result[:strength]
     assert_match "R tooling", r_result[:details]
+    assert_equal 14.0, ScienceScoreCalculator.new(@project).calculate[:score]
 
     @project.brief = {
       "languages" => [{ "name" => "Julia" }],
@@ -392,8 +397,9 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     }
     julia_result = ScienceScoreCalculator.new(@project).check_research_tooling
 
-    assert_equal 1.0, julia_result[:strength]
+    assert_equal 0.7, julia_result[:strength]
     assert_match "Julia tooling", julia_result[:details]
+    assert_equal 14.0, ScienceScoreCalculator.new(@project).calculate[:score]
   end
 
   test "check_research_tooling does not treat a generic C++ build as research" do
