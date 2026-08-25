@@ -96,13 +96,19 @@ namespace :projects do
     Project.sync_dependencies
   end
 
-  desc 'run brief against projects without brief data (LIMIT=100)'
+  desc 'enqueue brief scans (LIMIT=100 COHORT=all SHARD_COUNT=1 SHARD=0)'
   task :fetch_brief => :environment do
-    limit = (ENV['LIMIT'] || 100).to_i
-    Project.with_repository.where(brief: nil).where('science_score > 0').limit(limit).find_each do |project|
-      puts project.url
-      project.fetch_brief
-    end
+    enqueuer = BriefScanEnqueuer.new(
+      limit: ENV.fetch('LIMIT', '100'),
+      cohort: ENV.fetch('COHORT', 'all'),
+      shard_count: ENV.fetch('SHARD_COUNT', '1'),
+      shard: ENV.fetch('SHARD', '0')
+    )
+    enqueued = enqueuer.enqueue
+
+    puts "Enqueued #{enqueued} Brief jobs (cohort=#{enqueuer.cohort}, shard=#{enqueuer.shard}/#{enqueuer.shard_count})"
+  rescue ArgumentError => error
+    abort error.message
   end
 
   desc 'import reviewed projects from OST (Open Sustainable Technology)'

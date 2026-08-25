@@ -108,7 +108,10 @@ rake projects:discover                       # Auto-discover via topics and keyw
 ```bash
 rake projects:sync                           # Sync least recently synced projects (500 at a time)
 rake projects:sync_dependencies              # Update dependency information across projects
+rake projects:fetch_brief                    # Enqueue repository scans on the Brief queue
 ```
+
+Brief scanning uses a separate Sidekiq process. See [docs/brief-scanning.md](docs/brief-scanning.md) for cohort and sharding options.
 
 #### JOSS Vocabulary Analysis
 
