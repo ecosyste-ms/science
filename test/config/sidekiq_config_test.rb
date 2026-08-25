@@ -1,12 +1,13 @@
 require "test_helper"
 
 class SidekiqConfigTest < ActiveSupport::TestCase
-  test "the worker polls the default and brief queues" do
+  test "the worker uses bounded concurrency and weighted queues" do
     config = YAML.safe_load_file(
       Rails.root.join("config/sidekiq.yml"),
       permitted_classes: [Symbol]
     )
 
+    assert_equal 5, config[:concurrency]
     assert_equal [["default", 5], ["brief", 1]], config[:queues]
   end
 
