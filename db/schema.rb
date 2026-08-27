@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_27_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_27_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -37,6 +37,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_27_120000) do
     t.string "sub_categories", default: [], array: true
     t.string "topics", default: [], array: true
     t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_contributors_on_email"
   end
 
   create_table "dependencies", force: :cascade do |t|
@@ -253,6 +254,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_27_120000) do
     t.string "target_commitish"
     t.datetime "updated_at", null: false
     t.string "uuid"
+    t.index ["project_id", "uuid"], name: "index_releases_on_project_id_and_uuid"
   end
 
   create_table "research_organization_domains", force: :cascade do |t|
