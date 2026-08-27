@@ -10,6 +10,14 @@ class ResearchOrganizationDomainImporterTest < ActiveSupport::TestCase
     https://ror.org/inactive,inactive,education,inactive.edu,Inactive University
   CSV
 
+  ROR_WEBSITE_CSV = <<~CSV
+    id,status,types,domains,links.type.website,names.types.ror_display
+    https://ror.org/root,active,facility,,https://www.root-research.org/,Root Research
+    https://ror.org/subdomain,active,nonprofit,,https://lab.wordpress.com/,Research Lab
+    https://ror.org/path,active,education,,https://sites.google.com/view/institute,Path Institute
+    https://ror.org/curated,active,facility,curated.ac.uk,https://ignored-root.org/,Curated Institute
+  CSV
+
   def teardown
     ResearchOrganizationDomainMatcher.reset_cache!
   end
@@ -40,6 +48,22 @@ class ResearchOrganizationDomainImporterTest < ActiveSupport::TestCase
     assert_equal 1, result[:rejected_public_suffixes]
   end
 
+  test "ROR import falls back to exact root website hosts" do
+    result = RorResearchOrganizationDomainImporter.import_csv!(
+      StringIO.new(ROR_WEBSITE_CSV),
+      version: "website-hosts",
+      published_at: "2026-08-25",
+      minimum_domains: 1
+    )
+
+    domains = ResearchOrganizationDomain.active.where(source: "ror").pluck(:domain).sort
+    assert_equal %w[curated.ac.uk lab.wordpress.com root-research.org], domains
+    assert_equal 2, result[:website_domains]
+    assert_not_includes domains, "wordpress.com"
+    assert_not_includes domains, "sites.google.com"
+    assert_not_includes domains, "ignored-root.org"
+  end
+
   test "sync enters through Zenodo metadata and archive processing" do
     metadata = {
       "id" => 123,
@@ -59,7 +83,7 @@ class ResearchOrganizationDomainImporterTest < ActiveSupport::TestCase
     result = RorResearchOrganizationDomainImporter.sync!(minimum_domains: 1)
 
     assert result[:imported]
-    assert_equal "123", result[:version]
+    assert_equal "123.2", result[:version]
     assert_equal 2, result[:domains]
   end
 

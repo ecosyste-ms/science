@@ -1,4 +1,5 @@
 require 'test_helper'
+require 'stringio'
 
 class ScienceScoreCalculatorTest < ActiveSupport::TestCase
   def setup
@@ -634,6 +635,36 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     assert signal[:present]
     assert_equal "ror", signal[:source]
     assert_equal "https://ror.org/00j54wy13", signal[:external_id]
+    assert_equal 10.0, result[:score]
+  end
+
+  test "calculate uses a root ROR website imported through the scoring boundary" do
+    csv = <<~CSV
+      id,status,types,domains,links.type.website,names.types.ror_display
+      https://ror.org/root-website,active,facility,,https://www.root-research.org/,Root Research
+    CSV
+    RorResearchOrganizationDomainImporter.import_csv!(
+      StringIO.new(csv),
+      version: "calculator-root-website",
+      published_at: "2026-08-25",
+      minimum_domains: 1
+    )
+
+    host = Host.create!(name: "GitHub")
+    owner = Owner.create!(
+      host: host,
+      login: "root-research",
+      kind: "organization",
+      website: "https://root-research.org/software"
+    )
+    @project.update!(host: host, owner_record: owner)
+
+    result = ScienceScoreCalculator.new(@project).calculate
+    signal = result[:breakdown][:has_institutional_owner]
+
+    assert signal[:present]
+    assert_equal "root-research.org", signal[:domain]
+    assert_equal "https://ror.org/root-website", signal[:external_id]
     assert_equal 10.0, result[:score]
   end
 

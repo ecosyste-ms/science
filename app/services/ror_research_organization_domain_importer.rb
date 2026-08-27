@@ -4,16 +4,19 @@ require "json"
 require "open3"
 require "public_suffix"
 require "tempfile"
+require "uri"
 
 class RorResearchOrganizationDomainImporter
   ZENODO_RECORD_URL = "https://zenodo.org/api/records/6347574"
   MINIMUM_DOMAINS = 10_000
+  IMPORT_REVISION = 2
+  ARCHIVE_TIMEOUT = 60
   FULL_STRENGTH_TYPES = %w[education government facility nonprofit healthcare archive].freeze
 
   class << self
     def sync!(minimum_domains: MINIMUM_DOMAINS)
       metadata = fetch_metadata
-      version = metadata.fetch("id").to_s
+      version = "#{metadata.fetch('id')}.#{IMPORT_REVISION}"
       if ResearchOrganizationDomain.active_version_for("ror") == version
         ResearchOrganizationDomain.prune_inactive!("ror")
         return {
@@ -91,7 +94,9 @@ class RorResearchOrganizationDomainImporter
     end
 
     def download_archive(url, output)
-      response = connection.get(url)
+      response = connection.get(url) do |request|
+        request.options.timeout = ARCHIVE_TIMEOUT
+      end
       raise "ROR download failed with HTTP #{response.status}" unless response.success?
 
       output.write(response.body)
@@ -125,7 +130,12 @@ class RorResearchOrganizationDomainImporter
     end
 
     def import_rows!(csv, version:, published_at:)
-      counts = { records: 0, domains: 0, rejected_public_suffixes: 0 }
+      counts = {
+        records: 0,
+        domains: 0,
+        website_domains: 0,
+        rejected_public_suffixes: 0,
+      }
       rows = []
       now = Time.current
 
@@ -134,7 +144,11 @@ class RorResearchOrganizationDomainImporter
 
         counts[:records] += 1
         types = split_values(row["types"])
-        split_values(row["domains"]).each do |domain|
+        domains = split_values(row["domains"])
+        from_website = domains.empty?
+        domains = root_website_domains(row["links.type.website"]) if from_website
+
+        domains.each do |domain|
           normalized = ResearchOrganizationDomainMatcher.normalize_domain(domain)
           next unless normalized
           unless PublicSuffix.valid?(normalized)
@@ -156,6 +170,7 @@ class RorResearchOrganizationDomainImporter
             updated_at: now,
           }
           counts[:domains] += 1
+          counts[:website_domains] += 1 if from_website
           flush_rows!(rows) if rows.length >= 1_000
         end
       end
@@ -175,6 +190,18 @@ class RorResearchOrganizationDomainImporter
 
     def split_values(value)
       value.to_s.split(";").map(&:strip).reject(&:empty?)
+    end
+
+    def root_website_domains(value)
+      split_values(value).filter_map do |website|
+        text = website.match?(/\Ahttps?:\/\//i) ? website : "https://#{website}"
+        uri = URI.parse(text)
+        next unless uri.path.blank? || uri.path == "/"
+
+        ResearchOrganizationDomainMatcher.normalize_domain(uri.host)
+      rescue URI::InvalidURIError
+        nil
+      end.uniq
     end
 
     def connection
