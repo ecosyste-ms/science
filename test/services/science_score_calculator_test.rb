@@ -219,6 +219,27 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     assert_in_delta 0.25, result[:strength]
   end
 
+  test "check_academic_committers excludes ROR company domains" do
+    create_research_organization_domain(
+      "microsoft.com",
+      source: "ror",
+      version: "calculator-company",
+      external_id: "https://ror.org/company",
+      organization_types: ["company"],
+      strength: 0.4
+    )
+    ResearchOrganizationDomainMatcher.reset_cache!
+    @project.commits = {
+      "committers" => [
+        { "name" => "developer", "email" => "developer@microsoft.com", "count" => 10 }
+      ]
+    }
+
+    result = ScienceScoreCalculator.new(@project).check_academic_committers
+
+    assert_not result[:present]
+  end
+
   test "check_scientific_registry detects cran/bioconductor" do
     @project.packages = [{ 'ecosystem' => 'cran', 'name' => 'ggplot2' }]
     result = ScienceScoreCalculator.new(@project).check_scientific_registry
@@ -614,5 +635,33 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     assert_equal "ror", signal[:source]
     assert_equal "https://ror.org/00j54wy13", signal[:external_id]
     assert_equal 10.0, result[:score]
+  end
+
+  test "calculate retains weaker ROR company owner evidence" do
+    create_research_organization_domain(
+      "company.example",
+      source: "ror",
+      version: "calculator-company-owner",
+      external_id: "https://ror.org/company-owner",
+      organization_name: "Research Company",
+      organization_types: ["company"],
+      strength: 0.4
+    )
+    ResearchOrganizationDomainMatcher.reset_cache!
+    host = Host.create!(name: "GitHub")
+    owner = Owner.create!(
+      host: host,
+      login: "research-company",
+      kind: "organization",
+      website: "https://company.example"
+    )
+    @project.update!(host: host, owner_record: owner)
+
+    result = ScienceScoreCalculator.new(@project).calculate
+    signal = result[:breakdown][:has_institutional_owner]
+
+    assert signal[:present]
+    assert_equal 0.4, signal[:strength]
+    assert_equal 4.0, result[:score]
   end
 end

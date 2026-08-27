@@ -219,7 +219,11 @@ class ProjectSyncTest < ActiveSupport::TestCase
 
   test "find_or_create_owner creates and associates owner from owner data" do
     host = Host.create!(name: "GitHub", url: "https://github.com")
-    p = build_project(host: host, owner: { "login" => "NumPy", "name" => "NumPy" })
+    p = build_project(
+      host: host,
+      owner: { "login" => "NumPy", "name" => "NumPy" },
+      science_score: 20
+    )
     assert_difference("Owner.count", 1) { p.find_or_create_owner }
     owner = p.reload.owner_record
     assert_equal "numpy", owner.login
@@ -233,7 +237,8 @@ class ProjectSyncTest < ActiveSupport::TestCase
     project = build_project(
       host: host,
       owner_record: old_owner,
-      owner: { "login" => "new-owner", "name" => "New Owner" }
+      owner: { "login" => "new-owner", "name" => "New Owner" },
+      science_score: 20
     )
 
     project.find_or_create_owner
@@ -325,8 +330,9 @@ class ProjectSyncTest < ActiveSupport::TestCase
       fetch_packages import_mentions fetch_readme combine_keywords fetch_commits
       fetch_events fetch_issue_stats sync_issues fetch_citation_file fetch_codemeta
       fetch_zenodo_file sync_releases update_committers update_keywords_from_contributors
-      update_score update_science_score ping
+      update_score ping
     ].each { |method| project.stubs(method).returns(nil) }
+    project.stubs(:calculate_science_score_breakdown).returns(score: 20, breakdown: {})
     project.stubs(:matching_criteria?).returns(false)
 
     project.sync

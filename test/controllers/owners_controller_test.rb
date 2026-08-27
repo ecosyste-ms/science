@@ -46,14 +46,28 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
-  test "should only show projects with science_score > 0" do
+  test "should only show scientific projects" do
     host = Host.create!(name: "GitHub")
     owner = Owner.create!(host: host, login: "testuser")
-    project1 = Project.create!(url: "https://github.com/testuser/repo1", owner_record: owner, science_score: 5.0)
-    project2 = Project.create!(url: "https://github.com/testuser/repo2", owner_record: owner, science_score: 0)
+    Project.create!(
+      url: "https://github.com/testuser/below-threshold",
+      name: "below-threshold",
+      owner_record: owner,
+      science_score: 19.9
+    )
+    scientific = Project.create!(
+      url: "https://github.com/testuser/scientific",
+      name: "scientific-project",
+      owner_record: owner,
+      science_score: 20
+    )
 
     get host_owner_url(host.name, owner.login)
+
     assert_response :success
+    assert_equal [scientific], assigns(:projects)
+    assert_match "scientific-project", response.body
+    assert_no_match "below-threshold", response.body
   end
 
   test "research organizations action shows classified organizations" do

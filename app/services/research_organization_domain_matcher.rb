@@ -31,6 +31,17 @@ class ResearchOrganizationDomainMatcher
       match(domain).present?
     end
 
+    def academic_match(domain)
+      result = match(domain)
+      return if result&.fetch(:organization_types)&.include?("company")
+
+      result
+    end
+
+    def academic?(domain)
+      academic_match(domain).present?
+    end
+
     def domain_from_url(value)
       return if value.blank?
 

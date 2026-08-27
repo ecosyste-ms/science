@@ -5,7 +5,7 @@ class ScienceScoreCalculator
   SCIENTIFIC_DEPENDENCY_BONUS = 0.08
 
   def self.academic_domain?(domain)
-    ResearchOrganizationDomainMatcher.institutional?(domain)
+    ResearchOrganizationDomainMatcher.academic?(domain)
   end
 
   DOI_PATTERNS = [
@@ -484,7 +484,7 @@ class ScienceScoreCalculator
       email_domain = committer['email'].split('@').last&.downcase
       next unless email_domain
       
-      match = ResearchOrganizationDomainMatcher.match(email_domain)
+      match = ResearchOrganizationDomainMatcher.academic_match(email_domain)
       if match
         academic_committers << {
           name: committer['name'],

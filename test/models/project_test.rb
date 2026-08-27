@@ -633,7 +633,46 @@ class ProjectTest < ActiveSupport::TestCase
     assert owner.reload.hidden?
     assert_nil owner.name
     assert_equal owner, project.reload.owner_record
-    assert_equal 1, owner.projects_count
+    assert_equal 0, owner.projects_count
+  end
+
+  test "owner project count tracks the scientific threshold" do
+    host = Host.create!(name: "GitHub")
+    owner = Owner.create!(host: host, login: "science-owner")
+    project = Project.create!(
+      url: "https://github.com/science-owner/project",
+      owner_record: owner,
+      science_score: 19.9
+    )
+
+    assert_equal 0, owner.reload.projects_count
+
+    project.update!(science_score: 20)
+    assert_equal 1, owner.reload.projects_count
+
+    project.update!(science_score: 19.9)
+    assert_equal 0, owner.reload.projects_count
+  end
+
+  test "owner project count repair counts only scientific projects" do
+    host = Host.create!(name: "GitHub")
+    owner = Owner.create!(host: host, login: "repair-owner")
+    Project.create!(
+      url: "https://github.com/repair-owner/scientific",
+      owner_record: owner,
+      science_score: 20
+    )
+    Project.create!(
+      url: "https://github.com/repair-owner/below-threshold",
+      owner_record: owner,
+      science_score: 19.9
+    )
+    owner.update_column(:projects_count, 10)
+
+    changes = Project.counter_culture_fix_counts(only: :owner_record)
+
+    assert_equal 1, owner.reload.projects_count
+    assert_equal 1, changes.length
   end
 
   test "packages_sorted_ids returns cached sorted project ids" do

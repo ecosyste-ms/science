@@ -5,6 +5,8 @@ require 'stopwords'
 require 'github/markup'
 
 class Project < ApplicationRecord
+  SCIENCE_SCORE_THRESHOLD = 20
+
   include EcosystemApiClient
   include Project::Importers
   include Project::Sync
@@ -32,7 +34,9 @@ class Project < ApplicationRecord
   belongs_to :owner_record, class_name: 'Owner', foreign_key: 'owner_id', optional: true
 
   counter_culture :host, column_name: :repositories_count
-  counter_culture :owner_record, column_name: :projects_count
+  counter_culture :owner_record,
+    column_name: ->(project) { :projects_count if project.science_score.to_f >= SCIENCE_SCORE_THRESHOLD },
+    column_names: -> { { Project.scientific => :projects_count } }
 
   has_many :issues, dependent: :delete_all
   has_many :releases, dependent: :delete_all
@@ -75,7 +79,7 @@ class Project < ApplicationRecord
   
   scope :with_joss, -> { where.not(joss_metadata: nil) }
   scope :with_research_organization_owner, -> { joins(:owner_record).merge(Owner.institutional) }
-  scope :scientific, -> { where('science_score >= ?', 20) }
+  scope :scientific, -> { where('science_score >= ?', SCIENCE_SCORE_THRESHOLD) }
   scope :highly_scientific, -> { where('science_score >= ?', 75) }
   scope :should_sync, -> { where('last_synced_at IS NULL OR science_score IS NULL OR science_score > 0') }
 

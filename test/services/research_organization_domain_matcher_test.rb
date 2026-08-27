@@ -36,11 +36,12 @@ class ResearchOrganizationDomainMatcherTest < ActiveSupport::TestCase
     assert_equal 1.0, subdomain[:strength]
   end
 
-  test "retains weaker company evidence" do
+  test "retains company organizations but excludes their academic email evidence" do
     match = ResearchOrganizationDomainMatcher.match("labs.example.com")
 
     assert_equal 0.4, match[:strength]
     assert_equal ["company"], match[:organization_types]
+    assert_nil ResearchOrganizationDomainMatcher.academic_match("labs.example.com")
   end
 
   test "rejects substring matches" do
