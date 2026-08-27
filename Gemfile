@@ -33,7 +33,6 @@ gem 'groupdate'
 gem 'simple_form'
 gem 'cff'
 # gem 'tokenizers'
-gem 'redis', '< 6' # actioncable pins >= 4, < 6 at runtime
 gem 'csv'
 gem 'stemmify'
 gem 'appsignal'

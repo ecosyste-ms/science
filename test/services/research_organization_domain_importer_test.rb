@@ -15,6 +15,8 @@ class ResearchOrganizationDomainImporterTest < ActiveSupport::TestCase
   end
 
   test "manual import stores the former code domains as active rows" do
+    ResearchOrganizationDomain.where(source: "manual").delete_all
+
     result = ManualResearchOrganizationDomainImporter.sync!
 
     assert result[:imported]
@@ -62,6 +64,8 @@ class ResearchOrganizationDomainImporterTest < ActiveSupport::TestCase
   end
 
   test "refresh reclassifies owners when the first ROR download fails" do
+    ResearchOrganizationDomain.where(source: "manual").delete_all
+
     manual = ManualResearchOrganizationDomainImporter.sync!
     ManualResearchOrganizationDomainImporter.stubs(:sync!).returns(manual)
     RorResearchOrganizationDomainImporter.stubs(:sync!).raises("download failed")
