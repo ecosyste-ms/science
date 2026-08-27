@@ -42,6 +42,8 @@ class Project < ApplicationRecord
   has_many :releases, dependent: :delete_all
   has_many :project_fields, dependent: :destroy
   has_many :fields, through: :project_fields
+  has_many :project_open_alex_topics, dependent: :delete_all
+  has_many :open_alex_topics, through: :project_open_alex_topics
   has_many :mentions, dependent: :destroy
   has_many :papers, through: :mentions
   has_many :dependency_records, class_name: 'Dependency', dependent: :nullify

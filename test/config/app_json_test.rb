@@ -64,4 +64,18 @@ class AppJsonTest < ActiveSupport::TestCase
       },
     ], crons
   end
+
+  test "OpenAlex topics are refreshed daily" do
+    config = JSON.parse(Rails.root.join("app.json").read)
+    crons = config.fetch("cron").select do |cron|
+      cron.fetch("command").include?("open_alex:sync")
+    end
+
+    assert_equal [
+      {
+        "command" => "bundle exec rake open_alex:sync",
+        "schedule" => "0 5 * * *",
+      },
+    ], crons
+  end
 end

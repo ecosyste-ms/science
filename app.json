@@ -31,6 +31,10 @@
     {
       "command": "bundle exec rake research_organizations:sync",
       "schedule": "0 4 * * 1"
+    },
+    {
+      "command": "bundle exec rake open_alex:sync",
+      "schedule": "0 5 * * *"
     }
   ]
 }

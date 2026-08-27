@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_27_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_27_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -131,6 +131,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_27_170000) do
     t.index ["project_id"], name: "index_mentions_on_project_id"
   end
 
+  create_table "open_alex_topics", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.string "display_name", null: false
+    t.string "domain_id", null: false
+    t.string "domain_name", null: false
+    t.string "field_id", null: false
+    t.string "field_name", null: false
+    t.text "keywords", default: [], null: false, array: true
+    t.string "openalex_id", null: false
+    t.date "source_updated_at"
+    t.string "subfield_id", null: false
+    t.string "subfield_name", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_open_alex_topics_on_active"
+    t.index ["domain_id"], name: "index_open_alex_topics_on_domain_id"
+    t.index ["field_id"], name: "index_open_alex_topics_on_field_id"
+    t.index ["openalex_id"], name: "index_open_alex_topics_on_openalex_id", unique: true
+    t.index ["subfield_id"], name: "index_open_alex_topics_on_subfield_id"
+  end
+
   create_table "owners", force: :cascade do |t|
     t.string "company"
     t.datetime "created_at", null: false
@@ -190,6 +212,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_27_170000) do
     t.index ["project_id"], name: "index_project_fields_on_project_id"
   end
 
+  create_table "project_open_alex_topics", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "open_alex_topic_id", null: false
+    t.string "openalex_work_id", null: false
+    t.boolean "primary_topic", default: false, null: false
+    t.bigint "project_id", null: false
+    t.float "score", null: false
+    t.string "source", null: false
+    t.string "source_identifier", null: false
+    t.datetime "updated_at", null: false
+    t.index ["open_alex_topic_id", "score"], name: "index_project_open_alex_topics_on_topic_and_score"
+    t.index ["open_alex_topic_id"], name: "index_project_open_alex_topics_on_open_alex_topic_id"
+    t.index ["openalex_work_id"], name: "index_project_open_alex_topics_on_openalex_work_id"
+    t.index ["project_id", "open_alex_topic_id", "source", "source_identifier"], name: "index_project_open_alex_topics_on_assignment", unique: true
+    t.index ["project_id", "primary_topic"], name: "index_project_open_alex_topics_on_primary", where: "(primary_topic = true)"
+    t.index ["project_id"], name: "index_project_open_alex_topics_on_project_id"
+  end
+
   create_table "projects", force: :cascade do |t|
     t.jsonb "brief"
     t.string "category"
@@ -229,6 +269,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_27_170000) do
     t.integer "vote_score", default: 0
     t.json "works", default: {}
     t.text "zenodo"
+    t.index "((joss_metadata ->> 'doi'::text))", name: "index_projects_on_joss_doi", where: "(joss_metadata IS NOT NULL)"
     t.index ["category", "sub_category"], name: "index_projects_on_category_and_sub_category", where: "((category IS NOT NULL) AND (sub_category IS NOT NULL))"
     t.index ["collection_id"], name: "index_projects_on_collection_id"
     t.index ["host_id"], name: "index_projects_on_host_id"
@@ -284,4 +325,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_27_170000) do
 
   add_foreign_key "project_fields", "fields"
   add_foreign_key "project_fields", "projects"
+  add_foreign_key "project_open_alex_topics", "open_alex_topics"
+  add_foreign_key "project_open_alex_topics", "projects"
 end
