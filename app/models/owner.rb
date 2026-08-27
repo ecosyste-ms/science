@@ -12,6 +12,16 @@ class Owner < ApplicationRecord
   scope :visible, -> { where(hidden: [false, nil]) }
   scope :organizations, -> { where(kind: 'organization') }
   scope :institutional, -> { organizations.visible.where.not(institutional_domain: nil) }
+  scope :ror_matched, -> {
+    institutional.where(
+      institutional_domain: ResearchOrganizationDomain.active.where(source: 'ror').select(:domain)
+    )
+  }
+  scope :on_github, -> { joins(:host).where('LOWER(hosts.name) = ?', 'github') }
+  scope :repository_check_due, -> {
+    where(repositories_checked_at: nil)
+      .or(where('repositories_checked_at < ?', 1.day.ago))
+  }
 
   before_validation :classify_research_organization_domain,
     if: -> { new_record? || will_save_change_to_website? || will_save_change_to_kind? }
@@ -28,6 +38,23 @@ class Owner < ApplicationRecord
       progress&.call("Reclassified #{counts[:processed]} owners") if (counts[:processed] % 5_000).zero?
     end
     counts
+  end
+
+  def self.check_ror_repositories(limit: 25)
+    owners = ror_matched
+      .on_github
+      .repository_check_due
+      .order(Arel.sql('repositories_checked_at ASC NULLS FIRST'))
+      .limit(limit)
+
+    owners.each(&:check_repositories)
+    owners.size
+  end
+
+  def check_repositories
+    stats = Project.import_from_github_owner(login)
+    update_column(:repositories_checked_at, Time.current)
+    stats
   end
 
   def institutional?

@@ -28,6 +28,14 @@ class ProjectsRakeTest < ActiveSupport::TestCase
     assert_includes output, "cohort=joss"
   end
 
+  test "fetch_brief defaults to a batch of 50" do
+    51.times { |index| create_project("default-limit-#{index}") }
+
+    capture_io { Rake::Task["projects:fetch_brief"].execute }
+
+    assert_equal 50, FetchBriefWorker.jobs.size
+  end
+
   test "fetch_brief rejects an invalid cohort" do
     ENV["COHORT"] = "unknown"
 

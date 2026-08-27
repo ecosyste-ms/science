@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_25_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_27_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -148,6 +148,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_25_130000) do
     t.json "metadata", default: {}
     t.string "name"
     t.integer "projects_count", default: 0, null: false
+    t.datetime "repositories_checked_at"
     t.integer "repositories_count", default: 0
     t.bigint "total_stars"
     t.string "twitter"
@@ -158,6 +159,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_25_130000) do
     t.index ["host_id", "uuid"], name: "index_owners_on_host_id_uuid", unique: true
     t.index ["institutional_domain"], name: "index_owners_on_institutional_domain", where: "(institutional_domain IS NOT NULL)"
     t.index ["last_synced_at"], name: "index_owners_on_last_synced_at"
+    t.index ["repositories_checked_at"], name: "index_owners_on_repositories_checked_at"
   end
 
   create_table "papers", force: :cascade do |t|

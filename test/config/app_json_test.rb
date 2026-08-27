@@ -1,6 +1,14 @@
 require "test_helper"
 
 class AppJsonTest < ActiveSupport::TestCase
+  test "cron commands do not set environment variables" do
+    config = JSON.parse(Rails.root.join("app.json").read)
+
+    config.fetch("cron").each do |cron|
+      assert_no_match(/\b[A-Z][A-Z0-9_]*=/, cron.fetch("command"))
+    end
+  end
+
   test "Brief scans are scheduled every ten minutes in bounded batches" do
     config = JSON.parse(Rails.root.join("app.json").read)
     brief_crons = config.fetch("cron").select do |cron|
@@ -9,7 +17,7 @@ class AppJsonTest < ActiveSupport::TestCase
 
     assert_equal [
       {
-        "command" => "bundle exec rake projects:fetch_brief LIMIT=50",
+        "command" => "bundle exec rake projects:fetch_brief",
         "schedule" => "*/10 * * * *",
       },
     ], brief_crons
@@ -39,6 +47,20 @@ class AppJsonTest < ActiveSupport::TestCase
       {
         "command" => "bundle exec rake homepage:refresh",
         "schedule" => "5 * * * *",
+      },
+    ], crons
+  end
+
+  test "ROR owner repositories are checked hourly in bounded batches" do
+    config = JSON.parse(Rails.root.join("app.json").read)
+    crons = config.fetch("cron").select do |cron|
+      cron.fetch("command").include?("owners:check_ror_repositories")
+    end
+
+    assert_equal [
+      {
+        "command" => "bundle exec rake owners:check_ror_repositories",
+        "schedule" => "15 * * * *",
       },
     ], crons
   end
