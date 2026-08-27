@@ -4,6 +4,7 @@ module Project::Importers
   class_methods do
     def import_from_csv(url)
       conn = Faraday.new(url: url) do |faraday|
+        faraday.request :instrumentation
         faraday.response :follow_redirects
         faraday.adapter Faraday.default_adapter
       end
@@ -227,6 +228,7 @@ module Project::Importers
         url = "https://packages.ecosyste.ms/api/v1/keywords/#{CGI.escape(keyword)}?page=#{page}"
 
         conn = Faraday.new(url: url) do |faraday|
+          faraday.request :instrumentation
           faraday.response :follow_redirects
           faraday.request :retry, max: 3, interval: 0.5, interval_randomness: 0.5, backoff_factor: 2
           faraday.adapter Faraday.default_adapter
@@ -358,6 +360,7 @@ module Project::Importers
         url = "https://ost.ecosyste.ms/api/v1/projects?reviewed=true&page=#{page}"
         conn = Faraday.new(url: url) do |faraday|
           faraday.headers['User-Agent'] = 'science.ecosyste.ms'
+          faraday.request :instrumentation
           faraday.response :follow_redirects
           faraday.request :retry, max: 3, interval: 1, backoff_factor: 2
           faraday.adapter Faraday.default_adapter
@@ -414,6 +417,7 @@ module Project::Importers
         url = "https://repos.ecosyste.ms/api/v1/hosts/GitHub/owners/#{owner}/repositories?page=#{page}"
 
         conn = Faraday.new(url: url) do |faraday|
+          faraday.request :instrumentation
           faraday.response :follow_redirects
           faraday.request :retry, max: 3, interval: 0.5, interval_randomness: 0.5, backoff_factor: 2
           faraday.adapter Faraday.default_adapter
@@ -477,6 +481,7 @@ module Project::Importers
         url = "https://papers.ecosyste.ms/api/v1/projects?page=#{page}"
 
         conn = Faraday.new(url: url) do |faraday|
+          faraday.request :instrumentation
           faraday.response :follow_redirects
           faraday.request :retry, max: 3, interval: 0.5, interval_randomness: 0.5, backoff_factor: 2
           faraday.adapter Faraday.default_adapter
@@ -584,6 +589,7 @@ module Project::Importers
         url = "https://repos.ecosyste.ms/api/v1/hosts/GitHub/topics/#{topic}?page=#{page}"
 
         conn = Faraday.new(url: url) do |faraday|
+          faraday.request :instrumentation
           faraday.response :follow_redirects
           faraday.request :retry, max: 3, interval: 0.5, interval_randomness: 0.5, backoff_factor: 2
           faraday.adapter Faraday.default_adapter
@@ -648,6 +654,7 @@ module Project::Importers
         url = "https://packages.ecosyste.ms/api/v1/registries/#{registry}/packages?page=#{page}"
 
         conn = Faraday.new(url: url) do |faraday|
+          faraday.request :instrumentation
           faraday.response :follow_redirects
           faraday.request :retry, max: 3, interval: 0.5, interval_randomness: 0.5, backoff_factor: 2
           faraday.adapter Faraday.default_adapter
@@ -712,6 +719,7 @@ module Project::Importers
         url = "https://joss.theoj.org/papers/published.json?page=#{page}"
 
         conn = Faraday.new(url: url) do |faraday|
+          faraday.request :instrumentation
           faraday.response :follow_redirects
           faraday.request :retry, max: 3, interval: 0.5, interval_randomness: 0.5, backoff_factor: 2
           faraday.adapter Faraday.default_adapter

@@ -181,6 +181,7 @@ class RorResearchOrganizationDomainImporter
       Faraday.new do |faraday|
         faraday.headers["User-Agent"] = "science.ecosyste.ms ROR importer"
         faraday.headers["Authorization"] = "Bearer #{ENV.fetch('ZENODO_API_KEY')}" if ENV["ZENODO_API_KEY"].present?
+        faraday.request :instrumentation
         faraday.response :follow_redirects
         faraday.adapter Faraday.default_adapter
       end

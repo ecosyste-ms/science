@@ -3,6 +3,9 @@ require 'open3'
 module Project::Sync
   extend ActiveSupport::Concern
 
+  SLOW_STAGE_SECONDS = 5.0
+  SLOW_SYNC_SECONDS = 30.0
+
   class_methods do
     def sync_least_recently_synced
       Project.should_sync.where(last_synced_at: nil).or(Project.should_sync.where("last_synced_at < ?", 1.day.ago)).order('last_synced_at asc nulls first').limit(500).each do |project|
@@ -34,35 +37,72 @@ module Project::Sync
   end
 
   def sync
+    sync_started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    stage_durations = {}
+
     return if hidden_owner?
 
-    check_url
+    run_sync_stage(stage_durations, :check_url) { check_url }
     return unless self.persisted?
-    fetch_repository
-    find_or_create_host
-    fetch_owner
-    find_or_create_owner
+    run_sync_stage(stage_durations, :fetch_repository) { fetch_repository }
+    run_sync_stage(stage_durations, :find_or_create_host) { find_or_create_host }
+    run_sync_stage(stage_durations, :fetch_owner) { fetch_owner }
+    run_sync_stage(stage_durations, :find_or_create_owner) { find_or_create_owner }
     return if hidden_owner?
 
-    fetch_dependencies
-    fetch_packages
-    import_mentions
-    fetch_readme
-    combine_keywords
-    fetch_commits
-    fetch_events
-    fetch_issue_stats
-    sync_issues
-    fetch_citation_file
-    fetch_codemeta
-    fetch_zenodo_file
-    sync_releases
-    update_committers
-    update_keywords_from_contributors
-    update(last_synced_at: Time.now, matching_criteria: matching_criteria?)
-    update_score
-    update_science_score
-    ping
+    run_sync_stage(stage_durations, :fetch_dependencies) { fetch_dependencies }
+    run_sync_stage(stage_durations, :fetch_packages) { fetch_packages }
+    run_sync_stage(stage_durations, :import_mentions) { import_mentions }
+    run_sync_stage(stage_durations, :fetch_readme) { fetch_readme }
+    run_sync_stage(stage_durations, :combine_keywords) { combine_keywords }
+    run_sync_stage(stage_durations, :fetch_commits) { fetch_commits }
+    run_sync_stage(stage_durations, :fetch_events) { fetch_events }
+    run_sync_stage(stage_durations, :fetch_issue_stats) { fetch_issue_stats }
+    run_sync_stage(stage_durations, :sync_issues) { sync_issues }
+    run_sync_stage(stage_durations, :fetch_citation_file) { fetch_citation_file }
+    run_sync_stage(stage_durations, :fetch_codemeta) { fetch_codemeta }
+    run_sync_stage(stage_durations, :fetch_zenodo_file) { fetch_zenodo_file }
+    run_sync_stage(stage_durations, :sync_releases) { sync_releases }
+    run_sync_stage(stage_durations, :update_committers) { update_committers }
+    run_sync_stage(stage_durations, :update_keywords_from_contributors) do
+      update_keywords_from_contributors
+    end
+    run_sync_stage(stage_durations, :finalize) do
+      update(last_synced_at: Time.now, matching_criteria: matching_criteria?)
+    end
+    run_sync_stage(stage_durations, :update_score) { update_score }
+    run_sync_stage(stage_durations, :update_science_score) { update_science_score }
+    run_sync_stage(stage_durations, :ping) { ping }
+  ensure
+    if sync_started_at
+      total_duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - sync_started_at
+      log_sync_timings(stage_durations, total_duration)
+    end
+  end
+
+  def run_sync_stage(durations, stage)
+    started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    yield
+  ensure
+    durations[stage] = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
+  end
+
+  def log_sync_timings(durations, total_duration)
+    rounded_stages = durations.transform_values { |duration| duration.round(3) }
+    slow_stages = durations
+      .select { |_, duration| duration >= SLOW_STAGE_SECONDS }
+      .transform_values { |duration| duration.round(3) }
+    return if total_duration < SLOW_SYNC_SECONDS && slow_stages.empty?
+
+    payload = {
+      event: "project_sync_timing",
+      project_id: id,
+      url: url,
+      total_seconds: total_duration.round(3),
+      slow_stages: slow_stages
+    }
+    payload[:stages] = rounded_stages if total_duration >= SLOW_SYNC_SECONDS
+    Rails.logger.info(payload.to_json)
   end
 
   def sync_async
@@ -73,10 +113,7 @@ module Project::Sync
   end
 
   def check_url
-    conn = Faraday.new(url: url) do |faraday|
-      faraday.response :follow_redirects
-      faraday.adapter Faraday.default_adapter
-    end
+    conn = http_client(url)
 
     response = conn.get
     return unless response.success?
@@ -102,7 +139,7 @@ module Project::Sync
 
   def ping
     ping_urls.each do |url|
-      Faraday.get(url, nil, {'User-Agent' => 'science.ecosyste.ms'}) rescue nil
+      ecosystem_http_client(url).get rescue nil
     end
   end
 
@@ -360,11 +397,7 @@ module Project::Sync
 
   def load_readme
     return unless download_url.present?
-    conn = Faraday.new(url: archive_url(readme_file_name)) do |faraday|
-      faraday.response :follow_redirects
-      faraday.adapter Faraday.default_adapter
-      faraday.headers['User-Agent'] = 'explore.market.dev'
-    end
+    conn = ecosystem_http_client(archive_url(readme_file_name))
     response = conn.get
     return unless response.success?
     json = JSON.parse(response.body)
@@ -374,11 +407,7 @@ module Project::Sync
   def load_codemeta
     return unless download_url.present?
     return unless codemeta_file_name.present?
-    conn = Faraday.new(url: archive_url(codemeta_file_name)) do |faraday|
-      faraday.response :follow_redirects
-      faraday.adapter Faraday.default_adapter
-      faraday.headers['User-Agent'] = 'explore.market.dev'
-    end
+    conn = ecosystem_http_client(archive_url(codemeta_file_name))
     response = conn.get
     return unless response.success?
     json = JSON.parse(response.body)
@@ -414,11 +443,7 @@ module Project::Sync
 
     return unless url.present?
 
-    conn = Faraday.new(url: url) do |faraday|
-      faraday.response :follow_redirects
-      faraday.request :retry, max: 3, interval: 0.5, interval_randomness: 0.5, backoff_factor: 2
-      faraday.adapter Faraday.default_adapter
-    end
+    conn = http_client(url, retry_requests: true)
 
     response = conn.get
     return unless response.success?
@@ -433,11 +458,7 @@ module Project::Sync
 
     return unless url.present?
 
-    conn = Faraday.new(url: url) do |faraday|
-      faraday.response :follow_redirects
-      faraday.request :retry, max: 3, interval: 0.5, interval_randomness: 0.5, backoff_factor: 2
-      faraday.adapter Faraday.default_adapter
-    end
+    conn = http_client(url, retry_requests: true)
 
     response = conn.get
     return unless response.success?
@@ -606,10 +627,7 @@ module Project::Sync
     works = {}
     readme_doi_urls.each do |url|
       openalex_url = "https://api.openalex.org/works/#{url}"
-      conn = Faraday.new(url: openalex_url) do |faraday|
-        faraday.response :follow_redirects
-        faraday.adapter Faraday.default_adapter
-      end
+      conn = http_client(openalex_url)
       response = conn.get
       if response.success?
         works[url] = JSON.parse(response.body)

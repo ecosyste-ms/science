@@ -302,10 +302,31 @@ class ProjectSyncTest < ActiveSupport::TestCase
     p.ping_urls.each { |u| assert_requested :get, u }
   end
 
+  test "http clients limit connection and request time" do
+    p = build_project
+
+    [p.http_client("https://github.com"), p.ecosystem_http_client("https://repos.ecosyste.ms")].each do |client|
+      assert_equal 3, client.options.open_timeout
+      assert_equal 10, client.options.timeout
+    end
+  end
+
+  test "http client emits upstream metrics" do
+    p = build_project
+    stub_request(:get, "https://repos.example.org/project").to_return(status: 404)
+    Appsignal.expects(:increment_counter)
+      .with("upstream_http_requests", 1, host: "repos.example.org", status: "404")
+    Appsignal.expects(:add_distribution_value)
+      .with("upstream_http_duration", anything, host: "repos.example.org")
+
+    p.http_client("https://repos.example.org/project").get
+  end
+
   # ---- sync orchestration ----
 
-  test "sync calls all fetchers and sets last_synced_at" do
+  test "worker calls all sync stages and sets last_synced_at" do
     p = build_project
+    Project.expects(:find_by_id).with(p.id).returns(p)
     %i[
       check_url fetch_repository find_or_create_host fetch_owner find_or_create_owner
       fetch_dependencies fetch_packages import_mentions fetch_readme combine_keywords
@@ -315,8 +336,32 @@ class ProjectSyncTest < ActiveSupport::TestCase
     ].each { |m| p.expects(m).once }
 
     assert_nil p.last_synced_at
-    p.sync
+    SyncProjectWorker.new.perform(p.id)
     assert_not_nil p.reload.last_synced_at
+  end
+
+  test "slow sync timings include each stage" do
+    p = build_project
+    Rails.logger.expects(:info).with do |message|
+      payload = JSON.parse(message)
+      payload == {
+        "event" => "project_sync_timing",
+        "project_id" => p.id,
+        "url" => p.url,
+        "total_seconds" => 31.235,
+        "slow_stages" => { "sync_issues" => 6.789 },
+        "stages" => { "fetch_repository" => 1.235, "sync_issues" => 6.789 }
+      }
+    end
+
+    p.log_sync_timings({ fetch_repository: 1.2345, sync_issues: 6.7894 }, 31.2346)
+  end
+
+  test "fast sync timings are not logged" do
+    p = build_project
+    Rails.logger.expects(:info).never
+
+    p.log_sync_timings({ fetch_repository: 4.9996 }, 5.0)
   end
 
   test "sync creates an owner and increments its project count" do
