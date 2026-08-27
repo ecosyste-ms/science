@@ -135,6 +135,30 @@ class JossVocabularyAnalyzerTest < ActiveSupport::TestCase
     assert_equal 15.0, analysis[:score]
   end
 
+  test "analyze_project ignores generic documentation text and RST image directives" do
+    create_model(
+      "image_target" => 3.0,
+      "readthedocs" => 3.0,
+      "solver_documentation" => 3.0,
+      "julia_versions" => 3.0,
+      "plasma" => 2.0
+    )
+    project = Project.new(
+      url: "https://github.com/test/documentation",
+      readme: <<~README
+        .. image:: https://readthedocs.org/projects/example/badge/
+           :target: https://example.readthedocs.io/
+
+        Solver documentation supports Julia versions. Plasma.
+      README
+    )
+
+    analysis = JossVocabularyAnalyzer.analyze_project(project)
+
+    assert_equal ["plasma"], analysis[:terms]
+    assert_equal 15.0, analysis[:score]
+  end
+
   test "worker memoizes the parsed model" do
     model = create_model("simulation" => 2.0)
     JossVocabularyAnalyzer.reset_cache!

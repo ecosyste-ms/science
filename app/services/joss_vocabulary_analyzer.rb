@@ -2,6 +2,7 @@ class JossVocabularyAnalyzer
   TEXT_LIMIT = 5_000
   LENGTH_BOUNDS = [2_500, 4_000, 6_500, 10_500].freeze
   LABEL_LEAK_TERMS = %w[doi joss theoj].freeze
+  GENERIC_DOCUMENTATION_WORD = /\A(?:docs?|documentation|readthedocs|versions?)\z/.freeze
   SKIPPED_HEADINGS = /\A(?:acknowledg|citat|cite\b|citing\b|how to cit|community guidelines?\b|contribut|documentation\b|docs?\b|install|licen[cs]e?\b|references?\b)/i
   JOSS_REFERENCE = /10\.21105|joss\.theoj|journal of open source software/i
   TEMPLATE_LABEL = /statement of need|community guidelines?/i
@@ -218,7 +219,7 @@ class JossVocabularyAnalyzer
       pairs = words.each_cons(2).filter_map do |left, right|
         "#{left}_#{right}" unless LABEL_LEAK_TERMS.include?(left) || LABEL_LEAK_TERMS.include?(right)
       end
-      (terms + pairs).uniq
+      (terms + pairs).reject { |term| generic_documentation_term?(term) }.uniq
     end
 
     def sanitize_readme(readme)
@@ -232,6 +233,8 @@ class JossVocabularyAnalyzer
         next if in_fence
         next if line.match?(/\A(?: {4}|\t)/)
         next if line.match?(/!\[[^\]]*\]\([^)]*\)|<img\b|shields\.io/i)
+        next if line.match?(/\A\s*\.\.\s+(?:image|figure)::/i)
+        next if line.match?(/\A\s+:[\w-]+:/)
         next if line.match?(/\A\s*(?:[-*+]\s*)?@\p{L}+\s*\{/u)
         next if line.match?(JOSS_REFERENCE)
         line
@@ -257,6 +260,10 @@ class JossVocabularyAnalyzer
       body.join.gsub(/\[([^\]]+)\]\([^)]*\)/, '\\1')
         .gsub(%r{https?://\S+}, " ")
         .gsub(/<[^>]+>/, " ")
+    end
+
+    def generic_documentation_term?(term)
+      term.split("_").any? { |word| word.match?(GENERIC_DOCUMENTATION_WORD) }
     end
 
     def markdown_heading(lines, index)
