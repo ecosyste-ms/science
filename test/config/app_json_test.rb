@@ -28,4 +28,18 @@ class AppJsonTest < ActiveSupport::TestCase
       },
     ], crons
   end
+
+  test "homepage stats are refreshed hourly" do
+    config = JSON.parse(Rails.root.join("app.json").read)
+    crons = config.fetch("cron").select do |cron|
+      cron.fetch("command").include?("homepage:refresh")
+    end
+
+    assert_equal [
+      {
+        "command" => "bundle exec rake homepage:refresh",
+        "schedule" => "5 * * * *",
+      },
+    ], crons
+  end
 end
