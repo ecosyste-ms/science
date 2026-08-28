@@ -58,7 +58,7 @@ class OpenAlexRakeTest < ActiveSupport::TestCase
     assert_empty project.project_fields.reload
   end
 
-  test "sync imports JOSS, README, and metadata DOI labels through the rake entrypoint" do
+  test "sync imports JOSS, README, arXiv, and metadata labels through the rake entrypoint" do
     joss_project = Project.create!(
       url: "https://github.com/test/open-alex-rake",
       joss_metadata: { "doi" => "10.21105/joss.00001" }
@@ -81,6 +81,16 @@ class OpenAlexRakeTest < ActiveSupport::TestCase
       codemeta: {
         "referencePublication" => "https://doi.org/10.1000/metadata.1",
       }.to_json,
+      science_score: Project::SCIENCE_SCORE_THRESHOLD
+    )
+    arxiv_project = Project.create!(
+      url: "https://github.com/test/open-alex-arxiv-rake",
+      readme: "Paper: https://arxiv.org/abs/2202.01037v2?utm_source=readme",
+      science_score: Project::SCIENCE_SCORE_THRESHOLD
+    )
+    arxiv_list_project = Project.create!(
+      url: "https://github.com/test/open-alex-arxiv-list-rake",
+      readme: 11.times.map { |index| "arXiv:2501.#{format('%05d', index)}" }.join("\n"),
       science_score: Project::SCIENCE_SCORE_THRESHOLD
     )
     topics = 4_000.times.map { |index| topic_data(index) }
@@ -144,6 +154,23 @@ class OpenAlexRakeTest < ActiveSupport::TestCase
           }],
         }.to_json
       )
+    stub_request(:get, "https://api.openalex.org/works")
+      .with(query: hash_including(
+        "api_key" => "test-key",
+        "filter" => "doi:10.48550/arxiv.2202.01037"
+      ))
+      .to_return(
+        status: 200,
+        headers: { "Content-Type" => "application/json" },
+        body: {
+          "results" => [{
+            "id" => "https://openalex.org/W-arxiv",
+            "doi" => "https://doi.org/10.48550/arxiv.2202.01037",
+            "primary_topic" => primary.slice("id").merge("score" => 0.91),
+            "topics" => [primary.slice("id").merge("score" => 0.91)],
+          }],
+        }.to_json
+      )
 
     output, = capture_io { Rake::Task["open_alex:sync"].execute }
 
@@ -165,9 +192,15 @@ class OpenAlexRakeTest < ActiveSupport::TestCase
       "citation_bib.doi",
       "codemeta.referencePublication",
     ], metadata_assignments.pluck(:source).sort
+    arxiv_assignment = arxiv_project.project_open_alex_topics.reload.sole
+    assert_equal primary.fetch("id"), arxiv_assignment.open_alex_topic.openalex_id
+    assert_equal "readme_arxiv", arxiv_assignment.source
+    assert_equal "2202.01037", arxiv_assignment.source_identifier
+    assert_empty arxiv_list_project.project_open_alex_topics.reload
     assert_includes output, "OpenAlex taxonomy:"
     assert_includes output, "OpenAlex JOSS topics:"
     assert_includes output, "OpenAlex README DOI topics:"
+    assert_includes output, "OpenAlex README arXiv topics:"
     assert_includes output, "OpenAlex metadata DOI topics:"
   end
 

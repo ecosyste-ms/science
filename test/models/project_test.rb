@@ -131,6 +131,53 @@ class ProjectTest < ActiveSupport::TestCase
     ], project.dois
   end
 
+  test "extracts unversioned arXiv IDs from explicit references" do
+    project = Project.new(readme: <<~README)
+      https://arxiv.org/abs/1501.00001v2?utm_source=readme
+      https://export.arxiv.org/pdf/math.GT/0309136v3.pdf#page=2
+      arXiv:0706.0001v2
+      A DOI ending in similar digits: 10.1049/el.2013.3006
+      An unrelated decimal: 2202.01037
+    README
+
+    assert_equal [
+      "1501.00001",
+      "math.GT/0309136",
+      "0706.0001",
+    ], project.arxiv_ids
+    assert_equal "10.48550/arXiv.math.GT/0309136",
+      Project.arxiv_doi("math.GT/0309136v3")
+  end
+
+  test "extracts checksum-valid ORCIDs from project metadata" do
+    project = Project.new(
+      readme: "https://orcid.org/0000-0002-0088-0058",
+      citation_file: "orcid: 0000-0002-0488-8591",
+      codemeta: '{"id":"0000-0003-0166-248x"}',
+      zenodo: '{"orcid":"0000-0002-0088-005X"}',
+      joss_metadata: { "author_orcid" => "0000-0002-0088-0058" }
+    )
+
+    assert_equal [
+      "0000-0002-0088-0058",
+      "0000-0002-0488-8591",
+      "0000-0003-0166-248X",
+    ], project.orcids
+  end
+
+  test "combines README DOIs and arXiv IDs as unique OpenAlex DOIs" do
+    project = Project.new(readme: <<~README)
+      DOI: 10.1000/PAPER.1
+      arXiv:2202.01037v2
+      https://doi.org/10.48550/arXiv.2202.01037
+    README
+
+    assert_equal [
+      "10.1000/paper.1",
+      "10.48550/arxiv.2202.01037",
+    ], project.open_alex_readme_dois
+  end
+
   test "github_pages_to_repo_url" do
     project = Project.new
     repo_url = project.github_pages_to_repo_url('https://foo.github.io/bar')

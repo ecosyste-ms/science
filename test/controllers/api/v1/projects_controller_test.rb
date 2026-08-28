@@ -92,4 +92,25 @@ class Api::V1::ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_nil json_response['bibtex_url']
     assert_nil json_response['apalike_url']
   end
+
+  test "GET show includes arXiv IDs and ORCIDs" do
+    project = Project.create!(
+      url: 'https://github.com/test/with-identifiers',
+      readme: <<~README,
+        Paper: https://arxiv.org/abs/2202.01037v2?utm_source=readme
+        Author: https://orcid.org/0000-0002-0088-0058
+      README
+      codemeta: '{"author":{"@id":"https://orcid.org/0000-0003-0166-248x"}}'
+    )
+
+    get api_v1_project_url(project)
+
+    assert_response :success
+    json_response = JSON.parse(response.body)
+    assert_equal ['2202.01037'], json_response['arxiv_ids']
+    assert_equal [
+      '0000-0002-0088-0058',
+      '0000-0003-0166-248X',
+    ], json_response['orcids']
+  end
 end

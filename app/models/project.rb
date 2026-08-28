@@ -17,6 +17,14 @@ class Project < ApplicationRecord
     ((?:https?://)?(?:www\.|dx\.)?doi\.org/[^\s?#]+)[?#]\S+
   }ix
   DOI_HTML_TAG_PATTERN = %r{</?[a-z][^>]*>}i
+  ARXIV_REFERENCE_PATTERN = %r{
+    (?:
+      arxiv:\s*|
+      https?://(?:www\.|export\.)?arxiv\.org/(?:abs|pdf)/
+    )
+    [^\s?#<>"')\]]+
+  }ix
+  ARXIV_VERSION_PATTERN = /v\d+\z/i
 
   include EcosystemApiClient
   include Project::Importers
@@ -132,6 +140,23 @@ class Project < ApplicationRecord
     Identifiers::DOI.extract(extractable_text)
       .reject { |doi| doi.match?(DOI_IMAGE_SUFFIX_PATTERN) }
       .uniq
+  end
+
+  def self.extract_arxiv_ids(value)
+    value.to_s.scan(ARXIV_REFERENCE_PATTERN).flat_map do |reference|
+      normalized_reference = reference
+        .sub(/[.,;:]+\z/, "")
+        .sub(/\.pdf\z/i, "")
+      Identifiers::ArxivId.extract(normalized_reference)
+    end.map { |identifier| identifier.sub(ARXIV_VERSION_PATTERN, "") }.uniq
+  end
+
+  def self.arxiv_doi(identifier)
+    "10.48550/arXiv.#{identifier.sub(ARXIV_VERSION_PATTERN, "")}"
+  end
+
+  def self.extract_orcids(*values)
+    Identifiers::ORCID.extract(values.compact.join("\n")).uniq
   end
 
   def self.owner_details_from_url(url)
@@ -669,6 +694,26 @@ class Project < ApplicationRecord
 
   def dois
     self.class.extract_dois(readme)
+  end
+
+  def arxiv_ids
+    self.class.extract_arxiv_ids(readme)
+  end
+
+  def orcids
+    self.class.extract_orcids(
+      readme,
+      citation_file,
+      codemeta,
+      zenodo,
+      joss_metadata&.to_json
+    )
+  end
+
+  def open_alex_readme_dois
+    (
+      dois + arxiv_ids.map { |identifier| self.class.arxiv_doi(identifier) }
+    ).map(&:downcase).uniq
   end
 
   

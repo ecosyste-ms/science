@@ -5,6 +5,7 @@ class OpenAlexValidationReport
   SOURCE_PRIORITY = {
     OpenAlexProjectTopicImporter::JOSS_SOURCE => 0,
     OpenAlexProjectTopicImporter::README_DOI_SOURCE => 1,
+    OpenAlexProjectTopicImporter::README_ARXIV_SOURCE => 2,
   }.freeze
   SCORE_BANDS = [
     ["<0.50", 0.5],

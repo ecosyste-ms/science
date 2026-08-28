@@ -77,6 +77,66 @@ class OpenAlexProjectTopicImporterTest < ActiveSupport::TestCase
     assert assignments.none? { |assignment| assignment.source_identifier != "10.1000/paper.1" }
   end
 
+  test "imports topics for arXiv references through their canonical DOI" do
+    project = Project.create!(
+      url: "https://github.com/test/arxiv-paper",
+      readme: "Paper: https://arxiv.org/abs/2202.01037v2?utm_source=readme"
+    )
+    topic = create_topic("https://openalex.org/T-arxiv")
+    client = OpenAlexApiClient.new(api_key: "test-key")
+    client.stubs(:works_by_dois).with(["10.48550/arxiv.2202.01037"]).returns([{
+      "id" => "https://openalex.org/W-arxiv",
+      "doi" => "https://doi.org/10.48550/arxiv.2202.01037",
+      "primary_topic" => { "id" => topic.openalex_id, "score" => 0.93 },
+      "topics" => [{ "id" => topic.openalex_id, "score" => 0.93 }],
+    }])
+
+    result = sync(project, client, source: "readme_arxiv")
+
+    assert_equal 1, result[:dois]
+    assert_equal 1, result[:matched]
+    assignment = project.project_open_alex_topics.reload.sole
+    assert_equal "readme_arxiv", assignment.source
+    assert_equal "2202.01037", assignment.source_identifier
+    assert_equal "https://openalex.org/W-arxiv", assignment.openalex_work_id
+  end
+
+  test "skips README sources and clears their assignments when references exceed the limit" do
+    arxiv_references = 11.times.map do |index|
+      "arXiv:2501.#{format('%05d', index)}"
+    end
+    project = Project.create!(
+      url: "https://github.com/test/arxiv-list",
+      readme: (["DOI: 10.1000/project-paper"] + arxiv_references).join("\n")
+    )
+    doi_assignment = ProjectOpenAlexTopic.create!(
+      project: project,
+      open_alex_topic: create_topic("https://openalex.org/T-list-doi"),
+      score: 0.8,
+      source: "readme_doi",
+      source_identifier: "10.1000/project-paper",
+      openalex_work_id: "https://openalex.org/W-list-doi"
+    )
+    arxiv_assignment = ProjectOpenAlexTopic.create!(
+      project: project,
+      open_alex_topic: create_topic("https://openalex.org/T-list-arxiv"),
+      score: 0.8,
+      source: "readme_arxiv",
+      source_identifier: "2501.00000",
+      openalex_work_id: "https://openalex.org/W-list-arxiv"
+    )
+    client = OpenAlexApiClient.new(api_key: "test-key")
+    client.expects(:works_by_dois).never
+
+    doi_result = sync(project, client, source: "readme_doi")
+    arxiv_result = sync(project, client, source: "readme_arxiv")
+
+    assert_equal 1, doi_result[:skipped_many_identifiers]
+    assert_equal 1, arxiv_result[:skipped_many_identifiers]
+    assert_not ProjectOpenAlexTopic.exists?(doi_assignment.id)
+    assert_not ProjectOpenAlexTopic.exists?(arxiv_assignment.id)
+  end
+
   test "keeps prior assignments when OpenAlex has no matching work" do
     project = Project.create!(
       url: "https://github.com/test/missing-joss-work",

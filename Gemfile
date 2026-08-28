@@ -32,7 +32,7 @@ gem 'sidekiq-status'
 gem 'groupdate'
 gem 'simple_form'
 gem 'cff'
-gem 'identifiers', '~> 0.15', require: 'identifiers/doi'
+gem 'identifiers', '~> 0.15', require: %w[identifiers/arxiv_id identifiers/doi identifiers/orcid]
 # gem 'tokenizers'
 gem 'csv'
 gem 'stemmify'

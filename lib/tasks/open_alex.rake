@@ -24,6 +24,13 @@ namespace :open_alex do
     )
     puts "OpenAlex README DOI topics: #{readme.inspect}"
 
+    arxiv = OpenAlexProjectTopicImporter.sync!(
+      source: OpenAlexProjectTopicImporter::README_ARXIV_SOURCE,
+      client: client,
+      progress: progress
+    )
+    puts "OpenAlex README arXiv topics: #{arxiv.inspect}"
+
     metadata = OpenAlexProjectTopicImporter.sync!(
       source: OpenAlexProjectTopicImporter::METADATA_DOI_SOURCE,
       client: client,
