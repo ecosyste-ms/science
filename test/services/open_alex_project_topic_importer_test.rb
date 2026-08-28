@@ -1,6 +1,6 @@
 require "test_helper"
 
-class OpenAlexJossTopicImporterTest < ActiveSupport::TestCase
+class OpenAlexProjectTopicImporterTest < ActiveSupport::TestCase
   test "replaces JOSS DOI assignments with current raw OpenAlex scores" do
     project = Project.create!(
       url: "https://github.com/test/joss-project",
@@ -29,7 +29,7 @@ class OpenAlexJossTopicImporterTest < ActiveSupport::TestCase
       },
     ])
 
-    result = OpenAlexJossTopicImporter.sync!(client: client, scope: Project.where(id: project.id))
+    result = sync(project, client, source: "joss_doi")
 
     assert_equal 1, result[:matched]
     assert_equal 0, result[:without_topics]
@@ -45,6 +45,38 @@ class OpenAlexJossTopicImporterTest < ActiveSupport::TestCase
     assert_equal "https://openalex.org/W1", assignment.openalex_work_id
   end
 
+  test "imports every topic for scholarly DOI links in a README" do
+    project = Project.create!(
+      url: "https://github.com/test/linked-paper",
+      readme: "Results are described at https://DOI.ORG/10.1000/PAPER.1"
+    )
+    primary = create_topic("https://openalex.org/T2", name: "Ecology")
+    additional = create_topic("https://openalex.org/T3", name: "Biodiversity")
+    client = OpenAlexApiClient.new(api_key: "test-key")
+    client.stubs(:works_by_dois).with(["10.1000/paper.1"]).returns([
+      {
+        "id" => "https://openalex.org/W2",
+        "doi" => "https://doi.org/10.1000/paper.1",
+        "primary_topic" => { "id" => primary.openalex_id, "score" => 0.91 },
+        "topics" => [
+          { "id" => primary.openalex_id, "score" => 0.91 },
+          { "id" => additional.openalex_id, "score" => 0.63 },
+        ],
+      },
+    ])
+
+    result = sync(project, client, source: "readme_doi")
+
+    assert_equal 1, result[:dois]
+    assert_equal 1, result[:matched]
+    assert_equal 2, result[:assignments]
+    assignments = project.project_open_alex_topics.reload.by_score
+    assert_equal [primary, additional], assignments.map(&:open_alex_topic)
+    assert assignments.first.primary_topic?
+    assert assignments.none? { |assignment| assignment.source != "readme_doi" }
+    assert assignments.none? { |assignment| assignment.source_identifier != "10.1000/paper.1" }
+  end
+
   test "keeps prior assignments when OpenAlex has no matching work" do
     project = Project.create!(
       url: "https://github.com/test/missing-joss-work",
@@ -52,16 +84,16 @@ class OpenAlexJossTopicImporterTest < ActiveSupport::TestCase
     )
     assignment = ProjectOpenAlexTopic.create!(
       project: project,
-      open_alex_topic: create_topic("https://openalex.org/T2"),
+      open_alex_topic: create_topic("https://openalex.org/T4"),
       score: 0.7,
       source: "joss_doi",
       source_identifier: "10.21105/joss.00002",
-      openalex_work_id: "https://openalex.org/W2"
+      openalex_work_id: "https://openalex.org/W4"
     )
     client = OpenAlexApiClient.new(api_key: "test-key")
     client.stubs(:works_by_dois).returns([])
 
-    result = OpenAlexJossTopicImporter.sync!(client: client, scope: Project.where(id: project.id))
+    result = sync(project, client, source: "joss_doi")
 
     assert_equal 1, result[:missing]
     assert ProjectOpenAlexTopic.exists?(assignment.id)
@@ -74,7 +106,7 @@ class OpenAlexJossTopicImporterTest < ActiveSupport::TestCase
     )
     assignment = ProjectOpenAlexTopic.create!(
       project: project,
-      open_alex_topic: create_topic("https://openalex.org/T4"),
+      open_alex_topic: create_topic("https://openalex.org/T5"),
       score: 0.7,
       source: "joss_doi",
       source_identifier: "10.21105/joss.00004",
@@ -83,14 +115,14 @@ class OpenAlexJossTopicImporterTest < ActiveSupport::TestCase
     client = OpenAlexApiClient.new(api_key: "test-key")
     client.stubs(:works_by_dois).returns([
       {
-        "id" => "https://openalex.org/W4",
+        "id" => "https://openalex.org/W5",
         "doi" => "https://doi.org/10.21105/joss.00004",
         "primary_topic" => nil,
         "topics" => [],
       },
     ])
 
-    result = OpenAlexJossTopicImporter.sync!(client: client, scope: Project.where(id: project.id))
+    result = sync(project, client, source: "joss_doi")
 
     assert_equal 1, result[:matched]
     assert_equal 1, result[:without_topics]
@@ -105,18 +137,19 @@ class OpenAlexJossTopicImporterTest < ActiveSupport::TestCase
         joss_metadata: { "doi" => "10.21105/joss.00003" }
       )
     end
-    topic = create_topic("https://openalex.org/T3")
+    topic = create_topic("https://openalex.org/T6")
     client = OpenAlexApiClient.new(api_key: "test-key")
     client.stubs(:works_by_dois).returns([
       {
-        "id" => "https://openalex.org/W3",
+        "id" => "https://openalex.org/W6",
         "doi" => "https://doi.org/10.21105/joss.00003",
         "primary_topic" => { "id" => topic.openalex_id, "score" => 0.88 },
         "topics" => [{ "id" => topic.openalex_id, "score" => 0.88 }],
       },
     ])
 
-    result = OpenAlexJossTopicImporter.sync!(
+    result = OpenAlexProjectTopicImporter.sync!(
+      source: "joss_doi",
       client: client,
       scope: Project.where(id: projects.map(&:id))
     )
@@ -128,10 +161,26 @@ class OpenAlexJossTopicImporterTest < ActiveSupport::TestCase
       ProjectOpenAlexTopic.where(open_alex_topic: topic).pluck(:project_id).sort
   end
 
-  def create_topic(openalex_id)
+  test "rejects unknown label sources" do
+    error = assert_raises(ArgumentError) do
+      OpenAlexProjectTopicImporter.sync!(source: "unknown", client: stub)
+    end
+
+    assert_equal "Unknown OpenAlex topic source: unknown", error.message
+  end
+
+  def sync(project, client, source:)
+    OpenAlexProjectTopicImporter.sync!(
+      source: source,
+      client: client,
+      scope: Project.where(id: project.id)
+    )
+  end
+
+  def create_topic(openalex_id, name: "Research Software")
     OpenAlexTopic.create!(
       openalex_id: openalex_id,
-      display_name: "Research Software",
+      display_name: name,
       subfield_id: "1712",
       subfield_name: "Software",
       field_id: "17",

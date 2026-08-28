@@ -84,10 +84,6 @@ module Project::Classification
                   .map { |pf| [pf.field, pf.confidence_score] }
   end
 
-  def update_field_classifications
-    FieldClassifier.new.classify_and_save(self)
-  end
-
   def contributor_topics(limit: 10, minimum: 3)
     return {} unless commits.present?
     return {} unless commits['committers'].present?

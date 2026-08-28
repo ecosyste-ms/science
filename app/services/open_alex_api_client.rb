@@ -1,6 +1,8 @@
 class OpenAlexApiClient
   BASE_URL = "https://api.openalex.org"
   PER_PAGE = 100
+  DOIS_PER_REQUEST = 100
+  DOI_PATTERN = /\A10\.\d{4,9}\/\S+\z/i
   RETRY_STATUSES = [429, 500, 502, 503, 504].freeze
 
   class RequestError < StandardError; end
@@ -30,12 +32,14 @@ class OpenAlexApiClient
     normalized = dois.filter_map { |doi| normalize_doi(doi) }.uniq
     return [] if normalized.empty?
 
-    get(
-      "works",
-      filter: "doi:#{normalized.join('|')}",
-      per_page: PER_PAGE,
-      select: "id,doi,display_name,type,primary_topic,topics"
-    ).fetch("results")
+    normalized.each_slice(DOIS_PER_REQUEST).flat_map do |batch|
+      get(
+        "works",
+        filter: "doi:#{batch.join('|').gsub(',', '%2C')}",
+        per_page: PER_PAGE,
+        select: "id,doi,display_name,type,primary_topic,topics"
+      ).fetch("results")
+    end
   end
 
   def get(path, params = {})
@@ -52,12 +56,25 @@ class OpenAlexApiClient
   end
 
   def normalize_doi(value)
-    value.to_s
+    normalized = value.to_s
       .strip
       .downcase
       .sub(%r{\Ahttps?://(?:dx\.)?doi\.org/}, "")
       .sub(/\Adoi:\s*/, "")
-      .presence
+      .sub(/[.,;:]+\z/, "")
+    normalized = strip_unmatched_closing_delimiters(normalized)
+    normalized if normalized.match?(DOI_PATTERN)
+  end
+
+  def strip_unmatched_closing_delimiters(value)
+    {
+      ")" => "(",
+      "]" => "[",
+      "}" => "{",
+    }.each do |closing, opening|
+      value = value.chop while value.end_with?(closing) && value.count(closing) > value.count(opening)
+    end
+    value
   end
 
   def build_connection

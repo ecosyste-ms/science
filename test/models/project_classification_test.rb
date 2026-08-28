@@ -89,11 +89,4 @@ class ProjectClassificationTest < ActiveSupport::TestCase
     assert_equal %w[genomics sequencing], p.reload.keywords_from_contributors
   end
 
-  test "update_field_classifications delegates to FieldClassifier" do
-    p = Project.new(url: "https://github.com/x/y")
-    classifier = mock
-    FieldClassifier.expects(:new).returns(classifier)
-    classifier.expects(:classify_and_save).with(p)
-    p.update_field_classifications
-  end
 end

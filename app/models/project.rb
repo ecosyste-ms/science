@@ -635,7 +635,9 @@ class Project < ApplicationRecord
   end
 
   def readme_doi_urls
-    readme_urls.select{|u| doi_domains.include?(URI.parse(u).host) }.uniq
+    readme_urls.select do |url|
+      doi_domains.include?(URI.parse(url).host.to_s.downcase)
+    end.uniq
   end
 
   def dois
