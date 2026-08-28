@@ -9,6 +9,10 @@
       "schedule": "0 0 * * *"
     },
     {
+      "command": "bundle exec rake projects:import_metadata_repositories",
+      "schedule": "0 1 * * *"
+    },
+    {
       "command": "bundle exec rake projects:sync",
       "schedule": "*/10 * * * *"
     },

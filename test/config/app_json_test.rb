@@ -78,4 +78,18 @@ class AppJsonTest < ActiveSupport::TestCase
       },
     ], crons
   end
+
+  test "metadata repositories are imported daily" do
+    config = JSON.parse(Rails.root.join("app.json").read)
+    crons = config.fetch("cron").select do |cron|
+      cron.fetch("command").include?("projects:import_metadata_repositories")
+    end
+
+    assert_equal [
+      {
+        "command" => "bundle exec rake projects:import_metadata_repositories",
+        "schedule" => "0 1 * * *",
+      },
+    ], crons
+  end
 end
