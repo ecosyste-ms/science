@@ -8,9 +8,15 @@ class Project < ApplicationRecord
   SCIENCE_SCORE_THRESHOLD = 20
   DOI_IMAGE_SUFFIX_PATTERN = /\.(?:gif|jpe?g|png|svg|webp)(?:[?#]\S*)?\z/i
   ENCODED_DOI_SEPARATOR_PATTERN = /(10\.\d{4,9})%2f/i
+  DOI_MARKDOWN_LINK_BOUNDARY_PATTERN = /\]\s*\(/
+  DOI_HTTP_URL_PATTERN = %r{https?://[^\s<>"']+}i
+  DOI_RESOLVER_URL_PATTERN = %r{
+    \Ahttps?://(?:www\.|dx\.)?doi\.org/[^\s<>"']+
+  }ix
   DOI_RESOLVER_QUERY_PATTERN = %r{
     ((?:https?://)?(?:www\.|dx\.)?doi\.org/[^\s?#]+)[?#]\S+
   }ix
+  DOI_HTML_TAG_PATTERN = %r{</?[a-z][^>]*>}i
 
   include EcosystemApiClient
   include Project::Importers
@@ -114,9 +120,16 @@ class Project < ApplicationRecord
 
   def self.extract_dois(value)
     text = value.to_s
+      .gsub(DOI_MARKDOWN_LINK_BOUNDARY_PATTERN, " ")
       .gsub(DOI_RESOLVER_QUERY_PATTERN, '\\1')
       .gsub(ENCODED_DOI_SEPARATOR_PATTERN, '\\1/')
-    Identifiers::DOI.extract(text)
+    extractable_text = text
+      .gsub(DOI_HTTP_URL_PATTERN) do |url|
+        url.match?(DOI_RESOLVER_URL_PATTERN) ? url : " "
+      end
+      .gsub(DOI_HTML_TAG_PATTERN, " ")
+
+    Identifiers::DOI.extract(extractable_text)
       .reject { |doi| doi.match?(DOI_IMAGE_SUFFIX_PATTERN) }
       .uniq
   end

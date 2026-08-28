@@ -65,7 +65,10 @@ class OpenAlexRakeTest < ActiveSupport::TestCase
     )
     linked_project = Project.create!(
       url: "https://github.com/test/open-alex-linked-rake",
-      readme: "See DOI: 10.1000/linked.1",
+      readme: <<~README,
+        See DOI: 10.1000/linked.1
+        ![DOI badge](https://img.shields.io/badge/DOI-10.5281/zenodo.4642814-informational?logo=data:image/svg+xml;base64,LONG)
+      README
       science_score: Project::SCIENCE_SCORE_THRESHOLD
     )
     metadata_project = Project.create!(

@@ -118,6 +118,8 @@ class ProjectTest < ActiveSupport::TestCase
       https://doi.org/10.1000/PAPER.1?utm_source=readme
       https://doi.org/10.5281/zenodo.5565455.svg?download=1
       doi.org/10.1000/PAPER.2#abstract
+      [![DOI](https://img.shields.io/badge/DOI-10.5281/zenodo.4642814-informational?logo=data:image/svg+xml;base64,LONG)](https://doi.org/10.5281/zenodo.4642814)
+      <a href="https://example.com/10.9999/not-a-doi.pdf?token=LONG">Paper</a>
     README
 
     assert_equal [
@@ -125,6 +127,7 @@ class ProjectTest < ActiveSupport::TestCase
       "10.21105/joss.01453",
       "10.1000/paper.1",
       "10.1000/paper.2",
+      "10.5281/zenodo.4642814",
     ], project.dois
   end
 
