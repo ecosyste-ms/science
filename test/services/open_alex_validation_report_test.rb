@@ -35,6 +35,7 @@ class OpenAlexValidationReportTest < ActiveSupport::TestCase
     assert_equal 1, rows.length
     assert_equal "joss_doi|readme_doi", rows.first["sources"]
     assert_equal topic.openalex_id, rows.first["label_topic_id"]
+    assert_equal topic.openalex_id, rows.first["work_topic_ids"]
     assert_equal topic.openalex_id, rows.first["predicted_topic_id"]
     assert_equal "true", rows.first["exact_topic_match"]
     assert_equal "true", rows.first["exact_field_match"]
@@ -73,9 +74,57 @@ class OpenAlexValidationReportTest < ActiveSupport::TestCase
     )
     prediction = OpenAlexTopicClassifier::Prediction.new(topic: predicted_topic)
 
-    matches = OpenAlexValidationReport.new.matches_for([prediction], label)
+    matches = OpenAlexValidationReport.new.matches_for([prediction], [label])
 
     assert matches.values.all?
+  end
+
+  test "compares predictions with every topic stored for an OpenAlex work" do
+    project = Project.create!(url: "https://github.com/test/all-work-topics")
+    primary = create_topic(
+      openalex_id: "https://openalex.org/T-primary",
+      name: "Clinical Medicine",
+      subfield_id: "2701",
+      subfield_name: "Medicine",
+      field_id: "27",
+      field_name: "Medicine",
+      domain_id: "4",
+      domain_name: "Health Sciences"
+    )
+    additional = create_topic(
+      openalex_id: "https://openalex.org/T-additional",
+      name: "Software Engineering"
+    )
+    create_assignment(project, primary, source: "readme_doi")
+    create_assignment(
+      project,
+      additional,
+      source: "readme_doi",
+      primary_topic: false,
+      score: 0.72
+    )
+    prediction = OpenAlexTopicClassifier::Prediction.new(
+      topic: additional,
+      score: 0.8,
+      matched_terms: ["software_engineering"]
+    )
+    classifier = mock("classifier")
+    classifier.expects(:classify_project).with(project, limit: 5).returns([prediction])
+    io = StringIO.new
+
+    result = OpenAlexValidationReport.new(
+      classifier: classifier,
+      scope: Project.where(id: project.id)
+    ).generate(io: io)
+
+    row = CSV.parse(io.string, headers: true).sole
+    assert_equal primary.openalex_id, row["label_topic_id"]
+    assert_equal [additional.openalex_id, primary.openalex_id].sort.join("|"),
+      row["work_topic_ids"]
+    assert_equal "17|27", row["work_field_ids"]
+    assert_equal "true", row["exact_topic_match"]
+    assert_equal "true", row["exact_field_match"]
+    assert_equal 1, result.dig(:overall, :exact_topic_matches)
   end
 
   test "exports a labelled row when repository text has no taxonomy match" do
@@ -131,12 +180,18 @@ class OpenAlexValidationReportTest < ActiveSupport::TestCase
     )
   end
 
-  def create_assignment(project, topic, source:)
+  def create_assignment(
+    project,
+    topic,
+    source:,
+    primary_topic: true,
+    score: 0.95
+  )
     ProjectOpenAlexTopic.create!(
       project: project,
       open_alex_topic: topic,
-      score: 0.95,
-      primary_topic: true,
+      score: score,
+      primary_topic: primary_topic,
       source: source,
       source_identifier: "10.1000/validation",
       openalex_work_id: "https://openalex.org/W-validation"

@@ -31,7 +31,8 @@ class OpenAlexValidationReport
     project_id project_url project_name sources source_identifiers
     openalex_work_id label_score label_topic_id label_topic
     label_subfield_id label_subfield label_field_id label_field
-    label_domain_id label_domain predicted_topic_id predicted_topic
+    label_domain_id label_domain work_topic_ids work_subfield_ids
+    work_field_ids work_domain_ids predicted_topic_id predicted_topic
     predicted_subfield_id predicted_subfield predicted_field_id predicted_field
     predicted_domain_id predicted_domain prediction_score prediction_terms
     top_topic_ids top_scores exact_topic_match top_5_topic_match
@@ -62,8 +63,10 @@ class OpenAlexValidationReport
         result[:overall][:predicted_projects] += 1 if predictions.any?
 
         labels_for(project).each do |assignments|
-          assignment = preferred_assignment(assignments)
-          matches = matches_for(predictions, assignment.open_alex_topic)
+          primary_assignments = assignments.select(&:primary_topic?)
+          assignment = preferred_assignment(primary_assignments)
+          topics = assignments.map(&:open_alex_topic).uniq(&:id)
+          matches = matches_for(predictions, topics)
           io << CSV.generate_line(row(project, assignments, assignment, predictions, matches))
           record_label(result[:overall], predictions, matches)
           record_label(result[:by_source][source_key(assignments)], predictions, matches)
@@ -152,8 +155,8 @@ class OpenAlexValidationReport
 
   def labels_for(project)
     project.project_open_alex_topics
-      .select(&:primary_topic?)
       .group_by(&:openalex_work_id)
+      .select { |_, assignments| assignments.any?(&:primary_topic?) }
       .sort_by { |work_id, _| work_id }
       .map(&:last)
   end
@@ -166,6 +169,7 @@ class OpenAlexValidationReport
 
   def row(project, assignments, assignment, predictions, matches)
     topic = assignment.open_alex_topic
+    work_topics = assignments.map(&:open_alex_topic).uniq(&:id)
     prediction = predictions.first
     predicted_topic = prediction&.topic
     [
@@ -184,6 +188,10 @@ class OpenAlexValidationReport
       topic.field_name,
       topic.domain_id,
       topic.domain_name,
+      hierarchy_values(work_topics, :openalex_id),
+      hierarchy_values(work_topics, :subfield_id),
+      hierarchy_values(work_topics, :field_id),
+      hierarchy_values(work_topics, :domain_id),
       predicted_topic&.openalex_id,
       predicted_topic&.display_name,
       predicted_topic&.subfield_id,
@@ -212,23 +220,33 @@ class OpenAlexValidationReport
     end
   end
 
-  def matches_for(predictions, label)
+  def matches_for(predictions, labels)
     {
-      exact_topic_matches: hierarchy_match?(predictions.first, label, :openalex_id),
-      top_5_topic_matches: predictions.any? { |prediction| hierarchy_match?(prediction, label, :openalex_id) },
-      exact_subfield_matches: hierarchy_match?(predictions.first, label, :subfield_id),
-      top_5_subfield_matches: predictions.any? { |prediction| hierarchy_match?(prediction, label, :subfield_id) },
-      exact_field_matches: hierarchy_match?(predictions.first, label, :field_id),
-      top_5_field_matches: predictions.any? { |prediction| hierarchy_match?(prediction, label, :field_id) },
-      exact_domain_matches: hierarchy_match?(predictions.first, label, :domain_id),
+      exact_topic_matches: hierarchy_match?(predictions.first, labels, :openalex_id),
+      top_5_topic_matches: predictions.any? { |prediction| hierarchy_match?(prediction, labels, :openalex_id) },
+      exact_subfield_matches: hierarchy_match?(predictions.first, labels, :subfield_id),
+      top_5_subfield_matches: predictions.any? { |prediction| hierarchy_match?(prediction, labels, :subfield_id) },
+      exact_field_matches: hierarchy_match?(predictions.first, labels, :field_id),
+      top_5_field_matches: predictions.any? { |prediction| hierarchy_match?(prediction, labels, :field_id) },
+      exact_domain_matches: hierarchy_match?(predictions.first, labels, :domain_id),
     }
   end
 
-  def hierarchy_match?(prediction, label, attribute)
+  def hierarchy_match?(prediction, labels, attribute)
     return false unless prediction
 
-    normalize_openalex_id(prediction.topic.public_send(attribute)) ==
-      normalize_openalex_id(label.public_send(attribute))
+    predicted_id = normalize_openalex_id(prediction.topic.public_send(attribute))
+    labels.any? do |label|
+      predicted_id == normalize_openalex_id(label.public_send(attribute))
+    end
+  end
+
+  def hierarchy_values(topics, attribute)
+    topics.map { |topic| topic.public_send(attribute) }
+      .compact
+      .uniq
+      .sort
+      .join("|")
   end
 
   def normalize_openalex_id(value)

@@ -77,6 +77,43 @@ class OpenAlexProjectTopicImporterTest < ActiveSupport::TestCase
     assert assignments.none? { |assignment| assignment.source_identifier != "10.1000/paper.1" }
   end
 
+  test "keeps funding DOIs in project data but excludes them from work topics" do
+    project = Project.create!(
+      url: "https://github.com/test/funded-paper",
+      readme: <<~README
+        Paper: https://doi.org/10.1000/funded-paper
+        Funder: https://doi.org/10.13039/501100011033
+      README
+    )
+    stale_assignment = ProjectOpenAlexTopic.create!(
+      project: project,
+      open_alex_topic: create_topic("https://openalex.org/T-funder"),
+      score: 0.99,
+      primary_topic: true,
+      source: "readme_doi",
+      source_identifier: "10.13039/501100011033",
+      openalex_work_id: "https://openalex.org/W-funder"
+    )
+    current_topic = create_topic("https://openalex.org/T-funded-paper")
+    client = OpenAlexApiClient.new(api_key: "test-key")
+    client.expects(:works_by_dois).with(["10.1000/funded-paper"]).returns([{
+      "id" => "https://openalex.org/W-funded-paper",
+      "doi" => "https://doi.org/10.1000/funded-paper",
+      "primary_topic" => { "id" => current_topic.openalex_id, "score" => 0.91 },
+      "topics" => [{ "id" => current_topic.openalex_id, "score" => 0.91 }],
+    }])
+
+    result = sync(project, client, source: "readme_doi")
+
+    assert_includes project.dois, "10.13039/501100011033"
+    assert_equal 1, result[:dois]
+    assert_equal 1, result[:funding_identifiers]
+    assert_equal 1, result[:funding_assignments_removed]
+    assert_not ProjectOpenAlexTopic.exists?(stale_assignment.id)
+    assert_equal "10.1000/funded-paper",
+      project.project_open_alex_topics.reload.sole.source_identifier
+  end
+
   test "imports topics for arXiv references through their canonical DOI" do
     project = Project.create!(
       url: "https://github.com/test/arxiv-paper",

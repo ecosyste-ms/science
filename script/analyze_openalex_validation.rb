@@ -187,11 +187,22 @@ class OpenAlexValidationAnalyzer
     }
     project[:labels] += 1
     project[:covered] ||= value_present?(row["predicted_topic_id"])
-    project[:fields] << row["label_field"] if value_present?(row["label_field"])
-    project[:domains] << row["label_domain"] if value_present?(row["label_domain"])
+    hierarchy_values(row, "work_field_ids", "label_field").each do |field|
+      project[:fields] << field
+    end
+    hierarchy_values(row, "work_domain_ids", "label_domain").each do |domain|
+      project[:domains] << domain
+    end
     METRICS.each do |name, column|
       project[:metrics][name] ||= true_value?(row[column])
     end
+  end
+
+  def hierarchy_values(row, column, fallback_column)
+    values = row[column].to_s.split("|").reject(&:empty?)
+    return values if values.any?
+
+    [row[fallback_column]].select { |value| value_present?(value) }
   end
 
   def new_stats

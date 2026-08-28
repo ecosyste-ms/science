@@ -131,6 +131,48 @@ class AnalyzeOpenAlexValidationTest < ActiveSupport::TestCase
     assert_includes output.string, "group=overall labels=1 coverage=100.00%"
   end
 
+  test "counts every work field when reporting project label breadth" do
+    headers = HEADERS + %w[work_field_ids work_domain_ids]
+    rows = [
+      validation_row(
+        project_id: 1,
+        sources: "readme_doi",
+        label_field: "Medicine",
+        label_domain: "Health Sciences",
+        predicted_field: "Computer Science",
+        predicted_domain: "Physical Sciences",
+        label_score: 0.9,
+        prediction_score: 0.1,
+        matches: true
+      ).merge("work_field_ids" => "17|27", "work_domain_ids" => "3|4"),
+      validation_row(
+        project_id: 2,
+        sources: "readme_doi",
+        label_field: "Computer Science",
+        label_domain: "Physical Sciences",
+        predicted_field: "Computer Science",
+        predicted_domain: "Physical Sciences",
+        label_score: 0.9,
+        prediction_score: 0.1,
+        matches: true
+      ).merge("work_field_ids" => "17", "work_domain_ids" => "3"),
+    ]
+    output = StringIO.new
+
+    Tempfile.create(["openalex-validation", ".csv"]) do |file|
+      file.write(CSV.generate_line(headers))
+      rows.each do |row|
+        file.write(CSV.generate_line(headers.map { |header| row[header] }))
+      end
+      file.rewind
+
+      OpenAlexValidationAnalyzer.new(file.path, output: output).run
+    end
+
+    assert_includes output.string,
+      "projects=2 coverage=100.00% one_label=100.00% one_field=50.00% one_domain=50.00%"
+  end
+
   def validation_row(
     project_id:,
     sources:,

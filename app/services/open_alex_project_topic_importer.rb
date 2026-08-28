@@ -1,6 +1,7 @@
 class OpenAlexProjectTopicImporter
   BATCH_SIZE = 50
   MAX_README_IDENTIFIERS = 10
+  FUNDING_DOI_PREFIX = "10.13039/"
   JOSS_SOURCE = "joss_doi"
   README_DOI_SOURCE = "readme_doi"
   README_ARXIV_SOURCE = "readme_arxiv"
@@ -31,6 +32,8 @@ class OpenAlexProjectTopicImporter
         assignments: 0,
         unmatched_topics: 0,
         skipped_many_identifiers: 0,
+        funding_identifiers: 0,
+        funding_assignments_removed: 0,
       }
 
       scope.in_batches(of: batch_size) do |batch|
@@ -70,6 +73,7 @@ class OpenAlexProjectTopicImporter
     def sync_batch!(projects, client, counts, source)
       references_by_doi = Hash.new { |hash, key| hash[key] = [] }
       skipped_project_ids = []
+      funding_project_ids = []
       projects.each do |project|
         if too_many_readme_identifiers?(project, source)
           skipped_project_ids << project.id
@@ -80,6 +84,11 @@ class OpenAlexProjectTopicImporter
         doi_candidates_for(project, source).each do |candidate|
           doi = client.normalize_doi(candidate[:value])
           next unless doi.present?
+          if funding_doi?(doi)
+            funding_project_ids << project.id
+            counts[:funding_identifiers] += 1
+            next
+          end
 
           references_by_doi[doi] << {
             project_id: project.id,
@@ -159,6 +168,10 @@ class OpenAlexProjectTopicImporter
       end
 
       ProjectOpenAlexTopic.transaction do
+        counts[:funding_assignments_removed] += delete_funding_assignments(
+          funding_project_ids.uniq,
+          source
+        )
         delete_current_assignments(
           (matched_project_ids + skipped_project_ids).uniq,
           source
@@ -213,14 +226,30 @@ class OpenAlexProjectTopicImporter
     end
 
     def delete_current_assignments(project_ids, source)
+      assignments_for_source(project_ids, source).delete_all
+    end
+
+    def delete_funding_assignments(project_ids, source)
+      return 0 if project_ids.empty?
+
+      assignments_for_source(project_ids, source)
+        .where("LOWER(source_identifier) LIKE ?", "#{FUNDING_DOI_PREFIX}%")
+        .delete_all
+    end
+
+    def assignments_for_source(project_ids, source)
       assignments = ProjectOpenAlexTopic.where(project_id: project_ids)
       if source == METADATA_DOI_SOURCE
         clauses = METADATA_ASSIGNMENT_SOURCE_PREFIXES.map { "source LIKE ?" }.join(" OR ")
         patterns = METADATA_ASSIGNMENT_SOURCE_PREFIXES.map { |prefix| "#{prefix}%" }
-        assignments.where(clauses, *patterns).delete_all
+        assignments.where(clauses, *patterns)
       else
-        assignments.where(source: source).delete_all
+        assignments.where(source: source)
       end
+    end
+
+    def funding_doi?(doi)
+      doi.downcase.start_with?(FUNDING_DOI_PREFIX)
     end
 
     def work_topics(work)

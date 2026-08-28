@@ -39,7 +39,7 @@ namespace :open_alex do
     puts "OpenAlex metadata DOI topics: #{metadata.inspect}"
   end
 
-  desc "Compare repository-text topic predictions with primary OpenAlex labels (optional: LIMIT=n)"
+  desc "Compare repository-text predictions with all topics for each OpenAlex work (optional: LIMIT=n)"
   task validation: :environment do
     report = OpenAlexValidationReport.new(limit: ENV["LIMIT"])
     result = report.generate

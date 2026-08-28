@@ -67,6 +67,7 @@ class OpenAlexRakeTest < ActiveSupport::TestCase
       url: "https://github.com/test/open-alex-linked-rake",
       readme: <<~README,
         See DOI: 10.1000/linked.1
+        Funder: https://doi.org/10.13039/501100011033
         ![DOI badge](https://img.shields.io/badge/DOI-10.5281/zenodo.4642814-informational?logo=data:image/svg+xml;base64,LONG)
       README
       science_score: Project::SCIENCE_SCORE_THRESHOLD
@@ -182,6 +183,7 @@ class OpenAlexRakeTest < ActiveSupport::TestCase
     assert_equal primary.fetch("id"), linked_assignment.open_alex_topic.openalex_id
     assert_equal 0.87, linked_assignment.score
     assert_equal "readme_doi", linked_assignment.source
+    assert_includes linked_project.dois, "10.13039/501100011033"
     metadata_assignments = metadata_project.project_open_alex_topics.reload
     assert_equal 2, metadata_assignments.length
     assert metadata_assignments.all? do |assignment|
@@ -200,6 +202,7 @@ class OpenAlexRakeTest < ActiveSupport::TestCase
     assert_includes output, "OpenAlex taxonomy:"
     assert_includes output, "OpenAlex JOSS topics:"
     assert_includes output, "OpenAlex README DOI topics:"
+    assert_includes output, "funding_identifiers: 1"
     assert_includes output, "OpenAlex README arXiv topics:"
     assert_includes output, "OpenAlex metadata DOI topics:"
   end
