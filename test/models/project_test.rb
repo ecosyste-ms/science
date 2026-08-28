@@ -109,6 +109,25 @@ class ProjectTest < ActiveSupport::TestCase
     assert_not result[:breakdown][:has_citation_file][:present]
     assert_not result[:breakdown][:has_doi_in_readme][:present]
   end
+
+  test "extracts normalized DOIs from README text" do
+    project = Project.new(readme: <<~README)
+      DOI: 10.1016/0021-9991(92)90370-E.
+      https://doi.org/10.21105%2FJOSS.01453
+      https://doi.org/10.5281/zenodo.5565455.svg
+      https://doi.org/10.1000/PAPER.1?utm_source=readme
+      https://doi.org/10.5281/zenodo.5565455.svg?download=1
+      doi.org/10.1000/PAPER.2#abstract
+    README
+
+    assert_equal [
+      "10.1016/0021-9991(92)90370-e",
+      "10.21105/joss.01453",
+      "10.1000/paper.1",
+      "10.1000/paper.2",
+    ], project.dois
+  end
+
   test "github_pages_to_repo_url" do
     project = Project.new
     repo_url = project.github_pages_to_repo_url('https://foo.github.io/bar')

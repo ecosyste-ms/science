@@ -6,6 +6,11 @@ require 'github/markup'
 
 class Project < ApplicationRecord
   SCIENCE_SCORE_THRESHOLD = 20
+  DOI_IMAGE_SUFFIX_PATTERN = /\.(?:gif|jpe?g|png|svg|webp)(?:[?#]\S*)?\z/i
+  ENCODED_DOI_SEPARATOR_PATTERN = /(10\.\d{4,9})%2f/i
+  DOI_RESOLVER_QUERY_PATTERN = %r{
+    ((?:https?://)?(?:www\.|dx\.)?doi\.org/[^\s?#]+)[?#]\S+
+  }ix
 
   include EcosystemApiClient
   include Project::Importers
@@ -105,6 +110,15 @@ class Project < ApplicationRecord
     end
 
     scope
+  end
+
+  def self.extract_dois(value)
+    text = value.to_s
+      .gsub(DOI_RESOLVER_QUERY_PATTERN, '\\1')
+      .gsub(ENCODED_DOI_SEPARATOR_PATTERN, '\\1/')
+    Identifiers::DOI.extract(text)
+      .reject { |doi| doi.match?(DOI_IMAGE_SUFFIX_PATTERN) }
+      .uniq
   end
 
   def self.owner_details_from_url(url)
@@ -641,7 +655,7 @@ class Project < ApplicationRecord
   end
 
   def dois
-    readme_doi_urls.map{|u| URI.parse(u).path.gsub(/^\//, '') }.uniq
+    self.class.extract_dois(readme)
   end
 
   

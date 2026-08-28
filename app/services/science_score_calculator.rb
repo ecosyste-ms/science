@@ -8,12 +8,6 @@ class ScienceScoreCalculator
     ResearchOrganizationDomainMatcher.academic?(domain)
   end
 
-  DOI_PATTERNS = [
-    %r{10\.\d{4,}/[-._;()/:\w]+},
-    %r{doi\.org/10\.\d{4,}},
-    %r{dx\.doi\.org/10\.\d{4,}}
-  ]
-
   ACADEMIC_LINK_PATTERNS = [
     %r{arxiv\.org},
     %r{biorxiv\.org}, 
@@ -196,20 +190,13 @@ class ScienceScoreCalculator
   ARCHIVE_DOI_PREFIXES = %w[10.5281 10.6084].freeze
 
   def check_doi_in_readme
-    dois = []
-
-    if project.readme.present?
-      readme_text = project.readme.downcase
-      DOI_PATTERNS.each do |pattern|
-        dois.concat(readme_text.scan(pattern))
-      end
-    end
+    dois = project.dois
 
     if project.joss_metadata.present? && project.joss_metadata['doi']
-      dois << project.joss_metadata['doi']
+      dois.concat(Project.extract_dois(project.joss_metadata['doi']))
     end
 
-    dois = dois.map { |d| d[%r{10\.\d{4,}/[-._;()/:\w]+}] }.compact.uniq
+    dois.uniq!
     archive_dois, journal_dois = dois.partition do |d|
       ARCHIVE_DOI_PREFIXES.any? { |prefix| d.include?(prefix) }
     end

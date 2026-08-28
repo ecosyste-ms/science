@@ -44,7 +44,10 @@ class OpenAlexProjectTopicImporter
       when JOSS_SOURCE
         Project.visible.with_joss.where("joss_metadata ->> 'doi' IS NOT NULL")
       when README_DOI_SOURCE
-        Project.visible.scientific.with_readme.where("readme ILIKE ?", "%doi.org/%")
+        Project.visible.scientific.with_readme.where(
+          "readme ~* ?",
+          "10\\.[0-9]{4,9}(/|%2f)"
+        )
       when METADATA_DOI_SOURCE
         Project.visible.scientific.where(
           "NULLIF(citation_file, '') IS NOT NULL OR " \
