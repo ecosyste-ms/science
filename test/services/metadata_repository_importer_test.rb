@@ -151,6 +151,52 @@ class MetadataRepositoryImporterTest < ActiveSupport::TestCase
     assert_empty SyncProjectWorker.jobs
   end
 
+  test "matches repository previous names once across importer batches" do
+    Project.create!(
+      url: "https://github.com/research-org/current-name",
+      repository: {
+        "previous_names" => ["research-org/old-name"],
+      }
+    )
+    Project.create!(
+      url: "https://gitlab.example.org/group/current-name",
+      repository: {
+        "previous_names" => ["group/subgroup/old-name"],
+      }
+    )
+    github_source = Project.create!(
+      url: "https://github.com/research-org/github-source",
+      science_score: 20,
+      codemeta: {
+        "codeRepository" => "https://github.com/research-org/old-name",
+      }.to_json
+    )
+    gitlab_source = Project.create!(
+      url: "https://github.com/research-org/gitlab-source",
+      science_score: 20,
+      codemeta: {
+        "codeRepository" => "https://gitlab.example.org/group/subgroup/old-name",
+      }.to_json
+    )
+    alias_urls = MetadataRepositoryImporter.repository_alias_urls
+    MetadataRepositoryImporter.expects(:repository_alias_urls)
+      .once
+      .returns(alias_urls)
+
+    result = MetadataRepositoryImporter.sync!(
+      scope: Project.where(id: [github_source.id, gitlab_source.id]),
+      gitlab_hosts: GITLAB_HOSTS,
+      batch_size: 1
+    )
+
+    assert_equal 2, result[:existing]
+    assert_equal 2, result[:aliases]
+    assert_equal 0, result[:new]
+    assert_not Project.exists?(url: "https://github.com/research-org/old-name")
+    assert_not Project.exists?(url: "https://gitlab.example.org/group/subgroup/old-name")
+    assert_empty SyncProjectWorker.jobs
+  end
+
   def normalize(url)
     MetadataRepositoryImporter.normalize_repository_url(
       url,

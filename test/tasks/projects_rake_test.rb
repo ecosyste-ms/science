@@ -69,6 +69,33 @@ class ProjectsRakeTest < ActiveSupport::TestCase
     assert Project.exists?(source.id)
   end
 
+  test "import_metadata_repositories skips repository previous names" do
+    Project.create!(
+      url: "https://github.com/metadata-test/current-target",
+      repository: {
+        "previous_names" => ["metadata-test/old-target"],
+      }
+    )
+    Project.create!(
+      url: "https://github.com/metadata-test/alias-source",
+      science_score: 20,
+      codemeta: {
+        "codeRepository" => "https://github.com/metadata-test/old-target",
+      }.to_json
+    )
+    MetadataRepositoryImporter.stubs(:configured_gitlab_hosts)
+      .returns(["gitlab.com"])
+
+    output, = capture_io do
+      Rake::Task["projects:import_metadata_repositories"].execute
+    end
+
+    assert_includes output, "existing: 1"
+    assert_includes output, "aliases: 1"
+    assert_not Project.exists?(url: "https://github.com/metadata-test/old-target")
+    assert_empty SyncProjectWorker.jobs
+  end
+
   def create_project(name, joss: false, brief: nil, science_score: 20, repository: true)
     Project.create!(
       url: "https://github.com/test/#{name}",

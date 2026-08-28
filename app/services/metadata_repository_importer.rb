@@ -4,6 +4,20 @@ require "uri"
 class MetadataRepositoryImporter
   BATCH_SIZE = 100
   GITHUB_HOST = "github.com"
+  REPOSITORY_ALIAS_SQL = <<~SQL.squish
+    SELECT DISTINCT
+      'https://' || lower(split_part(projects.url::text, '/', 3)) || '/' ||
+        lower(previous_names.name) AS repository_url
+    FROM projects
+    CROSS JOIN LATERAL json_array_elements_text(
+      CASE
+        WHEN json_typeof(projects.repository -> 'previous_names') = 'array'
+          THEN projects.repository -> 'previous_names'
+        ELSE '[]'::json
+      END
+    ) AS previous_names(name)
+    WHERE NULLIF(previous_names.name, '') IS NOT NULL
+  SQL
   BITBUCKET_HOSTS = %w[bitbucket.org www.bitbucket.org].freeze
   GITHUB_RESERVED_OWNERS = %w[
     about
@@ -126,6 +140,7 @@ class MetadataRepositoryImporter
         github: 0,
         gitlab: 0,
         existing: 0,
+        aliases: 0,
         new: 0,
         created: 0,
         self: 0,
@@ -134,6 +149,7 @@ class MetadataRepositoryImporter
         failed: 0,
       }
       seen = Set.new
+      alias_urls = nil
       allowed_gitlab_hosts = gitlab_hosts.map { |host| normalized_host(host) }.compact.to_set
 
       scope.in_batches(of: batch_size) do |batch|
@@ -144,12 +160,16 @@ class MetadataRepositoryImporter
           seen,
           counts
         )
-        import_candidates(
-          candidates,
-          counts,
-          gitlab_hosts: allowed_gitlab_hosts,
-          dry_run: dry_run
-        )
+        if candidates.any?
+          alias_urls ||= repository_alias_urls
+          import_candidates(
+            candidates,
+            counts,
+            alias_urls: alias_urls,
+            gitlab_hosts: allowed_gitlab_hosts,
+            dry_run: dry_run
+          )
+        end
         counts[:processed] += projects.length
         progress&.call(
           "Metadata repository projects processed: #{counts[:processed]}"
@@ -214,13 +234,18 @@ class MetadataRepositoryImporter
       end
     end
 
-    def import_candidates(candidates, counts, gitlab_hosts:, dry_run:)
+    def import_candidates(candidates, counts, alias_urls:, gitlab_hosts:, dry_run:)
       return if candidates.empty?
 
       existing_urls = existing_repository_urls(candidates, gitlab_hosts: gitlab_hosts)
       candidates.each do |repository_url|
         if existing_urls.include?(repository_url)
           counts[:existing] += 1
+          next
+        end
+        if alias_urls.include?(repository_url)
+          counts[:existing] += 1
+          counts[:aliases] += 1
           next
         end
 
@@ -246,6 +271,14 @@ class MetadataRepositoryImporter
       Project.where(url: lookup_urls).pluck(:url).filter_map do |url|
         normalize_repository_url(url, gitlab_hosts: gitlab_hosts)
       end.to_set
+    end
+
+    def repository_alias_urls
+      connection = ActiveRecord::Base.connection
+      Project.transaction do
+        connection.execute("SET LOCAL max_parallel_workers_per_gather = 0")
+        connection.select_values(REPOSITORY_ALIAS_SQL).to_set
+      end
     end
 
     def normalize_repository_url(value, gitlab_hosts: configured_gitlab_hosts)
