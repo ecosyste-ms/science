@@ -79,6 +79,53 @@ class OpenAlexApiClientTest < ActiveSupport::TestCase
     assert_requested second_request, times: 1
   end
 
+  test "isolates and logs a DOI rejected with HTTP 400" do
+    valid_dois = ["10.1000/one", "10.1000/two"]
+    rejected_doi = '10.5281/zenodo.6581323[image:title="digital'
+    stub_request(:get, "https://api.openalex.org/works")
+      .with(query: hash_including(
+        "filter" => "doi:#{([valid_dois.first, rejected_doi, valid_dois.last]).join('|')}"
+      ))
+      .to_return(status: 400)
+    stub_request(:get, "https://api.openalex.org/works")
+      .with(query: hash_including("filter" => "doi:#{valid_dois.first}"))
+      .to_return(json_response(results: [{ "id" => "W1" }], next_cursor: nil))
+    stub_request(:get, "https://api.openalex.org/works")
+      .with(query: hash_including(
+        "filter" => "doi:#{rejected_doi}|#{valid_dois.last}"
+      ))
+      .to_return(status: 400)
+    stub_request(:get, "https://api.openalex.org/works")
+      .with(query: hash_including("filter" => "doi:#{rejected_doi}"))
+      .to_return(status: 400)
+    stub_request(:get, "https://api.openalex.org/works")
+      .with(query: hash_including("filter" => "doi:#{valid_dois.last}"))
+      .to_return(json_response(results: [{ "id" => "W2" }], next_cursor: nil))
+
+    _output, errors = capture_io do
+      works = OpenAlexApiClient.new(api_key: "test-key").works_by_dois(
+        [valid_dois.first, rejected_doi, valid_dois.last]
+      )
+      assert_equal [{ "id" => "W1" }, { "id" => "W2" }], works
+    end
+
+    assert_includes errors, "OpenAlex rejected a batch of 3 DOIs"
+    assert_includes errors, "Skipping OpenAlex DOI #{rejected_doi.inspect}"
+  end
+
+  test "raises non-400 errors without splitting DOI batches" do
+    stub_request(:get, "https://api.openalex.org/works")
+      .with(query: hash_including("filter" => "doi:10.1000/one|10.1000/two"))
+      .to_return(status: 500)
+    client = OpenAlexApiClient.new(api_key: "test-key")
+
+    error = assert_raises(OpenAlexApiClient::RequestError) do
+      client.works_by_dois(["10.1000/one", "10.1000/two"])
+    end
+
+    assert_equal 500, error.status
+  end
+
   test "normalizes README punctuation without changing balanced DOI parentheses" do
     client = OpenAlexApiClient.new(api_key: "test-key")
 

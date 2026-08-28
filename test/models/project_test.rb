@@ -119,6 +119,7 @@ class ProjectTest < ActiveSupport::TestCase
       https://doi.org/10.5281/zenodo.5565455.svg?download=1
       doi.org/10.1000/PAPER.2#abstract
       [![DOI](https://img.shields.io/badge/DOI-10.5281/zenodo.4642814-informational?logo=data:image/svg+xml;base64,LONG)](https://doi.org/10.5281/zenodo.4642814)
+      https://doi.org/10.5281/zenodo.6581323[image:https://zenodo.org/badge/doi/10.5281/zenodo.6581323.svg[doi:10.5281/zenodo.6581323,title="digital"]
       <a href="https://example.com/10.9999/not-a-doi.pdf?token=LONG">Paper</a>
     README
 
@@ -128,6 +129,7 @@ class ProjectTest < ActiveSupport::TestCase
       "10.1000/paper.1",
       "10.1000/paper.2",
       "10.5281/zenodo.4642814",
+      "10.5281/zenodo.6581323",
     ], project.dois
   end
 

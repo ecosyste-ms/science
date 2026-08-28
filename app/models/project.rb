@@ -9,6 +9,7 @@ class Project < ApplicationRecord
   DOI_IMAGE_SUFFIX_PATTERN = /\.(?:gif|jpe?g|png|svg|webp)(?:[?#]\S*)?\z/i
   ENCODED_DOI_SEPARATOR_PATTERN = /(10\.\d{4,9})%2f/i
   DOI_MARKDOWN_LINK_BOUNDARY_PATTERN = /\]\s*\(/
+  DOI_ASCIIDOC_IMAGE_BOUNDARY_PATTERN = /\[image:/i
   DOI_HTTP_URL_PATTERN = %r{https?://[^\s<>"']+}i
   DOI_RESOLVER_URL_PATTERN = %r{
     \Ahttps?://(?:www\.|dx\.)?doi\.org/[^\s<>"']+
@@ -129,6 +130,7 @@ class Project < ApplicationRecord
   def self.extract_dois(value)
     text = value.to_s
       .gsub(DOI_MARKDOWN_LINK_BOUNDARY_PATTERN, " ")
+      .gsub(DOI_ASCIIDOC_IMAGE_BOUNDARY_PATTERN, " ")
       .gsub(DOI_RESOLVER_QUERY_PATTERN, '\\1')
       .gsub(ENCODED_DOI_SEPARATOR_PATTERN, '\\1/')
     extractable_text = text

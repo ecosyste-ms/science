@@ -11,7 +11,14 @@ class OpenAlexApiClient
   DOI_IMAGE_SUFFIX_PATTERN = /\.(?:gif|jpe?g|png|svg|webp)\z/i
   RETRY_STATUSES = [429, 500, 502, 503, 504].freeze
 
-  class RequestError < StandardError; end
+  class RequestError < StandardError
+    attr_reader :status
+
+    def initialize(message, status: nil)
+      @status = status
+      super(message)
+    end
+  end
 
   attr_reader :api_key, :connection
 
@@ -39,19 +46,38 @@ class OpenAlexApiClient
     return [] if normalized.empty?
 
     normalized.each_slice(DOIS_PER_REQUEST).flat_map do |batch|
-      get(
-        "works",
-        filter: "doi:#{batch.join('|').gsub(',', '%2C')}",
-        per_page: PER_PAGE,
-        select: "id,doi,display_name,type,primary_topic,topics"
-      ).fetch("results")
+      works_for_doi_batch(batch)
     end
+  end
+
+  def works_for_doi_batch(batch)
+    get(
+      "works",
+      filter: "doi:#{batch.join('|').gsub(',', '%2C')}",
+      per_page: PER_PAGE,
+      select: "id,doi,display_name,type,primary_topic,topics"
+    ).fetch("results")
+  rescue RequestError => error
+    raise unless error.status == 400
+
+    if batch.one?
+      warn "Skipping OpenAlex DOI #{batch.first.inspect}: #{error.message}"
+      return []
+    end
+
+    warn "OpenAlex rejected a batch of #{batch.length} DOIs; splitting the batch"
+    midpoint = batch.length / 2
+    works_for_doi_batch(batch.first(midpoint)) +
+      works_for_doi_batch(batch.drop(midpoint))
   end
 
   def get(path, params = {})
     response = connection.get(path, params.merge(api_key: api_key))
     unless response.success?
-      raise RequestError, "OpenAlex request failed with HTTP #{response.status}"
+      raise RequestError.new(
+        "OpenAlex request failed with HTTP #{response.status}",
+        status: response.status
+      )
     end
 
     JSON.parse(response.body)
