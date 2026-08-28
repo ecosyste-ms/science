@@ -6,6 +6,14 @@ module Project::Citation
     (?:\{([^{}]+)\}|"([^"]+)"|([^,\s}]+))
   /ix
   BIBTEX_DOI_URL_PATTERN = %r!https?://(?:dx\.)?doi\.org/[^\s}"<>]+!i
+  BIBTEX_URL_PATTERN = %r!https?://[^\s}"<>]+!i
+  CODEMETA_REPOSITORY_FIELDS = %w[
+    codeRepository
+    relatedLink
+    sameAs
+    citation
+    url
+  ].freeze
 
   def citation_file_name
     return unless repository.present?
@@ -60,6 +68,102 @@ module Project::Citation
       codemeta_reference_publication_doi_candidates +
       zenodo_documentation_doi_candidates
     ).uniq { |candidate| [candidate[:value], candidate[:source]] }
+  end
+
+  def metadata_repository_url_candidates
+    (
+      citation_cff_repository_url_candidates +
+      citation_bib_repository_url_candidates +
+      codemeta_repository_url_candidates +
+      zenodo_repository_url_candidates
+    ).uniq { |candidate| [candidate[:value], candidate[:source]] }
+  end
+
+  def citation_cff_repository_url_candidates
+    cff = citation_cff
+    return [] unless cff
+
+    candidates = repository_url_candidates_from_cff_record(cff, "citation_cff")
+    if cff.preferred_citation.respond_to?(:repository_code)
+      candidates += repository_url_candidates_from_cff_record(
+        cff.preferred_citation,
+        "citation_cff.preferred-citation"
+      )
+    end
+    cff.references.each do |reference|
+      candidates += repository_url_candidates_from_cff_record(
+        reference,
+        "citation_cff.references"
+      )
+    end
+    candidates
+  end
+
+  def repository_url_candidates_from_cff_record(record, source)
+    {
+      "repository-code" => :repository_code,
+      "repository" => :repository,
+      "url" => :url,
+    }.filter_map do |field, method|
+      next unless record.respond_to?(method)
+
+      value = record.public_send(method)
+      next unless value.present?
+
+      { value: value, source: "#{source}.#{field}" }
+    end
+  end
+
+  def citation_bib_repository_url_candidates
+    return [] unless citation_bib_content?
+
+    citation_file.scan(BIBTEX_URL_PATTERN).map do |value|
+      { value: value, source: "citation_bib.url" }
+    end.uniq
+  end
+
+  def codemeta_repository_url_candidates
+    metadata = codemeta_json
+    return [] unless metadata.is_a?(Hash)
+
+    CODEMETA_REPOSITORY_FIELDS.flat_map do |field|
+      next [] unless metadata.key?(field)
+
+      metadata_url_candidates_from_value(
+        metadata[field],
+        "codemeta.#{field}"
+      )
+    end
+  end
+
+  def zenodo_repository_url_candidates
+    Array.wrap(zenodo_json&.[]("related_identifiers")).flat_map do |identifier|
+      next [] unless identifier.is_a?(Hash)
+
+      value = identifier["identifier"]
+      next [] unless value.present?
+
+      relation = identifier["relation"].presence || "related"
+      metadata_url_candidates_from_value(
+        value,
+        "zenodo.related_identifiers.#{relation}"
+      )
+    end
+  end
+
+  def metadata_url_candidates_from_value(value, source)
+    case value
+    when Array
+      value.flat_map { |item| metadata_url_candidates_from_value(item, source) }
+    when Hash
+      value.flat_map do |key, item|
+        metadata_url_candidates_from_value(item, "#{source}.#{key}")
+      end
+    else
+      value.to_s.scan(BIBTEX_URL_PATTERN).map do |url|
+        { value: url, source: source }
+      end
+    end
   end
 
   def citation_cff_preferred_doi_candidates

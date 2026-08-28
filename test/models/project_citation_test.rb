@@ -81,6 +81,29 @@ class ProjectCitationTest < ActiveSupport::TestCase
     ], project.citation_bib_doi_candidates
   end
 
+  test "extracts repository URLs from BibTeX citation content" do
+    project = Project.new(
+      url: "https://github.com/x/y",
+      citation_file: <<~BIBTEX
+        @software{example,
+          url = {https://github.com/example/software},
+          note = {Archived at https://doi.org/10.1000/example}
+        }
+      BIBTEX
+    )
+
+    assert_equal [
+      {
+        value: "https://github.com/example/software",
+        source: "citation_bib.url",
+      },
+      {
+        value: "https://doi.org/10.1000/example",
+        source: "citation_bib.url",
+      },
+    ], project.citation_bib_repository_url_candidates
+  end
+
   test "returns no CFF DOI candidates when preferred citation is absent" do
     project = Project.new(
       url: "https://github.com/x/y",
@@ -130,6 +153,85 @@ class ProjectCitationTest < ActiveSupport::TestCase
         source: "citation_cff.preferred-citation.identifiers",
       },
     ], project.citation_cff_preferred_doi_candidates
+  end
+
+  test "extracts repository URLs from CFF records" do
+    project = Project.new(
+      url: "https://github.com/x/y",
+      citation_file: <<~CFF
+        cff-version: 1.2.0
+        message: Cite this software.
+        title: Example software
+        authors:
+          - family-names: Doe
+            given-names: Jane
+        repository-code: https://github.com/example/software
+        preferred-citation:
+          type: article
+          title: Example paper
+          authors:
+            - family-names: Doe
+              given-names: Jane
+          url: https://example.org/paper
+        references:
+          - type: software
+            title: Dependency
+            authors:
+              - family-names: Smith
+                given-names: Sam
+            repository: https://gitlab.example.org/group/dependency
+      CFF
+    )
+
+    assert_equal [
+      {
+        value: "https://github.com/example/software",
+        source: "citation_cff.repository-code",
+      },
+      {
+        value: "https://example.org/paper",
+        source: "citation_cff.preferred-citation.url",
+      },
+      {
+        value: "https://gitlab.example.org/group/dependency",
+        source: "citation_cff.references.repository",
+      },
+    ], project.citation_cff_repository_url_candidates
+  end
+
+  test "extracts repository URL candidates from CodeMeta and Zenodo" do
+    project = Project.new(
+      url: "https://github.com/x/y",
+      codemeta: {
+        "codeRepository" => "https://github.com/example/software",
+        "citation" => {
+          "@id" => "https://gitlab.com/example/paper-code",
+        },
+        "name" => "Ignored metadata",
+      }.to_json,
+      zenodo: {
+        "related_identifiers" => [{
+          "identifier" => "https://github.com/example/archive",
+          "relation" => "isSupplementTo",
+          "scheme" => "url",
+        }],
+      }.to_json
+    )
+
+    assert_equal [
+      {
+        value: "https://github.com/example/software",
+        source: "codemeta.codeRepository",
+      },
+      {
+        value: "https://gitlab.com/example/paper-code",
+        source: "codemeta.citation.@id",
+      },
+      {
+        value: "https://github.com/example/archive",
+        source: "zenodo.related_identifiers.isSupplementTo",
+      },
+    ], project.metadata_repository_url_candidates
   end
 
   test "extracts CodeMeta reference publication DOI candidates with field provenance" do

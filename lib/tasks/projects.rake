@@ -91,6 +91,14 @@ namespace :projects do
     Project.discover_via_keywords
   end
 
+  desc 'discover repositories linked from citation and metadata files'
+  task :import_metadata_repositories => :environment do
+    dry_run = ActiveModel::Type::Boolean.new.cast(ENV.fetch('DRY_RUN', 'false'))
+    counts = MetadataRepositoryImporter.sync!(dry_run: dry_run)
+    label = dry_run ? "Metadata repository dry run" : "Metadata repository import"
+    puts "#{label}: #{counts.inspect}"
+  end
+
   desc 'sync dependencies'
   task :sync_dependencies => :environment do
     Project.sync_dependencies
