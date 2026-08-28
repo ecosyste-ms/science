@@ -88,6 +88,8 @@ class OpenAlexApiClientTest < ActiveSupport::TestCase
       client.normalize_doi("10.1088/1741-2560/13/1/016002);")
     assert_equal "10.1016/0021-9991(92)90370-e",
       client.normalize_doi("10.1016/0021-9991(92)90370-e")
+    assert_equal "10.21105/joss.01453",
+      client.normalize_doi("https://doi.org/10.21105%2Fjoss.01453")
   end
 
   test "rejects README placeholders that are not DOIs" do
@@ -95,6 +97,14 @@ class OpenAlexApiClientTest < ActiveSupport::TestCase
 
     assert_nil client.normalize_doi("fixme")
     assert_nil client.normalize_doi("concept_doi_from_zenodo")
+  end
+
+  test "rejects DOI resolver image URLs" do
+    client = OpenAlexApiClient.new(api_key: "test-key")
+
+    assert_nil client.normalize_doi("https://doi.org/10.5281/zenodo.5565455.svg")
+    assert_nil client.normalize_doi("https://doi.org/10.5281/zenodo.5565455.PNG")
+    assert_nil client.normalize_doi("10.5281/zenodo.5565455.svg")
   end
 
   def json_response(results:, next_cursor:)

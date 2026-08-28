@@ -161,6 +161,58 @@ class OpenAlexProjectTopicImporterTest < ActiveSupport::TestCase
       ProjectOpenAlexTopic.where(open_alex_topic: topic).pluck(:project_id).sort
   end
 
+  test "imports metadata DOI topics with field and relation provenance" do
+    project = Project.create!(
+      url: "https://github.com/test/metadata-dois",
+      citation_file: <<~CFF,
+        cff-version: 1.2.0
+        message: Cite the paper below.
+        title: Example software
+        authors:
+          - family-names: Doe
+            given-names: Jane
+        preferred-citation:
+          type: article
+          title: Example paper
+          authors:
+            - family-names: Doe
+              given-names: Jane
+          doi: 10.1000/shared-paper
+      CFF
+      codemeta: {
+        "referencePublication" => "https://doi.org/10.1000/shared-paper",
+      }.to_json,
+      zenodo: {
+        "related_identifiers" => [{
+          "scheme" => "doi",
+          "identifier" => "10.1000/shared-paper",
+          "relation" => "isDocumentedBy",
+        }],
+      }.to_json
+    )
+    topic = create_topic("https://openalex.org/T-metadata")
+    client = OpenAlexApiClient.new(api_key: "test-key")
+    client.stubs(:works_by_dois).with(["10.1000/shared-paper"]).returns([{
+      "id" => "https://openalex.org/W-metadata",
+      "doi" => "https://doi.org/10.1000/shared-paper",
+      "primary_topic" => { "id" => topic.openalex_id, "score" => 0.9 },
+      "topics" => [{ "id" => topic.openalex_id, "score" => 0.9 }],
+    }])
+
+    result = sync(project, client, source: "metadata_doi")
+
+    assert_equal 1, result[:dois]
+    assert_equal 1, result[:matched]
+    assert_equal 3, result[:assignments]
+    assignments = project.project_open_alex_topics.reload
+    assert_equal [
+      "citation_cff.preferred-citation.doi",
+      "codemeta.referencePublication",
+      "zenodo.related_identifiers.isDocumentedBy",
+    ], assignments.pluck(:source).sort
+    assert_equal ["10.1000/shared-paper"], assignments.pluck(:source_identifier).uniq
+  end
+
   test "rejects unknown label sources" do
     error = assert_raises(ArgumentError) do
       OpenAlexProjectTopicImporter.sync!(source: "unknown", client: stub)

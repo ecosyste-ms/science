@@ -58,7 +58,7 @@ class OpenAlexRakeTest < ActiveSupport::TestCase
     assert_empty project.project_fields.reload
   end
 
-  test "sync imports JOSS and linked DOI labels through the rake entrypoint" do
+  test "sync imports JOSS, README, and metadata DOI labels through the rake entrypoint" do
     joss_project = Project.create!(
       url: "https://github.com/test/open-alex-rake",
       joss_metadata: { "doi" => "10.21105/joss.00001" }
@@ -66,6 +66,18 @@ class OpenAlexRakeTest < ActiveSupport::TestCase
     linked_project = Project.create!(
       url: "https://github.com/test/open-alex-linked-rake",
       readme: "See https://DOI.ORG/10.1000/linked.1",
+      science_score: Project::SCIENCE_SCORE_THRESHOLD
+    )
+    metadata_project = Project.create!(
+      url: "https://github.com/test/open-alex-metadata-rake",
+      citation_file: <<~BIBTEX,
+        @article{metadata,
+          doi = {10.1000/metadata.1}
+        }
+      BIBTEX
+      codemeta: {
+        "referencePublication" => "https://doi.org/10.1000/metadata.1",
+      }.to_json,
       science_score: Project::SCIENCE_SCORE_THRESHOLD
     )
     topics = 4_000.times.map { |index| topic_data(index) }
@@ -112,6 +124,23 @@ class OpenAlexRakeTest < ActiveSupport::TestCase
           }],
         }.to_json
       )
+    stub_request(:get, "https://api.openalex.org/works")
+      .with(query: hash_including(
+        "api_key" => "test-key",
+        "filter" => "doi:10.1000/metadata.1"
+      ))
+      .to_return(
+        status: 200,
+        headers: { "Content-Type" => "application/json" },
+        body: {
+          "results" => [{
+            "id" => "https://openalex.org/W3",
+            "doi" => "https://doi.org/10.1000/metadata.1",
+            "primary_topic" => primary.slice("id").merge("score" => 0.82),
+            "topics" => [primary.slice("id").merge("score" => 0.82)],
+          }],
+        }.to_json
+      )
 
     output, = capture_io { Rake::Task["open_alex:sync"].execute }
 
@@ -123,9 +152,20 @@ class OpenAlexRakeTest < ActiveSupport::TestCase
     assert_equal primary.fetch("id"), linked_assignment.open_alex_topic.openalex_id
     assert_equal 0.87, linked_assignment.score
     assert_equal "readme_doi", linked_assignment.source
+    metadata_assignments = metadata_project.project_open_alex_topics.reload
+    assert_equal 2, metadata_assignments.length
+    assert metadata_assignments.all? do |assignment|
+      assignment.open_alex_topic.openalex_id == primary.fetch("id") &&
+        assignment.score == 0.82
+    end
+    assert_equal [
+      "citation_bib.doi",
+      "codemeta.referencePublication",
+    ], metadata_assignments.pluck(:source).sort
     assert_includes output, "OpenAlex taxonomy:"
     assert_includes output, "OpenAlex JOSS topics:"
     assert_includes output, "OpenAlex README DOI topics:"
+    assert_includes output, "OpenAlex metadata DOI topics:"
   end
 
   def topic_data(index)

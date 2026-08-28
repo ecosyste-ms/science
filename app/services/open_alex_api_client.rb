@@ -1,8 +1,14 @@
+require "uri"
+
 class OpenAlexApiClient
   BASE_URL = "https://api.openalex.org"
   PER_PAGE = 100
   DOIS_PER_REQUEST = 100
   DOI_PATTERN = /\A10\.\d{4,9}\/\S+\z/i
+  DOI_IMAGE_URL_PATTERN = %r{
+    \Ahttps?://(?:www\.|dx\.)?doi\.org/\S+\.(?:gif|jpe?g|png|svg|webp)(?:[?#]\S*)?\z
+  }ix
+  DOI_IMAGE_SUFFIX_PATTERN = /\.(?:gif|jpe?g|png|svg|webp)\z/i
   RETRY_STATUSES = [429, 500, 502, 503, 504].freeze
 
   class RequestError < StandardError; end
@@ -56,13 +62,16 @@ class OpenAlexApiClient
   end
 
   def normalize_doi(value)
-    normalized = value.to_s
-      .strip
-      .downcase
+    normalized = value.to_s.strip
+    return if normalized.match?(DOI_IMAGE_URL_PATTERN)
+
+    normalized = normalized.downcase
       .sub(%r{\Ahttps?://(?:dx\.)?doi\.org/}, "")
       .sub(/\Adoi:\s*/, "")
       .sub(/[.,;:]+\z/, "")
+    normalized = URI::DEFAULT_PARSER.unescape(normalized)
     normalized = strip_unmatched_closing_delimiters(normalized)
+    return if normalized.match?(DOI_IMAGE_SUFFIX_PATTERN)
     normalized if normalized.match?(DOI_PATTERN)
   end
 

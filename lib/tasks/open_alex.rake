@@ -23,6 +23,13 @@ namespace :open_alex do
       progress: progress
     )
     puts "OpenAlex README DOI topics: #{readme.inspect}"
+
+    metadata = OpenAlexProjectTopicImporter.sync!(
+      source: OpenAlexProjectTopicImporter::METADATA_DOI_SOURCE,
+      client: client,
+      progress: progress
+    )
+    puts "OpenAlex metadata DOI topics: #{metadata.inspect}"
   end
 
   desc "Compare repository-text topic predictions with primary OpenAlex labels (optional: LIMIT=n)"

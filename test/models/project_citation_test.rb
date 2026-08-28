@@ -37,6 +37,161 @@ class ProjectCitationTest < ActiveSupport::TestCase
     assert_nil Project.new(url: "https://github.com/x/y").citation_cff
   end
 
+  test "citation_cff ignores non-CFF citation content" do
+    project = Project.new(
+      url: "https://github.com/x/y",
+      repository: {
+        "metadata" => { "files" => { "citation" => "CITATION.bib" } },
+      },
+      citation_file: "@article{paper, doi = {10.1000/example}}"
+    )
+
+    assert_nil project.citation_cff
+    assert_empty project.citation_cff_preferred_doi_candidates
+  end
+
+  test "extracts DOI fields and resolver URLs from BibTeX citation content" do
+    project = Project.new(
+      url: "https://github.com/x/y",
+      citation_file: <<~BIBTEX
+        @article{first,
+          doi = {10.1000/bibtex-field},
+          url = {https://doi.org/10.1000/bibtex-field}
+        }
+        @software{second,
+          DOI = "10.1000/bibtex-quoted"
+        }
+        @misc{third,
+          url = {https://doi.org/10.1000/bibtex-url}
+        }
+      BIBTEX
+    )
+
+    assert_equal [
+      { value: "10.1000/bibtex-field", source: "citation_bib.doi" },
+      { value: "10.1000/bibtex-quoted", source: "citation_bib.doi" },
+      {
+        value: "https://doi.org/10.1000/bibtex-field",
+        source: "citation_bib.doi_url",
+      },
+      {
+        value: "https://doi.org/10.1000/bibtex-url",
+        source: "citation_bib.doi_url",
+      },
+    ], project.citation_bib_doi_candidates
+  end
+
+  test "returns no CFF DOI candidates when preferred citation is absent" do
+    project = Project.new(
+      url: "https://github.com/x/y",
+      citation_file: <<~CFF
+        cff-version: 1.2.0
+        message: Cite this software.
+        title: Example software
+        authors:
+          - family-names: Doe
+            given-names: Jane
+      CFF
+    )
+
+    assert_empty project.citation_cff_preferred_doi_candidates
+  end
+
+  test "extracts preferred citation DOI candidates from CITATION.cff" do
+    project = Project.new(
+      url: "https://github.com/x/y",
+      citation_file: <<~CFF
+        cff-version: 1.2.0
+        message: Cite the paper below.
+        title: Example software
+        authors:
+          - family-names: Doe
+            given-names: Jane
+        preferred-citation:
+          type: article
+          title: Example paper
+          authors:
+            - family-names: Doe
+              given-names: Jane
+          doi: 10.1000/cff-paper
+          identifiers:
+            - type: doi
+              value: 10.1000/cff-identifier
+      CFF
+    )
+
+    assert_equal [
+      {
+        value: "10.1000/cff-paper",
+        source: "citation_cff.preferred-citation.doi",
+      },
+      {
+        value: "10.1000/cff-identifier",
+        source: "citation_cff.preferred-citation.identifiers",
+      },
+    ], project.citation_cff_preferred_doi_candidates
+  end
+
+  test "extracts CodeMeta reference publication DOI candidates with field provenance" do
+    project = Project.new(
+      url: "https://github.com/x/y",
+      codemeta: {
+        "referencePublication" => [
+          "https://doi.org/10.1000/codemeta-paper",
+          {
+            "@type" => "ScholarlyArticle",
+            "identifier" => {
+              "@type" => "PropertyValue",
+              "propertyID" => "DOI",
+              "value" => "10.1000/codemeta-identifier",
+            },
+          },
+        ],
+      }.to_json
+    )
+
+    assert_equal [
+      {
+        value: "https://doi.org/10.1000/codemeta-paper",
+        source: "codemeta.referencePublication",
+      },
+      {
+        value: "10.1000/codemeta-identifier",
+        source: "codemeta.referencePublication.identifier.value",
+      },
+    ], project.codemeta_reference_publication_doi_candidates
+  end
+
+  test "extracts only documented-by DOI identifiers from Zenodo metadata" do
+    project = Project.new(
+      url: "https://github.com/x/y",
+      zenodo: {
+        "related_identifiers" => [
+          {
+            "scheme" => "doi",
+            "identifier" => "10.1000/zenodo-paper",
+            "relation" => "isDocumentedBy",
+          },
+          {
+            "scheme" => "doi",
+            "identifier" => "10.1000/zenodo-data",
+            "relation" => "isSupplementTo",
+          },
+          {
+            "scheme" => "url",
+            "identifier" => "https://doi.org/10.1000/not-a-doi-scheme",
+            "relation" => "isDocumentedBy",
+          },
+        ],
+      }.to_json
+    )
+
+    assert_equal [{
+      value: "10.1000/zenodo-paper",
+      source: "zenodo.related_identifiers.isDocumentedBy",
+    }], project.zenodo_documentation_doi_candidates
+  end
+
   test "person_to_codemeta handles Person with orcid and affiliation" do
     p = Project.new(url: "https://github.com/x/y")
     person = CFF::Person.new
