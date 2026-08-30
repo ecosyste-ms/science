@@ -278,6 +278,19 @@ components:
           type: array
           items:
             type: string
+        fields:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              domain:
+                type: string
+              score:
+                type: number
     Issue:
       type: object
       properties:

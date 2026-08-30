@@ -113,4 +113,38 @@ class Api::V1::ProjectsControllerTest < ActionDispatch::IntegrationTest
       '0000-0003-0166-248X',
     ], json_response['orcids']
   end
+
+  test "GET show includes several ranked OpenAlex fields" do
+    project = Project.create!(
+      url: "https://github.com/test/with-fields",
+      name: "Scientific Toolkit",
+      science_score: 70
+    )
+    engineering = Field.create!(
+      name: "Engineering",
+      domain: "Physical Sciences",
+      openalex_id: "https://openalex.org/fields/22"
+    )
+    computer_science = Field.create!(
+      name: "Computer Science",
+      domain: "Physical Sciences",
+      openalex_id: "https://openalex.org/fields/17"
+    )
+    legacy = Field.create!(name: "Legacy Field", domain: "physical_sciences")
+    ProjectField.create!(project: project, field: engineering, confidence_score: 0.62)
+    ProjectField.create!(project: project, field: computer_science, confidence_score: 0.84)
+    ProjectField.create!(project: project, field: legacy, confidence_score: 0.99)
+
+    get api_v1_project_url(project)
+
+    assert_response :success
+    fields = JSON.parse(response.body).fetch("fields")
+    assert_equal [
+      "https://openalex.org/fields/17",
+      "https://openalex.org/fields/22",
+    ], fields.map { |field| field.fetch("id") }
+    assert_equal ["Computer Science", "Engineering"], fields.map { |field| field.fetch("name") }
+    assert_equal [0.84, 0.62], fields.map { |field| field.fetch("score") }
+    assert fields.all? { |field| field.fetch("domain") == "Physical Sciences" }
+  end
 end

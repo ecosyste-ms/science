@@ -1,6 +1,7 @@
 class Api::V1::IssuesController < Api::V1::ApplicationController
   def index
-    scope = Issue.where(pull_request: false, state: 'open').includes(:project)
+    scope = Issue.where(pull_request: false, state: 'open')
+      .includes(project: { project_fields: :field })
     scope = scope.joins(:project).merge(Project.visible).good_first_issue
 
     # Apply filters if provided

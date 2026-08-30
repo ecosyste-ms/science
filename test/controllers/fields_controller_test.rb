@@ -1,287 +1,175 @@
-require 'test_helper'
+require "test_helper"
 
 class FieldsControllerTest < ActionDispatch::IntegrationTest
   setup do
-    # Use existing seeded fields or create them
-    @physics_field = Field.find_or_create_by!(name: 'Physics', domain: 'physical_sciences') do |f|
-      f.keywords = ['quantum', 'mechanics', 'particles']
-      f.packages = ['numpy', 'scipy']
-      f.indicators = ['simulation', 'experiment']
-    end
-    
-    @economics_field = Field.find_or_create_by!(name: 'Economics', domain: 'social_sciences') do |f|
-      f.keywords = ['market', 'finance', 'economy']
-      f.packages = ['pandas', 'statsmodels']
-      f.indicators = ['analysis', 'model']
-    end
-    
-    # Create test projects with minimal required fields
-    @project1 = Project.find_or_create_by!(url: 'https://github.com/test/quantum-sim') do |p|
-      p.name = 'Quantum Simulator'
-      p.description = 'A quantum physics simulation tool'
-      p.keywords = ['quantum', 'physics', 'simulation']
-    end
-    
-    @project2 = Project.find_or_create_by!(url: 'https://github.com/test/econ-model') do |p|
-      p.name = 'Economic Model'
-      p.description = 'Economic modeling tool'
-      p.keywords = ['economics', 'model', 'finance']
-    end
-    
-    # Clean up and recreate project-field associations
-    ProjectField.where(project: [@project1, @project2]).destroy_all
-    
-    @pf1 = ProjectField.create!(
-      project: @project1,
-      field: @physics_field,
-      confidence_score: 0.85,
-      match_signals: { 'keywords' => 0.9, 'readme' => 0.8 }
+    @computer_science = Field.create!(
+      name: "Computer Science",
+      domain: "Physical Sciences",
+      openalex_id: "https://openalex.org/fields/17"
     )
-    
-    @pf2 = ProjectField.create!(
-      project: @project2,
-      field: @economics_field,
-      confidence_score: 0.75,
-      match_signals: { 'keywords' => 0.8, 'packages' => 0.7 }
+    @engineering = Field.create!(
+      name: "Engineering",
+      domain: "Physical Sciences",
+      openalex_id: "https://openalex.org/fields/22"
     )
-    
-    # Add multi-field classification
-    @pf3 = ProjectField.create!(
-      project: @project1,
-      field: @economics_field,
-      confidence_score: 0.45,
-      match_signals: { 'keywords' => 0.5 }
+    @legacy_field = Field.create!(
+      name: "Legacy Demo Field",
+      domain: "physical_sciences"
+    )
+    create_topic(
+      openalex_id: "https://openalex.org/T1",
+      name: "Software Engineering",
+      field: @computer_science,
+      subfield_id: "https://openalex.org/subfields/1712",
+      subfield_name: "Software"
+    )
+    create_topic(
+      openalex_id: "https://openalex.org/T2",
+      name: "Control Engineering",
+      field: @engineering,
+      subfield_id: "https://openalex.org/subfields/2207",
+      subfield_name: "Control and Systems Engineering"
+    )
+    @project_one = Project.create!(
+      url: "https://github.com/test/algorithm-toolkit",
+      name: "Algorithm Toolkit",
+      description: "Algorithms for scientific computing",
+      keywords: %w[algorithms computing],
+      science_score: 72
+    )
+    @project_two = Project.create!(
+      url: "https://github.com/test/control-simulator",
+      name: "Control Simulator",
+      description: "Control systems simulation",
+      keywords: %w[control simulation],
+      science_score: 64
+    )
+    @non_scientific_project = Project.create!(
+      url: "https://github.com/test/non-scientific",
+      name: "Non-scientific Project",
+      science_score: Project::SCIENCE_SCORE_THRESHOLD - 1
+    )
+    ProjectField.create!(
+      project: @project_one,
+      field: @computer_science,
+      confidence_score: 0.81,
+      match_signals: { "matched_terms" => %w[algorithm computing] }
+    )
+    ProjectField.create!(
+      project: @project_one,
+      field: @engineering,
+      confidence_score: 0.46,
+      match_signals: { "matched_terms" => %w[simulation] }
+    )
+    ProjectField.create!(
+      project: @project_two,
+      field: @engineering,
+      confidence_score: 0.73,
+      match_signals: { "matched_terms" => %w[control simulation] }
+    )
+    ProjectField.create!(
+      project: @project_two,
+      field: @legacy_field,
+      confidence_score: 0.99
+    )
+    ProjectField.create!(
+      project: @non_scientific_project,
+      field: @engineering,
+      confidence_score: 1.0
     )
   end
 
-  teardown do
-    # Clean up test data
-    ProjectField.where(project: [@project1, @project2]).destroy_all
+  test "index lists OpenAlex fields and classification counts" do
+    get fields_url
+
+    assert_response :success
+    assert_select "h1", text: "Scientific Fields"
+    assert_select "a[href='#{field_path(@computer_science)}']", text: @computer_science.name
+    assert_select "a[href='#{field_path(@engineering)}']", text: @engineering.name
+    assert_select "a[href='/domains/physical-sciences']", text: "Physical Sciences"
+    assert_no_match @legacy_field.name, response.body
+    assert_no_match @non_scientific_project.name, response.body
+    assert_match "2 projects", response.body
+    assert_match "Active Topics", response.body
+    assert_match "Multi-field Projects", response.body
   end
 
-  # INDEX ACTION TESTS
-  
-  test "should get index" do
-    get fields_url
+  test "show resolves a field slug and ranks projects by classifier score" do
+    get field_url(@engineering)
+
     assert_response :success
-    
-    assert_select 'h1', text: 'Scientific Fields'
-    
-    # Check that domains are displayed
-    assert_match 'Physical Sciences', response.body
-    assert_match 'Social Sciences', response.body
-    
-    # Check that fields are displayed
-    assert_match @physics_field.name, response.body
-    assert_match @economics_field.name, response.body
-  end
-  
-  test "index should show summary statistics" do
-    get fields_url
-    assert_response :success
-    
-    # Check for stats cards
-    assert_select '.card.text-center', minimum: 4
-    assert_match 'Classified Projects', response.body
-    assert_match 'Avg Confidence', response.body
-    assert_match 'Multi-field Projects', response.body
-  end
-  
-  test "index should show project counts" do
-    get fields_url
-    assert_response :success
-    
-    # Both fields should have project counts displayed
-    assert_select '.badge', minimum: 2
-  end
-  
-  test "index should handle fields with no projects" do
-    empty_field = Field.find_or_create_by!(name: 'Test Empty Field', domain: 'physical_sciences')
-    
-    get fields_url
-    assert_response :success
-    
-    # Should display the field even with 0 projects
-    assert_match empty_field.name, response.body
+    assert_select "h1", text: @engineering.name
+    assert_match "Field ID:", response.body
+    assert_match "22", response.body
+    assert_match "Control and Systems Engineering", response.body
+    assert_no_match "https://openalex.org/subfields/2207", response.body
+    assert_select "a[href='/domains/physical-sciences']", text: "Physical Sciences"
+    assert_operator response.body.index(@project_two.name), :<, response.body.index(@project_one.name)
+    assert_match "score 0.730", response.body
+    assert_match "Control", response.body
+    assert_match "Also ranked in:", response.body
+    assert_select "a[href='#{field_path(@computer_science)}']", text: @computer_science.name
   end
 
-  # SHOW ACTION TESTS
-  
-  test "should get show for physics field" do
-    get field_url(@physics_field)
+  test "show lists related OpenAlex fields and their project counts" do
+    get field_url(@computer_science)
+
     assert_response :success
-    
-    assert_select 'h1', @physics_field.name
-    assert_match 'Physical Sciences', response.body
-  end
-  
-  test "should get show for economics field" do
-    get field_url(@economics_field)
-    assert_response :success
-    
-    assert_select 'h1', @economics_field.name
-    assert_match 'Social Sciences', response.body
-  end
-  
-  test "show should display field statistics" do
-    get field_url(@physics_field)
-    assert_response :success
-    
-    assert_match 'Total Projects:', response.body
-    assert_match 'Average Confidence', response.body
-    assert_match 'High Confidence', response.body
-  end
-  
-  test "show should display field metadata" do
-    get field_url(@physics_field)
-    assert_response :success
-    
-    # Check keywords if present
-    if @physics_field.keywords.any?
-      assert_match 'Field Keywords:', response.body
-      @physics_field.keywords.each do |keyword|
-        assert_match keyword, response.body
-      end
-    end
-    
-    # Check packages if present
-    if @physics_field.packages.any?
-      assert_match 'Common Packages:', response.body
-    end
-    
-    # Check indicators if present
-    if @physics_field.indicators.any?
-      assert_match 'Scientific Indicators:', response.body
-    end
-  end
-  
-  test "show should list projects in the field" do
-    get field_url(@physics_field)
-    assert_response :success
-    
-    # Project should be listed
-    assert_match @project1.name, response.body
-    assert_match @project1.description, response.body
-    
-    # Confidence score should be displayed
-    assert_match '85% confidence', response.body
-  end
-  
-  test "show should display multi-field projects correctly" do
-    get field_url(@economics_field)
-    assert_response :success
-    
-    # Both projects should be listed
-    assert_match @project1.name, response.body
-    assert_match @project2.name, response.body
-    
-    # Should show "Also in" for project1
-    assert_match 'Also in:', response.body
-  end
-  
-  test "show should handle fields with no projects" do
-    empty_field = Field.find_or_create_by!(name: 'Test Empty', domain: 'social_sciences')
-    
-    get field_url(empty_field)
-    assert_response :success
-    
-    assert_match 'No projects have been classified in this field yet', response.body
-  end
-  
-  test "show should display related fields" do
-    # Make sure there's another field in same domain
-    chemistry = Field.find_or_create_by!(name: 'Chemistry', domain: 'physical_sciences')
-    
-    get field_url(@physics_field)
-    assert_response :success
-    
-    assert_match 'Related Fields', response.body
-    assert_match chemistry.name, response.body
-  end
-  
-  test "show should handle missing match signals" do
-    # Create project field without match signals
-    pf_no_signals = ProjectField.create!(
-      project: @project2,
-      field: @physics_field,
-      confidence_score: 0.6,
-      match_signals: nil
-    )
-    
-    get field_url(@physics_field)
-    assert_response :success
-    
-    # Should not error
-    assert_match @project2.name, response.body
-    
-    pf_no_signals.destroy
-  end
-  
-  test "show should display top keywords when projects have them" do
-    get field_url(@physics_field)
-    assert_response :success
-    
-    # Should have top keywords section if projects have keywords
-    if @project1.keywords.any?
-      assert_match 'Top Keywords from Projects', response.body
-    end
-  end
-  
-  test "show handles projects with nil keywords" do
-    @project1.update(keywords: nil)
-    
-    get field_url(@physics_field)
-    assert_response :success
-    
-    # Should not error
-    assert_match @project1.name, response.body
-  end
-  
-  test "show handles projects with empty array keywords" do
-    @project1.update(keywords: [])
-    
-    get field_url(@physics_field)
-    assert_response :success
-    
-    # Should not error
-    assert_match @project1.name, response.body
+    assert_match "Related Fields", response.body
+    assert_select "a[href='#{field_path(@engineering)}']", text: @engineering.name
+    assert_match "(2 projects)", response.body
   end
 
-  # EDGE CASES
-  
-  test "show returns 404 for non-existent field" do
-    get field_url(999999)
+  test "domain lists its OpenAlex fields and each classified project once" do
+    get open_alex_domain_url("physical-sciences")
+
+    assert_response :success
+    assert_select "h1", text: "Physical Sciences"
+    assert_select "a[href='#{field_path(@computer_science)}']", text: @computer_science.name
+    assert_select "a[href='#{field_path(@engineering)}']", text: @engineering.name
+    assert_select "[data-project-id='#{@project_one.id}']", count: 1
+    assert_select "[data-project-id='#{@project_two.id}']", count: 1
+    assert_no_match @legacy_field.name, response.body
+    assert_no_match @non_scientific_project.name, response.body
+    assert_operator response.body.index(@project_one.name), :<, response.body.index(@project_two.name)
+    assert_match "score 0.810", response.body
+  end
+
+  test "domain rejects an unknown OpenAlex domain slug" do
+    get open_alex_domain_url("not-a-domain")
     assert_response :not_found
   end
-  
-  test "index handles when no fields exist" do
-    # Don't actually delete all fields as it would break other tests
-    # Just test that the view doesn't error with empty collections
-    get fields_url
-    assert_response :success
+
+  test "show returns 404 for a legacy field ID" do
+    get field_url(@legacy_field.id)
+
+    assert_response :not_found
   end
-  
-  test "show handles very long field names" do
-    long_field = Field.find_or_create_by!(
-      name: 'Very Long Field Name ' * 10,
-      domain: 'physical_sciences'
-    )
-    
-    get field_url(long_field)
-    assert_response :success
+
+  test "show rejects an unknown field slug" do
+    get field_url("not-a-field")
+    assert_response :not_found
   end
-  
-  test "show handles special characters in field data" do
-    special_field = Field.find_or_create_by!(
-      name: 'Field & Science < > "Test"',
-      domain: 'physical_sciences',
-      keywords: ['test&demo', '<script>alert(1)</script>']
-    )
-    
-    get field_url(special_field)
+
+  test "show escapes project keywords" do
+    @project_one.update!(keywords: ["<script>alert(1)</script>"])
+
+    get field_url(@computer_science)
+
     assert_response :success
-    
-    # Should escape HTML properly
-    assert_no_match '<script>alert', response.body
+    assert_no_match "<script>alert", response.body
+  end
+
+  def create_topic(openalex_id:, name:, field:, subfield_id:, subfield_name:)
+    OpenAlexTopic.create!(
+      openalex_id: openalex_id,
+      display_name: name,
+      subfield_id: subfield_id,
+      subfield_name: subfield_name,
+      field_id: field.openalex_id,
+      field_name: field.name,
+      domain_id: "https://openalex.org/domains/3",
+      domain_name: field.domain
+    )
   end
 end

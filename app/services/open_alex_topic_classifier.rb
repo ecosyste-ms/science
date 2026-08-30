@@ -1,6 +1,7 @@
 class OpenAlexTopicClassifier
   DEFAULT_LIMIT = 5
   MATCHED_TERM_LIMIT = 10
+  FIELD_TOPIC_LIMIT = 5
   SOURCE_WEIGHTS = {
     topic_name: 5.0,
     topic_keyword: 4.0,
@@ -26,6 +27,16 @@ class OpenAlexTopicClassifier
   ].to_h { |term| [term, true] }.freeze
 
   Prediction = Struct.new(:topic, :score, :matched_terms, keyword_init: true)
+  FieldPrediction = Struct.new(
+    :field_id,
+    :field_name,
+    :domain_id,
+    :domain_name,
+    :score,
+    :matched_terms,
+    :topic_ids,
+    keyword_init: true
+  )
 
   attr_reader :topics, :topic_lookup, :topic_terms, :topic_norms, :term_index
 
@@ -49,17 +60,43 @@ class OpenAlexTopicClassifier
       end
     end
 
-    scores.map do |topic_id, score|
+    ranked_scores = scores.map do |topic_id, score|
       [topic_id, score / (project_norm * topic_norms.fetch(topic_id))]
     end.sort_by { |topic_id, score| [-score, topic_lookup.fetch(topic_id).openalex_id] }
+    ranked_scores = ranked_scores.first(limit) if limit
+
+    ranked_scores.map do |topic_id, score|
+      Prediction.new(
+        topic: topic_lookup.fetch(topic_id),
+        score: score,
+        matched_terms: matched_terms(topic_id, project_terms)
+      )
+    end
+  end
+
+  def classify_project_fields(project, limit: DEFAULT_LIMIT)
+    fields = {}
+
+    classify_project(project, limit: DEFAULT_LIMIT).each do |prediction|
+      topic = prediction.topic
+      field = fields[topic.field_id] ||= FieldPrediction.new(
+        field_id: topic.field_id,
+        field_name: topic.field_name,
+        domain_id: topic.domain_id,
+        domain_name: topic.domain_name,
+        score: prediction.score,
+        matched_terms: [],
+        topic_ids: []
+      )
+      field.matched_terms = (field.matched_terms + prediction.matched_terms)
+        .uniq.first(MATCHED_TERM_LIMIT)
+      field.topic_ids = (field.topic_ids + [topic.openalex_id])
+        .first(FIELD_TOPIC_LIMIT)
+    end
+
+    fields.values
+      .sort_by { |field| [-field.score, field.field_id] }
       .first(limit)
-      .map do |topic_id, score|
-        Prediction.new(
-          topic: topic_lookup.fetch(topic_id),
-          score: score,
-          matched_terms: matched_terms(topic_id, project_terms)
-        )
-      end
   end
 
   def build_topic_terms

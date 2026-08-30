@@ -52,15 +52,18 @@ class ProjectClassificationTest < ActiveSupport::TestCase
     assert_nil Project.new(url: "https://github.com/x/y").suggest_category
   end
 
-  test "all_fields_with_confidence sorts project_fields by confidence descending" do
+  test "OpenAlex fields sort by score and exclude legacy demo fields" do
     project = Project.create!(url: "https://github.com/x/y")
-    f1 = Field.create!(name: "biology", domain: "life-sciences")
-    f2 = Field.create!(name: "physics", domain: "physical-sciences")
+    f1 = Field.create!(name: "biology", domain: "Life Sciences", openalex_id: "11")
+    f2 = Field.create!(name: "physics", domain: "Physical Sciences", openalex_id: "12")
+    legacy = Field.create!(name: "demo", domain: "physical_sciences")
     ProjectField.create!(project: project, field: f1, confidence_score: 0.3)
     ProjectField.create!(project: project, field: f2, confidence_score: 0.9)
+    ProjectField.create!(project: project, field: legacy, confidence_score: 1.0)
 
-    result = project.all_fields_with_confidence
+    result = project.open_alex_fields_with_scores
     assert_equal [[f2, 0.9], [f1, 0.3]], result
+    assert_equal f2, project.primary_field
   end
 
   test "contributor_topics counts stemmed topics across contributors above minimum" do

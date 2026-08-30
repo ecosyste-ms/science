@@ -4,8 +4,10 @@ class Field < ApplicationRecord
   
   validates :name, presence: true, uniqueness: true
   validates :domain, presence: true
+  validates :openalex_id, uniqueness: true, allow_nil: true
   
   scope :by_domain, ->(domain) { where(domain: domain) }
+  scope :open_alex, -> { where.not(openalex_id: nil) }
   
   DOMAINS = {
     'physical_sciences' => 'Physical Sciences',
@@ -15,6 +17,10 @@ class Field < ApplicationRecord
   }
   
   def domain_display_name
-    DOMAINS[domain] || domain.humanize
+    DOMAINS[domain] || domain
+  end
+
+  def to_param
+    openalex_id.present? ? name.parameterize : super
   end
 end

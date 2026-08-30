@@ -60,7 +60,8 @@ Rails.application.routes.draw do
   
   resources :contributors, only: [:index, :show] 
 
-  resources :fields, only: [:index, :show]
+  get "/domains/:slug", to: "fields#domain", as: :open_alex_domain
+  resources :fields, only: [:index, :show], param: :slug
 
   resources :categories, only: [:index, :show] do
     member do

@@ -1,6 +1,8 @@
 class Api::V1::ProjectsController < Api::V1::ApplicationController
   def index
-    @projects = Project.visible.where.not(last_synced_at: nil)
+    @projects = Project.visible
+      .includes(project_fields: :field)
+      .where.not(last_synced_at: nil)
 
 
     if params[:sort].present? || params[:order].present?
@@ -16,11 +18,12 @@ class Api::V1::ProjectsController < Api::V1::ApplicationController
   end
 
   def show
-    @project = Project.visible.find(params[:id])
+    @project = Project.visible.includes(project_fields: :field).find(params[:id])
   end
 
   def lookup
-    @project = Project.visible.find_by(url: params[:url].downcase)
+    @project = Project.visible.includes(project_fields: :field)
+      .find_by(url: params[:url].downcase)
     if @project.nil?
       @project = Project.create(url: params[:url].downcase)
       raise ActiveRecord::RecordNotFound unless @project.persisted?
@@ -37,11 +40,15 @@ class Api::V1::ProjectsController < Api::V1::ApplicationController
   end
 
   def packages
-    @projects = Project.visible.active.select{|p| p.packages.present? }.sort_by{|p| p.packages.sum{|p| p['downloads'] || 0 } }.reverse
+    @projects = Project.visible.active
+      .includes(project_fields: :field)
+      .select { |project| project.packages.present? }
+      .sort_by { |project| project.packages.sum { |package| package['downloads'] || 0 } }
+      .reverse
   end
 
   def search
-    @scope = Project.visible
+    @scope = Project.visible.includes(project_fields: :field)
 
     if params[:q].present?
       @scope = @scope.where("url ILIKE ?", "%#{params[:q]}%")

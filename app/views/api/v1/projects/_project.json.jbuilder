@@ -5,3 +5,9 @@ if project.citation_file.present?
   json.bibtex_url export_project_url(project, format: 'bibtex')
   json.apalike_url export_project_url(project, format: 'apalike')
 end
+json.fields project.open_alex_fields_with_scores do |field, score|
+  json.id field.openalex_id
+  json.name field.name
+  json.domain field.domain_display_name
+  json.score score.round(6)
+end

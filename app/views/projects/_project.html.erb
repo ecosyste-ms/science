@@ -53,24 +53,14 @@
         <% end %>
 
 
-        <% if project.project_fields.any? %>
+        <% if project.open_alex_fields_with_scores.any? %>
           <div class="d-flex align-items-start me-4 mb-2">
             <%= bootstrap_icon 'layers', width: 18, height: 18, class: 'flex-shrink-0 me-2' %>
             <div>
-              <% project.all_fields_with_confidence.each do |field, confidence| %>
-                <% badge =
-                    if confidence > 0.7
-                      'info'
-                    elsif confidence > 0.5
-                      'secondary'
-                    else
-                      'light'
-                    end %>
-                <span class="badge text-bg-<%= badge %> me-1 mb-2">
-                  <%= field.name %>
-                  <% if confidence < 0.5 %>
-                    <small>(<%= (confidence * 100).round(0) %>%)</small>
-                  <% end %>
+              <% project.open_alex_fields_with_scores.each do |field, score| %>
+                <span class="badge text-bg-light me-1 mb-2">
+                  <%= link_to field.name, field_path(field), class: "text-reset text-decoration-none" %>
+                  <small>(<%= number_with_precision(score, precision: 2) %>)</small>
                 </span>
               <% end %>
             </div>

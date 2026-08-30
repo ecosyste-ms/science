@@ -1,6 +1,8 @@
 class ProjectsController < ApplicationController
   def show
-    @project = Project.visible.includes(:host, :owner_record, papers: :mentions).find(params[:id])
+    @project = Project.visible
+      .includes(:host, :owner_record, { project_fields: :field }, papers: :mentions)
+      .find(params[:id])
   end
 
   def export
@@ -25,7 +27,7 @@ class ProjectsController < ApplicationController
   end
 
   def search
-    @scope = Project.visible.where('science_score > 0')
+    @scope = Project.visible.includes(project_fields: :field).where('science_score > 0')
 
     if params[:q].present?
       @scope = @scope.where("url ILIKE ?", "%#{params[:q]}%")
@@ -82,6 +84,7 @@ class ProjectsController < ApplicationController
   end
 
   def filtered_project_list(scope)
+    scope = scope.includes(project_fields: :field)
     scope = scope.keyword(params[:keyword]) if params[:keyword].present?
     scope = scope.owner(params[:owner]) if params[:owner].present?
     scope = scope.language(params[:language]) if params[:language].present?

@@ -1,95 +1,109 @@
 class FieldsController < ApplicationController
   rescue_from ActiveRecord::RecordNotFound, with: :render_404
-  def index
-    # Cache field stats for 1 hour since they change infrequently
-    @field_stats = if Rails.cache.respond_to?(:fetch)
-      Rails.cache.fetch('field_index_stats', expires_in: 1.hour) do
-        calculate_field_stats
-      end
-    else
-      calculate_field_stats
-    end
 
-    @fields = Field.all.sort_by { |f| [f.domain, -@field_stats[f.id][:project_count]] }
+  def index
+    @fields = Field.open_alex.order(:domain, :name).to_a
+    @domains = @fields.group_by(&:domain_display_name).map do |domain_name, fields|
+      {
+        slug: domain_name.parameterize,
+        name: domain_name,
+        fields: fields,
+      }
+    end
+    classifications = visible_classifications
+    @field_stats = classifications.group(:field_id).distinct.count(:project_id)
+    @classified_projects_count = classifications.distinct.count(:project_id)
+    @multi_field_projects_count = classifications
+      .group(:project_id)
+      .having("COUNT(DISTINCT project_fields.field_id) > 1")
+      .count
+      .length
+    @active_topic_count = OpenAlexTopic.active.count
   end
 
   def show
-    @field = Field.find(params[:id])
+    field_slug = params[:slug].to_s
+    @field = Field.open_alex.to_a.find { |field| field.to_param == field_slug }
+    raise ActiveRecord::RecordNotFound unless @field
 
-    # Get projects in this field with their confidence scores
-    @pagy, @project_fields = pagy(@field.project_fields
-                                        .joins(:project)
-                                        .merge(Project.visible)
-                                        .includes(:project)
-                                        .order(confidence_score: :desc),
-                                  items: 20)
-
-    # Cache field statistics for 30 minutes
-    @stats = if Rails.cache.respond_to?(:fetch)
-      Rails.cache.fetch("field_#{@field.id}_stats", expires_in: 30.minutes) do
-        calculate_field_show_stats(@field)
-      end
-    else
-      calculate_field_show_stats(@field)
-    end
-
-    # Cache top keywords for 1 hour
-    @top_keywords = if Rails.cache.respond_to?(:fetch)
-      Rails.cache.fetch("field_#{@field.id}_keywords", expires_in: 1.hour) do
-        calculate_top_keywords(@field)
-      end
-    else
-      calculate_top_keywords(@field)
-    end
-  end
-  
-  private
-
-  def calculate_field_stats
-    # Use a single query to get counts and averages for all fields
-    # This is more efficient than N+1 queries
-    field_stats = {}
-
-    # Get counts per field
-    visible_project_fields = ProjectField.joins(:project).merge(Project.visible)
-    counts = visible_project_fields.group(:field_id).count
-    # Get averages per field
-    averages = visible_project_fields.group(:field_id).average(:confidence_score)
-
-    Field.all.each do |field|
-      project_count = counts[field.id] || 0
-      field_stats[field.id] = {
-        project_count: project_count,
-        avg_confidence: project_count > 0 ? averages[field.id]&.round(2) : nil
-      }
-    end
-
-    field_stats
-  end
-
-  def calculate_field_show_stats(field)
-    project_fields = field.project_fields.joins(:project).merge(Project.visible)
-    {
-      total_projects: project_fields.count,
-      avg_confidence: project_fields.average(:confidence_score)&.round(2),
-      high_confidence_count: project_fields.where('confidence_score >= ?', 0.7).count,
-      medium_confidence_count: project_fields.where('confidence_score >= ? AND confidence_score < ?', 0.5, 0.7).count,
-      low_confidence_count: project_fields.where('confidence_score < ?', 0.5).count
+    classifications = @field.project_fields
+      .joins(:project)
+      .merge(Project.visible)
+      .merge(Project.scientific)
+    @pagy, @project_fields = pagy(
+      classifications
+        .includes(project: { project_fields: :field })
+        .order(confidence_score: :desc),
+      limit: 20
+    )
+    @stats = {
+      total_projects: classifications.count,
+      average_score: classifications.average(:confidence_score),
     }
+    topics = OpenAlexTopic.active.where(field_id: @field.openalex_id)
+    @domain_slug = @field.domain_display_name.parameterize
+    @topic_count = topics.count
+    @subfields = topics.distinct.order(:subfield_name)
+      .pluck(:subfield_id, :subfield_name)
+    @top_keywords = calculate_top_keywords(@field)
+    @related_fields = Field.open_alex.where(domain: @field.domain)
+      .where.not(id: @field.id)
+      .order(:name)
+    @related_field_counts = visible_classifications
+      .where(field_id: @related_fields.select(:id))
+      .group(:field_id)
+      .distinct
+      .count(:project_id)
+  end
+
+  def domain
+    domain_slug = params[:slug].to_s
+    domain = OpenAlexTopic.active.distinct
+      .pluck(:domain_id, :domain_name)
+      .find { |_domain_id, domain_name| domain_name.parameterize == domain_slug }
+    raise ActiveRecord::RecordNotFound unless domain
+
+    @domain_openalex_id, @domain_name = domain
+    topics = OpenAlexTopic.active.where(domain_id: @domain_openalex_id)
+
+    field_openalex_ids = topics.distinct.pluck(:field_id)
+    @fields = Field.open_alex.where(openalex_id: field_openalex_ids).order(:name).to_a
+    classifications = visible_classifications.where(field_id: @fields.map(&:id))
+    @field_stats = classifications.group(:field_id).distinct.count(:project_id)
+    @stats = {
+      total_fields: @fields.length,
+      total_projects: classifications.distinct.count(:project_id),
+      total_topics: topics.count,
+    }
+
+    ranked_classification_ids = classifications
+      .select("DISTINCT ON (project_fields.project_id) project_fields.id")
+      .reorder(Arel.sql(
+        "project_fields.project_id, project_fields.confidence_score DESC, project_fields.id"
+      ))
+    @pagy, @project_fields = pagy(
+      ProjectField.where(id: ranked_classification_ids)
+        .includes(:field, project: { project_fields: :field })
+        .order(confidence_score: :desc, id: :asc),
+      limit: 20
+    )
+  end
+
+  def visible_classifications
+    ProjectField.joins(:project, :field)
+      .merge(Project.visible)
+      .merge(Project.scientific)
+      .merge(Field.open_alex)
   end
 
   def calculate_top_keywords(field)
-    return [] unless field.project_fields.any?
-
     keyword_counts = Hash.new(0)
-    field.projects.merge(Project.visible).limit(100).each do |project|
-      if project.keywords.present? && project.keywords.is_a?(Array)
-        project.keywords.each do |keyword|
-          keyword_counts[keyword.to_s] += 1 if keyword.present?
-        end
+    field.projects.merge(Project.visible).limit(100).pluck(:keywords).each do |keywords|
+      Array(keywords).each do |keyword|
+        keyword_counts[keyword.to_s] += 1 if keyword.present?
       end
     end
-    keyword_counts.sort_by { |_, count| -count }.first(20)
+    keyword_counts.sort_by { |keyword, count| [-count, keyword] }.first(20)
   end
 
   def render_404

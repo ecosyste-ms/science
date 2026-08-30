@@ -72,6 +72,86 @@ class OpenAlexTopicClassifierTest < ActiveSupport::TestCase
     refute_equal second, predictions.first.topic
   end
 
+  test "returns several distinct fields ranked by their best matching topic" do
+    genomics = create_topic(
+      openalex_id: "https://openalex.org/T-field-1",
+      name: "Genome Sequence Analysis",
+      keywords: ["Genomics", "DNA Sequencing"]
+    )
+    related_genomics = create_topic(
+      openalex_id: "https://openalex.org/T-field-2",
+      name: "Genome Assembly",
+      keywords: ["Genome Assembly"]
+    )
+    climate = create_topic(
+      openalex_id: "https://openalex.org/T-field-3",
+      name: "Climate Modelling",
+      keywords: ["Climate Models"],
+      field_id: "23",
+      field_name: "Environmental Science"
+    )
+    project = Project.new(
+      url: "https://github.com/test/genome-climate",
+      name: "Genome Sequence Toolkit",
+      description: "Genome assembly with climate model inputs",
+      keywords: %w[genomics sequencing climate]
+    )
+
+    fields = OpenAlexTopicClassifier.new.classify_project_fields(project)
+
+    assert_equal %w[17 23], fields.map(&:field_id)
+    assert_equal "Biochemistry, Genetics and Molecular Biology", fields.first.field_name
+    assert_includes fields.first.topic_ids, genomics.openalex_id
+    assert_includes fields.first.topic_ids, related_genomics.openalex_id
+    assert_equal [climate.openalex_id], fields.second.topic_ids
+    assert_operator fields.first.score, :>, fields.second.score
+  end
+
+  test "collapses the top five topics without filling from lower-ranked topics" do
+    topics = []
+    topics << create_topic(openalex_id: "https://openalex.org/T10", name: "Genome Analysis")
+    topics << create_topic(openalex_id: "https://openalex.org/T20", name: "Genome Analysis")
+    topics << create_topic(
+      openalex_id: "https://openalex.org/T30",
+      name: "Genome Analysis",
+      field_id: "23",
+      field_name: "Environmental Science"
+    )
+    topics << create_topic(
+      openalex_id: "https://openalex.org/T40",
+      name: "Genome Analysis",
+      field_id: "24",
+      field_name: "Immunology and Microbiology"
+    )
+    topics << create_topic(
+      openalex_id: "https://openalex.org/T50",
+      name: "Genome Analysis",
+      field_id: "25",
+      field_name: "Materials Science"
+    )
+    topics << create_topic(
+      openalex_id: "https://openalex.org/T60",
+      name: "Genome Analysis",
+      field_id: "26",
+      field_name: "Mathematics"
+    )
+    predictions = topics.each_with_index.map do |topic, index|
+      OpenAlexTopicClassifier::Prediction.new(
+        topic: topic,
+        score: 1.0 - (index * 0.1),
+        matched_terms: ["genome"]
+      )
+    end
+    classifier = OpenAlexTopicClassifier.new(scope: OpenAlexTopic.none)
+    classifier.define_singleton_method(:classify_project) do |_project, limit:|
+      predictions.first(limit)
+    end
+
+    fields = classifier.classify_project_fields(Project.new)
+
+    assert_equal %w[17 23 24 25], fields.map(&:field_id)
+  end
+
   def create_topic(
     openalex_id:,
     name:,

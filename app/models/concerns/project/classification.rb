@@ -75,13 +75,20 @@ module Project::Classification
   end
 
   def primary_field
-    project_fields.primary.first&.field
+    open_alex_fields_with_scores.first&.first
   end
 
   def all_fields_with_confidence
+    open_alex_fields_with_scores
+  end
+
+  def open_alex_fields_with_scores
     project_fields.to_a
-                  .sort_by { |pf| -pf.confidence_score }
-                  .map { |pf| [pf.field, pf.confidence_score] }
+      .select { |project_field| project_field.field.openalex_id.present? }
+      .sort_by do |project_field|
+        [-project_field.confidence_score, project_field.field.openalex_id]
+      end
+      .map { |project_field| [project_field.field, project_field.confidence_score] }
   end
 
   def contributor_topics(limit: 10, minimum: 3)

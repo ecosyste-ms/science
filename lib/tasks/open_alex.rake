@@ -45,4 +45,13 @@ namespace :open_alex do
     result = report.generate
     report.summary_lines(result).each { |line| warn line }
   end
+
+  desc "Rebuild ranked OpenAlex fields for scientific projects (optional: LIMIT=n)"
+  task classify_fields: :environment do
+    result = OpenAlexFieldClassificationImporter.sync!(
+      limit: ENV["LIMIT"],
+      progress: ->(message) { puts message }
+    )
+    puts "OpenAlex field classifications: #{result.inspect}"
+  end
 end

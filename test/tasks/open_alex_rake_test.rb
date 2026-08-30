@@ -58,6 +58,46 @@ class OpenAlexRakeTest < ActiveSupport::TestCase
     assert_empty project.project_fields.reload
   end
 
+  test "field classification materializes ranked fields through the rake entrypoint" do
+    project = Project.create!(
+      url: "https://github.com/test/open-alex-fields-rake",
+      name: "Genome Climate Toolkit",
+      description: "Genome sequencing with climate model inputs",
+      keywords: %w[genomics sequencing climate],
+      science_score: Project::SCIENCE_SCORE_THRESHOLD
+    )
+    OpenAlexTopic.create!(
+      openalex_id: "https://openalex.org/T-genome-rake",
+      display_name: "Genome Sequence Analysis",
+      keywords: ["Genomics", "DNA Sequencing"],
+      subfield_id: "1306",
+      subfield_name: "Genetics",
+      field_id: "13",
+      field_name: "Biochemistry, Genetics and Molecular Biology",
+      domain_id: "1",
+      domain_name: "Life Sciences"
+    )
+    OpenAlexTopic.create!(
+      openalex_id: "https://openalex.org/T-climate-rake",
+      display_name: "Climate Modelling",
+      keywords: ["Climate Models"],
+      subfield_id: "2306",
+      subfield_name: "Global and Planetary Change",
+      field_id: "23",
+      field_name: "Environmental Science",
+      domain_id: "3",
+      domain_name: "Physical Sciences"
+    )
+
+    output, = capture_io { Rake::Task["open_alex:classify_fields"].execute }
+
+    assert_equal %w[13 23], project.reload.open_alex_fields_with_scores
+      .map { |field, _| field.openalex_id }
+    assert_includes output, "OpenAlex field projects classified: 1"
+    assert_includes output, "fields: 2"
+    assert_includes output, "classifications: 2"
+  end
+
   test "sync imports JOSS, README, arXiv, and metadata labels through the rake entrypoint" do
     joss_project = Project.create!(
       url: "https://github.com/test/open-alex-rake",

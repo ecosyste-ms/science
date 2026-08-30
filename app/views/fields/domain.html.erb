@@ -1,0 +1,103 @@
+<% @meta_title = @domain_name %>
+<% @meta_description = "Scientific software projects classified in the #{@domain_name} OpenAlex domain" %>
+
+<div class="container-md">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><%= link_to "Fields", fields_path %></li>
+      <li class="breadcrumb-item active" aria-current="page"><%= @domain_name %></li>
+    </ol>
+  </nav>
+
+  <h1><%= @domain_name %></h1>
+  <p class="lead text-muted">OpenAlex domain</p>
+
+  <div class="row mb-4">
+    <div class="col-md-4 mb-3">
+      <div class="card text-center h-100">
+        <div class="card-body">
+          <h3 class="text-primary"><%= @stats[:total_fields] %></h3>
+          <p class="text-muted mb-0">Fields</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4 mb-3">
+      <div class="card text-center h-100">
+        <div class="card-body">
+          <h3 class="text-success"><%= @stats[:total_projects] %></h3>
+          <p class="text-muted mb-0">Classified Projects</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4 mb-3">
+      <div class="card text-center h-100">
+        <div class="card-body">
+          <h3 class="text-warning"><%= @stats[:total_topics] %></h3>
+          <p class="text-muted mb-0">Active Topics</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <h3 class="card-title">Fields in <%= @domain_name %></h3>
+      <div class="row">
+        <% @fields.each do |field| %>
+          <div class="col-md-6 mb-3">
+            <div class="d-flex justify-content-between border-bottom pb-2">
+              <%= link_to field.name, field_path(field), class: "text-decoration-none" %>
+              <span class="badge bg-light text-dark ms-2">
+                <%= @field_stats.fetch(field.id, 0) %> projects
+              </span>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <h3>Projects in <%= @domain_name %> (<%= @stats[:total_projects] %>)</h3>
+
+  <% if @project_fields.any? %>
+    <% @project_fields.each do |project_field| %>
+      <% project = project_field.project %>
+      <div class="card mb-3" data-project-id="<%= project.id %>">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="flex-grow-1">
+              <h5 class="card-title">
+                <%= link_to project.name, project_path(project) %>
+                <span class="badge bg-info ms-2">
+                  score <%= number_with_precision(project_field.confidence_score, precision: 3) %>
+                </span>
+              </h5>
+
+              <% if project.description.present? %>
+                <p class="card-text text-muted"><%= project.description %></p>
+              <% end %>
+
+              <small class="text-muted">
+                Highest-ranked field in this domain:
+                <%= link_to project_field.field.name, field_path(project_field.field) %>
+              </small>
+            </div>
+
+            <% if project.science_score.present? %>
+              <div class="text-end ms-3">
+                <small class="text-muted">Science Score</small><br>
+                <span class="badge bg-primary"><%= project.science_score.round %>%</span>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <%== pagy_bootstrap_nav(@pagy) %>
+  <% else %>
+    <div class="alert alert-info">
+      No projects have been classified in this domain yet.
+    </div>
+  <% end %>
+</div>
