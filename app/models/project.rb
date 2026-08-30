@@ -68,12 +68,18 @@ class Project < ApplicationRecord
   has_many :papers, through: :mentions
   has_many :dependency_records, class_name: 'Dependency', dependent: :nullify
   has_many :project_dependencies, dependent: :delete_all
+  has_many :repository_aliases,
+    class_name: "ProjectRepositoryAlias",
+    dependent: :delete_all
   has_many :dependency_package_records, through: :project_dependencies, source: :package
   has_many :published_package_records,
     class_name: "Package",
     foreign_key: :published_by_project_id,
     dependent: :nullify
   has_many :votes, dependent: :delete_all
+
+  before_save :reset_repository_alias_index,
+    if: :will_save_change_to_repository?
 
   has_many :good_first_issues, -> { good_first_issue }, class_name: 'Issue'
 
@@ -267,6 +273,11 @@ class Project < ApplicationRecord
     repo_url = github_pages_to_repo_url(url)
     return repo_url if repo_url.present?
     url
+  end
+
+  def reset_repository_alias_index
+    self.repository_aliases_indexed_at = nil
+    self.repository_aliases_index_error = nil
   end
 
   def github_pages_to_repo_url(github_pages_url)

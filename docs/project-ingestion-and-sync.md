@@ -16,6 +16,9 @@ The regular discovery tasks are defined in `app.json`. Import and sync run as se
 | Every 10 minutes | `projects:fetch_brief` | Eligible repositories missing Brief dependency data |
 | Every 10 minutes, offset by 3 minutes | `projects:sync_dependencies` | Stored direct dependencies awaiting indexing |
 | Every 10 minutes, offset by 6 minutes | `packages:resolve_dependencies` | Unresolved dependency identities awaiting local package records |
+| Every 10 minutes, offset by 7 minutes | `projects:sync_repository_aliases` | Previous repository names awaiting indexed aliases |
+| Every 10 minutes, offset by 8 minutes | `packages:sync_metadata` | Local packages awaiting packages.ecosyste.ms metadata |
+| Every 10 minutes, offset by 9 minutes | `packages:match_projects` | Package repository URLs awaiting project links |
 
 The JOSS importer stores the paper JSON in `joss_metadata`. Existing projects receive updated JOSS metadata, while new projects are queued for sync. The papers and registry importers currently accept GitHub repository URLs. The reviewed OST importer also limits its imports to GitHub.
 
@@ -72,6 +75,22 @@ Resolution creates local `packages` rows and links every matching `project_depen
 ```bash
 LIMIT=1000 bundle exec rake packages:resolve_dependencies
 RETRY_ERRORS=true LIMIT=100 bundle exec rake packages:resolve_dependencies
+```
+
+`projects:sync_repository_aliases` processes at most 500 projects per run. It normalizes the previous repository names stored by repos.ecosyste.ms and writes indexed `project_repository_aliases` rows. A change to the stored repository record makes the project eligible again. Errors are recorded once unless `RETRY_ERRORS=true` is passed.
+
+`packages:sync_metadata` looks up at most 100 local packages per run. It uses the canonical PURL when present and a registry-scoped name lookup otherwise. A match stores the packages.ecosyste.ms ID, canonical PURL, namespace, repository URL, upstream update time, and complete API record. Matched packages refresh after 30 days.
+
+A missing lookup is retried after one day and then seven days. The third miss is marked `unavailable` and left for manual retry because the identity may be private, invalid, or absent from the upstream index. API failures retry after one hour, six hours, and one day before stopping. Ambiguous lookups also require a manual retry. Pass `RETRY_STOPPED=true` to include unavailable, failed, and ambiguous packages.
+
+`packages:match_projects` processes at most 500 packages per run. It normalizes HTTPS, Git, and SSH repository URLs, then checks current project URLs and indexed previous names. A single match sets `published_by_project_id`. Missing, invalid, and ambiguous repository matches store `repository_match_error` and become eligible again after 30 days.
+
+```bash
+LIMIT=500 bundle exec rake projects:sync_repository_aliases
+RETRY_ERRORS=true LIMIT=50 bundle exec rake projects:sync_repository_aliases
+LIMIT=100 bundle exec rake packages:sync_metadata
+RETRY_STOPPED=true LIMIT=25 bundle exec rake packages:sync_metadata
+LIMIT=500 bundle exec rake packages:match_projects
 ```
 
 ## Partial results and hidden owners

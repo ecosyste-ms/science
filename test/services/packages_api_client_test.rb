@@ -51,6 +51,45 @@ class PackagesApiClientTest < ActiveSupport::TestCase
     )
   end
 
+  test "looks up a package by Purl" do
+    connection = mock
+    connection.expects(:get)
+      .with("packages/lookup", { purl: "pkg:gem/rails" })
+      .returns(response([{ "id" => 1 }]))
+
+    records = PackagesApiClient.new(connection: connection)
+      .package_lookup(purl: "pkg:gem/rails")
+
+    assert_equal [{ "id" => 1 }], records
+  end
+
+  test "scopes a name lookup to its registry" do
+    connection = mock
+    connection.expects(:get)
+      .with(
+        "registries/npmjs.org/lookup",
+        { name: "@scope/name", ecosystem: "npm" }
+      )
+      .returns(response([{ "id" => 2 }]))
+
+    records = PackagesApiClient.new(connection: connection).package_lookup(
+      registry_name: "npmjs.org",
+      ecosystem: "npm",
+      name: "@scope/name"
+    )
+
+    assert_equal [{ "id" => 2 }], records
+  end
+
+  test "requires a package identity for lookup" do
+    error = assert_raises(ArgumentError) do
+      PackagesApiClient.new(connection: mock).package_lookup
+    end
+
+    assert_equal "purl or registry name and package name are required",
+      error.message
+  end
+
   def response(body, total_count: 0, status: 200)
     stub(
       success?: status.between?(200, 299),

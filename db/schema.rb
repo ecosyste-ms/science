@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_30_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_30_191000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -204,7 +204,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_170000) do
 
   create_table "packages", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.datetime "ecosystems_checked_at"
+    t.text "ecosystems_error"
+    t.integer "ecosystems_error_count", default: 0, null: false
     t.bigint "ecosystems_id"
+    t.integer "ecosystems_miss_count", default: 0, null: false
+    t.datetime "ecosystems_retry_at"
+    t.datetime "ecosystems_sync_started_at"
+    t.string "ecosystems_sync_status"
     t.datetime "ecosystems_updated_at"
     t.jsonb "metadata", default: {}, null: false
     t.string "name", null: false
@@ -213,9 +220,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_170000) do
     t.bigint "published_by_project_id"
     t.text "purl"
     t.datetime "repository_checked_at"
+    t.text "repository_match_error"
     t.text "repository_url"
     t.datetime "updated_at", null: false
+    t.index ["ecosystems_checked_at"], name: "index_packages_pending_ecosystems_sync", where: "(ecosystems_checked_at IS NULL)"
     t.index ["ecosystems_id"], name: "index_packages_on_ecosystems_id", unique: true, where: "(ecosystems_id IS NOT NULL)"
+    t.index ["ecosystems_retry_at"], name: "index_packages_on_ecosystems_retry_at", where: "(ecosystems_retry_at IS NOT NULL)"
+    t.index ["ecosystems_sync_started_at"], name: "index_packages_on_ecosystems_sync_started_at", where: "(ecosystems_sync_started_at IS NOT NULL)"
     t.index ["package_registry_id", "name"], name: "index_packages_on_registry_and_name", unique: true
     t.index ["package_registry_id"], name: "index_packages_on_package_registry_id"
     t.index ["published_by_project_id"], name: "index_packages_on_published_by_project_id"
@@ -290,6 +301,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_170000) do
     t.index ["project_id"], name: "index_project_open_alex_topics_on_project_id"
   end
 
+  create_table "project_repository_aliases", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "project_id", null: false
+    t.datetime "updated_at", null: false
+    t.citext "url", null: false
+    t.index ["project_id", "url"], name: "index_project_repository_aliases_on_project_and_url", unique: true
+    t.index ["project_id"], name: "index_project_repository_aliases_on_project_id"
+    t.index ["url"], name: "index_project_repository_aliases_on_url"
+  end
+
   create_table "projects", force: :cascade do |t|
     t.jsonb "brief"
     t.string "category"
@@ -319,6 +340,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_170000) do
     t.json "packages"
     t.text "readme"
     t.json "repository"
+    t.text "repository_aliases_index_error"
+    t.datetime "repository_aliases_indexed_at"
     t.boolean "reviewed"
     t.string "rubric"
     t.float "science_score"
@@ -336,6 +359,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_170000) do
     t.index ["collection_id"], name: "index_projects_on_collection_id"
     t.index ["host_id"], name: "index_projects_on_host_id"
     t.index ["id"], name: "index_projects_pending_dependency_index", where: "(((dependencies IS NOT NULL) OR (brief ? 'dependencies'::text)) AND (dependencies_indexed_at IS NULL) AND (dependencies_index_error IS NULL))"
+    t.index ["id"], name: "index_projects_pending_repository_aliases", where: "((repository IS NOT NULL) AND (repository_aliases_indexed_at IS NULL))"
     t.index ["owner_id"], name: "index_projects_on_owner_id"
     t.index ["reviewed"], name: "index_projects_on_reviewed"
     t.index ["url"], name: "index_projects_on_url", unique: true
@@ -394,4 +418,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_170000) do
   add_foreign_key "project_fields", "projects"
   add_foreign_key "project_open_alex_topics", "open_alex_topics"
   add_foreign_key "project_open_alex_topics", "projects"
+  add_foreign_key "project_repository_aliases", "projects"
 end

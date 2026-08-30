@@ -111,6 +111,18 @@ namespace :projects do
     puts "Project dependencies: #{result.inspect}"
   end
 
+  desc 'index stored repository aliases (LIMIT=500 RETRY_ERRORS=false)'
+  task :sync_repository_aliases => :environment do
+    retry_errors = ActiveModel::Type::Boolean.new.cast(
+      ENV.fetch('RETRY_ERRORS', 'false')
+    )
+    result = ProjectRepositoryAliasIndexer.sync_batch!(
+      limit: ENV.fetch('LIMIT', ProjectRepositoryAliasIndexer::DEFAULT_LIMIT),
+      retry_errors: retry_errors
+    )
+    puts "Project repository aliases: #{result.inspect}"
+  end
+
   desc 'enqueue brief scans (LIMIT=50 COHORT=all SHARD_COUNT=1 SHARD=0)'
   task :fetch_brief => :environment do
     enqueuer = BriefScanEnqueuer.new(

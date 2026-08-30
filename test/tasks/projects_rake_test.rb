@@ -79,6 +79,25 @@ class ProjectsRakeTest < ActiveSupport::TestCase
     assert_includes output, "dependencies: 1"
   end
 
+  test "sync_repository_aliases indexes a bounded batch through the rake entrypoint" do
+    project = Project.create!(
+      url: "https://github.com/test/current-name",
+      repository: { "previous_names" => ["test/old-name"] }
+    )
+    ENV["LIMIT"] = "1"
+
+    output, = capture_io do
+      Rake::Task["projects:sync_repository_aliases"].execute
+    end
+
+    assert_equal ["https://github.com/test/old-name"],
+      project.repository_aliases.pluck(:url)
+    assert project.reload.repository_aliases_indexed_at.present?
+    assert_includes output, "selected: 1"
+    assert_includes output, "indexed: 1"
+    assert_includes output, "aliases: 1"
+  end
+
   test "import_metadata_repositories creates and enqueues discovered repositories" do
     source = Project.create!(
       url: "https://github.com/metadata-test/metadata-source",

@@ -2,12 +2,14 @@ require "test_helper"
 require "rake"
 
 class PackagesRakeTest < ActiveSupport::TestCase
-  ENV_KEYS = %w[LIMIT RETRY_ERRORS].freeze
+  ENV_KEYS = %w[LIMIT RETRY_ERRORS RETRY_STOPPED].freeze
 
   setup do
     Rails.application.load_tasks unless Rake::Task.task_defined?("packages:sync_registries")
     Rake::Task["packages:sync_registries"].reenable
     Rake::Task["packages:resolve_dependencies"].reenable
+    Rake::Task["packages:sync_metadata"].reenable
+    Rake::Task["packages:match_projects"].reenable
     @original_env = ENV_KEYS.to_h { |key| [key, ENV[key]] }
     ENV_KEYS.each { |key| ENV.delete(key) }
   end
@@ -85,5 +87,67 @@ class PackagesRakeTest < ActiveSupport::TestCase
     assert_includes output, "selected: 1"
     assert_includes output, "resolved: 1"
     assert_includes output, "dependency_rows: 1"
+  end
+
+  test "syncs package metadata through the rake entrypoint" do
+    registry = PackageRegistry.create!(
+      name: "rubygems.org",
+      url: "https://rubygems.org",
+      ecosystem: "rubygems",
+      purl_type: "gem",
+      default: true
+    )
+    package = Package.create!(
+      package_registry: registry,
+      name: "rails",
+      purl: "pkg:gem/rails"
+    )
+    request = stub_request(
+      :get,
+      "https://packages.ecosyste.ms/api/v1/packages/lookup"
+    ).with(query: { "purl" => "pkg:gem/rails" }).to_return(
+      status: 200,
+      body: [{
+        id: 123,
+        name: "rails",
+        namespace: nil,
+        purl: "pkg:gem/rails",
+        repository_url: "https://github.com/rails/rails",
+        updated_at: "2026-08-30T12:00:00Z",
+        registry: { name: "rubygems.org" },
+      }].to_json
+    )
+    ENV["LIMIT"] = "1"
+
+    output, = capture_io { Rake::Task["packages:sync_metadata"].invoke }
+
+    assert_requested request
+    assert_equal 123, package.reload.ecosystems_id
+    assert_includes output, "selected: 1"
+    assert_includes output, "matched: 1"
+  end
+
+  test "matches package projects through the rake entrypoint" do
+    registry = PackageRegistry.create!(
+      name: "pypi.org",
+      url: "https://pypi.org",
+      ecosystem: "pypi",
+      purl_type: "pypi",
+      default: true
+    )
+    project = Project.create!(url: "https://github.com/numpy/numpy")
+    package = Package.create!(
+      package_registry: registry,
+      name: "numpy",
+      purl: "pkg:pypi/numpy",
+      repository_url: "git@github.com:NumPy/numpy.git"
+    )
+    ENV["LIMIT"] = "1"
+
+    output, = capture_io { Rake::Task["packages:match_projects"].invoke }
+
+    assert_equal project, package.reload.published_by_project
+    assert_includes output, "selected: 1"
+    assert_includes output, "matched: 1"
   end
 end

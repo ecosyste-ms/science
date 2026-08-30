@@ -16,4 +16,24 @@ namespace :packages do
     )
     puts "Package resolution: #{result.inspect}"
   end
+
+  desc "Sync package metadata from packages.ecosyste.ms (LIMIT=100 RETRY_STOPPED=false)"
+  task sync_metadata: :environment do
+    retry_stopped = ActiveModel::Type::Boolean.new.cast(
+      ENV.fetch("RETRY_STOPPED", "false")
+    )
+    result = PackageMetadataSync.sync_batch!(
+      limit: ENV.fetch("LIMIT", PackageMetadataSync::DEFAULT_LIMIT),
+      retry_stopped: retry_stopped
+    )
+    puts "Package metadata: #{result.inspect}"
+  end
+
+  desc "Match package repository URLs to projects (LIMIT=500)"
+  task match_projects: :environment do
+    result = PackagePublicationMatcher.match_batch!(
+      limit: ENV.fetch("LIMIT", PackagePublicationMatcher::DEFAULT_LIMIT)
+    )
+    puts "Package project matching: #{result.inspect}"
+  end
 end

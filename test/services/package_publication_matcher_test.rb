@@ -1,0 +1,107 @@
+require "test_helper"
+
+class PackagePublicationMatcherTest < ActiveSupport::TestCase
+  setup do
+    @registry = PackageRegistry.create!(
+      name: "pypi.org",
+      url: "https://pypi.org",
+      ecosystem: "pypi",
+      purl_type: "pypi",
+      default: true
+    )
+  end
+
+  test "matches a normalized package repository to a project" do
+    project = Project.create!(url: "https://github.com/numpy/numpy")
+    package = create_package(
+      "numpy",
+      repository_url: "git@github.com:NumPy/numpy.git"
+    )
+
+    result = PackagePublicationMatcher.match_batch!(limit: 1)
+
+    assert_equal 1, result.fetch(:matched)
+    assert_equal project, package.reload.published_by_project
+    assert package.repository_checked_at.present?
+    assert_nil package.repository_match_error
+  end
+
+  test "matches a previous repository name" do
+    project = Project.create!(
+      url: "https://github.com/science-org/current-name",
+      repository: { "previous_names" => ["science-org/old-name"] }
+    )
+    package = create_package(
+      "renamed-package",
+      repository_url: "https://github.com/science-org/old-name"
+    )
+    ProjectRepositoryAliasIndexer.new(project).sync!
+
+    result = PackagePublicationMatcher.match_batch!(limit: 1)
+
+    assert_equal 1, result.fetch(:matched)
+    assert_equal project, package.reload.published_by_project
+  end
+
+  test "records an ambiguous repository identity" do
+    Project.create!(url: "https://github.com/science-org/shared-name")
+    renamed = Project.create!(
+      url: "https://github.com/science-org/current-name",
+      repository: { "previous_names" => ["science-org/shared-name"] }
+    )
+    package = create_package(
+      "ambiguous-package",
+      repository_url: "https://github.com/science-org/shared-name"
+    )
+    ProjectRepositoryAliasIndexer.new(renamed).sync!
+
+    result = PackagePublicationMatcher.match_batch!(limit: 1)
+
+    assert_equal 1, result.fetch(:ambiguous)
+    package.reload
+    assert_nil package.published_by_project_id
+    assert_equal "multiple projects match repository URL",
+      package.repository_match_error
+  end
+
+  test "records a missing project and waits before retrying" do
+    package = create_package(
+      "missing-package",
+      repository_url: "https://github.com/science-org/missing"
+    )
+
+    first = PackagePublicationMatcher.match_batch!(limit: 1)
+    second = PackagePublicationMatcher.match_batch!(limit: 1)
+
+    assert_equal 1, first.fetch(:missing)
+    assert_equal 0, second.fetch(:selected)
+    assert_equal "project not found", package.reload.repository_match_error
+  end
+
+  test "limits each project matching batch" do
+    create_package(
+      "first",
+      repository_url: "https://github.com/science-org/first"
+    )
+    create_package(
+      "second",
+      repository_url: "https://github.com/science-org/second"
+    )
+
+    result = PackagePublicationMatcher.match_batch!(limit: 1)
+
+    assert_equal 1, result.fetch(:selected)
+    assert_equal 1, Package.where.not(repository_checked_at: nil).count
+  end
+
+  def create_package(name, repository_url:)
+    Package.create!(
+      package_registry: @registry,
+      name: name,
+      purl: "pkg:pypi/#{name}",
+      repository_url: repository_url,
+      ecosystems_sync_status: "matched",
+      ecosystems_checked_at: Time.current
+    )
+  end
+end

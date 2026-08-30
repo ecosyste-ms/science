@@ -1,4 +1,15 @@
 class Package < ApplicationRecord
+  ECOSYSTEMS_SYNC_STATUSES = %w[
+    matched
+    missing
+    unavailable
+    ambiguous
+    transient_error
+    failed
+  ].freeze
+  MISSING_RETRY_DELAYS = [1.day, 7.days].freeze
+  ERROR_RETRY_DELAYS = [1.hour, 6.hours, 1.day].freeze
+
   belongs_to :package_registry
   belongs_to :published_by_project, class_name: "Project", optional: true
 
@@ -9,6 +20,9 @@ class Package < ApplicationRecord
   validates :name, uniqueness: { scope: :package_registry_id }
   validates :ecosystems_id, uniqueness: true, allow_nil: true
   validates :purl, uniqueness: true, allow_nil: true
+  validates :ecosystems_sync_status,
+    inclusion: { in: ECOSYSTEMS_SYNC_STATUSES },
+    allow_nil: true
 
   before_validation :normalize_purl
 
@@ -25,5 +39,93 @@ class Package < ApplicationRecord
     end
   rescue Purl::Error => error
     errors.add(:purl, error.message)
+  end
+
+  def claim_ecosystems_sync!(now: Time.current)
+    stale_before = now - 30.minutes
+    claimed = self.class.where(id: id)
+      .where(
+        "ecosystems_sync_started_at IS NULL OR ecosystems_sync_started_at < ?",
+        stale_before
+      )
+      .update_all(ecosystems_sync_started_at: now)
+    claimed == 1
+  end
+
+  def release_ecosystems_sync!
+    self.class.where(id: id).update_all(
+      ecosystems_sync_started_at: nil
+    )
+  end
+
+  def record_ecosystems_match!(record, now: Time.current)
+    attributes = {
+      ecosystems_id: record.fetch("id"),
+      namespace: record["namespace"],
+      metadata: record,
+      ecosystems_updated_at: record["updated_at"],
+      ecosystems_sync_status: "matched",
+      ecosystems_checked_at: now,
+      ecosystems_retry_at: nil,
+      ecosystems_sync_started_at: nil,
+      ecosystems_error: nil,
+      ecosystems_error_count: 0,
+    }
+    attributes[:purl] = record["purl"] if record["purl"].present?
+
+    remote_repository_url = record["repository_url"].presence
+    if repository_url != remote_repository_url
+      attributes.merge!(
+        repository_url: remote_repository_url,
+        published_by_project_id: nil,
+        repository_checked_at: nil,
+        repository_match_error: nil
+      )
+    end
+
+    update!(attributes)
+    :matched
+  end
+
+  def record_ecosystems_missing!(now: Time.current)
+    count = ecosystems_miss_count + 1
+    delay = MISSING_RETRY_DELAYS[count - 1]
+    status = delay ? "missing" : "unavailable"
+    update!(
+      ecosystems_sync_status: status,
+      ecosystems_checked_at: now,
+      ecosystems_retry_at: delay ? now + delay : nil,
+      ecosystems_sync_started_at: nil,
+      ecosystems_miss_count: count,
+      ecosystems_error_count: 0,
+      ecosystems_error: nil
+    )
+    status.to_sym
+  end
+
+  def record_ecosystems_ambiguous!(count, now: Time.current)
+    update!(
+      ecosystems_sync_status: "ambiguous",
+      ecosystems_checked_at: now,
+      ecosystems_retry_at: nil,
+      ecosystems_sync_started_at: nil,
+      ecosystems_error: "lookup returned #{count} packages"
+    )
+    :ambiguous
+  end
+
+  def record_ecosystems_error!(error, now: Time.current)
+    count = ecosystems_error_count + 1
+    delay = ERROR_RETRY_DELAYS[count - 1]
+    status = delay ? "transient_error" : "failed"
+    update!(
+      ecosystems_sync_status: status,
+      ecosystems_checked_at: now,
+      ecosystems_retry_at: delay ? now + delay : nil,
+      ecosystems_sync_started_at: nil,
+      ecosystems_error_count: count,
+      ecosystems_error: "#{error.class}: #{error.message}".truncate(2_000)
+    )
+    status.to_sym
   end
 end

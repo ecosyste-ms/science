@@ -29,6 +29,18 @@
       "schedule": "6,16,26,36,46,56 * * * *"
     },
     {
+      "command": "bundle exec rake projects:sync_repository_aliases",
+      "schedule": "7,17,27,37,47,57 * * * *"
+    },
+    {
+      "command": "bundle exec rake packages:sync_metadata",
+      "schedule": "8,18,28,38,48,58 * * * *"
+    },
+    {
+      "command": "bundle exec rake packages:match_projects",
+      "schedule": "9,19,29,39,49,59 * * * *"
+    },
+    {
       "command": "bundle exec rake projects:fetch_brief",
       "schedule": "*/10 * * * *"
     },

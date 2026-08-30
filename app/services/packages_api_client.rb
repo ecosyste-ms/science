@@ -39,8 +39,38 @@ class PackagesApiClient
     raise RequestError, "packages.ecosyste.ms request failed: #{error.class}"
   end
 
+  def package_lookup(purl: nil, registry_name: nil, ecosystem: nil, name: nil)
+    if purl.present?
+      path = "packages/lookup"
+      params = { purl: purl }
+    elsif registry_name.present? && name.present?
+      path = "registries/#{ERB::Util.url_encode(registry_name)}/lookup"
+      params = { name: name, ecosystem: ecosystem }.compact
+    else
+      raise ArgumentError, "purl or registry name and package name are required"
+    end
+
+    response = connection.get(path, params)
+    unless response.success?
+      raise RequestError,
+        "packages.ecosyste.ms request failed with HTTP #{response.status}"
+    end
+
+    records = JSON.parse(response.body)
+    unless records.is_a?(Array)
+      raise RequestError, "packages.ecosyste.ms returned unexpected JSON"
+    end
+    records
+  rescue JSON::ParserError
+    raise RequestError, "packages.ecosyste.ms returned invalid JSON"
+  rescue Faraday::Error => error
+    raise RequestError, "packages.ecosyste.ms request failed: #{error.class}"
+  end
+
   def build_connection
     Faraday.new(url: BASE_URL) do |faraday|
+      faraday.options.open_timeout = 5
+      faraday.options.timeout = 20
       faraday.headers["User-Agent"] = "science.ecosyste.ms"
       if ENV["ECOSYSTEMS_API_KEY"].present?
         faraday.headers["X-API-Key"] = ENV["ECOSYSTEMS_API_KEY"]
