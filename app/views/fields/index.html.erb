@@ -15,7 +15,7 @@
     <div class="col-md-3 mb-3">
       <div class="card text-center h-100">
         <div class="card-body">
-          <h3 class="text-primary"><%= @fields.count %></h3>
+          <h3 class="text-primary"><%= number_with_delimiter @fields.count %></h3>
           <p class="text-muted mb-0">OpenAlex Fields</p>
         </div>
       </div>
@@ -23,7 +23,7 @@
     <div class="col-md-3 mb-3">
       <div class="card text-center h-100">
         <div class="card-body">
-          <h3 class="text-success"><%= @classified_projects_count %></h3>
+          <h3 class="text-success"><%= number_with_delimiter @classified_projects_count %></h3>
           <p class="text-muted mb-0">Classified Projects</p>
         </div>
       </div>
@@ -39,7 +39,7 @@
     <div class="col-md-3 mb-3">
       <div class="card text-center h-100">
         <div class="card-body">
-          <h3 class="text-warning"><%= @active_topic_count %></h3>
+          <h3 class="text-warning"><%= number_with_delimiter @active_topic_count %></h3>
           <p class="text-muted mb-0">Active Topics</p>
         </div>
       </div>
