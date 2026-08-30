@@ -1,4 +1,16 @@
 class Package < ApplicationRecord
+  GENERAL_DEPENDENT_REPOSITORIES_SQL = <<~SQL.squish.freeze
+    NULLIF(packages.metadata ->> 'dependent_repos_count', '')::bigint
+  SQL
+  DEPENDENT_REPOSITORIES_TOP_PERCENTAGE_SQL = <<~SQL.squish.freeze
+    NULLIF(
+      packages.metadata #>> '{rankings,dependent_repos_count}',
+      ''
+    )::double precision
+  SQL
+  AVERAGE_TOP_PERCENTAGE_SQL = <<~SQL.squish.freeze
+    NULLIF(packages.metadata #>> '{rankings,average}', '')::double precision
+  SQL
   ECOSYSTEMS_SYNC_STATUSES = %w[
     matched
     missing
@@ -47,7 +59,16 @@ class Package < ApplicationRecord
     )
       .select(
         "packages.*, " \
-        "scientific_dependency_counts.scientific_dependents_count"
+        "scientific_dependency_counts.scientific_dependents_count, " \
+        "#{GENERAL_DEPENDENT_REPOSITORIES_SQL} " \
+        "AS general_dependent_repositories_count, " \
+        "#{DEPENDENT_REPOSITORIES_TOP_PERCENTAGE_SQL} " \
+        "AS dependent_repositories_top_percentage, " \
+        "#{AVERAGE_TOP_PERCENTAGE_SQL} AS average_top_percentage, " \
+        "CASE WHEN #{GENERAL_DEPENDENT_REPOSITORIES_SQL} > 0 " \
+        "THEN scientific_dependency_counts.scientific_dependents_count * 100.0 " \
+        "/ #{GENERAL_DEPENDENT_REPOSITORIES_SQL} END " \
+        "AS science_usage_percentage"
       )
       .preload(:package_registry, :published_by_project)
       .order(

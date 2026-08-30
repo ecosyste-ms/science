@@ -97,11 +97,29 @@ class PackagesRakeTest < ActiveSupport::TestCase
       purl_type: "gem",
       default: true
     )
+    low_usage_package = Package.create!(
+      package_registry: registry,
+      name: "low-usage",
+      purl: "pkg:gem/low-usage"
+    )
     package = Package.create!(
       package_registry: registry,
       name: "rails",
       purl: "pkg:gem/rails"
     )
+    2.times do |index|
+      project = Project.create!(
+        url: "https://github.com/example/package-metadata-priority-#{index}"
+      )
+      ProjectDependency.create!(
+        project: project,
+        package: package,
+        ecosystem: "rubygems",
+        package_name: package.name,
+        purl: package.purl,
+        direct: true
+      )
+    end
     request = stub_request(
       :get,
       "https://packages.ecosyste.ms/api/v1/packages/lookup"
@@ -123,6 +141,7 @@ class PackagesRakeTest < ActiveSupport::TestCase
 
     assert_requested request
     assert_equal 123, package.reload.ecosystems_id
+    assert_nil low_usage_package.reload.ecosystems_checked_at
     assert_includes output, "selected: 1"
     assert_includes output, "matched: 1"
   end

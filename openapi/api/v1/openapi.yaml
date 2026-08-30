@@ -16,6 +16,52 @@ externalDocs:
 servers:
   - url: https://science.ecosyste.ms/api/v1
 paths:
+  /packages:
+    get:
+      description: List packages ranked by the number of scientific projects that directly depend on them
+      operationId: getPackages
+      tags:
+        - packages
+      parameters:
+        - name: ecosystem
+          in: query
+          description: Filter by package ecosystem
+          required: false
+          schema:
+            type: string
+        - name: domain
+          in: query
+          description: Filter dependent projects by OpenAlex domain slug
+          required: false
+          schema:
+            type: string
+        - name: field
+          in: query
+          description: Filter dependent projects by OpenAlex field slug
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Pagination page number
+          required: false
+          schema:
+            type: integer
+        - name: per_page
+          in: query
+          description: Number of records to return
+          required: false
+          schema:
+            type: integer
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Package"
   /projects:
     get:
       description: get projects
@@ -210,6 +256,66 @@ paths:
                   $ref: "#/components/schemas/Issue"
 components:
   schemas:
+    Package:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        namespace:
+          type: string
+          nullable: true
+        purl:
+          type: string
+          nullable: true
+        repository_url:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        registry:
+          type: object
+          properties:
+            name:
+              type: string
+            ecosystem:
+              type: string
+        scientific_projects_count:
+          type: integer
+        dependent_repositories_count:
+          type: integer
+          nullable: true
+        dependent_repositories_top_percentage:
+          type: number
+          nullable: true
+          description: Top percentage within the package registry; smaller values indicate greater general popularity
+        average_top_percentage:
+          type: number
+          nullable: true
+          description: Average top percentage across the available packages.ecosyste.ms rankings
+        science_usage_percentage:
+          type: number
+          nullable: true
+          description: Scientific project count as a percentage of known dependent repositories
+        rankings:
+          type: object
+        published_by_project:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+              nullable: true
+            repository_url:
+              type: string
+            api_url:
+              type: string
+            html_url:
+              type: string
     Project:
       type: object
       properties:

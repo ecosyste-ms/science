@@ -90,12 +90,20 @@ class PackageTest < ActiveSupport::TestCase
     popular = Package.create!(
       package_registry: @registry,
       name: "popular",
-      purl: "pkg:npm/popular"
+      purl: "pkg:npm/popular",
+      metadata: {
+        "dependent_repos_count" => 200,
+        "rankings" => { "dependent_repos_count" => 0.5 },
+      }
     )
     other = Package.create!(
       package_registry: @registry,
       name: "other",
-      purl: "pkg:npm/other"
+      purl: "pkg:npm/other",
+      metadata: {
+        "dependent_repos_count" => 20,
+        "rankings" => { "average" => 10.0 },
+      }
     )
     2.times do |index|
       project = Project.create!(
@@ -130,5 +138,12 @@ class PackageTest < ActiveSupport::TestCase
     assert_equal 2, ranked.count(:all)
     assert_equal [popular, other], ranked.to_a
     assert_equal [2, 1], counts
+    assert_equal 200, ranked.first.general_dependent_repositories_count.to_i
+    assert_in_delta 0.5,
+      ranked.first.dependent_repositories_top_percentage.to_f
+    assert_nil ranked.second.dependent_repositories_top_percentage
+    assert_in_delta 10.0, ranked.second.average_top_percentage.to_f
+    assert_in_delta 1.0, ranked.first.science_usage_percentage.to_f
+    assert_in_delta 5.0, ranked.second.science_usage_percentage.to_f
   end
 end

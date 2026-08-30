@@ -69,6 +69,13 @@ class PackageMetadataSync
   end
 
   def candidates(now: Time.current)
+    dependency_counts = ProjectDependency.where(direct: true)
+      .where.not(package_id: nil)
+      .group(:package_id)
+      .select(
+        :package_id,
+        "COUNT(*) AS project_dependents_count"
+      )
     due = Package.where(ecosystems_checked_at: nil)
       .or(Package.where("ecosystems_retry_at <= ?", now))
       .or(Package.where(
@@ -80,12 +87,22 @@ class PackageMetadataSync
       due = due.or(Package.where(ecosystems_sync_status: STOPPED_STATUSES))
     end
 
-    due.includes(:package_registry)
+    due.joins(
+      "LEFT JOIN (#{dependency_counts.to_sql}) package_usage_counts " \
+      "ON package_usage_counts.package_id = packages.id"
+    )
+      .includes(:package_registry)
       .where(
         "ecosystems_sync_started_at IS NULL OR ecosystems_sync_started_at < ?",
         now - 30.minutes
       )
-      .order(Arel.sql("COALESCE(ecosystems_retry_at, created_at), id"))
+      .order(
+        Arel.sql(
+          "COALESCE(package_usage_counts.project_dependents_count, 0) DESC"
+        ),
+        Arel.sql("COALESCE(packages.ecosystems_retry_at, packages.created_at)"),
+        :id
+      )
       .limit(limit)
   end
 
