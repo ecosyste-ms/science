@@ -1,0 +1,117 @@
+<% @meta_title = "Scientific Packages" %>
+<% @meta_description = "Packages used directly by scientific software projects." %>
+
+<div class="container-md">
+  <div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+      <h1>Scientific Packages</h1>
+      <p class="text-muted">
+        Packages ranked by the number of scientific projects that directly depend on them.
+      </p>
+    </div>
+    <%= link_to "View All Projects", projects_path, class: "btn btn-outline-primary" %>
+  </div>
+
+  <%= form_with url: packages_path, method: :get, local: true, class: "card mb-4" do |form| %>
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+          <%= form.label :ecosystem, "Ecosystem", class: "form-label" %>
+          <%= form.select :ecosystem,
+            options_for_select(
+              [["All ecosystems", ""]] + @ecosystems.map { |ecosystem| [ecosystem, ecosystem] },
+              @selected_ecosystem
+            ),
+            {},
+            class: "form-select" %>
+        </div>
+        <div class="col-md-4">
+          <%= form.label :domain, "OpenAlex domain", class: "form-label" %>
+          <%= form.select :domain,
+            options_for_select(
+              [["All domains", ""]] + @domains.map { |domain| [domain.fetch(:name), domain.fetch(:slug)] },
+              @selected_domain&.fetch(:slug)
+            ),
+            {},
+            class: "form-select" %>
+        </div>
+        <div class="col-md-4">
+          <%= form.label :field, "OpenAlex field", class: "form-label" %>
+          <%= form.select :field,
+            options_for_select(
+              [["All fields", ""]] + @fields.map { |field| ["#{field.domain_display_name} / #{field.name}", field.to_param] },
+              @selected_field&.to_param
+            ),
+            {},
+            class: "form-select" %>
+        </div>
+        <div class="col-12 d-flex gap-2">
+          <%= form.submit "Apply filters", class: "btn btn-primary" %>
+          <%= link_to "Clear filters", packages_path, class: "btn btn-outline-secondary" %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <h2 class="h4 mb-3">
+    <%= number_with_delimiter @pagy.count %>
+    <%= "package".pluralize(@pagy.count) %>
+  </h2>
+
+  <% if @packages.any? %>
+    <% @packages.each do |package| %>
+      <% count = package.scientific_dependents_count.to_i %>
+      <div class="card mb-3" data-package-id="<%= package.id %>">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start gap-3">
+            <div class="flex-grow-1">
+              <h3 class="h5 card-title mb-2">
+                <% if package.published_by_project %>
+                  <%= link_to package.name, project_path(package.published_by_project) %>
+                <% elsif package.repository_url.present? %>
+                  <%= link_to package.name,
+                    package.repository_url,
+                    target: "_blank",
+                    rel: "noopener" %>
+                <% else %>
+                  <%= package.name %>
+                <% end %>
+              </h3>
+              <div class="mb-2">
+                <span class="badge bg-light text-dark"><%= package.package_registry.ecosystem %></span>
+                <span class="badge bg-light text-dark"><%= package.package_registry.name %></span>
+              </div>
+
+              <% if package.metadata["description"].present? %>
+                <p class="card-text text-muted"><%= package.metadata["description"] %></p>
+              <% end %>
+
+              <% if package.purl.present? %>
+                <p class="mb-2"><code><%= package.purl %></code></p>
+              <% end %>
+
+              <% if package.published_by_project %>
+                <p class="mb-0 text-muted">
+                  Published by
+                  <%= link_to package.published_by_project.name.presence || package.published_by_project.url,
+                    project_path(package.published_by_project) %>
+                </p>
+              <% end %>
+            </div>
+
+            <div class="text-end" data-dependent-projects-count="<%= count %>">
+              <span class="badge bg-primary fs-6"><%= number_with_delimiter count %></span><br>
+              <small class="text-muted"><%= "scientific project".pluralize(count) %></small>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
+  <% else %>
+    <div class="alert alert-info">
+      No packages match these filters.
+    </div>
+  <% end %>
+</div>

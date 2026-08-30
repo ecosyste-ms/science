@@ -26,6 +26,47 @@ class Package < ApplicationRecord
 
   before_validation :normalize_purl
 
+  def self.ranked_by_scientific_dependents(field_ids: nil)
+    counts = ProjectDependency.joins(:project)
+      .merge(Project.visible)
+      .merge(Project.scientific)
+      .where(direct: true)
+      .where.not(package_id: nil)
+    unless field_ids.nil?
+      project_ids = ProjectField.where(field_id: field_ids).select(:project_id)
+      counts = counts.where(project_id: project_ids)
+    end
+    counts = counts.group(:package_id).select(
+      "project_dependencies.package_id, " \
+      "COUNT(DISTINCT project_dependencies.project_id) AS scientific_dependents_count"
+    )
+
+    joins(
+      "INNER JOIN (#{counts.to_sql}) scientific_dependency_counts " \
+      "ON scientific_dependency_counts.package_id = packages.id"
+    )
+      .select(
+        "packages.*, " \
+        "scientific_dependency_counts.scientific_dependents_count"
+      )
+      .preload(:package_registry, :published_by_project)
+      .order(
+        Arel.sql("scientific_dependency_counts.scientific_dependents_count DESC"),
+        Arel.sql("lower(packages.name) ASC"),
+        :id
+      )
+  end
+
+  def self.scientific_dependency_ecosystems
+    ProjectDependency.joins(:project, package: :package_registry)
+      .merge(Project.visible)
+      .merge(Project.scientific)
+      .where(direct: true)
+      .distinct
+      .order("package_registries.ecosystem")
+      .pluck("package_registries.ecosystem")
+  end
+
   def normalize_purl
     if purl.blank?
       self.purl = nil

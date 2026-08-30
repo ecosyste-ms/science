@@ -85,4 +85,50 @@ class PackageTest < ActiveSupport::TestCase
     assert_not package.valid?
     assert package.errors[:purl].any?
   end
+
+  test "ranks packages by distinct scientific dependent projects" do
+    popular = Package.create!(
+      package_registry: @registry,
+      name: "popular",
+      purl: "pkg:npm/popular"
+    )
+    other = Package.create!(
+      package_registry: @registry,
+      name: "other",
+      purl: "pkg:npm/other"
+    )
+    2.times do |index|
+      project = Project.create!(
+        url: "https://github.com/test/package-ranking-#{index}",
+        science_score: 70
+      )
+      ProjectDependency.create!(
+        project: project,
+        package: popular,
+        ecosystem: "npm",
+        package_name: popular.name,
+        purl: popular.purl,
+        direct: true
+      )
+      next unless index.zero?
+
+      ProjectDependency.create!(
+        project: project,
+        package: other,
+        ecosystem: "npm",
+        package_name: other.name,
+        purl: other.purl,
+        direct: true
+      )
+    end
+
+    ranked = Package.ranked_by_scientific_dependents
+    counts = ranked.map do |package|
+      package.scientific_dependents_count.to_i
+    end
+
+    assert_equal 2, ranked.count(:all)
+    assert_equal [popular, other], ranked.to_a
+    assert_equal [2, 1], counts
+  end
 end

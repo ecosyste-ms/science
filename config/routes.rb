@@ -56,6 +56,8 @@ Rails.application.routes.draw do
 
   resources :releases, only: [:index]
 
+  resources :packages, only: [:index]
+
   resources :issues, only: [:index]
   
   resources :contributors, only: [:index, :show] 
