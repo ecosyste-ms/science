@@ -32,6 +32,27 @@ class PackageRegistryTest < ActiveSupport::TestCase
     )
   end
 
+  test "uses the Purl type before a conflicting ecosystem default" do
+    gem_registry = PackageRegistry.create!(
+      name: "rubygems.org",
+      url: "https://rubygems.org",
+      ecosystem: "rubygems",
+      purl_type: "gem"
+    )
+    PackageRegistry.create!(
+      name: "npmjs.org",
+      url: "https://registry.npmjs.org",
+      ecosystem: "npm",
+      purl_type: "npm",
+      default: true
+    )
+
+    assert_equal gem_registry, PackageRegistry.for_dependency(
+      ecosystem: "npm",
+      purl_type: "gem"
+    )
+  end
+
   test "does not replace an unknown explicit registry with the default" do
     PackageRegistry.create!(
       name: "rubygems.org",

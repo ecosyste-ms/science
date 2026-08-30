@@ -2,6 +2,11 @@ class ProjectDependency < ApplicationRecord
   belongs_to :project
   belongs_to :package, optional: true
 
+  scope :unresolved, -> { where(package_id: nil) }
+  scope :pending_package_resolution, -> {
+    unresolved.where(package_resolution_attempted_at: nil)
+  }
+
   validates :ecosystem, :package_name, presence: true
   validates :package_id,
     uniqueness: { scope: :project_id },

@@ -11,9 +11,11 @@ The regular discovery tasks are defined in `app.json`. Import and sync run as se
 | Every 30 minutes | `projects:import_joss` | Published JOSS papers |
 | Daily at 00:00 | `projects:import` | JOSS, papers.ecosyste.ms, CRAN, Bioconductor, conda-forge, and reviewed Open Sustainable Technology projects |
 | Daily at 01:00 | `projects:import_metadata_repositories` | Repository links in citation and metadata files |
+| Daily at 02:00 | `packages:sync_registries` | Package registries and their default status from packages.ecosyste.ms |
 | Every 10 minutes | `projects:sync` | Projects due for metadata refresh |
 | Every 10 minutes | `projects:fetch_brief` | Eligible repositories missing Brief dependency data |
 | Every 10 minutes, offset by 3 minutes | `projects:sync_dependencies` | Stored direct dependencies awaiting indexing |
+| Every 10 minutes, offset by 6 minutes | `packages:resolve_dependencies` | Unresolved dependency identities awaiting local package records |
 
 The JOSS importer stores the paper JSON in `joss_metadata`. Existing projects receive updated JOSS metadata, while new projects are queued for sync. The papers and registry importers currently accept GitHub repository URLs. The reviewed OST importer also limits its imports to GitHub.
 
@@ -61,6 +63,15 @@ A missing repos response and a Brief result without a `dependencies` key mean th
 ```bash
 LIMIT=250 bundle exec rake projects:sync_dependencies
 RETRY_ERRORS=true LIMIT=25 bundle exec rake projects:sync_dependencies
+```
+
+`packages:resolve_dependencies` groups unresolved rows by PURL or package coordinate and processes at most 1000 identities per run. It selects explicit registries from PURL qualifiers, then uses the PURL or ecosystem default. Namespaces follow packages.ecosyste.ms naming: Maven uses `:`, while npm, Go, and other namespaced package types use `/`.
+
+Resolution creates local `packages` rows and links every matching `project_dependencies` row. It does not require the package to be publicly available, so a valid internal package can retain its identity before external metadata is found. A malformed coordinate or unknown explicit registry records `package_resolution_attempted_at` and `package_resolution_error` once. Docker coordinates beginning with a registry hostname remain unresolved unless that registry exists in `package_registries`.
+
+```bash
+LIMIT=1000 bundle exec rake packages:resolve_dependencies
+RETRY_ERRORS=true LIMIT=100 bundle exec rake packages:resolve_dependencies
 ```
 
 ## Partial results and hidden owners

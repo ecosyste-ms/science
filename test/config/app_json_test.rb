@@ -37,6 +37,34 @@ class AppJsonTest < ActiveSupport::TestCase
     ], dependency_crons
   end
 
+  test "project dependencies are resolved to packages after indexing" do
+    config = JSON.parse(Rails.root.join("app.json").read)
+    resolution_crons = config.fetch("cron").select do |cron|
+      cron.fetch("command").include?("packages:resolve_dependencies")
+    end
+
+    assert_equal [
+      {
+        "command" => "bundle exec rake packages:resolve_dependencies",
+        "schedule" => "6,16,26,36,46,56 * * * *",
+      },
+    ], resolution_crons
+  end
+
+  test "package registries are refreshed before dependency resolution" do
+    config = JSON.parse(Rails.root.join("app.json").read)
+    registry_crons = config.fetch("cron").select do |cron|
+      cron.fetch("command").include?("packages:sync_registries")
+    end
+
+    assert_equal [
+      {
+        "command" => "bundle exec rake packages:sync_registries",
+        "schedule" => "0 2 * * *",
+      },
+    ], registry_crons
+  end
+
   test "research organization domains are refreshed weekly" do
     config = JSON.parse(Rails.root.join("app.json").read)
     crons = config.fetch("cron").select do |cron|

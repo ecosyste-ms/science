@@ -2,9 +2,20 @@ require "test_helper"
 require "rake"
 
 class PackagesRakeTest < ActiveSupport::TestCase
+  ENV_KEYS = %w[LIMIT RETRY_ERRORS].freeze
+
   setup do
     Rails.application.load_tasks unless Rake::Task.task_defined?("packages:sync_registries")
     Rake::Task["packages:sync_registries"].reenable
+    Rake::Task["packages:resolve_dependencies"].reenable
+    @original_env = ENV_KEYS.to_h { |key| [key, ENV[key]] }
+    ENV_KEYS.each { |key| ENV.delete(key) }
+  end
+
+  teardown do
+    @original_env.each do |key, value|
+      value.nil? ? ENV.delete(key) : ENV[key] = value
+    end
   end
 
   test "syncs registries through the rake entrypoint" do
@@ -48,5 +59,31 @@ class PackagesRakeTest < ActiveSupport::TestCase
     assert_includes output, "created: 2"
     assert_includes second_output, "created: 0"
     assert_includes second_output, "updated: 0"
+  end
+
+  test "resolves a bounded dependency batch through the rake entrypoint" do
+    PackageRegistry.create!(
+      name: "rubygems.org",
+      url: "https://rubygems.org",
+      ecosystem: "rubygems",
+      purl_type: "gem",
+      default: true
+    )
+    project = Project.create!(url: "https://github.com/example/package-rake")
+    dependency = ProjectDependency.create!(
+      project: project,
+      ecosystem: "rubygems",
+      package_name: "rails",
+      purl: "pkg:gem/rails",
+      direct: true
+    )
+    ENV["LIMIT"] = "1"
+
+    output, = capture_io { Rake::Task["packages:resolve_dependencies"].invoke }
+
+    assert_equal "rails", dependency.reload.package.name
+    assert_includes output, "selected: 1"
+    assert_includes output, "resolved: 1"
+    assert_includes output, "dependency_rows: 1"
   end
 end

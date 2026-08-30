@@ -40,10 +40,22 @@ class PackageRegistry < ApplicationRecord
       return where("lower(url) = ?", normalized.downcase).first
     end
 
+    if purl_type.present?
+      default_url = Purl.default_registry(purl_type)
+      if default_url.present?
+        normalized = normalized_url(default_url)
+        registry = where("lower(url) = ?", normalized.downcase).first
+        return registry if registry
+      end
+
+      registry = defaults.where("lower(purl_type) = ?", purl_type.downcase).first
+      return registry if registry
+    end
+
     registry = defaults.where("lower(ecosystem) = ?", ecosystem.to_s.downcase).first
     return registry if registry
 
-    default_url = Purl.default_registry(purl_type.presence || ecosystem)
+    default_url = Purl.default_registry(ecosystem)
     return if default_url.blank?
 
     normalized = normalized_url(default_url)

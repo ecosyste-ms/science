@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_30_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_30_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -244,15 +244,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_150000) do
     t.jsonb "metadata", default: {}, null: false
     t.bigint "package_id"
     t.string "package_name", null: false
+    t.datetime "package_resolution_attempted_at"
+    t.text "package_resolution_error"
     t.bigint "project_id", null: false
     t.text "purl"
     t.datetime "updated_at", null: false
     t.index ["ecosystem", "package_name"], name: "index_project_dependencies_on_package_coordinates"
+    t.index ["ecosystem", "package_name"], name: "index_project_dependencies_pending_name_resolution", where: "((package_id IS NULL) AND (purl IS NULL) AND (package_resolution_attempted_at IS NULL))"
     t.index ["package_id"], name: "index_project_dependencies_on_package_id"
     t.index ["project_id", "ecosystem", "package_name"], name: "index_project_dependencies_on_unresolved_name", unique: true, where: "((package_id IS NULL) AND (purl IS NULL))"
     t.index ["project_id", "package_id"], name: "index_project_dependencies_on_resolved_package", unique: true, where: "(package_id IS NOT NULL)"
     t.index ["project_id", "purl"], name: "index_project_dependencies_on_unresolved_purl", unique: true, where: "((package_id IS NULL) AND (purl IS NOT NULL))"
     t.index ["project_id"], name: "index_project_dependencies_on_project_id"
+    t.index ["purl"], name: "index_project_dependencies_pending_purl_resolution", where: "((package_id IS NULL) AND (purl IS NOT NULL) AND (package_resolution_attempted_at IS NULL))"
   end
 
   create_table "project_fields", force: :cascade do |t|
