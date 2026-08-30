@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_27_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_30_133000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -185,6 +185,44 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_27_180000) do
     t.index ["repositories_checked_at"], name: "index_owners_on_repositories_checked_at"
   end
 
+  create_table "package_registries", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.boolean "default", default: false, null: false
+    t.string "ecosystem", null: false
+    t.datetime "ecosystems_updated_at"
+    t.jsonb "metadata", default: {}, null: false
+    t.string "name", null: false
+    t.string "purl_type", null: false
+    t.datetime "updated_at", null: false
+    t.string "url", null: false
+    t.index "lower((ecosystem)::text)", name: "index_package_registries_on_default_ecosystem", unique: true, where: "(\"default\" = true)"
+    t.index "lower((ecosystem)::text)", name: "index_package_registries_on_lower_ecosystem"
+    t.index "lower((name)::text)", name: "index_package_registries_on_lower_name", unique: true
+    t.index "lower((purl_type)::text)", name: "index_package_registries_on_lower_purl_type"
+    t.index "lower((url)::text)", name: "index_package_registries_on_lower_url", unique: true
+  end
+
+  create_table "packages", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "ecosystems_id"
+    t.datetime "ecosystems_updated_at"
+    t.jsonb "metadata", default: {}, null: false
+    t.string "name", null: false
+    t.string "namespace"
+    t.bigint "package_registry_id", null: false
+    t.bigint "published_by_project_id"
+    t.text "purl"
+    t.datetime "repository_checked_at"
+    t.text "repository_url"
+    t.datetime "updated_at", null: false
+    t.index ["ecosystems_id"], name: "index_packages_on_ecosystems_id", unique: true, where: "(ecosystems_id IS NOT NULL)"
+    t.index ["package_registry_id", "name"], name: "index_packages_on_registry_and_name", unique: true
+    t.index ["package_registry_id"], name: "index_packages_on_package_registry_id"
+    t.index ["published_by_project_id"], name: "index_packages_on_published_by_project_id"
+    t.index ["purl"], name: "index_packages_on_purl", unique: true, where: "(purl IS NOT NULL)"
+    t.index ["repository_checked_at"], name: "index_packages_on_repository_checked_at"
+  end
+
   create_table "papers", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "doi"
@@ -197,6 +235,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_27_180000) do
     t.datetime "updated_at", null: false
     t.text "urls", default: [], array: true
     t.index ["doi"], name: "index_papers_on_doi"
+  end
+
+  create_table "project_dependencies", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.boolean "direct", default: false, null: false
+    t.string "ecosystem", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.bigint "package_id"
+    t.string "package_name", null: false
+    t.bigint "project_id", null: false
+    t.text "purl"
+    t.datetime "updated_at", null: false
+    t.index ["ecosystem", "package_name"], name: "index_project_dependencies_on_package_coordinates"
+    t.index ["package_id"], name: "index_project_dependencies_on_package_id"
+    t.index ["project_id", "ecosystem", "package_name"], name: "index_project_dependencies_on_unresolved_name", unique: true, where: "((package_id IS NULL) AND (purl IS NULL))"
+    t.index ["project_id", "package_id"], name: "index_project_dependencies_on_resolved_package", unique: true, where: "(package_id IS NOT NULL)"
+    t.index ["project_id", "purl"], name: "index_project_dependencies_on_unresolved_purl", unique: true, where: "((package_id IS NULL) AND (purl IS NOT NULL))"
+    t.index ["project_id"], name: "index_project_dependencies_on_project_id"
   end
 
   create_table "project_fields", force: :cascade do |t|
@@ -323,6 +379,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_27_180000) do
     t.index ["project_id"], name: "index_votes_on_project_id"
   end
 
+  add_foreign_key "packages", "package_registries"
+  add_foreign_key "packages", "projects", column: "published_by_project_id", on_delete: :nullify
+  add_foreign_key "project_dependencies", "packages", on_delete: :nullify
+  add_foreign_key "project_dependencies", "projects"
   add_foreign_key "project_fields", "fields"
   add_foreign_key "project_fields", "projects"
   add_foreign_key "project_open_alex_topics", "open_alex_topics"

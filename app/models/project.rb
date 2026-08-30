@@ -67,6 +67,12 @@ class Project < ApplicationRecord
   has_many :mentions, dependent: :destroy
   has_many :papers, through: :mentions
   has_many :dependency_records, class_name: 'Dependency', dependent: :nullify
+  has_many :project_dependencies, dependent: :delete_all
+  has_many :dependency_package_records, through: :project_dependencies, source: :package
+  has_many :published_package_records,
+    class_name: "Package",
+    foreign_key: :published_by_project_id,
+    dependent: :nullify
   has_many :votes, dependent: :delete_all
 
   has_many :good_first_issues, -> { good_first_issue }, class_name: 'Issue'

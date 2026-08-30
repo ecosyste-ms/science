@@ -10,6 +10,7 @@ gem "sprockets-rails"
 gem "pg"
 gem "puma"
 gem "public_suffix"
+gem "purl", "~> 1.8"
 gem "jbuilder"
 gem "bootsnap", require: false
 gem "sassc-rails"
