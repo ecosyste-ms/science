@@ -2,7 +2,7 @@ require "test_helper"
 require "rake"
 
 class ProjectsRakeTest < ActiveSupport::TestCase
-  ENV_KEYS = %w[LIMIT COHORT SHARD_COUNT SHARD DRY_RUN].freeze
+  ENV_KEYS = %w[LIMIT COHORT SHARD_COUNT SHARD DRY_RUN RETRY_ERRORS].freeze
 
   setup do
     Rails.application.load_tasks unless Rake::Task.task_defined?("projects:fetch_brief")
@@ -45,6 +45,38 @@ class ProjectsRakeTest < ActiveSupport::TestCase
       capture_io { Rake::Task["projects:fetch_brief"].execute }
     end
     assert_empty FetchBriefWorker.jobs
+  end
+
+  test "sync_dependencies indexes a bounded project batch through the rake entrypoint" do
+    project = Project.create!(
+      url: "https://github.com/test/dependency-rake",
+      dependencies: [
+        {
+          "ecosystem" => "rubygems",
+          "filepath" => "Gemfile",
+          "kind" => "manifest",
+          "dependencies" => [
+            {
+              "package_name" => "rails",
+              "ecosystem" => "rubygems",
+              "requirements" => "~> 8.1",
+              "direct" => true,
+              "kind" => "runtime",
+              "optional" => false,
+            },
+          ],
+        },
+      ]
+    )
+    ENV["LIMIT"] = "1"
+
+    output, = capture_io { Rake::Task["projects:sync_dependencies"].execute }
+
+    assert_equal ["rails"], project.project_dependencies.reload.pluck(:package_name)
+    assert project.reload.dependencies_indexed_at.present?
+    assert_includes output, "selected: 1"
+    assert_includes output, "indexed: 1"
+    assert_includes output, "dependencies: 1"
   end
 
   test "import_metadata_repositories creates and enqueues discovered repositories" do

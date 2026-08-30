@@ -23,6 +23,20 @@ class AppJsonTest < ActiveSupport::TestCase
     ], brief_crons
   end
 
+  test "project dependencies are indexed every ten minutes in bounded batches" do
+    config = JSON.parse(Rails.root.join("app.json").read)
+    dependency_crons = config.fetch("cron").select do |cron|
+      cron.fetch("command").include?("projects:sync_dependencies")
+    end
+
+    assert_equal [
+      {
+        "command" => "bundle exec rake projects:sync_dependencies",
+        "schedule" => "3,13,23,33,43,53 * * * *",
+      },
+    ], dependency_crons
+  end
+
   test "research organization domains are refreshed weekly" do
     config = JSON.parse(Rails.root.join("app.json").read)
     crons = config.fetch("cron").select do |cron|

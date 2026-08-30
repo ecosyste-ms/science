@@ -12,6 +12,8 @@ The regular discovery tasks are defined in `app.json`. Import and sync run as se
 | Daily at 00:00 | `projects:import` | JOSS, papers.ecosyste.ms, CRAN, Bioconductor, conda-forge, and reviewed Open Sustainable Technology projects |
 | Daily at 01:00 | `projects:import_metadata_repositories` | Repository links in citation and metadata files |
 | Every 10 minutes | `projects:sync` | Projects due for metadata refresh |
+| Every 10 minutes | `projects:fetch_brief` | Eligible repositories missing Brief dependency data |
+| Every 10 minutes, offset by 3 minutes | `projects:sync_dependencies` | Stored direct dependencies awaiting indexing |
 
 The JOSS importer stores the paper JSON in `joss_metadata`. Existing projects receive updated JOSS metadata, while new projects are queued for sync. The papers and registry importers currently accept GitHub repository URLs. The reviewed OST importer also limits its imports to GitHub.
 
@@ -47,6 +49,19 @@ Selected IDs are sent to `SyncProjectWorker` on the default Sidekiq queue. Sidek
 The repository lookup supplies host data, archive URLs, metadata filenames, release endpoints, and manifest endpoints. Other stages call packages.ecosyste.ms, commits.ecosyste.ms, issues.ecosyste.ms, timeline.ecosyste.ms, and archives.ecosyste.ms. Project keywords combine repository topics with package keywords case-insensitively.
 
 README and CodeMeta files normally come through archives.ecosyste.ms using the repository archive and detected path. Each has a raw repository fallback. CITATION and Zenodo files use the archive path reported by repository metadata.
+
+## Dependency indexing
+
+Repository sync stores the repos.ecosyste.ms manifest response in `projects.dependencies`. Brief scans store their direct and transitive dependency results in `projects.brief`. The scheduled `projects:sync_dependencies` task processes at most 250 projects per run and accepts `LIMIT` values up to 1000.
+
+The indexer records direct dependencies in `project_dependencies`. Repos manifest data has priority when it contains usable direct dependencies. Brief is the fallback when the repos response is empty or has no usable direct dependencies. Each row keeps its source and manifest occurrences in `metadata`.
+
+A missing repos response and a Brief result without a `dependencies` key mean that dependency collection has not happened yet, so the project is not marked as indexed. An empty array is a collected result with no dependencies and is marked once. A later change to either stored source clears `dependencies_indexed_at` and makes the project eligible again. Invalid payloads set `dependencies_index_error`; pass `RETRY_ERRORS=true` for an explicit retry.
+
+```bash
+LIMIT=250 bundle exec rake projects:sync_dependencies
+RETRY_ERRORS=true LIMIT=25 bundle exec rake projects:sync_dependencies
+```
 
 ## Partial results and hidden owners
 

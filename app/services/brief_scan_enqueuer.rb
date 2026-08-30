@@ -24,7 +24,7 @@ class BriefScanEnqueuer
   end
 
   def projects
-    scope = Project.visible.with_repository.where(brief: nil).where("science_score > 0")
+    scope = Project.visible.with_repository.needing_brief_dependencies.where("science_score > 0")
     scope = scope.with_joss if cohort == "joss"
     scope = scope.where(joss_metadata: nil) if cohort == "non_joss"
     scope.where("projects.id % ? = ?", shard_count, shard)

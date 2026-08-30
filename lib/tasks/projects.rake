@@ -99,9 +99,16 @@ namespace :projects do
     puts "#{label}: #{counts.inspect}"
   end
 
-  desc 'sync dependencies'
+  desc 'index stored direct dependencies (LIMIT=250 RETRY_ERRORS=false)'
   task :sync_dependencies => :environment do
-    Project.sync_dependencies
+    retry_errors = ActiveModel::Type::Boolean.new.cast(
+      ENV.fetch('RETRY_ERRORS', 'false')
+    )
+    result = Project.sync_dependencies(
+      limit: ENV.fetch('LIMIT', ProjectDependencyIndexer::DEFAULT_LIMIT),
+      retry_errors: retry_errors
+    )
+    puts "Project dependencies: #{result.inspect}"
   end
 
   desc 'enqueue brief scans (LIMIT=50 COHORT=all SHARD_COUNT=1 SHARD=0)'

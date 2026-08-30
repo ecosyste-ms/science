@@ -130,11 +130,37 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_equal 2, p.events["last_year"]["pushes"]
   end
 
-  test "fetch_dependencies stores parsed body" do
-    p = build_project
-    stub_request(:get, repo_hash["manifests_url"]).to_return(status: 200, body: [{ ecosystem: "pypi" }].to_json)
+  test "fetch_dependencies stores parsed body and clears stale indexing state" do
+    p = build_project(
+      dependencies: [{ "ecosystem" => "rubygems" }],
+      dependencies_indexed_at: 1.day.ago,
+      dependencies_index_error: "old error"
+    )
+    stub_request(:get, repo_hash["manifests_url"])
+      .to_return(status: 200, body: [{ ecosystem: "pypi" }].to_json)
+
     p.fetch_dependencies
+
     assert_equal "pypi", p.reload.dependencies.first["ecosystem"]
+    assert_nil p.dependencies_indexed_at
+    assert_nil p.dependencies_index_error
+  end
+
+  test "fetch_dependencies retains indexing state for unchanged manifests" do
+    manifests = [{ "ecosystem" => "pypi" }]
+    indexed_at = 1.day.ago
+    p = build_project(
+      dependencies: manifests,
+      dependencies_indexed_at: indexed_at,
+      dependencies_index_error: "retry manually"
+    )
+    stub_request(:get, repo_hash["manifests_url"])
+      .to_return(status: 200, body: manifests.to_json)
+
+    p.fetch_dependencies
+
+    assert_in_delta indexed_at, p.reload.dependencies_indexed_at, 1.second
+    assert_equal "retry manually", p.dependencies_index_error
   end
 
   test "fetch_citation_file stores contents from archives api" do
@@ -396,7 +422,11 @@ class ProjectSyncTest < ActiveSupport::TestCase
   end
 
   test "fetch_brief stores trimmed brief output" do
-    p = build_project(repository: repo_hash.merge("clone_url" => "https://github.com/numpy/numpy.git"))
+    p = build_project(
+      repository: repo_hash.merge("clone_url" => "https://github.com/numpy/numpy.git"),
+      dependencies_indexed_at: 1.day.ago,
+      dependencies_index_error: "old error"
+    )
     output = {
       version: "0.11.0", languages: [{ name: "Python" }], package_managers: [],
       tools: { test: [{ name: "pytest" }] }, resources: {}, manifests: [], lines: {},
@@ -411,8 +441,10 @@ class ProjectSyncTest < ActiveSupport::TestCase
     p.fetch_brief
     assert_equal "0.11.0", p.reload.brief["version"]
     assert_equal "pytest", p.brief.dig("tools", "test", 0, "name")
-    refute p.brief.key?("dependencies")
+    assert_equal "numpy", p.brief.dig("dependencies", 0, "name")
     refute p.brief.key?("git")
+    assert_nil p.dependencies_indexed_at
+    assert_nil p.dependencies_index_error
   end
 
   test "fetch_brief returns early when repository absent" do

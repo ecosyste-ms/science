@@ -5,7 +5,7 @@ class FetchBriefWorker
   sidekiq_options queue: "brief", retry: 3
 
   def perform(project_id)
-    project = Project.where(brief: nil).find_by(id: project_id)
+    project = Project.needing_brief_dependencies.find_by(id: project_id)
     return unless project
 
     project.fetch_brief

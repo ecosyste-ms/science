@@ -17,6 +17,10 @@
       "schedule": "*/10 * * * *"
     },
     {
+      "command": "bundle exec rake projects:sync_dependencies",
+      "schedule": "3,13,23,33,43,53 * * * *"
+    },
+    {
       "command": "bundle exec rake projects:fetch_brief",
       "schedule": "*/10 * * * *"
     },

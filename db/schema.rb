@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_30_133000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_30_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -295,6 +295,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_133000) do
     t.json "commits"
     t.datetime "created_at", null: false
     t.json "dependencies"
+    t.text "dependencies_index_error"
+    t.datetime "dependencies_indexed_at"
     t.json "dependent_repos"
     t.string "description"
     t.boolean "esd", default: false
@@ -329,6 +331,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_133000) do
     t.index ["category", "sub_category"], name: "index_projects_on_category_and_sub_category", where: "((category IS NOT NULL) AND (sub_category IS NOT NULL))"
     t.index ["collection_id"], name: "index_projects_on_collection_id"
     t.index ["host_id"], name: "index_projects_on_host_id"
+    t.index ["id"], name: "index_projects_pending_dependency_index", where: "(((dependencies IS NOT NULL) OR (brief ? 'dependencies'::text)) AND (dependencies_indexed_at IS NULL) AND (dependencies_index_error IS NULL))"
     t.index ["owner_id"], name: "index_projects_on_owner_id"
     t.index ["reviewed"], name: "index_projects_on_reviewed"
     t.index ["url"], name: "index_projects_on_url", unique: true

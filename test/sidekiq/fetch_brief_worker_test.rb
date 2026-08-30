@@ -23,6 +23,14 @@ class FetchBriefWorkerTest < ActiveSupport::TestCase
       tools: {},
       resources: {},
       manifests: [],
+      dependencies: [
+        {
+          name: "numpy",
+          purl: "pkg:pypi/numpy",
+          scope: "runtime",
+          direct: true,
+        },
+      ],
       lines: {},
     }.to_json
     Open3.expects(:capture3).returns([output, "", stub(success?: true)])
@@ -30,6 +38,7 @@ class FetchBriefWorkerTest < ActiveSupport::TestCase
     FetchBriefWorker.new.perform(project.id)
 
     assert_equal "Fortran", project.reload.brief.dig("languages", 0, "name")
+    assert_equal "pkg:pypi/numpy", project.brief.dig("dependencies", 0, "purl")
     assert_equal 20.0, project.science_score
     assert project.science_score_breakdown.dig(:breakdown, :has_research_tooling, :present)
   end
@@ -60,15 +69,56 @@ class FetchBriefWorkerTest < ActiveSupport::TestCase
     assert_equal 0.0, project.science_score_breakdown.dig(:breakdown, :has_research_tooling, :score)
   end
 
-  test "skips a project that already has brief data" do
+  test "skips a project that already has Brief dependency data" do
     project = Project.create!(
       url: "https://github.com/test/already-scanned",
       repository: { "clone_url" => "https://github.com/test/already-scanned.git" },
       science_score: 20,
-      brief: { "version" => "0.12.0" }
+      brief: { "version" => "0.12.1", "dependencies" => [] }
     )
     Project.any_instance.expects(:fetch_brief).never
 
     FetchBriefWorker.new.perform(project.id)
+  end
+
+  test "rescans a successful legacy Brief result and makes an empty repos result eligible again" do
+    project = Project.create!(
+      url: "https://github.com/test/legacy-brief",
+      repository: { "clone_url" => "https://github.com/test/legacy-brief.git" },
+      science_score: 20,
+      brief: { "version" => "0.12.0", "languages" => [] },
+      dependencies: [],
+      dependencies_indexed_at: 1.day.ago
+    )
+    output = {
+      version: "0.12.1",
+      languages: [],
+      package_managers: [],
+      tools: {},
+      resources: {},
+      manifests: [],
+      dependencies: [
+        {
+          name: "rails",
+          purl: "pkg:gem/rails",
+          scope: "runtime",
+          direct: true,
+        },
+      ],
+      lines: {},
+    }.to_json
+    Open3.expects(:capture3).returns([output, "", stub(success?: true)])
+
+    FetchBriefWorker.new.perform(project.id)
+
+    assert_equal "pkg:gem/rails", project.reload.brief.dig("dependencies", 0, "purl")
+    assert_nil project.dependencies_indexed_at
+
+    result = Project.sync_dependencies(limit: 1)
+
+    assert_equal 1, result.fetch(:indexed)
+    dependency = project.project_dependencies.reload.sole
+    assert_equal "rails", dependency.package_name
+    assert_equal "brief", dependency.metadata.fetch("source")
   end
 end

@@ -19,20 +19,8 @@ module Project::Sync
       end
     end
 
-    def sync_dependencies(min_count: 10)
-      dependencies = Project.map(&:dependency_packages).flatten(1).group_by(&:itself).transform_values(&:count).sort_by{|k,v| v}.reverse
-
-      dependencies.each do |(ecosystem, package_name), count|
-        puts "Checking #{ecosystem} #{package_name}"
-
-        dependency = Dependency.find_or_create_by(ecosystem: ecosystem, name: package_name)
-
-        dependency.update(count: count)
-
-        next if dependency.package.present?
-
-        dependency.sync_package if count > min_count
-      end
+    def sync_dependencies(limit: ProjectDependencyIndexer::DEFAULT_LIMIT, retry_errors: false)
+      ProjectDependencyIndexer.sync_batch!(limit: limit, retry_errors: retry_errors)
     end
   end
 
@@ -356,6 +344,10 @@ module Project::Sync
     response = conn.get
     return unless response.success?
     self.dependencies = JSON.parse(response.body)
+    if will_save_change_to_dependencies?
+      self.dependencies_indexed_at = nil
+      self.dependencies_index_error = nil
+    end
     self.save
   rescue
     puts "Error fetching dependencies for #{repository_url}"
@@ -576,6 +568,7 @@ module Project::Sync
     end
 
     data = JSON.parse(out)
+    previous_brief_dependencies = brief.is_a?(Hash) ? brief['dependencies'] : nil
     self.brief = {
       'version' => data['version'],
       'languages' => data['languages'],
@@ -583,8 +576,13 @@ module Project::Sync
       'tools' => data['tools'],
       'resources' => data['resources'],
       'manifests' => data['manifests'],
+      'dependencies' => data['dependencies'],
       'lines' => data['lines'],
     }
+    if previous_brief_dependencies != data['dependencies']
+      self.dependencies_indexed_at = nil
+      self.dependencies_index_error = nil
+    end
     save
   rescue Errno::ENOENT
     Rails.logger.warn "brief binary not found; skipping fetch_brief for #{repository_url}"

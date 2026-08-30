@@ -12,14 +12,24 @@ class BriefScanEnqueuerTest < ActiveSupport::TestCase
   test "enqueues only eligible JOSS projects" do
     joss = create_project("joss", joss: true)
     create_project("non-joss")
-    create_project("scanned", joss: true, brief: { "version" => "0.12.0" })
+    legacy = create_project("legacy", joss: true, brief: { "version" => "0.12.0" })
+    create_project(
+      "scanned",
+      joss: true,
+      brief: { "version" => "0.12.1", "dependencies" => [] }
+    )
+    create_project(
+      "failed",
+      joss: true,
+      brief: { "error" => "timeout", "attempted_at" => Time.current.iso8601 }
+    )
     create_project("unscored", joss: true, science_score: 0)
     create_project("missing-repository", joss: true, repository: nil)
 
     count = BriefScanEnqueuer.new(limit: 10, cohort: "joss").enqueue
 
-    assert_equal 1, count
-    assert_equal [[joss.id]], FetchBriefWorker.jobs.map { |job| job["args"] }
+    assert_equal 2, count
+    assert_equal [[joss.id], [legacy.id]], FetchBriefWorker.jobs.map { |job| job["args"] }
   end
 
   test "applies a deterministic non-JOSS shard" do
