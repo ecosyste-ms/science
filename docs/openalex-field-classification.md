@@ -1,6 +1,6 @@
 # OpenAlex field classification
 
-`OpenAlexTopicClassifier` ranks repository text against the active OpenAlex topic taxonomy. `OpenAlexFieldClassificationImporter` turns those topic predictions into `Field` and `ProjectField` records for visible scientific projects. The classifier reads stored taxonomy data and project text; it does not use a project's DOI or saved `ProjectOpenAlexTopic` labels when making a prediction.
+`OpenAlexTopicClassifier` ranks repository text against the active OpenAlex topic taxonomy. `OpenAlexFieldClassificationImporter` turns those topic predictions into `Field` and `ProjectField` records for visible scientific projects. The classifier reads stored taxonomy data and project text; it does not use a project's DOI or saved `ProjectOpenAlexTopic` labels when making a prediction. Taxonomy and scholarly work-label imports are described in [OpenAlex taxonomy and work ingestion](openalex-ingestion.md).
 
 ## Text inputs
 
