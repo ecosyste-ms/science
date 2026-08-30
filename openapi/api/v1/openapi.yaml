@@ -41,6 +41,14 @@ paths:
           required: false
           schema:
             type: string
+        - name: sort
+          in: query
+          description: Order by direct scientific use or science relevance adjusted for general package popularity
+          required: false
+          schema:
+            type: string
+            enum: [scientific_projects, science_relevance]
+            default: scientific_projects
         - name: page
           in: query
           description: Pagination page number
@@ -295,6 +303,14 @@ components:
           type: number
           nullable: true
           description: Average top percentage across the available packages.ecosyste.ms rankings
+        science_relevance_top_percentage:
+          type: number
+          nullable: true
+          description: Ranking percentage used by the science relevance score after handling inconsistent upstream averages
+        science_relevance_score:
+          type: number
+          nullable: true
+          description: Scientific project count weighted from 25% to 100% using average package popularity within its registry
         science_usage_percentage:
           type: number
           nullable: true

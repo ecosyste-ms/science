@@ -48,6 +48,8 @@ class Api::V1::PackagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1_000, numpy.fetch("dependent_repositories_count")
     assert_in_delta 0.05, numpy.fetch("dependent_repositories_top_percentage")
     assert_in_delta 1.05, numpy.fetch("average_top_percentage")
+    assert_in_delta 1.05, numpy.fetch("science_relevance_top_percentage")
+    assert_in_delta 0.815, numpy.fetch("science_relevance_score")
     assert_in_delta 0.2, numpy.fetch("science_usage_percentage")
     assert_equal @physics_project.id, numpy.dig("published_by_project", "id")
     assert_equal api_v1_project_url(@physics_project),
@@ -73,6 +75,32 @@ class Api::V1::PackagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal 1, JSON.parse(response.body).length
     assert_equal "2", response.headers.fetch("total-count")
+  end
+
+  test "index orders by science relevance when requested" do
+    @sf.update!(
+      metadata: @sf.metadata.deep_merge(
+        "rankings" => { "average" => 5.0 }
+      )
+    )
+
+    get api_v1_packages_url, params: { sort: "science_relevance" }
+
+    assert_response :success
+    packages = JSON.parse(response.body)
+    assert_equal [@sf.id, @numpy.id],
+      packages.map { |package| package.fetch("id") }
+    assert_in_delta 1.0, packages.first.fetch("science_relevance_score")
+    assert_in_delta 0.815, packages.second.fetch("science_relevance_score")
+  end
+
+  test "index ignores an unknown package ordering" do
+    get api_v1_packages_url, params: { sort: "science_relevance DESC" }
+
+    assert_response :success
+    packages = JSON.parse(response.body)
+    assert_equal [@numpy.id, @sf.id],
+      packages.map { |package| package.fetch("id") }
   end
 
   test "index applies domain filters and recalculates project counts" do

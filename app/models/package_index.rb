@@ -1,10 +1,16 @@
 class PackageIndex
+  SORT_OPTIONS = {
+    "scientific_projects" => "Most scientific projects",
+    "science_relevance" => "Science relevance",
+  }.freeze
+
   attr_reader :domains,
     :ecosystems,
     :fields,
     :selected_domain,
     :selected_ecosystem,
-    :selected_field
+    :selected_field,
+    :selected_sort
 
   def initialize(params)
     @fields = Field.open_alex.order(:domain, :name).to_a
@@ -21,17 +27,27 @@ class PackageIndex
     @selected_field = fields.find do |field|
       field.to_param == params[:field].to_s
     end
+    @selected_sort = if SORT_OPTIONS.key?(params[:sort].to_s)
+      params[:sort].to_s
+    else
+      SORT_OPTIONS.keys.first
+    end
   end
 
   def scope
     packages = Package.ranked_by_scientific_dependents(
-      field_ids: selected_field_ids
+      field_ids: selected_field_ids,
+      sort: selected_sort
     )
     return packages unless selected_ecosystem
 
     packages.joins(:package_registry).where(
       package_registries: { ecosystem: selected_ecosystem }
     )
+  end
+
+  def sort_options
+    SORT_OPTIONS.map { |value, label| [label, value] }
   end
 
   def selected_field_ids

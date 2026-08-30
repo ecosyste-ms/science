@@ -6,7 +6,11 @@
     <div>
       <h1>Scientific Packages</h1>
       <p class="text-muted">
-        Packages ranked by the number of scientific projects that directly depend on them.
+        <% if @selected_sort == "science_relevance" %>
+          Packages ranked by scientific project use with a capped adjustment for general package popularity.
+        <% else %>
+          Packages ranked by the number of scientific projects that directly depend on them.
+        <% end %>
       </p>
     </div>
     <%= link_to "View All Projects", projects_path, class: "btn btn-outline-primary" %>
@@ -15,7 +19,7 @@
   <%= form_with url: packages_path, method: :get, local: true, class: "card mb-4" do |form| %>
     <div class="card-body">
       <div class="row g-3 align-items-end">
-        <div class="col-md-4">
+        <div class="col-md-3">
           <%= form.label :ecosystem, "Ecosystem", class: "form-label" %>
           <%= form.select :ecosystem,
             options_for_select(
@@ -25,7 +29,7 @@
             {},
             class: "form-select" %>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <%= form.label :domain, "OpenAlex domain", class: "form-label" %>
           <%= form.select :domain,
             options_for_select(
@@ -35,13 +39,20 @@
             {},
             class: "form-select" %>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <%= form.label :field, "OpenAlex field", class: "form-label" %>
           <%= form.select :field,
             options_for_select(
               [["All fields", ""]] + @fields.map { |field| ["#{field.domain_display_name} / #{field.name}", field.to_param] },
               @selected_field&.to_param
             ),
+            {},
+            class: "form-select" %>
+        </div>
+        <div class="col-md-3">
+          <%= form.label :sort, "Order by", class: "form-label" %>
+          <%= form.select :sort,
+            options_for_select(@sort_options, @selected_sort),
             {},
             class: "form-select" %>
         </div>
@@ -102,6 +113,13 @@
             <div class="text-end" data-dependent-projects-count="<%= count %>">
               <span class="badge bg-primary fs-6"><%= number_with_delimiter count %></span><br>
               <small class="text-muted"><%= "scientific project".pluralize(count) %></small>
+              <% if @selected_sort == "science_relevance" && package.science_relevance_score %>
+                <br>
+                <small class="text-muted">
+                  relevance score
+                  <%= number_with_precision package.science_relevance_score, precision: 2 %>
+                </small>
+              <% end %>
             </div>
           </div>
         </div>

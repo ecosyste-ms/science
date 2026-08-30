@@ -68,6 +68,29 @@ class PackagesControllerTest < ActionDispatch::IntegrationTest
     assert_no_match @sf.name, response.body
   end
 
+  test "science relevance ordering applies a capped popularity adjustment" do
+    @numpy.update!(
+      metadata: @numpy.metadata.merge(
+        "rankings" => { "average" => 0.0 }
+      )
+    )
+    @scipy.update!(
+      metadata: @scipy.metadata.merge(
+        "rankings" => { "average" => 5.0 }
+      )
+    )
+
+    get packages_url, params: { sort: "science_relevance" }
+
+    assert_response :success
+    assert_select "select[name='sort'] option[selected][value='science_relevance']"
+    assert_select "[data-package-id]" do |elements|
+      assert_equal [@scipy.id, @numpy.id, @sf.id],
+        elements.map { |element| element["data-package-id"].to_i }
+    end
+    assert_match "relevance score", response.body
+  end
+
   test "domain filter recalculates counts for projects in that domain" do
     get packages_url, params: { domain: "physical-sciences" }
 

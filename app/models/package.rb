@@ -11,6 +11,24 @@ class Package < ApplicationRecord
   AVERAGE_TOP_PERCENTAGE_SQL = <<~SQL.squish.freeze
     NULLIF(packages.metadata #>> '{rankings,average}', '')::double precision
   SQL
+  SCIENCE_RELEVANCE_TOP_PERCENTAGE_SQL = <<~SQL.squish.freeze
+    CASE
+      WHEN #{AVERAGE_TOP_PERCENTAGE_SQL} >= 100.0
+        AND #{DEPENDENT_REPOSITORIES_TOP_PERCENTAGE_SQL} = 0.0
+      THEN 0.0
+      ELSE #{AVERAGE_TOP_PERCENTAGE_SQL}
+    END
+  SQL
+  SCIENCE_RELEVANCE_SCORE_SQL = <<~SQL.squish.freeze
+    CASE WHEN #{SCIENCE_RELEVANCE_TOP_PERCENTAGE_SQL} IS NOT NULL THEN
+      scientific_dependency_counts.scientific_dependents_count * (
+        0.25 + 0.75 * LEAST(
+          GREATEST(#{SCIENCE_RELEVANCE_TOP_PERCENTAGE_SQL}, 0.0),
+          5.0
+        ) / 5.0
+      )
+    END
+  SQL
   ECOSYSTEMS_SYNC_STATUSES = %w[
     matched
     missing
@@ -38,7 +56,10 @@ class Package < ApplicationRecord
 
   before_validation :normalize_purl
 
-  def self.ranked_by_scientific_dependents(field_ids: nil)
+  def self.ranked_by_scientific_dependents(
+    field_ids: nil,
+    sort: "scientific_projects"
+  )
     counts = ProjectDependency.joins(:project)
       .merge(Project.visible)
       .merge(Project.scientific)
@@ -65,17 +86,29 @@ class Package < ApplicationRecord
         "#{DEPENDENT_REPOSITORIES_TOP_PERCENTAGE_SQL} " \
         "AS dependent_repositories_top_percentage, " \
         "#{AVERAGE_TOP_PERCENTAGE_SQL} AS average_top_percentage, " \
+        "#{SCIENCE_RELEVANCE_TOP_PERCENTAGE_SQL} " \
+        "AS science_relevance_top_percentage, " \
+        "#{SCIENCE_RELEVANCE_SCORE_SQL} AS science_relevance_score, " \
         "CASE WHEN #{GENERAL_DEPENDENT_REPOSITORIES_SQL} > 0 " \
         "THEN scientific_dependency_counts.scientific_dependents_count * 100.0 " \
         "/ #{GENERAL_DEPENDENT_REPOSITORIES_SQL} END " \
         "AS science_usage_percentage"
       )
       .preload(:package_registry, :published_by_project)
-      .order(
-        Arel.sql("scientific_dependency_counts.scientific_dependents_count DESC"),
-        Arel.sql("lower(packages.name) ASC"),
-        :id
-      )
+      .order(*scientific_dependency_order(sort))
+  end
+
+  def self.scientific_dependency_order(sort)
+    order = []
+    if sort == "science_relevance"
+      order << Arel.sql("#{SCIENCE_RELEVANCE_SCORE_SQL} DESC NULLS LAST")
+    end
+    order << Arel.sql(
+      "scientific_dependency_counts.scientific_dependents_count DESC"
+    )
+    order << Arel.sql("lower(packages.name) ASC")
+    order << :id
+    order
   end
 
   def self.scientific_dependency_ecosystems

@@ -93,7 +93,10 @@ class PackageTest < ActiveSupport::TestCase
       purl: "pkg:npm/popular",
       metadata: {
         "dependent_repos_count" => 200,
-        "rankings" => { "dependent_repos_count" => 0.5 },
+        "rankings" => {
+          "dependent_repos_count" => 0.0,
+          "average" => 100.0,
+        },
       }
     )
     other = Package.create!(
@@ -139,11 +142,21 @@ class PackageTest < ActiveSupport::TestCase
     assert_equal [popular, other], ranked.to_a
     assert_equal [2, 1], counts
     assert_equal 200, ranked.first.general_dependent_repositories_count.to_i
-    assert_in_delta 0.5,
+    assert_in_delta 0.0,
       ranked.first.dependent_repositories_top_percentage.to_f
+    assert_in_delta 0.0,
+      ranked.first.science_relevance_top_percentage.to_f
     assert_nil ranked.second.dependent_repositories_top_percentage
     assert_in_delta 10.0, ranked.second.average_top_percentage.to_f
     assert_in_delta 1.0, ranked.first.science_usage_percentage.to_f
     assert_in_delta 5.0, ranked.second.science_usage_percentage.to_f
+
+    relevant = Package.ranked_by_scientific_dependents(
+      sort: "science_relevance"
+    ).to_a
+
+    assert_equal [other, popular], relevant
+    assert_in_delta 1.0, relevant.first.science_relevance_score.to_f
+    assert_in_delta 0.5, relevant.second.science_relevance_score.to_f
   end
 end
