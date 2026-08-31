@@ -42,7 +42,8 @@ class PackagePublicationMatcher
         record_match!(package, project_ids)
         result[:matched] += 1
       elsif project_ids.empty?
-        project = Project.create_or_find_by!(url: repository_url)
+        project = Project.find_or_create_by!(url: repository_url)
+        matches[repository_url] << project.id
         record_match!(package, [project.id])
         if project.previously_new_record?
           project.sync_async

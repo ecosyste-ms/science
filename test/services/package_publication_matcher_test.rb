@@ -92,6 +92,29 @@ class PackagePublicationMatcherTest < ActiveSupport::TestCase
     assert_equal 0, second.fetch(:selected)
   end
 
+  test "links packages that share an unmatched repository" do
+    first = create_package(
+      "first-package",
+      repository_url: "https://github.com/science-org/shared-package"
+    )
+    second = create_package(
+      "second-package",
+      repository_url: "https://github.com/science-org/shared-package"
+    )
+
+    result = PackagePublicationMatcher.match_batch!(limit: 2)
+
+    project = Project.find_by!(
+      url: "https://github.com/science-org/shared-package"
+    )
+
+    assert_equal 1, result.fetch(:discovered)
+    assert_equal 1, result.fetch(:matched)
+    assert_equal project, first.reload.published_by_project
+    assert_equal project, second.reload.published_by_project
+    assert_equal [[project.id]], SyncProjectWorker.jobs.map { |job| job["args"] }
+  end
+
   test "limits each project matching batch" do
     create_package(
       "first",
