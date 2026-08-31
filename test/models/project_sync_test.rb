@@ -43,9 +43,8 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_equal "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/numpy/numpy/ping", p.repos_ping_url
     assert_equal "https://issues.ecosyste.ms/api/v1/hosts/GitHub/repositories/numpy/numpy/ping", p.issues_ping_url
     assert_equal "https://commits.ecosyste.ms/api/v1/hosts/GitHub/repositories/numpy/numpy/ping", p.commits_ping_url
-    assert_equal ["https://packages.ecosyste.ms/api/v1/registries/pypi.org/packages/numpy/ping"], p.packages_ping_urls
     assert_equal "https://repos.ecosyste.ms/api/v1/hosts/GitHub/owner/numpy/ping", p.owner_ping_url
-    assert_equal 5, p.ping_urls.length
+    assert_equal 4, p.ping_urls.length
   end
 
   test "ping urls return nil or empty when no repository" do
@@ -56,7 +55,6 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_nil p.owner_ping_url
     assert_nil p.owner_api_url
     assert_nil p.timeline_url
-    assert_equal [], p.packages_ping_urls
     assert_equal [], p.ping_urls
   end
 

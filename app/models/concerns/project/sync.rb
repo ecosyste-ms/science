@@ -132,7 +132,9 @@ module Project::Sync
   end
 
   def ping_urls
-    ([repos_ping_url] + [issues_ping_url] + [commits_ping_url] + packages_ping_urls + [owner_ping_url]).compact.uniq
+    [repos_ping_url, issues_ping_url, commits_ping_url, owner_ping_url]
+      .compact
+      .uniq
   end
 
   def repos_ping_url
@@ -148,13 +150,6 @@ module Project::Sync
   def commits_ping_url
     return unless repository.present?
     "https://commits.ecosyste.ms/api/v1/hosts/#{repository['host']['name']}/repositories/#{repository['full_name']}/ping"
-  end
-
-  def packages_ping_urls
-    return [] unless packages.present?
-    packages.map do |package|
-      "https://packages.ecosyste.ms/api/v1/registries/#{package['registry']['name']}/packages/#{package['name']}/ping"
-    end
   end
 
   def owner_ping_url
