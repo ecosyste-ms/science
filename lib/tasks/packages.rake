@@ -47,4 +47,18 @@ namespace :packages do
     )
     puts "Package ranking normalization: #{result.inspect}"
   end
+
+  desc "Review Science Score inputs for current package candidates"
+  task science_score_review: :environment do
+    purls = ENV["PURLS"]&.split(",")
+    report = PackageScienceScoreReviewReport.new(
+      purls: purls,
+      limit: ENV.fetch("LIMIT", PackageScienceScoreReviewReport::DEFAULT_LIMIT),
+      max_score: ENV.fetch(
+        "MAX_SCORE",
+        PackageScienceScoreReviewReport::DEFAULT_MAX_SCORE
+      )
+    )
+    puts JSON.pretty_generate(report.generate)
+  end
 end

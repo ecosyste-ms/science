@@ -2,7 +2,7 @@ require "test_helper"
 require "rake"
 
 class PackagesRakeTest < ActiveSupport::TestCase
-  ENV_KEYS = %w[LIMIT RETRY_ERRORS RETRY_STOPPED].freeze
+  ENV_KEYS = %w[LIMIT MAX_SCORE PURLS RETRY_ERRORS RETRY_STOPPED].freeze
 
   setup do
     Rails.application.load_tasks unless Rake::Task.task_defined?("packages:sync_registries")
@@ -11,6 +11,7 @@ class PackagesRakeTest < ActiveSupport::TestCase
     Rake::Task["packages:sync_metadata"].reenable
     Rake::Task["packages:match_projects"].reenable
     Rake::Task["packages:normalize_rankings"].reenable
+    Rake::Task["packages:science_score_review"].reenable
     SyncProjectWorker.jobs.clear
     @original_env = ENV_KEYS.to_h { |key| [key, ENV[key]] }
     ENV_KEYS.each { |key| ENV.delete(key) }
@@ -64,6 +65,31 @@ class PackagesRakeTest < ActiveSupport::TestCase
     assert_includes output, "created: 2"
     assert_includes second_output, "created: 0"
     assert_includes second_output, "updated: 0"
+  end
+
+  test "prints a bounded Science Score review through the rake entrypoint" do
+    registry = PackageRegistry.create!(
+      name: "cran.r-project.org",
+      url: "https://cran.r-project.org",
+      ecosystem: "cran",
+      purl_type: "cran",
+      default: true
+    )
+    package = Package.create!(
+      package_registry: registry,
+      name: "testthat",
+      purl: "pkg:cran/testthat"
+    )
+    ENV["PURLS"] = package.purl
+
+    output, = capture_io do
+      Rake::Task["packages:science_score_review"].invoke
+    end
+    payload = JSON.parse(output)
+
+    assert_equal package.purl, payload.dig("packages", 0, "purl")
+    assert_equal "publishing_project_not_linked",
+      payload.dig("packages", 0, "status")
   end
 
   test "resolves a bounded dependency batch through the rake entrypoint" do
