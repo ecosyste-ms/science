@@ -79,6 +79,33 @@ class ProjectsRakeTest < ActiveSupport::TestCase
     assert_includes output, "dependencies: 1"
   end
 
+  test "sync_citation_authors indexes a bounded batch through the rake entrypoint" do
+    project = Project.create!(
+      url: "https://github.com/test/citation-author-rake",
+      science_score: 20,
+      citation_file: <<~CFF
+        cff-version: 1.2.0
+        message: Cite this software
+        title: Example Software
+        authors:
+          - given-names: Ada
+            family-names: Lovelace
+      CFF
+    )
+    ENV["LIMIT"] = "1"
+
+    output, = capture_io do
+      Rake::Task["projects:sync_citation_authors"].execute
+    end
+
+    assert_equal ["Ada Lovelace"],
+      project.project_authors.reload.pluck(:display_name)
+    assert project.reload.citation_authors_indexed_at.present?
+    assert_includes output, "selected: 1"
+    assert_includes output, "indexed: 1"
+    assert_includes output, "authors: 1"
+  end
+
   test "sync_repository_aliases indexes a bounded batch through the rake entrypoint" do
     project = Project.create!(
       url: "https://github.com/test/current-name",

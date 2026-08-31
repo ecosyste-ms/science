@@ -111,6 +111,18 @@ namespace :projects do
     puts "Project dependencies: #{result.inspect}"
   end
 
+  desc 'index stored CFF authors (LIMIT=250 RETRY_ERRORS=false)'
+  task :sync_citation_authors => :environment do
+    retry_errors = ActiveModel::Type::Boolean.new.cast(
+      ENV.fetch('RETRY_ERRORS', 'false')
+    )
+    result = Project.sync_citation_authors(
+      limit: ENV.fetch('LIMIT', ProjectCitationAuthorIndexer::DEFAULT_LIMIT),
+      retry_errors: retry_errors
+    )
+    puts "Project citation authors: #{result.inspect}"
+  end
+
   desc 'index stored repository aliases (LIMIT=500 RETRY_ERRORS=false)'
   task :sync_repository_aliases => :environment do
     retry_errors = ActiveModel::Type::Boolean.new.cast(

@@ -68,6 +68,7 @@ class Project < ApplicationRecord
   has_many :papers, through: :mentions
   has_many :dependency_records, class_name: 'Dependency', dependent: :nullify
   has_many :project_dependencies, dependent: :delete_all
+  has_many :project_authors, dependent: :delete_all
   has_many :repository_aliases,
     class_name: "ProjectRepositoryAlias",
     dependent: :delete_all
@@ -80,6 +81,8 @@ class Project < ApplicationRecord
 
   before_save :reset_repository_alias_index,
     if: :will_save_change_to_repository?
+  before_save :reset_citation_author_index,
+    if: :will_save_change_to_citation_file?
 
   has_many :good_first_issues, -> { good_first_issue }, class_name: 'Issue'
 

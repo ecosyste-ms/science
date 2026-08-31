@@ -22,6 +22,16 @@ module Project::Sync
     def sync_dependencies(limit: ProjectDependencyIndexer::DEFAULT_LIMIT, retry_errors: false)
       ProjectDependencyIndexer.sync_batch!(limit: limit, retry_errors: retry_errors)
     end
+
+    def sync_citation_authors(
+      limit: ProjectCitationAuthorIndexer::DEFAULT_LIMIT,
+      retry_errors: false
+    )
+      ProjectCitationAuthorIndexer.sync_batch!(
+        limit: limit,
+        retry_errors: retry_errors
+      )
+    end
   end
 
   def sync
@@ -499,7 +509,10 @@ module Project::Sync
 
   def fetch_citation_file
     return unless repository.present?
-    return unless citation_file_name.present?
+    unless citation_file_name.present?
+      update!(citation_file: nil) if citation_file.present?
+      return
+    end
     return unless download_url.present?
     conn = ecosystem_http_client(archive_url(citation_file_name))
     response = conn.get

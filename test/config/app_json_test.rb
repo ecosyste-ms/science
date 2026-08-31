@@ -37,6 +37,20 @@ class AppJsonTest < ActiveSupport::TestCase
     ], dependency_crons
   end
 
+  test "CFF authors are indexed every ten minutes in bounded batches" do
+    config = JSON.parse(Rails.root.join("app.json").read)
+    crons = config.fetch("cron").select do |cron|
+      cron.fetch("command").include?("projects:sync_citation_authors")
+    end
+
+    assert_equal [
+      {
+        "command" => "bundle exec rake projects:sync_citation_authors",
+        "schedule" => "1,11,21,31,41,51 * * * *",
+      },
+    ], crons
+  end
+
   test "stale zero-score package projects are refreshed in bounded batches" do
     config = JSON.parse(Rails.root.join("app.json").read)
     crons = config.fetch("cron").select do |cron|

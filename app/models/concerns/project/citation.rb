@@ -61,6 +61,11 @@ module Project::Citation
     nil
   end
 
+  def reset_citation_author_index
+    self.citation_authors_indexed_at = nil
+    self.citation_authors_index_error = nil
+  end
+
   def open_alex_metadata_doi_candidates
     (
       citation_cff_preferred_doi_candidates +

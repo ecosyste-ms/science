@@ -235,9 +235,56 @@ class ProjectSyncTest < ActiveSupport::TestCase
 
   test "fetch_citation_file stores contents from archives api" do
     p = build_project
+    p.update_columns(
+      citation_authors_indexed_at: 1.day.ago,
+      citation_authors_index_error: "old error",
+      citation_authors_index_version: 1,
+      citation_authors_source_digest: "old digest"
+    )
     stub_request(:get, p.archive_url("CITATION.cff")).to_return(status: 200, body: { contents: "cff-version: 1.2.0" }.to_json)
     p.fetch_citation_file
     assert_equal "cff-version: 1.2.0", p.reload.citation_file
+    assert_nil p.citation_authors_indexed_at
+    assert_nil p.citation_authors_index_error
+    assert_equal 1, p.citation_authors_index_version
+    assert_equal "old digest", p.citation_authors_source_digest
+  end
+
+  test "fetch_citation_file retains indexing state for unchanged content" do
+    content = "cff-version: 1.2.0"
+    indexed_at = 1.day.ago
+    p = build_project(citation_file: content)
+    p.update_columns(
+      citation_authors_indexed_at: indexed_at,
+      citation_authors_index_error: "retry manually",
+      citation_authors_index_version: 1,
+      citation_authors_source_digest: Digest::SHA256.hexdigest(content)
+    )
+    stub_request(:get, p.archive_url("CITATION.cff"))
+      .to_return(status: 200, body: { contents: content }.to_json)
+
+    p.fetch_citation_file
+
+    assert_in_delta indexed_at, p.reload.citation_authors_indexed_at, 1.second
+    assert_equal "retry manually", p.citation_authors_index_error
+  end
+
+  test "fetch_citation_file clears content when repository metadata removes it" do
+    repository = repo_hash.deep_dup
+    repository.fetch("metadata").fetch("files").delete("citation")
+    p = build_project(citation_file: "cff-version: 1.2.0", repository: repository)
+    p.update_columns(
+      citation_authors_indexed_at: 1.day.ago,
+      citation_authors_index_error: "old error",
+      citation_authors_source_digest: "old digest"
+    )
+
+    p.fetch_citation_file
+
+    assert_nil p.reload.citation_file
+    assert_nil p.citation_authors_indexed_at
+    assert_nil p.citation_authors_index_error
+    assert_equal "old digest", p.citation_authors_source_digest
   end
 
   test "fetch_zenodo_file stores contents from archives api" do

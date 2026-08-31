@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_31_080000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_31_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -253,6 +253,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_31_080000) do
     t.index ["doi"], name: "index_papers_on_doi"
   end
 
+  create_table "project_authors", force: :cascade do |t|
+    t.text "affiliation"
+    t.string "author_kind", null: false
+    t.string "authorship_kind", null: false
+    t.datetime "created_at", null: false
+    t.text "display_name"
+    t.citext "email"
+    t.text "family_names"
+    t.text "given_names"
+    t.string "orcid"
+    t.integer "position", null: false
+    t.bigint "project_id", null: false
+    t.jsonb "raw_data", default: {}, null: false
+    t.string "source", null: false
+    t.string "source_digest", null: false
+    t.string "source_path", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_project_authors_on_email", where: "(email IS NOT NULL)"
+    t.index ["orcid"], name: "index_project_authors_on_orcid", where: "(orcid IS NOT NULL)"
+    t.index ["project_id", "source", "authorship_kind", "position"], name: "index_project_authors_on_snapshot_position", unique: true
+    t.index ["project_id"], name: "index_project_authors_on_project_id"
+  end
+
   create_table "project_dependencies", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.boolean "direct", default: false, null: false
@@ -320,6 +343,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_31_080000) do
   create_table "projects", force: :cascade do |t|
     t.jsonb "brief"
     t.string "category"
+    t.text "citation_authors_index_error"
+    t.integer "citation_authors_index_version"
+    t.datetime "citation_authors_indexed_at"
+    t.string "citation_authors_source_digest"
     t.text "citation_file"
     t.text "codemeta"
     t.integer "collection_id"
@@ -362,8 +389,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_31_080000) do
     t.text "zenodo"
     t.index "((joss_metadata ->> 'doi'::text))", name: "index_projects_on_joss_doi", where: "(joss_metadata IS NOT NULL)"
     t.index ["category", "sub_category"], name: "index_projects_on_category_and_sub_category", where: "((category IS NOT NULL) AND (sub_category IS NOT NULL))"
+    t.index ["citation_authors_index_version", "id"], name: "index_projects_on_citation_author_version", where: "((science_score >= (20)::double precision) AND ((citation_file ~ '^[[:space:]]*cff-version:'::text) OR (citation_authors_source_digest IS NOT NULL)))"
     t.index ["collection_id"], name: "index_projects_on_collection_id"
     t.index ["host_id"], name: "index_projects_on_host_id"
+    t.index ["id"], name: "index_projects_pending_citation_authors", where: "((citation_authors_indexed_at IS NULL) AND (citation_authors_index_error IS NULL) AND ((science_score >= (20)::double precision) AND ((citation_file ~ '^[[:space:]]*cff-version:'::text) OR (citation_authors_source_digest IS NOT NULL))))"
     t.index ["id"], name: "index_projects_pending_dependency_index", where: "(((dependencies IS NOT NULL) OR (brief ? 'dependencies'::text)) AND (dependencies_indexed_at IS NULL) AND (dependencies_index_error IS NULL))"
     t.index ["id"], name: "index_projects_pending_repository_aliases", where: "((repository IS NOT NULL) AND (repository_aliases_indexed_at IS NULL))"
     t.index ["owner_id"], name: "index_projects_on_owner_id"
@@ -418,6 +447,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_31_080000) do
 
   add_foreign_key "packages", "package_registries"
   add_foreign_key "packages", "projects", column: "published_by_project_id", on_delete: :nullify
+  add_foreign_key "project_authors", "projects", on_delete: :cascade
   add_foreign_key "project_dependencies", "packages", on_delete: :nullify
   add_foreign_key "project_dependencies", "projects"
   add_foreign_key "project_fields", "fields"
