@@ -368,6 +368,15 @@ components:
           type: object
         score:
           type: number
+        science_score:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 100
+        science_score_breakdown:
+          type: object
+          nullable: true
+          description: Saved evidence used to calculate the Science Score
         created_at:
           type: string
           format: date-time

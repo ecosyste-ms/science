@@ -52,6 +52,28 @@ class Api::V1::ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes json_response, 'nonscience-pkg'
   end
 
+  test "GET show includes a zero science score and its breakdown" do
+    breakdown = {
+      "score" => 0.0,
+      "breakdown" => {
+        "has_citation_file" => { "present" => false },
+      },
+      "max_score" => 100,
+    }
+    project = Project.create!(
+      url: "https://github.com/test/unscored-project",
+      science_score: 0,
+      science_score_breakdown: breakdown
+    )
+
+    get api_v1_project_url(project)
+
+    assert_response :success
+    json_response = JSON.parse(response.body)
+    assert_equal 0.0, json_response.fetch("science_score")
+    assert_equal breakdown, json_response.fetch("science_score_breakdown")
+  end
+
   test "GET show includes export URLs when citation_file is present" do
     cff_content = <<~CFF
       cff-version: 1.2.0
