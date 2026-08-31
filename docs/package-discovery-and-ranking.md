@@ -4,12 +4,12 @@ Science stores direct dependencies as links between `Project` and `Package` reco
 
 ## Data flow
 
-Dependency and package processing runs in bounded scheduled stages:
+Dependency and package processing runs in bounded scheduled stages. Project sync also stores package records returned for its repository in local `Package` rows and links them to the publishing project.
 
 1. `projects:sync_dependencies` reads stored repos.ecosyste.ms manifests, with Brief as a fallback when the manifest response has no usable direct dependencies. It writes at most 250 projects per run to `project_dependencies`.
 2. `packages:sync_registries` imports package registries, PURL types, and default registry settings from packages.ecosyste.ms each day.
 3. `packages:resolve_dependencies` groups unresolved rows by PURL or package coordinate. It resolves at most 1,000 identities per scheduled run, creates local `packages` records, and links all matching dependency rows.
-4. `packages:sync_metadata` enriches at most 100 packages per run with packages.ecosyste.ms data. Packages used by more direct project dependencies run first.
+4. `packages:sync_metadata` enriches at most 100 dependency-derived packages per run with packages.ecosyste.ms data. Packages used by more direct project dependencies run first.
 5. `packages:normalize_rankings` copies ranking values from existing package JSON into dedicated columns in batches of at most 1,000. Each package is processed once unless its upstream metadata changes.
 6. `packages:match_projects` checks up to 500 package repository URLs against current project URLs and recorded repository aliases. A valid unmatched URL creates a project and queues its normal sync. A single match sets `published_by_project_id`.
 

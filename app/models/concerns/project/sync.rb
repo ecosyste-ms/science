@@ -312,10 +312,23 @@ module Project::Sync
 
     response = conn.get
     return unless response.success?
-    self.packages = JSON.parse(response.body)
+    package_records = JSON.parse(response.body)
+    self.packages = package_records
     self.save
+    package_records.each { |record| link_published_package(record) }
   rescue
     puts "Error fetching packages for #{repository_url}"
+  end
+
+  def link_published_package(record)
+    package = Package.find_or_create_from_ecosystems!(record)
+    return unless package
+
+    package.update!(
+      published_by_project: self,
+      repository_checked_at: Time.current,
+      repository_match_error: nil
+    )
   end
 
   def commits_api_url

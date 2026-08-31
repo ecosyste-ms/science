@@ -95,11 +95,62 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_nil p.fetch_owner
   end
 
-  test "fetch_packages stores parsed body" do
+  test "fetch_packages stores package records and links published packages" do
     p = build_project
-    stub_request(:get, p.packages_url).to_return(status: 200, body: [{ name: "numpy" }].to_json)
+    registry = PackageRegistry.create!(
+      name: "pypi.org",
+      url: "https://pypi.org",
+      ecosystem: "pypi",
+      purl_type: "pypi",
+      default: true
+    )
+    record = package_record(
+      name: "numpy",
+      purl: "pkg:pypi/numpy",
+      registry: registry
+    )
+    stub_request(:get, p.packages_url).to_return(
+      status: 200,
+      body: [record].to_json
+    )
+
     p.fetch_packages
+
+    package = Package.find_by!(purl: "pkg:pypi/numpy")
     assert_equal "numpy", p.reload.packages.first["name"]
+    assert_equal p, package.published_by_project
+    assert_equal record.fetch("id"), package.ecosystems_id
+    assert_equal record, package.metadata
+  end
+
+  test "fetch_packages links an existing package without creating a duplicate" do
+    p = build_project
+    registry = PackageRegistry.create!(
+      name: "pypi.org",
+      url: "https://pypi.org",
+      ecosystem: "pypi",
+      purl_type: "pypi",
+      default: true
+    )
+    package = Package.create!(
+      package_registry: registry,
+      name: "numpy",
+      purl: "pkg:pypi/numpy"
+    )
+    record = package_record(
+      name: "numpy",
+      purl: "pkg:pypi/numpy",
+      registry: registry
+    )
+    stub_request(:get, p.packages_url).to_return(
+      status: 200,
+      body: [record].to_json
+    )
+
+    p.fetch_packages
+
+    assert_equal 1, Package.count
+    assert_equal p, package.reload.published_by_project
   end
 
   test "fetch_commits stores parsed body" do
@@ -107,6 +158,27 @@ class ProjectSyncTest < ActiveSupport::TestCase
     stub_request(:get, p.commits_api_url).to_return(status: 200, body: { total_commits: 5 }.to_json)
     p.fetch_commits
     assert_equal 5, p.reload.commits["total_commits"]
+  end
+
+  def package_record(name:, purl:, registry:)
+    {
+      "id" => 123,
+      "name" => name,
+      "namespace" => nil,
+      "purl" => purl,
+      "repository_url" => "https://github.com/numpy/numpy",
+      "updated_at" => "2026-08-31T12:00:00Z",
+      "dependent_repos_count" => 200,
+      "rankings" => {
+        "dependent_repos_count" => 0.4,
+        "average" => 1.5,
+      },
+      "registry" => {
+        "name" => registry.name,
+        "url" => registry.url,
+        "ecosystem" => registry.ecosystem,
+      },
+    }
   end
 
   test "fetch_commits returns early without repository" do

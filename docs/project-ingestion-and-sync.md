@@ -46,7 +46,7 @@ Selected IDs are sent to `SyncProjectWorker` on the default Sidekiq queue. Sidek
 
 1. Resolve redirects and validate the repository URL.
 2. Fetch repository and owner records, then associate local `Host` and `Owner` rows.
-3. Fetch dependency manifests, package records, and package mentions.
+3. Fetch dependency manifests, package records, and package mentions. Package records also create or update local packages and link them to the publishing project.
 4. Fetch the README, commits, timeline events, and issue statistics.
 5. Import issue rows and repository metadata files.
 6. Sync releases, committer records, and contributor-derived keywords.
