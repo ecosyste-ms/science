@@ -56,23 +56,12 @@ class PackageScienceScoreReviewReport
   end
 
   def candidate_purls
-    eligible_packages = Package.joins(:published_by_project)
+    Package.ranked_by_scientific_dependents(sort: "science_relevance")
+      .where("package_projects.science_score > 0")
+      .where("package_projects.science_score <= ?", max_score)
       .where.not(purl: nil)
-      .where("projects.science_score > 0")
-      .where("projects.science_score <= ?", max_score)
-      .select(:id)
-    package_ids = scientific_dependencies
-      .where(package_id: eligible_packages)
-      .group(:package_id)
-      .order(Arel.sql(
-        "COUNT(DISTINCT project_dependencies.project_id) DESC, " \
-        "project_dependencies.package_id ASC"
-      ))
       .limit(limit)
-      .pluck(:package_id)
-    purls_by_id = Package.where(id: package_ids).pluck(:id, :purl).to_h
-
-    package_ids.filter_map { |id| purls_by_id[id] }
+      .map(&:purl)
   end
 
   def selection_report
@@ -83,7 +72,7 @@ class PackageScienceScoreReviewReport
       limit: limit,
       minimum_science_score: 0.0,
       maximum_science_score: max_score,
-      order: "direct_scientific_dependents",
+      order: "science_relevance",
     }
   end
 

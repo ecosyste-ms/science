@@ -118,28 +118,40 @@ class PackageScienceScoreReviewReportTest < ActiveSupport::TestCase
       package_registry: registry,
       published_by_project: candidate_project,
       name: "current-candidate",
-      purl: "pkg:cran/current-candidate"
+      purl: "pkg:cran/current-candidate",
+      average_top_percentage: 5
     )
-    zero_score_package = Package.create!(
+    popular_general_package = Package.create!(
       package_registry: registry,
       published_by_project: Project.create!(
-        url: "https://github.com/test/zero-score",
-        science_score: 0
+        url: "https://github.com/test/popular-general",
+        science_score: 1
       ),
-      name: "zero-score",
-      purl: "pkg:cran/zero-score"
+      name: "popular-general",
+      purl: "pkg:cran/popular-general",
+      average_top_percentage: 0
     )
-    dependent = Project.create!(
-      url: "https://github.com/test/candidate-dependent",
-      science_score: 50
+    dependents = 2.times.map do |index|
+      Project.create!(
+        url: "https://github.com/test/candidate-dependent-#{index}",
+        science_score: 50
+      )
+    end
+    ProjectDependency.create!(
+      project: dependents.first,
+      package: candidate,
+      ecosystem: "cran",
+      package_name: candidate.name,
+      purl: candidate.purl,
+      direct: true
     )
-    [candidate, zero_score_package].each do |package|
+    dependents.each do |dependent|
       ProjectDependency.create!(
         project: dependent,
-        package: package,
+        package: popular_general_package,
         ecosystem: "cran",
-        package_name: package.name,
-        purl: package.purl,
+        package_name: popular_general_package.name,
+        purl: popular_general_package.purl,
         direct: true
       )
     end
@@ -147,6 +159,7 @@ class PackageScienceScoreReviewReportTest < ActiveSupport::TestCase
     result = PackageScienceScoreReviewReport.new(limit: 1).generate
 
     assert_equal "current_candidates", result.dig(:selection, :mode)
+    assert_equal "science_relevance", result.dig(:selection, :order)
     assert_equal [candidate.purl], result.fetch(:packages).pluck(:purl)
   end
 end
