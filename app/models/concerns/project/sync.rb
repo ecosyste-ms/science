@@ -315,19 +315,28 @@ module Project::Sync
     package_records = JSON.parse(response.body)
     self.packages = package_records
     self.save
-    package_records.each { |record| link_published_package(record) }
+    link_published_packages(package_records)
   rescue
     puts "Error fetching packages for #{repository_url}"
   end
 
-  def link_published_package(record)
-    package = Package.find_or_create_from_ecosystems!(record)
-    return unless package
+  def link_published_packages(records)
+    purls = records.filter_map do |record|
+      purl = record["purl"]
+      next if purl.blank?
 
-    package.update!(
-      published_by_project: self,
-      repository_checked_at: Time.current,
-      repository_match_error: nil
+      Purl.parse(purl).with(version: nil, subpath: nil).to_s
+    rescue Purl::Error
+      nil
+    end.uniq
+    return if purls.empty?
+
+    now = Time.current
+    Package.where(purl: purls, published_by_project_id: nil).update_all(
+      published_by_project_id: id,
+      repository_checked_at: now,
+      repository_match_error: nil,
+      updated_at: now
     )
   end
 

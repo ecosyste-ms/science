@@ -95,35 +95,7 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_nil p.fetch_owner
   end
 
-  test "fetch_packages stores package records and links published packages" do
-    p = build_project
-    registry = PackageRegistry.create!(
-      name: "pypi.org",
-      url: "https://pypi.org",
-      ecosystem: "pypi",
-      purl_type: "pypi",
-      default: true
-    )
-    record = package_record(
-      name: "numpy",
-      purl: "pkg:pypi/numpy",
-      registry: registry
-    )
-    stub_request(:get, p.packages_url).to_return(
-      status: 200,
-      body: [record].to_json
-    )
-
-    p.fetch_packages
-
-    package = Package.find_by!(purl: "pkg:pypi/numpy")
-    assert_equal "numpy", p.reload.packages.first["name"]
-    assert_equal p, package.published_by_project
-    assert_equal record.fetch("id"), package.ecosystems_id
-    assert_equal record, package.metadata
-  end
-
-  test "fetch_packages links an existing package without creating a duplicate" do
+  test "fetch_packages stores records and links existing unlinked packages" do
     p = build_project
     registry = PackageRegistry.create!(
       name: "pypi.org",
@@ -139,7 +111,7 @@ class ProjectSyncTest < ActiveSupport::TestCase
     )
     record = package_record(
       name: "numpy",
-      purl: "pkg:pypi/numpy",
+      purl: "pkg:pypi/numpy@2.3.0",
       registry: registry
     )
     stub_request(:get, p.packages_url).to_return(
@@ -149,8 +121,50 @@ class ProjectSyncTest < ActiveSupport::TestCase
 
     p.fetch_packages
 
-    assert_equal 1, Package.count
+    assert_equal "numpy", p.reload.packages.first["name"]
     assert_equal p, package.reload.published_by_project
+  end
+
+  test "fetch_packages does not create missing packages or change existing links" do
+    p = build_project
+    other_project = Project.create!(url: "https://github.com/scipy/scipy")
+    checked_at = 2.days.ago
+    registry = PackageRegistry.create!(
+      name: "pypi.org",
+      url: "https://pypi.org",
+      ecosystem: "pypi",
+      purl_type: "pypi",
+      default: true
+    )
+    package = Package.create!(
+      package_registry: registry,
+      name: "numpy",
+      purl: "pkg:pypi/numpy",
+      published_by_project: other_project,
+      repository_checked_at: checked_at
+    )
+    records = [
+      package_record(
+        name: "numpy",
+        purl: "pkg:pypi/numpy",
+        registry: registry
+      ),
+      package_record(
+        name: "missing",
+        purl: "pkg:pypi/missing",
+        registry: registry
+      ),
+    ]
+    stub_request(:get, p.packages_url).to_return(
+      status: 200,
+      body: records.to_json
+    )
+
+    p.fetch_packages
+
+    assert_equal 1, Package.count
+    assert_equal other_project, package.reload.published_by_project
+    assert_equal checked_at, package.repository_checked_at
   end
 
   test "fetch_commits stores parsed body" do

@@ -136,33 +136,6 @@ class Package < ApplicationRecord
       .pluck("package_registries.ecosystem")
   end
 
-  def self.find_or_create_from_ecosystems!(record)
-    registry_name = record.dig("registry", "name").to_s
-    return if registry_name.blank?
-
-    package_registry = PackageRegistry
-      .where("lower(name) = ?", registry_name.downcase)
-      .first
-    return unless package_registry
-
-    purl = record["purl"].presence
-    purl = Purl.parse(purl).with(version: nil, subpath: nil).to_s if purl
-    package = find_by(purl: purl) if purl
-    package ||= find_by(
-      package_registry: package_registry,
-      name: record.fetch("name")
-    )
-    package ||= create!(
-      package_registry: package_registry,
-      name: record.fetch("name"),
-      namespace: record["namespace"],
-      purl: purl
-    )
-
-    package.record_ecosystems_match!(record)
-    package
-  end
-
   def normalize_purl
     if purl.blank?
       self.purl = nil
