@@ -12,6 +12,9 @@ Dependency and package processing runs in bounded scheduled stages. Project sync
 4. `packages:sync_metadata` enriches at most 100 dependency-derived packages per run with packages.ecosyste.ms data. Packages used by more direct project dependencies run first.
 5. `packages:normalize_rankings` copies ranking values from existing package JSON into dedicated columns in batches of at most 1,000. Each package is processed once unless its upstream metadata changes.
 6. `packages:match_projects` checks up to 500 package repository URLs against current project URLs and recorded repository aliases. A valid unmatched URL creates a project and queues its normal sync. A single match sets `published_by_project_id`.
+7. `packages:refresh_projects` queues up to 25 publishing projects whose Science Score remains zero and whose last sync is more than seven days old. Projects with more direct scientific dependents run first.
+
+Publishing projects used directly by scientific projects are also eligible for the bounded Brief scan when their current Science Score is zero. Other zero-score projects remain outside the recurring refresh and Brief queues.
 
 The stages run separately so unavailable package metadata does not prevent local dependency indexing. Private or invalid packages may remain without upstream metadata, as may packages from registries missing in packages.ecosyste.ms. Resolution errors and metadata sync errors are recorded to prevent every scheduled run from retrying the same identity.
 
@@ -23,7 +26,7 @@ Explicit registry qualifiers in a PURL take precedence. Otherwise, resolution us
 
 `/packages` and `/api/v1/packages` use the same `PackageIndex` query. Both accept `ecosystem`, OpenAlex `domain`, and OpenAlex `field` filters. Domain and field filters limit the dependent project population before package counts are calculated. Each package count is the number of distinct visible scientific projects with a direct dependency on that package.
 
-Packages with a matched publishing project whose Science Score is zero are excluded. Packages without a matched project or saved score remain visible while the publishing repository is processed.
+Packages with a matched publishing project whose Science Score is below 5 are excluded. Packages without a matched project or saved score remain visible while the publishing repository is processed.
 
 The API accepts `page`, `per_page`, and `sort`. For example:
 
@@ -44,11 +47,11 @@ When `published_by_project_id` is present, the browser links the package name to
 ```text
 p = clamp(science_relevance_top_percentage, 0, 5)
 popularity_weight = 0.10 + 0.90 * (p / 5)
-repository_boost = 1 + clamp(repository_science_score, 0, 100) / 100
-science_relevance_score = scientific_projects_count * popularity_weight * repository_boost
+repository_factor = clamp(repository_science_score, 0, 100) / 100
+science_relevance_score = scientific_projects_count * popularity_weight * repository_factor
 ```
 
-The popularity weight ranges from 0.10 for a package at the top of its registry to 1.0 for a package at or below the top 5 percent. This limits the popularity penalty to tenfold. A matched repository Science Score adds a positive boost from 1x to 2x. Packages without a matched repository or saved score receive a 1x boost, since package matching and project scoring coverage remain incomplete. Direct scientific use remains the base of the score.
+The popularity weight ranges from 0.10 for a package at the top of its registry to 1.0 for a package at or below the top 5 percent. This limits the popularity penalty to tenfold. The repository factor makes Science Score the primary relevance signal. Packages without a matched repository or saved score have no relevance score and sort after scored packages. Direct scientific use remains the base of the score.
 
 Some upstream records report an average top percentage of 100 while their dependent repository rank is 0. The score treats that inconsistent pair as 0. The API returns the raw `average_top_percentage` and the normalized `science_relevance_top_percentage` so this adjustment is visible. A package without ranking metadata has no relevance score and sorts after scored packages. The direct-use ordering continues to include it normally.
 

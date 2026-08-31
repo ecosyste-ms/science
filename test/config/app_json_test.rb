@@ -37,6 +37,20 @@ class AppJsonTest < ActiveSupport::TestCase
     ], dependency_crons
   end
 
+  test "stale zero-score package projects are refreshed in bounded batches" do
+    config = JSON.parse(Rails.root.join("app.json").read)
+    crons = config.fetch("cron").select do |cron|
+      cron.fetch("command").include?("packages:refresh_projects")
+    end
+
+    assert_equal [
+      {
+        "command" => "bundle exec rake packages:refresh_projects",
+        "schedule" => "2,12,22,32,42,52 * * * *",
+      },
+    ], crons
+  end
+
   test "project dependencies are resolved to packages after indexing" do
     config = JSON.parse(Rails.root.join("app.json").read)
     resolution_crons = config.fetch("cron").select do |cron|

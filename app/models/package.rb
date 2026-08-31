@@ -64,11 +64,7 @@ class Package < ApplicationRecord
     field_ids: nil,
     sort: "scientific_projects"
   )
-    counts = ProjectDependency.joins(:project)
-      .merge(Project.visible)
-      .merge(Project.scientific)
-      .where(direct: true)
-      .where.not(package_id: nil)
+    counts = direct_scientific_dependencies
     unless field_ids.nil?
       project_ids = ProjectField.where(field_id: field_ids).select(:project_id)
       counts = counts.where(project_id: project_ids)
@@ -110,6 +106,34 @@ class Package < ApplicationRecord
       )
       .preload(:package_registry, :published_by_project)
       .order(*scientific_dependency_order(sort))
+  end
+
+  def self.direct_scientific_dependencies
+    ProjectDependency.joins(:project)
+      .merge(Project.visible)
+      .merge(Project.scientific)
+      .where(direct: true)
+      .where.not(package_id: nil)
+  end
+
+  def self.scientific_publishing_project_ids
+    direct_scientific_dependencies
+      .joins(:package)
+      .where.not(packages: { published_by_project_id: nil })
+      .select("packages.published_by_project_id")
+      .distinct
+  end
+
+  def self.scientific_publishing_project_counts
+    direct_scientific_dependencies
+      .joins(:package)
+      .where.not(packages: { published_by_project_id: nil })
+      .group("packages.published_by_project_id")
+      .select(
+        "packages.published_by_project_id AS project_id, " \
+        "COUNT(DISTINCT project_dependencies.project_id) " \
+        "AS scientific_dependents_count"
+      )
   end
 
   def self.scientific_dependency_order(sort)

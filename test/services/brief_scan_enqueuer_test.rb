@@ -42,6 +42,39 @@ class BriefScanEnqueuerTest < ActiveSupport::TestCase
     assert_equal expected_ids, FetchBriefWorker.jobs.map { |job| job["args"].first }
   end
 
+  test "includes zero-score publishers used directly by scientific projects" do
+    publisher = create_project("publisher", science_score: 0)
+    create_project("unrelated-zero", science_score: 0)
+    registry = PackageRegistry.create!(
+      name: "brief-enqueuer.example",
+      url: "https://brief-enqueuer.example",
+      ecosystem: "brief-enqueuer",
+      purl_type: "brief-enqueuer",
+      default: true
+    )
+    package = Package.create!(
+      package_registry: registry,
+      published_by_project: publisher,
+      name: "publisher",
+      purl: "pkg:brief-enqueuer/publisher"
+    )
+    dependent = create_project("scientific-dependent", science_score: 20)
+    ProjectDependency.create!(
+      project: dependent,
+      package: package,
+      ecosystem: "brief-enqueuer",
+      package_name: package.name,
+      purl: package.purl,
+      direct: true
+    )
+
+    count = BriefScanEnqueuer.new(limit: 10).enqueue
+
+    assert_equal 2, count
+    assert_equal [publisher.id, dependent.id].sort,
+      FetchBriefWorker.jobs.map { |job| job["args"].first }.sort
+  end
+
   test "rejects invalid options" do
     error = assert_raises(ArgumentError) { BriefScanEnqueuer.new(limit: "many") }
     assert_equal "LIMIT must be an integer", error.message

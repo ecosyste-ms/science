@@ -37,6 +37,16 @@ namespace :packages do
     puts "Package project matching: #{result.inspect}"
   end
 
+  desc "Refresh stale zero-score package projects (LIMIT=25, maximum 25)"
+  task refresh_projects: :environment do
+    enqueued = PackageProjectRefreshEnqueuer.new(
+      limit: ENV.fetch("LIMIT", PackageProjectRefreshEnqueuer::DEFAULT_LIMIT)
+    ).enqueue
+    puts "Enqueued #{enqueued} package project refresh jobs"
+  rescue ArgumentError => error
+    abort error.message
+  end
+
   desc "Normalize cached package ranking metadata (LIMIT=1000)"
   task normalize_rankings: :environment do
     result = PackageRankingMetadataNormalizer.normalize_batch!(

@@ -10,6 +10,7 @@ class PackagesRakeTest < ActiveSupport::TestCase
     Rake::Task["packages:resolve_dependencies"].reenable
     Rake::Task["packages:sync_metadata"].reenable
     Rake::Task["packages:match_projects"].reenable
+    Rake::Task["packages:refresh_projects"].reenable
     Rake::Task["packages:normalize_rankings"].reenable
     Rake::Task["packages:science_score_review"].reenable
     SyncProjectWorker.jobs.clear
@@ -221,6 +222,46 @@ class PackagesRakeTest < ActiveSupport::TestCase
     assert_equal project, package.reload.published_by_project
     assert_equal [[project.id]], SyncProjectWorker.jobs.map { |job| job["args"] }
     assert_includes output, "discovered: 1"
+  end
+
+  test "refreshes a stale zero-score publishing project through the rake entrypoint" do
+    registry = PackageRegistry.create!(
+      name: "refresh-rake.example",
+      url: "https://refresh-rake.example",
+      ecosystem: "refresh-rake",
+      purl_type: "refresh-rake",
+      default: true
+    )
+    publisher = Project.create!(
+      url: "https://github.com/example/package-refresh-rake",
+      science_score: 0,
+      last_synced_at: 8.days.ago
+    )
+    package = Package.create!(
+      package_registry: registry,
+      published_by_project: publisher,
+      name: "refresh-rake",
+      purl: "pkg:refresh-rake/refresh-rake"
+    )
+    dependent = Project.create!(
+      url: "https://github.com/example/package-refresh-rake-dependent",
+      science_score: 20
+    )
+    ProjectDependency.create!(
+      project: dependent,
+      package: package,
+      ecosystem: registry.ecosystem,
+      package_name: package.name,
+      purl: package.purl,
+      direct: true
+    )
+    ENV["LIMIT"] = "1"
+
+    output, = capture_io { Rake::Task["packages:refresh_projects"].invoke }
+
+    assert_equal [[publisher.id]],
+      SyncProjectWorker.jobs.map { |job| job["args"] }
+    assert_includes output, "Enqueued 1 package project refresh jobs"
   end
 
   test "normalizes package rankings through the rake entrypoint" do
