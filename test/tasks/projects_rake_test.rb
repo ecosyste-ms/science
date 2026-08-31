@@ -106,6 +106,36 @@ class ProjectsRakeTest < ActiveSupport::TestCase
     assert_includes output, "authors: 1"
   end
 
+  test "sync_contributors indexes a bounded batch through the rake entrypoint" do
+    project = Project.create!(
+      url: "https://github.com/test/contributor-rake",
+      science_score: 20,
+      commits: {
+        "committers" => [
+          {
+            "name" => "Ada Lovelace",
+            "email" => "ada@example.edu",
+            "login" => "adal",
+            "count" => 4,
+          },
+        ],
+      }
+    )
+    ENV["LIMIT"] = "1"
+
+    output, = capture_io do
+      Rake::Task["projects:sync_contributors"].execute
+    end
+
+    contributor = project.project_contributors.first
+    assert_equal "Ada Lovelace", contributor.name
+    assert_equal 4, contributor.contributions_count
+    assert project.reload.contributors_indexed_at.present?
+    assert_includes output, "selected: 1"
+    assert_includes output, "indexed: 1"
+    assert_includes output, "contributors: 1"
+  end
+
   test "sync_repository_aliases indexes a bounded batch through the rake entrypoint" do
     project = Project.create!(
       url: "https://github.com/test/current-name",

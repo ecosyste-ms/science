@@ -152,10 +152,19 @@ class ProjectSyncTest < ActiveSupport::TestCase
   end
 
   test "fetch_commits stores parsed body" do
-    p = build_project
+    p = build_project(
+      contributors_indexed_at: 1.day.ago,
+      contributors_index_error: "old error",
+      contributors_index_version: 1,
+      contributors_source_digest: "old digest"
+    )
     stub_request(:get, p.commits_api_url).to_return(status: 200, body: { total_commits: 5 }.to_json)
     p.fetch_commits
     assert_equal 5, p.reload.commits["total_commits"]
+    assert_nil p.contributors_indexed_at
+    assert_nil p.contributors_index_error
+    assert_equal 1, p.contributors_index_version
+    assert_equal "old digest", p.contributors_source_digest
   end
 
   def package_record(name:, purl:, registry:)

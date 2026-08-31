@@ -123,6 +123,18 @@ namespace :projects do
     puts "Project citation authors: #{result.inspect}"
   end
 
+  desc 'index stored repository contributors (LIMIT=250 RETRY_ERRORS=false)'
+  task :sync_contributors => :environment do
+    retry_errors = ActiveModel::Type::Boolean.new.cast(
+      ENV.fetch('RETRY_ERRORS', 'false')
+    )
+    result = Project.sync_contributors(
+      limit: ENV.fetch('LIMIT', ProjectContributorIndexer::DEFAULT_LIMIT),
+      retry_errors: retry_errors
+    )
+    puts "Project contributors: #{result.inspect}"
+  end
+
   desc 'index stored repository aliases (LIMIT=500 RETRY_ERRORS=false)'
   task :sync_repository_aliases => :environment do
     retry_errors = ActiveModel::Type::Boolean.new.cast(

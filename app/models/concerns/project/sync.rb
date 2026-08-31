@@ -32,6 +32,16 @@ module Project::Sync
         retry_errors: retry_errors
       )
     end
+
+    def sync_contributors(
+      limit: ProjectContributorIndexer::DEFAULT_LIMIT,
+      retry_errors: false
+    )
+      ProjectContributorIndexer.sync_batch!(
+        limit: limit,
+        retry_errors: retry_errors
+      )
+    end
   end
 
   def sync
@@ -330,6 +340,11 @@ module Project::Sync
     self.save
   rescue
     puts "Error fetching commits for #{repository_url}"
+  end
+
+  def reset_contributor_index
+    self.contributors_indexed_at = nil
+    self.contributors_index_error = nil
   end
 
   def fetch_dependencies

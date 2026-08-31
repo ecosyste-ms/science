@@ -37,6 +37,10 @@
       "schedule": "4,14,24,34,44,54 * * * *"
     },
     {
+      "command": "bundle exec rake projects:sync_contributors",
+      "schedule": "5,15,25,35,45,55 * * * *"
+    },
+    {
       "command": "bundle exec rake packages:resolve_dependencies",
       "schedule": "6,16,26,36,46,56 * * * *"
     },

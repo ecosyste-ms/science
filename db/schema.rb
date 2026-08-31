@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_31_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_31_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -276,6 +276,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_31_150000) do
     t.index ["project_id"], name: "index_project_authors_on_project_id"
   end
 
+  create_table "project_contributors", force: :cascade do |t|
+    t.string "account_kind", null: false
+    t.string "classification_reason"
+    t.bigint "contributions_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.citext "email"
+    t.citext "login"
+    t.text "name"
+    t.bigint "owner_id"
+    t.bigint "project_id", null: false
+    t.string "provider_uuid"
+    t.jsonb "raw_data", default: {}, null: false
+    t.string "source", null: false
+    t.string "source_digest", null: false
+    t.string "source_key", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_project_contributors_on_email", where: "(email IS NOT NULL)"
+    t.index ["login"], name: "index_project_contributors_on_login", where: "(login IS NOT NULL)"
+    t.index ["owner_id"], name: "index_project_contributors_on_owner_id"
+    t.index ["project_id", "source", "source_key"], name: "index_project_contributors_on_source_key", unique: true
+    t.index ["project_id"], name: "index_project_contributors_on_project_id"
+    t.index ["provider_uuid"], name: "index_project_contributors_on_provider_uuid", where: "(provider_uuid IS NOT NULL)"
+  end
+
   create_table "project_dependencies", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.boolean "direct", default: false, null: false
@@ -351,6 +375,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_31_150000) do
     t.text "codemeta"
     t.integer "collection_id"
     t.json "commits"
+    t.text "contributors_index_error"
+    t.integer "contributors_index_version"
+    t.datetime "contributors_indexed_at"
+    t.string "contributors_source_digest"
     t.datetime "created_at", null: false
     t.json "dependencies"
     t.text "dependencies_index_error"
@@ -391,8 +419,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_31_150000) do
     t.index ["category", "sub_category"], name: "index_projects_on_category_and_sub_category", where: "((category IS NOT NULL) AND (sub_category IS NOT NULL))"
     t.index ["citation_authors_index_version", "id"], name: "index_projects_on_citation_author_version", where: "((science_score >= (20)::double precision) AND ((citation_file ~ '^[[:space:]]*cff-version:'::text) OR (citation_authors_source_digest IS NOT NULL)))"
     t.index ["collection_id"], name: "index_projects_on_collection_id"
+    t.index ["contributors_index_version", "id"], name: "index_projects_on_contributor_version", where: "((science_score >= (20)::double precision) AND (((commits IS NOT NULL) AND (json_typeof((commits -> 'committers'::text)) = 'array'::text)) OR (contributors_source_digest IS NOT NULL)))"
     t.index ["host_id"], name: "index_projects_on_host_id"
     t.index ["id"], name: "index_projects_pending_citation_authors", where: "((citation_authors_indexed_at IS NULL) AND (citation_authors_index_error IS NULL) AND ((science_score >= (20)::double precision) AND ((citation_file ~ '^[[:space:]]*cff-version:'::text) OR (citation_authors_source_digest IS NOT NULL))))"
+    t.index ["id"], name: "index_projects_pending_contributors", where: "((contributors_indexed_at IS NULL) AND (contributors_index_error IS NULL) AND ((science_score >= (20)::double precision) AND (((commits IS NOT NULL) AND (json_typeof((commits -> 'committers'::text)) = 'array'::text)) OR (contributors_source_digest IS NOT NULL))))"
     t.index ["id"], name: "index_projects_pending_dependency_index", where: "(((dependencies IS NOT NULL) OR (brief ? 'dependencies'::text)) AND (dependencies_indexed_at IS NULL) AND (dependencies_index_error IS NULL))"
     t.index ["id"], name: "index_projects_pending_repository_aliases", where: "((repository IS NOT NULL) AND (repository_aliases_indexed_at IS NULL))"
     t.index ["owner_id"], name: "index_projects_on_owner_id"
@@ -448,6 +478,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_31_150000) do
   add_foreign_key "packages", "package_registries"
   add_foreign_key "packages", "projects", column: "published_by_project_id", on_delete: :nullify
   add_foreign_key "project_authors", "projects", on_delete: :cascade
+  add_foreign_key "project_contributors", "owners", on_delete: :nullify
+  add_foreign_key "project_contributors", "projects", on_delete: :cascade
   add_foreign_key "project_dependencies", "packages", on_delete: :nullify
   add_foreign_key "project_dependencies", "projects"
   add_foreign_key "project_fields", "fields"
