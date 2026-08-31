@@ -2,6 +2,7 @@ class PackageIndex
   SORT_OPTIONS = {
     "scientific_projects" => "Most scientific projects",
     "science_relevance" => "Science relevance",
+    "science_score" => "Science Score",
   }.freeze
 
   attr_reader :domains,

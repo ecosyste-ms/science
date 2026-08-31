@@ -117,6 +117,8 @@ class Package < ApplicationRecord
     order = []
     if sort == "science_relevance"
       order << Arel.sql("#{SCIENCE_RELEVANCE_SCORE_SQL} DESC NULLS LAST")
+    elsif sort == "science_score"
+      order << Arel.sql("#{REPOSITORY_SCIENCE_SCORE_SQL} DESC NULLS LAST")
     end
     order << Arel.sql(
       "scientific_dependency_counts.scientific_dependents_count DESC"

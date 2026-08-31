@@ -117,6 +117,20 @@ class Api::V1::PackagesControllerTest < ActionDispatch::IntegrationTest
     assert_in_delta 0.9826, packages.second.fetch("science_relevance_score")
   end
 
+  test "index orders by linked repository science score when requested" do
+    @medicine_project.update!(science_score: 85)
+    @sf.update!(published_by_project: @medicine_project)
+
+    get api_v1_packages_url, params: { sort: "science_score" }
+
+    assert_response :success
+    packages = JSON.parse(response.body)
+    assert_equal [@sf.id, @numpy.id],
+      packages.map { |package| package.fetch("id") }
+    assert_in_delta 85.0, packages.first.fetch("repository_science_score")
+    assert_in_delta 70.0, packages.second.fetch("repository_science_score")
+  end
+
   test "index ignores an unknown package ordering" do
     get api_v1_packages_url, params: { sort: "science_relevance DESC" }
 

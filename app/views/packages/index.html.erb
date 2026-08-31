@@ -8,6 +8,8 @@
       <p class="text-muted">
         <% if @selected_sort == "science_relevance" %>
           Packages ranked by scientific project use, general package popularity, and linked repository Science Score.
+        <% elsif @selected_sort == "science_score" %>
+          Packages ranked by the Science Score of their linked repository.
         <% else %>
           Packages ranked by the number of scientific projects that directly depend on them.
         <% end %>
@@ -118,6 +120,12 @@
                 <small class="text-muted">
                   relevance score
                   <%= number_with_precision package.science_relevance_score, precision: 2 %>
+                </small>
+              <% elsif @selected_sort == "science_score" && package.repository_science_score %>
+                <br>
+                <small class="text-muted">
+                  Science Score
+                  <%= number_with_precision package.repository_science_score, precision: 1 %>%
                 </small>
               <% end %>
             </div>
