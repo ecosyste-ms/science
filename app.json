@@ -25,6 +25,10 @@
       "schedule": "3,13,23,33,43,53 * * * *"
     },
     {
+      "command": "bundle exec rake packages:normalize_rankings",
+      "schedule": "4,14,24,34,44,54 * * * *"
+    },
+    {
       "command": "bundle exec rake packages:resolve_dependencies",
       "schedule": "6,16,26,36,46,56 * * * *"
     },

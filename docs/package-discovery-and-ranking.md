@@ -10,7 +10,8 @@ Dependency and package processing runs in bounded scheduled stages:
 2. `packages:sync_registries` imports package registries, PURL types, and default registry settings from packages.ecosyste.ms each day.
 3. `packages:resolve_dependencies` groups unresolved rows by PURL or package coordinate. It resolves at most 1,000 identities per scheduled run, creates local `packages` records, and links all matching dependency rows.
 4. `packages:sync_metadata` enriches at most 100 packages per run with packages.ecosyste.ms data. Packages used by more direct project dependencies run first.
-5. `packages:match_projects` checks up to 500 package repository URLs against current project URLs and recorded repository aliases. A single match sets `published_by_project_id`.
+5. `packages:normalize_rankings` copies ranking values from existing package JSON into dedicated columns in batches of at most 1,000. Each package is processed once unless its upstream metadata changes.
+6. `packages:match_projects` checks up to 500 package repository URLs against current project URLs and recorded repository aliases. A single match sets `published_by_project_id`.
 
 The stages run separately so unavailable package metadata does not prevent local dependency indexing. Private or invalid packages may remain without upstream metadata, as may packages from registries missing in packages.ecosyste.ms. Resolution errors and metadata sync errors are recorded to prevent every scheduled run from retrying the same identity.
 
@@ -40,15 +41,24 @@ When `published_by_project_id` is present, the browser links the package name to
 
 ```text
 p = clamp(science_relevance_top_percentage, 0, 5)
-weight = 0.25 + 0.75 * (p / 5)
-science_relevance_score = scientific_projects_count * weight
+popularity_weight = 0.10 + 0.90 * (p / 5)
+repository_boost = 1 + clamp(repository_science_score, 0, 100) / 100
+science_relevance_score = scientific_projects_count * popularity_weight * repository_boost
 ```
 
-The weight ranges from 0.25 for a package at the top of its registry to 1.0 for a package at or below the top 5 percent. This limits the popularity penalty to fourfold. Direct scientific use remains the base of the score.
+The popularity weight ranges from 0.10 for a package at the top of its registry to 1.0 for a package at or below the top 5 percent. This limits the popularity penalty to tenfold. A matched repository Science Score adds a positive boost from 1x to 2x. Packages without a matched repository or saved score receive a 1x boost, since package matching and project scoring coverage remain incomplete. Direct scientific use remains the base of the score.
 
 Some upstream records report an average top percentage of 100 while their dependent repository rank is 0. The score treats that inconsistent pair as 0. The API returns the raw `average_top_percentage` and the normalized `science_relevance_top_percentage` so this adjustment is visible. A package without ranking metadata has no relevance score and sorts after scored packages. The direct-use ordering continues to include it normally.
 
 The relevance ordering is intended for comparison with the direct-use list. Metadata coverage varies by registry, so it should remain optional until the prioritized metadata sync has covered enough packages and the results have been checked within each registry.
+
+Dependent repository counts and ranking percentages are stored in columns when package metadata is written. The bounded normalization task copies these values for existing rows. Package ordering reads the columns instead of decoding the complete upstream package record for every candidate. Domain and field filters still calculate scientific project counts from their selected project population.
+
+## Dependency kinds
+
+Package counts include direct dependencies only. Each `ProjectDependency` retains its source occurrences, including raw `kind` and `optional` values when supplied by repos.ecosyste.ms or Brief.
+
+Kind values have registry-specific meanings. GitHub Actions use values such as `composite` and `docker` for action implementations. CRAN uses `imports`, `depends`, and `suggests`, while JVM build files use values such as `implementation`, `compile`, and `testImplementation`. The package ranking does not assign global weights to these raw values. A future dependency-role facet should normalize them within each package ecosystem first.
 
 ## Signal boundary
 

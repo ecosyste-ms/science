@@ -51,6 +51,20 @@ class AppJsonTest < ActiveSupport::TestCase
     ], resolution_crons
   end
 
+  test "package rankings are normalized every ten minutes in bounded batches" do
+    config = JSON.parse(Rails.root.join("app.json").read)
+    crons = config.fetch("cron").select do |cron|
+      cron.fetch("command").include?("packages:normalize_rankings")
+    end
+
+    assert_equal [
+      {
+        "command" => "bundle exec rake packages:normalize_rankings",
+        "schedule" => "4,14,24,34,44,54 * * * *",
+      },
+    ], crons
+  end
+
   test "package registries are refreshed before dependency resolution" do
     config = JSON.parse(Rails.root.join("app.json").read)
     registry_crons = config.fetch("cron").select do |cron|

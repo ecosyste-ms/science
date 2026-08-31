@@ -15,6 +15,7 @@ json.array! @packages do |package|
   json.dependent_repositories_top_percentage package.dependent_repositories_top_percentage&.to_f
   json.average_top_percentage package.average_top_percentage&.to_f
   json.science_relevance_top_percentage package.science_relevance_top_percentage&.to_f
+  json.repository_science_score package.repository_science_score&.to_f
   json.science_relevance_score package.science_relevance_score&.to_f
   json.science_usage_percentage package.science_usage_percentage&.to_f
   json.rankings package.metadata["rankings"] || {}

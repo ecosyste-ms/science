@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_30_191000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_31_080000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -203,7 +203,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_191000) do
   end
 
   create_table "packages", force: :cascade do |t|
+    t.float "average_top_percentage"
     t.datetime "created_at", null: false
+    t.float "dependent_repositories_top_percentage"
     t.datetime "ecosystems_checked_at"
     t.text "ecosystems_error"
     t.integer "ecosystems_error_count", default: 0, null: false
@@ -213,12 +215,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_191000) do
     t.datetime "ecosystems_sync_started_at"
     t.string "ecosystems_sync_status"
     t.datetime "ecosystems_updated_at"
+    t.bigint "general_dependent_repositories_count"
     t.jsonb "metadata", default: {}, null: false
     t.string "name", null: false
     t.string "namespace"
     t.bigint "package_registry_id", null: false
     t.bigint "published_by_project_id"
     t.text "purl"
+    t.datetime "ranking_metadata_normalized_at"
     t.datetime "repository_checked_at"
     t.text "repository_match_error"
     t.text "repository_url"
@@ -231,6 +235,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_191000) do
     t.index ["package_registry_id"], name: "index_packages_on_package_registry_id"
     t.index ["published_by_project_id"], name: "index_packages_on_published_by_project_id"
     t.index ["purl"], name: "index_packages_on_purl", unique: true, where: "(purl IS NOT NULL)"
+    t.index ["ranking_metadata_normalized_at"], name: "index_packages_pending_ranking_metadata_normalization", where: "(ranking_metadata_normalized_at IS NULL)"
     t.index ["repository_checked_at"], name: "index_packages_on_repository_checked_at"
   end
 
@@ -264,6 +269,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_191000) do
     t.index ["ecosystem", "package_name"], name: "index_project_dependencies_pending_name_resolution", where: "((package_id IS NULL) AND (purl IS NULL) AND (package_resolution_attempted_at IS NULL))"
     t.index ["package_id"], name: "index_project_dependencies_on_package_id"
     t.index ["project_id", "ecosystem", "package_name"], name: "index_project_dependencies_on_unresolved_name", unique: true, where: "((package_id IS NULL) AND (purl IS NULL))"
+    t.index ["project_id", "package_id"], name: "index_project_dependencies_on_direct_resolved_package", where: "(direct AND (package_id IS NOT NULL))"
     t.index ["project_id", "package_id"], name: "index_project_dependencies_on_resolved_package", unique: true, where: "(package_id IS NOT NULL)"
     t.index ["project_id", "purl"], name: "index_project_dependencies_on_unresolved_purl", unique: true, where: "((package_id IS NULL) AND (purl IS NOT NULL))"
     t.index ["project_id"], name: "index_project_dependencies_on_project_id"

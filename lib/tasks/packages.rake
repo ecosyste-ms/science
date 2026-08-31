@@ -36,4 +36,15 @@ namespace :packages do
     )
     puts "Package project matching: #{result.inspect}"
   end
+
+  desc "Normalize cached package ranking metadata (LIMIT=1000)"
+  task normalize_rankings: :environment do
+    result = PackageRankingMetadataNormalizer.normalize_batch!(
+      limit: ENV.fetch(
+        "LIMIT",
+        PackageRankingMetadataNormalizer::DEFAULT_LIMIT
+      )
+    )
+    puts "Package ranking normalization: #{result.inspect}"
+  end
 end

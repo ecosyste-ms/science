@@ -38,6 +38,10 @@ class PackageMetadataSyncTest < ActiveSupport::TestCase
     assert_equal "https://github.com/rails/rails", package.repository_url
     assert_equal "pkg:gem/rails", package.purl
     assert_equal 123, package.metadata.fetch("id")
+    assert_equal 200, package.general_dependent_repositories_count
+    assert_in_delta 0.4, package.dependent_repositories_top_percentage
+    assert_in_delta 1.5, package.average_top_percentage
+    assert_not_nil package.ranking_metadata_normalized_at
     assert_equal Time.zone.parse("2026-08-30T12:00:00Z"),
       package.ecosystems_updated_at
     assert_nil package.published_by_project_id
@@ -156,6 +160,11 @@ class PackageMetadataSyncTest < ActiveSupport::TestCase
       "purl" => purl,
       "repository_url" => repository_url,
       "updated_at" => "2026-08-30T12:00:00Z",
+      "dependent_repos_count" => 200,
+      "rankings" => {
+        "dependent_repos_count" => 0.4,
+        "average" => 1.5,
+      },
       "registry" => { "name" => @registry.name },
     }
   end

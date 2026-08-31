@@ -86,6 +86,26 @@ class PackageTest < ActiveSupport::TestCase
     assert package.errors[:purl].any?
   end
 
+  test "normalizes package ranking metadata on write" do
+    package = Package.create!(
+      package_registry: @registry,
+      name: "ranked",
+      purl: "pkg:npm/ranked",
+      metadata: {
+        "dependent_repos_count" => 120,
+        "rankings" => {
+          "dependent_repos_count" => 2.5,
+          "average" => 3.5,
+        },
+      }
+    )
+
+    assert_equal 120, package.general_dependent_repositories_count
+    assert_in_delta 2.5, package.dependent_repositories_top_percentage
+    assert_in_delta 3.5, package.average_top_percentage
+    assert_not_nil package.ranking_metadata_normalized_at
+  end
+
   test "ranks packages by distinct scientific dependent projects" do
     popular = Package.create!(
       package_registry: @registry,
@@ -131,6 +151,7 @@ class PackageTest < ActiveSupport::TestCase
         purl: other.purl,
         direct: true
       )
+      other.update!(published_by_project: project)
     end
 
     ranked = Package.ranked_by_scientific_dependents
@@ -156,7 +177,8 @@ class PackageTest < ActiveSupport::TestCase
     ).to_a
 
     assert_equal [other, popular], relevant
-    assert_in_delta 1.0, relevant.first.science_relevance_score.to_f
-    assert_in_delta 0.5, relevant.second.science_relevance_score.to_f
+    assert_in_delta 70.0, relevant.first.repository_science_score.to_f
+    assert_in_delta 1.7, relevant.first.science_relevance_score.to_f
+    assert_in_delta 0.2, relevant.second.science_relevance_score.to_f
   end
 end

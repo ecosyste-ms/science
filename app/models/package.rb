@@ -1,16 +1,9 @@
 class Package < ApplicationRecord
-  GENERAL_DEPENDENT_REPOSITORIES_SQL = <<~SQL.squish.freeze
-    NULLIF(packages.metadata ->> 'dependent_repos_count', '')::bigint
-  SQL
-  DEPENDENT_REPOSITORIES_TOP_PERCENTAGE_SQL = <<~SQL.squish.freeze
-    NULLIF(
-      packages.metadata #>> '{rankings,dependent_repos_count}',
-      ''
-    )::double precision
-  SQL
-  AVERAGE_TOP_PERCENTAGE_SQL = <<~SQL.squish.freeze
-    NULLIF(packages.metadata #>> '{rankings,average}', '')::double precision
-  SQL
+  GENERAL_DEPENDENT_REPOSITORIES_SQL =
+    "packages.general_dependent_repositories_count".freeze
+  DEPENDENT_REPOSITORIES_TOP_PERCENTAGE_SQL =
+    "packages.dependent_repositories_top_percentage".freeze
+  AVERAGE_TOP_PERCENTAGE_SQL = "packages.average_top_percentage".freeze
   SCIENCE_RELEVANCE_TOP_PERCENTAGE_SQL = <<~SQL.squish.freeze
     CASE
       WHEN #{AVERAGE_TOP_PERCENTAGE_SQL} >= 100.0
@@ -19,14 +12,25 @@ class Package < ApplicationRecord
       ELSE #{AVERAGE_TOP_PERCENTAGE_SQL}
     END
   SQL
+  REPOSITORY_SCIENCE_SCORE_SQL = <<~SQL.squish.freeze
+    package_projects.science_score
+  SQL
+  REPOSITORY_SCIENCE_BOOST_SQL = <<~SQL.squish.freeze
+    (
+      1.0 + COALESCE(
+        LEAST(GREATEST(#{REPOSITORY_SCIENCE_SCORE_SQL}, 0.0), 100.0),
+        0.0
+      ) / 100.0
+    )
+  SQL
   SCIENCE_RELEVANCE_SCORE_SQL = <<~SQL.squish.freeze
     CASE WHEN #{SCIENCE_RELEVANCE_TOP_PERCENTAGE_SQL} IS NOT NULL THEN
       scientific_dependency_counts.scientific_dependents_count * (
-        0.25 + 0.75 * LEAST(
+        0.10 + 0.90 * LEAST(
           GREATEST(#{SCIENCE_RELEVANCE_TOP_PERCENTAGE_SQL}, 0.0),
           5.0
         ) / 5.0
-      )
+      ) * #{REPOSITORY_SCIENCE_BOOST_SQL}
     END
   SQL
   ECOSYSTEMS_SYNC_STATUSES = %w[
@@ -55,6 +59,8 @@ class Package < ApplicationRecord
     allow_nil: true
 
   before_validation :normalize_purl
+  before_validation :normalize_ranking_metadata,
+    if: :will_save_change_to_metadata?
 
   def self.ranked_by_scientific_dependents(
     field_ids: nil,
@@ -78,6 +84,10 @@ class Package < ApplicationRecord
       "INNER JOIN (#{counts.to_sql}) scientific_dependency_counts " \
       "ON scientific_dependency_counts.package_id = packages.id"
     )
+      .joins(
+        "LEFT JOIN projects package_projects " \
+        "ON package_projects.id = packages.published_by_project_id"
+      )
       .select(
         "packages.*, " \
         "scientific_dependency_counts.scientific_dependents_count, " \
@@ -88,6 +98,7 @@ class Package < ApplicationRecord
         "#{AVERAGE_TOP_PERCENTAGE_SQL} AS average_top_percentage, " \
         "#{SCIENCE_RELEVANCE_TOP_PERCENTAGE_SQL} " \
         "AS science_relevance_top_percentage, " \
+        "#{REPOSITORY_SCIENCE_SCORE_SQL} AS repository_science_score, " \
         "#{SCIENCE_RELEVANCE_SCORE_SQL} AS science_relevance_score, " \
         "CASE WHEN #{GENERAL_DEPENDENT_REPOSITORIES_SQL} > 0 " \
         "THEN scientific_dependency_counts.scientific_dependents_count * 100.0 " \
@@ -134,6 +145,24 @@ class Package < ApplicationRecord
     end
   rescue Purl::Error => error
     errors.add(:purl, error.message)
+  end
+
+  def normalize_ranking_metadata(now: Time.current)
+    rankings = metadata["rankings"]
+    rankings = {} unless rankings.is_a?(Hash)
+    self.general_dependent_repositories_count = Integer(
+      metadata["dependent_repos_count"],
+      exception: false
+    )
+    self.dependent_repositories_top_percentage = Float(
+      rankings["dependent_repos_count"],
+      exception: false
+    )
+    self.average_top_percentage = Float(
+      rankings["average"],
+      exception: false
+    )
+    self.ranking_metadata_normalized_at = now
   end
 
   def claim_ecosystems_sync!(now: Time.current)

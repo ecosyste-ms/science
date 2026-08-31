@@ -43,7 +43,7 @@ paths:
             type: string
         - name: sort
           in: query
-          description: Order by direct scientific use or science relevance adjusted for general package popularity
+          description: Order by direct scientific use or science relevance adjusted for general package popularity and linked repository Science Score
           required: false
           schema:
             type: string
@@ -307,10 +307,14 @@ components:
           type: number
           nullable: true
           description: Ranking percentage used by the science relevance score after handling inconsistent upstream averages
+        repository_science_score:
+          type: number
+          nullable: true
+          description: Science Score of the project matched to the package repository
         science_relevance_score:
           type: number
           nullable: true
-          description: Scientific project count weighted from 25% to 100% using average package popularity within its registry
+          description: Scientific project count weighted from 10% to 100% by package popularity, then boosted by up to 2x using linked repository Science Score
         science_usage_percentage:
           type: number
           nullable: true

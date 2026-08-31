@@ -10,6 +10,7 @@ class PackagesRakeTest < ActiveSupport::TestCase
     Rake::Task["packages:resolve_dependencies"].reenable
     Rake::Task["packages:sync_metadata"].reenable
     Rake::Task["packages:match_projects"].reenable
+    Rake::Task["packages:normalize_rankings"].reenable
     @original_env = ENV_KEYS.to_h { |key| [key, ENV[key]] }
     ENV_KEYS.each { |key| ENV.delete(key) }
   end
@@ -168,5 +169,34 @@ class PackagesRakeTest < ActiveSupport::TestCase
     assert_equal project, package.reload.published_by_project
     assert_includes output, "selected: 1"
     assert_includes output, "matched: 1"
+  end
+
+  test "normalizes package rankings through the rake entrypoint" do
+    registry = PackageRegistry.create!(
+      name: "rubygems.org",
+      url: "https://rubygems.org",
+      ecosystem: "rubygems",
+      purl_type: "gem",
+      default: true
+    )
+    package = Package.create!(
+      package_registry: registry,
+      name: "rails",
+      purl: "pkg:gem/rails",
+      metadata: {
+        "dependent_repos_count" => 500,
+        "rankings" => { "average" => 1.5 },
+      }
+    )
+    package.update_columns(ranking_metadata_normalized_at: nil)
+    ENV["LIMIT"] = "1"
+
+    output, = capture_io { Rake::Task["packages:normalize_rankings"].invoke }
+
+    assert_not_nil package.reload.ranking_metadata_normalized_at
+    assert_equal 500, package.general_dependent_repositories_count
+    assert_in_delta 1.5, package.average_top_percentage
+    assert_includes output, "selected: 1"
+    assert_includes output, "normalized: 1"
   end
 end
