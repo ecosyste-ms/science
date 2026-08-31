@@ -38,24 +38,10 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_equal "https://timeline.ecosyste.ms/api/v1/events/numpy/numpy/summary", p.timeline_url
   end
 
-  test "ping urls" do
-    p = build_project(packages: [{ "name" => "numpy", "registry" => { "name" => "pypi.org" } }])
-    assert_equal "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/numpy/numpy/ping", p.repos_ping_url
-    assert_equal "https://issues.ecosyste.ms/api/v1/hosts/GitHub/repositories/numpy/numpy/ping", p.issues_ping_url
-    assert_equal "https://commits.ecosyste.ms/api/v1/hosts/GitHub/repositories/numpy/numpy/ping", p.commits_ping_url
-    assert_equal "https://repos.ecosyste.ms/api/v1/hosts/GitHub/owner/numpy/ping", p.owner_ping_url
-    assert_equal 4, p.ping_urls.length
-  end
-
-  test "ping urls return nil or empty when no repository" do
+  test "repository urls return nil when no repository is stored" do
     p = Project.new(url: "https://github.com/x/y")
-    assert_nil p.repos_ping_url
-    assert_nil p.issues_ping_url
-    assert_nil p.commits_ping_url
-    assert_nil p.owner_ping_url
     assert_nil p.owner_api_url
     assert_nil p.timeline_url
-    assert_equal [], p.ping_urls
   end
 
   test "file urls" do
@@ -394,7 +380,7 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_equal "numpy", p.reload.owner_record.login
   end
 
-  # ---- combine_keywords / ping ----
+  # ---- combine_keywords ----
 
   test "combine_keywords merges repository topics and package keywords" do
     p = build_project(
@@ -403,13 +389,6 @@ class ProjectSyncTest < ActiveSupport::TestCase
     )
     p.combine_keywords
     assert_equal ["Astro", "python", "science"], p.reload.keywords
-  end
-
-  test "ping GETs each ping url" do
-    p = build_project
-    p.ping_urls.each { |u| stub_request(:get, u).to_return(status: 200) }
-    p.ping
-    p.ping_urls.each { |u| assert_requested :get, u }
   end
 
   test "http clients limit connection and request time" do
@@ -442,7 +421,7 @@ class ProjectSyncTest < ActiveSupport::TestCase
       fetch_dependencies fetch_packages import_mentions fetch_readme combine_keywords
       fetch_commits fetch_events fetch_issue_stats sync_issues fetch_citation_file
       fetch_codemeta fetch_zenodo_file sync_releases update_committers
-      update_keywords_from_contributors update_score update_science_score ping
+      update_keywords_from_contributors update_score update_science_score
     ].each { |m| p.expects(m).once }
 
     assert_nil p.last_synced_at
@@ -485,7 +464,7 @@ class ProjectSyncTest < ActiveSupport::TestCase
       fetch_packages import_mentions fetch_readme combine_keywords fetch_commits
       fetch_events fetch_issue_stats sync_issues fetch_citation_file fetch_codemeta
       fetch_zenodo_file sync_releases update_committers update_keywords_from_contributors
-      update_score ping
+      update_score
     ].each { |method| project.stubs(method).returns(nil) }
     project.stubs(:calculate_science_score_breakdown).returns(score: 20, breakdown: {})
     project.stubs(:matching_criteria?).returns(false)

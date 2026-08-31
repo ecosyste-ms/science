@@ -60,7 +60,6 @@ module Project::Sync
     end
     run_sync_stage(stage_durations, :update_score) { update_score }
     run_sync_stage(stage_durations, :update_science_score) { update_science_score }
-    run_sync_stage(stage_durations, :ping) { ping }
   ensure
     if sync_started_at
       total_duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - sync_started_at
@@ -123,38 +122,6 @@ module Project::Sync
     self.save
   rescue FrozenError
     puts "Error combining keywords for #{repository_url}"
-  end
-
-  def ping
-    ping_urls.each do |url|
-      ecosystem_http_client(url).get rescue nil
-    end
-  end
-
-  def ping_urls
-    [repos_ping_url, issues_ping_url, commits_ping_url, owner_ping_url]
-      .compact
-      .uniq
-  end
-
-  def repos_ping_url
-    return unless repository.present?
-    "https://repos.ecosyste.ms/api/v1/hosts/#{repository['host']['name']}/repositories/#{repository['full_name']}/ping"
-  end
-
-  def issues_ping_url
-    return unless repository.present?
-    "https://issues.ecosyste.ms/api/v1/hosts/#{repository['host']['name']}/repositories/#{repository['full_name']}/ping"
-  end
-
-  def commits_ping_url
-    return unless repository.present?
-    "https://commits.ecosyste.ms/api/v1/hosts/#{repository['host']['name']}/repositories/#{repository['full_name']}/ping"
-  end
-
-  def owner_ping_url
-    return unless repository.present?
-    "https://repos.ecosyste.ms/api/v1/hosts/#{repository['host']['name']}/owner/#{repository['owner']}/ping"
   end
 
   def repos_api_url
