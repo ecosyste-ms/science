@@ -78,6 +78,28 @@ class Api::V1::PackagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "2", response.headers.fetch("total-count")
   end
 
+  test "index excludes packages published by a zero-score project" do
+    publisher = Project.create!(
+      url: "https://github.com/test/non-scientific-publisher",
+      science_score: 0
+    )
+    package = create_package(
+      @pypi,
+      "non-scientific-package",
+      dependent_repositories_count: 1,
+      top_percentage: 1.0
+    )
+    create_dependency(@medicine_project, package)
+    package.update!(published_by_project: publisher)
+
+    get api_v1_packages_url
+
+    assert_response :success
+    package_ids = JSON.parse(response.body).map { |record| record.fetch("id") }
+    assert_not_includes package_ids, package.id
+    assert_equal "2", response.headers.fetch("total-count")
+  end
+
   test "index orders by science relevance when requested" do
     @sf.update!(
       metadata: @sf.metadata.deep_merge(

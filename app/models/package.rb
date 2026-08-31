@@ -88,6 +88,10 @@ class Package < ApplicationRecord
         "LEFT JOIN projects package_projects " \
         "ON package_projects.id = packages.published_by_project_id"
       )
+      .where(
+        "package_projects.science_score IS NULL OR " \
+        "package_projects.science_score > 0"
+      )
       .select(
         "packages.*, " \
         "scientific_dependency_counts.scientific_dependents_count, " \

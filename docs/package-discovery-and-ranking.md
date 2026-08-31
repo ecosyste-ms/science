@@ -23,6 +23,8 @@ Explicit registry qualifiers in a PURL take precedence. Otherwise, resolution us
 
 `/packages` and `/api/v1/packages` use the same `PackageIndex` query. Both accept `ecosystem`, OpenAlex `domain`, and OpenAlex `field` filters. Domain and field filters limit the dependent project population before package counts are calculated. Each package count is the number of distinct visible scientific projects with a direct dependency on that package.
 
+Packages with a matched publishing project whose Science Score is zero are excluded. Packages without a matched project or saved score remain visible while the publishing repository is processed.
+
 The API accepts `page`, `per_page`, and `sort`. For example:
 
 ```text
