@@ -2,6 +2,7 @@ require "test_helper"
 
 class PackagePublicationMatcherTest < ActiveSupport::TestCase
   setup do
+    SyncProjectWorker.jobs.clear
     @registry = PackageRegistry.create!(
       name: "pypi.org",
       url: "https://pypi.org",
@@ -9,6 +10,10 @@ class PackagePublicationMatcherTest < ActiveSupport::TestCase
       purl_type: "pypi",
       default: true
     )
+  end
+
+  teardown do
+    SyncProjectWorker.jobs.clear
   end
 
   test "matches a normalized package repository to a project" do
@@ -64,18 +69,27 @@ class PackagePublicationMatcherTest < ActiveSupport::TestCase
       package.repository_match_error
   end
 
-  test "records a missing project and waits before retrying" do
+  test "creates and enqueues a project for an unmatched package repository" do
     package = create_package(
       "missing-package",
       repository_url: "https://github.com/science-org/missing"
     )
 
-    first = PackagePublicationMatcher.match_batch!(limit: 1)
+    result = PackagePublicationMatcher.match_batch!(limit: 1)
+
+    project = Project.find_by!(
+      url: "https://github.com/science-org/missing"
+    )
+
+    assert_equal 1, result.fetch(:discovered)
+    assert_equal project, package.reload.published_by_project
+    assert package.repository_checked_at.present?
+    assert_nil package.repository_match_error
+    assert_equal [[project.id]], SyncProjectWorker.jobs.map { |job| job["args"] }
+
     second = PackagePublicationMatcher.match_batch!(limit: 1)
 
-    assert_equal 1, first.fetch(:missing)
     assert_equal 0, second.fetch(:selected)
-    assert_equal "project not found", package.reload.repository_match_error
   end
 
   test "limits each project matching batch" do

@@ -11,7 +11,7 @@ Dependency and package processing runs in bounded scheduled stages:
 3. `packages:resolve_dependencies` groups unresolved rows by PURL or package coordinate. It resolves at most 1,000 identities per scheduled run, creates local `packages` records, and links all matching dependency rows.
 4. `packages:sync_metadata` enriches at most 100 packages per run with packages.ecosyste.ms data. Packages used by more direct project dependencies run first.
 5. `packages:normalize_rankings` copies ranking values from existing package JSON into dedicated columns in batches of at most 1,000. Each package is processed once unless its upstream metadata changes.
-6. `packages:match_projects` checks up to 500 package repository URLs against current project URLs and recorded repository aliases. A single match sets `published_by_project_id`.
+6. `packages:match_projects` checks up to 500 package repository URLs against current project URLs and recorded repository aliases. A valid unmatched URL creates a project and queues its normal sync. A single match sets `published_by_project_id`.
 
 The stages run separately so unavailable package metadata does not prevent local dependency indexing. Private or invalid packages may remain without upstream metadata, as may packages from registries missing in packages.ecosyste.ms. Resolution errors and metadata sync errors are recorded to prevent every scheduled run from retrying the same identity.
 

@@ -25,7 +25,7 @@ class PackagePublicationMatcher
     result = {
       selected: packages.length,
       matched: 0,
-      missing: 0,
+      discovered: 0,
       ambiguous: 0,
       invalid: 0,
     }
@@ -42,8 +42,14 @@ class PackagePublicationMatcher
         record_match!(package, project_ids)
         result[:matched] += 1
       elsif project_ids.empty?
-        record_match!(package, [], "project not found")
-        result[:missing] += 1
+        project = Project.create_or_find_by!(url: repository_url)
+        record_match!(package, [project.id])
+        if project.previously_new_record?
+          project.sync_async
+          result[:discovered] += 1
+        else
+          result[:matched] += 1
+        end
       else
         record_match!(package, [], "multiple projects match repository URL")
         result[:ambiguous] += 1

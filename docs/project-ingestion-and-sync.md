@@ -86,7 +86,7 @@ Package metadata writes dependent repository counts and normalized ranking perce
 
 A missing lookup is retried after one day and then seven days. The third miss is marked `unavailable` and left for manual retry because the identity may be private, invalid, or absent from the upstream index. API failures retry after one hour, six hours, and one day before stopping. Ambiguous lookups also require a manual retry. Pass `RETRY_STOPPED=true` to include unavailable, failed, and ambiguous packages.
 
-`packages:match_projects` processes at most 500 packages per run. It normalizes HTTPS, Git, and SSH repository URLs, then checks current project URLs and indexed previous names. A single match sets `published_by_project_id`. Missing, invalid, and ambiguous repository matches store `repository_match_error` and become eligible again after 30 days.
+`packages:match_projects` processes at most 500 packages per run. It normalizes HTTPS, Git, and SSH repository URLs, then checks current project URLs and indexed previous names. A single match sets `published_by_project_id`. A valid unmatched repository creates a project and queues its normal sync. Invalid and ambiguous repository matches store `repository_match_error` and become eligible again after 30 days.
 
 ```bash
 LIMIT=500 bundle exec rake projects:sync_repository_aliases

@@ -11,6 +11,7 @@ class PackagesRakeTest < ActiveSupport::TestCase
     Rake::Task["packages:sync_metadata"].reenable
     Rake::Task["packages:match_projects"].reenable
     Rake::Task["packages:normalize_rankings"].reenable
+    SyncProjectWorker.jobs.clear
     @original_env = ENV_KEYS.to_h { |key| [key, ENV[key]] }
     ENV_KEYS.each { |key| ENV.delete(key) }
   end
@@ -19,6 +20,7 @@ class PackagesRakeTest < ActiveSupport::TestCase
     @original_env.each do |key, value|
       value.nil? ? ENV.delete(key) : ENV[key] = value
     end
+    SyncProjectWorker.jobs.clear
   end
 
   test "syncs registries through the rake entrypoint" do
@@ -169,6 +171,30 @@ class PackagesRakeTest < ActiveSupport::TestCase
     assert_equal project, package.reload.published_by_project
     assert_includes output, "selected: 1"
     assert_includes output, "matched: 1"
+  end
+
+  test "discovers package projects through the rake entrypoint" do
+    registry = PackageRegistry.create!(
+      name: "pypi.org",
+      url: "https://pypi.org",
+      ecosystem: "pypi",
+      purl_type: "pypi",
+      default: true
+    )
+    package = Package.create!(
+      package_registry: registry,
+      name: "unmatched",
+      purl: "pkg:pypi/unmatched",
+      repository_url: "https://github.com/numpy/unmatched"
+    )
+    ENV["LIMIT"] = "1"
+
+    output, = capture_io { Rake::Task["packages:match_projects"].invoke }
+
+    project = Project.find_by!(url: "https://github.com/numpy/unmatched")
+    assert_equal project, package.reload.published_by_project
+    assert_equal [[project.id]], SyncProjectWorker.jobs.map { |job| job["args"] }
+    assert_includes output, "discovered: 1"
   end
 
   test "normalizes package rankings through the rake entrypoint" do
