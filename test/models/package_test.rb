@@ -178,7 +178,7 @@ class PackageTest < ActiveSupport::TestCase
 
     assert_equal [other, popular], relevant
     assert_in_delta 70.0, relevant.first.repository_science_score.to_f
-    assert_in_delta 1.7, relevant.first.science_relevance_score.to_f
-    assert_in_delta 0.2, relevant.second.science_relevance_score.to_f
+    assert_in_delta 0.7, relevant.first.science_relevance_score.to_f
+    assert_nil relevant.second.science_relevance_score
   end
 end

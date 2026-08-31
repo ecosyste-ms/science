@@ -15,13 +15,10 @@ class Package < ApplicationRecord
   REPOSITORY_SCIENCE_SCORE_SQL = <<~SQL.squish.freeze
     package_projects.science_score
   SQL
-  REPOSITORY_SCIENCE_BOOST_SQL = <<~SQL.squish.freeze
-    (
-      1.0 + COALESCE(
-        LEAST(GREATEST(#{REPOSITORY_SCIENCE_SCORE_SQL}, 0.0), 100.0),
-        0.0
-      ) / 100.0
-    )
+  REPOSITORY_SCIENCE_FACTOR_SQL = <<~SQL.squish.freeze
+    CASE WHEN #{REPOSITORY_SCIENCE_SCORE_SQL} IS NOT NULL THEN
+      LEAST(GREATEST(#{REPOSITORY_SCIENCE_SCORE_SQL}, 0.0), 100.0) / 100.0
+    END
   SQL
   SCIENCE_RELEVANCE_SCORE_SQL = <<~SQL.squish.freeze
     CASE WHEN #{SCIENCE_RELEVANCE_TOP_PERCENTAGE_SQL} IS NOT NULL THEN
@@ -30,7 +27,7 @@ class Package < ApplicationRecord
           GREATEST(#{SCIENCE_RELEVANCE_TOP_PERCENTAGE_SQL}, 0.0),
           5.0
         ) / 5.0
-      ) * #{REPOSITORY_SCIENCE_BOOST_SQL}
+      ) * #{REPOSITORY_SCIENCE_FACTOR_SQL}
     END
   SQL
   ECOSYSTEMS_SYNC_STATUSES = %w[
@@ -41,6 +38,7 @@ class Package < ApplicationRecord
     transient_error
     failed
   ].freeze
+  MINIMUM_REPOSITORY_SCIENCE_SCORE = 5.0
   MISSING_RETRY_DELAYS = [1.day, 7.days].freeze
   ERROR_RETRY_DELAYS = [1.hour, 6.hours, 1.day].freeze
 
@@ -90,7 +88,8 @@ class Package < ApplicationRecord
       )
       .where(
         "package_projects.science_score IS NULL OR " \
-        "package_projects.science_score > 0"
+        "package_projects.science_score >= ?",
+        MINIMUM_REPOSITORY_SCIENCE_SCORE
       )
       .select(
         "packages.*, " \

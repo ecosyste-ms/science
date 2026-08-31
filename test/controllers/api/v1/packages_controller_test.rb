@@ -50,7 +50,7 @@ class Api::V1::PackagesControllerTest < ActionDispatch::IntegrationTest
     assert_in_delta 1.05, numpy.fetch("average_top_percentage")
     assert_in_delta 1.05, numpy.fetch("science_relevance_top_percentage")
     assert_in_delta 70.0, numpy.fetch("repository_science_score")
-    assert_in_delta 0.9826, numpy.fetch("science_relevance_score")
+    assert_in_delta 0.4046, numpy.fetch("science_relevance_score")
     assert_in_delta 0.2, numpy.fetch("science_usage_percentage")
     assert_equal @physics_project.id, numpy.dig("published_by_project", "id")
     assert_equal api_v1_project_url(@physics_project),
@@ -78,10 +78,10 @@ class Api::V1::PackagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "2", response.headers.fetch("total-count")
   end
 
-  test "index excludes packages published by a zero-score project" do
+  test "index excludes packages published below the science score floor" do
     publisher = Project.create!(
       url: "https://github.com/test/non-scientific-publisher",
-      science_score: 0
+      science_score: 4.99
     )
     package = create_package(
       @pypi,
@@ -100,21 +100,33 @@ class Api::V1::PackagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "2", response.headers.fetch("total-count")
   end
 
-  test "index orders by science relevance when requested" do
+  test "science relevance puts repository score ahead of dependency volume" do
     @sf.update!(
       metadata: @sf.metadata.deep_merge(
         "rankings" => { "average" => 5.0 }
+      ),
+      published_by_project: Project.create!(
+        url: "https://github.com/test/weak-signal-package",
+        science_score: 7
       )
     )
+    create_dependency(@physics_project, @sf)
+    third_project = Project.create!(
+      url: "https://github.com/test/third-scientific-dependent",
+      science_score: 70
+    )
+    create_dependency(third_project, @sf)
 
     get api_v1_packages_url, params: { sort: "science_relevance" }
 
     assert_response :success
     packages = JSON.parse(response.body)
-    assert_equal [@sf.id, @numpy.id],
+    assert_equal [@numpy.id, @sf.id],
       packages.map { |package| package.fetch("id") }
-    assert_in_delta 1.0, packages.first.fetch("science_relevance_score")
-    assert_in_delta 0.9826, packages.second.fetch("science_relevance_score")
+    assert_equal 2, packages.first.fetch("scientific_projects_count")
+    assert_equal 3, packages.second.fetch("scientific_projects_count")
+    assert_in_delta 0.4046, packages.first.fetch("science_relevance_score")
+    assert_in_delta 0.21, packages.second.fetch("science_relevance_score")
   end
 
   test "index orders by linked repository science score when requested" do

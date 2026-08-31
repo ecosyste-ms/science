@@ -57,7 +57,10 @@ class PackageScienceScoreReviewReport
 
   def candidate_purls
     Package.ranked_by_scientific_dependents(sort: "science_relevance")
-      .where("package_projects.science_score > 0")
+      .where(
+        "package_projects.science_score >= ?",
+        Package::MINIMUM_REPOSITORY_SCIENCE_SCORE
+      )
       .where("package_projects.science_score <= ?", max_score)
       .where.not(purl: nil)
       .limit(limit)
@@ -70,7 +73,7 @@ class PackageScienceScoreReviewReport
     {
       mode: "current_candidates",
       limit: limit,
-      minimum_science_score: 0.0,
+      minimum_science_score: Package::MINIMUM_REPOSITORY_SCIENCE_SCORE,
       maximum_science_score: max_score,
       order: "science_relevance",
     }
