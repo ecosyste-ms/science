@@ -120,6 +120,28 @@ class FieldsControllerTest < ActionDispatch::IntegrationTest
     assert_match "(2 projects)", response.body
   end
 
+  test "field and domain listings use the project URL when its name is missing" do
+    project = Project.create!(
+      url: "https://github.com/test/unnamed-science-project",
+      science_score: 60
+    )
+    ProjectField.create!(
+      project: project,
+      field: @computer_science,
+      confidence_score: 0.7
+    )
+
+    get field_url(@computer_science)
+
+    assert_response :success
+    assert_select "a[href='#{project_path(project)}']", text: project.url
+
+    get open_alex_domain_url("physical-sciences")
+
+    assert_response :success
+    assert_select "a[href='#{project_path(project)}']", text: project.url
+  end
+
   test "domain lists its OpenAlex fields and each classified project once" do
     get open_alex_domain_url("physical-sciences")
 

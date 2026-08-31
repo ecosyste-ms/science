@@ -77,7 +77,8 @@ class PackagesControllerTest < ActionDispatch::IntegrationTest
     @scipy.update!(
       metadata: @scipy.metadata.merge(
         "rankings" => { "average" => 5.0 }
-      )
+      ),
+      published_by_project: @medicine_project
     )
 
     get packages_url, params: { sort: "science_relevance" }
@@ -105,6 +106,19 @@ class PackagesControllerTest < ActionDispatch::IntegrationTest
     end
     assert_match "Science Score", response.body
     assert_match "85.0%", response.body
+  end
+
+  test "published project labels use the repository URL when the name is missing" do
+    publisher = Project.create!(
+      url: "https://github.com/test/unnamed-package-publisher",
+      science_score: 60
+    )
+    @numpy.update!(published_by_project: publisher)
+
+    get packages_url
+
+    assert_response :success
+    assert_select "[data-package-id='#{@numpy.id}'] p a", text: publisher.url
   end
 
   test "domain filter recalculates counts for projects in that domain" do

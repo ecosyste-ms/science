@@ -106,7 +106,7 @@
               <% if package.published_by_project %>
                 <p class="mb-0 text-muted">
                   Published by
-                  <%= link_to package.published_by_project.name.presence || package.published_by_project.url,
+                  <%= link_to package.published_by_project.to_s,
                     project_path(package.published_by_project) %>
                 </p>
               <% end %>

@@ -22,7 +22,7 @@
 
     <h3 class="card-title listing__title mt-3">
       <%= link_to project_path(project) do %>
-        <%= project.respond_to?(:name) && project.name.present? ? project.name : project.to_s %>
+        <%= project.to_s %>
         <span class="listing__meta">
           <% if project.sub_category.present? %> — <%= project.sub_category %><% end %>
           <% if project.score && project.score.finite? %> • Rank <%= project.score.round(1) %><% end %>

@@ -129,6 +129,25 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_select ".list-group-item", minimum: 1
   end
 
+  test "listings and lookup use the repository URL when the name is missing" do
+    project = Project.create!(
+      url: "https://github.com/test/unnamed-project-listing",
+      science_score: 60
+    )
+
+    get projects_url
+
+    assert_response :success
+    assert_select "h3 a[href='#{project_path(project)}']" do |links|
+      assert_includes links.first.text, project.url
+    end
+
+    get lookup_projects_url, params: { q: "unnamed-project-listing" }
+
+    assert_response :success
+    assert_select "h6", text: project.url
+  end
+
   test "should show popular projects when no query" do
     get lookup_projects_url
     assert_response :success
