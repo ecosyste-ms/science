@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_31_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_01_080000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -232,7 +232,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_31_160000) do
     t.index ["ecosystems_retry_at"], name: "index_packages_on_ecosystems_retry_at", where: "(ecosystems_retry_at IS NOT NULL)"
     t.index ["ecosystems_sync_started_at"], name: "index_packages_on_ecosystems_sync_started_at", where: "(ecosystems_sync_started_at IS NOT NULL)"
     t.index ["package_registry_id", "name"], name: "index_packages_on_registry_and_name", unique: true
-    t.index ["package_registry_id"], name: "index_packages_on_package_registry_id"
     t.index ["published_by_project_id"], name: "index_packages_on_published_by_project_id"
     t.index ["purl"], name: "index_packages_on_purl", unique: true, where: "(purl IS NOT NULL)"
     t.index ["ranking_metadata_normalized_at"], name: "index_packages_pending_ranking_metadata_normalization", where: "(ranking_metadata_normalized_at IS NULL)"
@@ -273,7 +272,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_31_160000) do
     t.index ["email"], name: "index_project_authors_on_email", where: "(email IS NOT NULL)"
     t.index ["orcid"], name: "index_project_authors_on_orcid", where: "(orcid IS NOT NULL)"
     t.index ["project_id", "source", "authorship_kind", "position"], name: "index_project_authors_on_snapshot_position", unique: true
-    t.index ["project_id"], name: "index_project_authors_on_project_id"
   end
 
   create_table "project_contributors", force: :cascade do |t|
@@ -296,7 +294,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_31_160000) do
     t.index ["login"], name: "index_project_contributors_on_login", where: "(login IS NOT NULL)"
     t.index ["owner_id"], name: "index_project_contributors_on_owner_id"
     t.index ["project_id", "source", "source_key"], name: "index_project_contributors_on_source_key", unique: true
-    t.index ["project_id"], name: "index_project_contributors_on_project_id"
     t.index ["provider_uuid"], name: "index_project_contributors_on_provider_uuid", where: "(provider_uuid IS NOT NULL)"
   end
 
@@ -333,7 +330,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_31_160000) do
     t.index ["confidence_score"], name: "index_project_fields_on_confidence_score"
     t.index ["field_id"], name: "index_project_fields_on_field_id"
     t.index ["project_id", "field_id"], name: "index_project_fields_on_project_id_and_field_id", unique: true
-    t.index ["project_id"], name: "index_project_fields_on_project_id"
   end
 
   create_table "project_open_alex_topics", force: :cascade do |t|
@@ -347,11 +343,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_31_160000) do
     t.string "source_identifier", null: false
     t.datetime "updated_at", null: false
     t.index ["open_alex_topic_id", "score"], name: "index_project_open_alex_topics_on_topic_and_score"
-    t.index ["open_alex_topic_id"], name: "index_project_open_alex_topics_on_open_alex_topic_id"
     t.index ["openalex_work_id"], name: "index_project_open_alex_topics_on_openalex_work_id"
     t.index ["project_id", "open_alex_topic_id", "source", "source_identifier"], name: "index_project_open_alex_topics_on_assignment", unique: true
     t.index ["project_id", "primary_topic"], name: "index_project_open_alex_topics_on_primary", where: "(primary_topic = true)"
-    t.index ["project_id"], name: "index_project_open_alex_topics_on_project_id"
   end
 
   create_table "project_repository_aliases", force: :cascade do |t|
@@ -360,7 +354,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_31_160000) do
     t.datetime "updated_at", null: false
     t.citext "url", null: false
     t.index ["project_id", "url"], name: "index_project_repository_aliases_on_project_and_url", unique: true
-    t.index ["project_id"], name: "index_project_repository_aliases_on_project_id"
     t.index ["url"], name: "index_project_repository_aliases_on_url"
   end
 
