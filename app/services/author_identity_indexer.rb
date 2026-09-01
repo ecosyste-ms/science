@@ -2,7 +2,7 @@ require "digest"
 require "set"
 
 class AuthorIdentityIndexer
-  CURRENT_VERSION = 1
+  CURRENT_VERSION = 2
   DEFAULT_LIMIT = 250
   MAX_LIMIT = 1_000
   WRITE_BATCH_SIZE = 1_000

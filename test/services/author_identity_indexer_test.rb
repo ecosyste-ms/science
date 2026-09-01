@@ -64,14 +64,18 @@ class AuthorIdentityIndexerTest < ActiveSupport::TestCase
       )
     )
 
-    AuthorIdentityIndexer.new(identified).sync!
     result = AuthorIdentityIndexer.new(email_only).sync!
 
     assert result.fetch(:indexed)
-    assert_equal identified.project_authors.first.author,
-      email_only.project_authors.first.author
+    author = email_only.project_authors.first.author
+    assert_equal "0000-0002-1825-0097",
+      author.identifiers.find_by!(scheme: "orcid").value
     assert_equal "email_to_orcid",
       email_only.project_authors.first.author_match_kind
+
+    AuthorIdentityIndexer.new(identified).sync!
+
+    assert_equal identified.project_authors.first.author, author
     assert_equal 1, Author.count
   end
 
@@ -147,6 +151,79 @@ class AuthorIdentityIndexerTest < ActiveSupport::TestCase
     assert_equal 2, DeveloperAccountIdentifier.count
     assert_equal 1,
       project.project_contributors.reload.pluck(:developer_account_id).uniq.length
+  end
+
+  test "leaves a shared login unresolved when provider identifiers conflict" do
+    host = Host.create!(name: "Conflicting Provider GitHub")
+    project = create_indexed_project(
+      host: host,
+      committers: [
+        {
+          "name" => "First",
+          "login" => "shared",
+          "uuid" => "42",
+          "count" => 2,
+        },
+        {
+          "name" => "Second",
+          "login" => "shared",
+          "uuid" => "84",
+          "count" => 3,
+        },
+      ]
+    )
+
+    result = AuthorIdentityIndexer.new(project).sync!
+
+    assert_equal 0, result.fetch(:linked_account_observations)
+    assert_equal 2, result.fetch(:ambiguous)
+    assert_empty project.project_contributors.reload.where.not(
+      developer_account_id: nil
+    )
+    assert_equal 0, DeveloperAccount.count
+    assert_equal 0, DeveloperAccountIdentifier.count
+  end
+
+  test "does not reuse an account with conflicting provider identifiers" do
+    host = Host.create!(name: "Existing Conflict GitHub")
+    account = DeveloperAccount.create!(
+      host: host,
+      canonical_key: "host:#{host.id}:provider:42",
+      provider_uuid: "42",
+      login: "shared",
+      account_kind: "unknown"
+    )
+    %w[42 84].each do |provider_uuid|
+      DeveloperAccountIdentifier.create!(
+        developer_account: account,
+        host: host,
+        scheme: "provider",
+        value: provider_uuid
+      )
+    end
+    DeveloperAccountIdentifier.create!(
+      developer_account: account,
+      host: host,
+      scheme: "login",
+      value: "shared"
+    )
+    project = create_indexed_project(
+      host: host,
+      committers: [
+        {
+          "name" => "First",
+          "login" => "shared",
+          "uuid" => "42",
+          "count" => 2,
+        },
+      ]
+    )
+
+    result = AuthorIdentityIndexer.new(project).sync!
+
+    assert_equal 0, result.fetch(:linked_account_observations)
+    assert_equal 1, result.fetch(:ambiguous)
+    assert_nil project.project_contributors.first.reload.developer_account_id
   end
 
   test "does not link an author through an account with bot evidence" do

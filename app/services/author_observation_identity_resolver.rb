@@ -60,6 +60,11 @@ class AuthorObservationIdentityResolver
       next unless author
 
       observation = resolution.fetch(:observation)
+      orcid = resolution_orcid(resolution)
+      if orcid.present? && identifiers[["orcid", orcid.downcase]] != author.id
+        ambiguous += 1
+        next
+      end
       if resolution.fetch(:match_kind).start_with?("email")
         email_author_id = identifiers[["email", observation.email.downcase]]
         unless email_author_id == author.id
@@ -146,11 +151,12 @@ class AuthorObservationIdentityResolver
       observation = resolution.fetch(:observation)
       author = authors_by_key.fetch(resolution.fetch(:canonical_key).downcase)
       identifiers = []
-      if observation.orcid.present?
+      orcid = resolution_orcid(resolution)
+      if orcid.present?
         identifiers << {
           author_id: author.id,
           scheme: "orcid",
-          value: observation.orcid,
+          value: orcid,
           publicly_visible: true,
         }
       end
@@ -178,7 +184,7 @@ class AuthorObservationIdentityResolver
     pairs = resolutions.flat_map do |resolution|
       observation = resolution.fetch(:observation)
       [
-        ["orcid", observation.orcid],
+        ["orcid", resolution_orcid(resolution)],
         ["email", observation.email&.downcase],
       ]
     end.reject { |_, value| value.blank? }.uniq
@@ -193,5 +199,13 @@ class AuthorObservationIdentityResolver
         key = [scheme, value.downcase]
         result[key] = author_id if allowed.include?(key)
       end
+  end
+
+  def resolution_orcid(resolution)
+    observation = resolution.fetch(:observation)
+    return observation.orcid if observation.orcid.present?
+
+    canonical_key = resolution.fetch(:canonical_key)
+    canonical_key.delete_prefix("orcid:") if canonical_key.start_with?("orcid:")
   end
 end

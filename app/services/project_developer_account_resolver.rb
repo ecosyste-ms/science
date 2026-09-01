@@ -30,18 +30,28 @@ class ProjectDeveloperAccountResolver
           .filter_map { |scheme, value| value.to_i if scheme == "owner" }
       end.uniq
     ).index_by(&:owner_id)
+    conflicting_account_ids = conflicting_existing_account_ids(
+      existing_by_identifier.values + existing_by_owner.values.map(&:id)
+    )
 
     resolved = []
     ambiguous = 0
     components.each do |component|
       identifiers = component.flat_map { |observation| observation.fetch(:identifiers) }.uniq
+      if conflicting_strong_identifiers?(identifiers)
+        ambiguous += component.length
+        next
+      end
       account_ids = identifiers.filter_map { |identifier| existing_by_identifier[identifier] }
       identifiers.each do |scheme, value|
         account_ids << existing_by_owner[value.to_i]&.id if scheme == "owner"
       end
       account_ids.compact!
       account_ids.uniq!
-      if account_ids.length > 1
+      conflicting_account = account_ids.any? do |account_id|
+        conflicting_account_ids.include?(account_id)
+      end
+      if account_ids.length > 1 || conflicting_account
         ambiguous += component.length
         next
       end
@@ -160,6 +170,24 @@ class ProjectDeveloperAccountResolver
       identifier = identifiers.find { |candidate_scheme, _| candidate_scheme == scheme }
       return identifier if identifier
     end
+  end
+
+  def conflicting_strong_identifiers?(identifiers)
+    %w[owner provider].any? do |scheme|
+      identifiers.count { |identifier_scheme, _| identifier_scheme == scheme } > 1
+    end
+  end
+
+  def conflicting_existing_account_ids(account_ids)
+    account_ids = account_ids.compact.uniq
+    return Set.new if account_ids.empty?
+
+    DeveloperAccountIdentifier
+      .where(developer_account_id: account_ids, scheme: %w[owner provider])
+      .group(:developer_account_id, :scheme)
+      .having("COUNT(DISTINCT LOWER(value)) > 1")
+      .pluck(:developer_account_id)
+      .to_set
   end
 
   def create_developer_accounts!(resolutions)

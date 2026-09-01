@@ -165,6 +165,11 @@ class ProjectsRakeTest < ActiveSupport::TestCase
             "login" => "adal",
             "count" => 4,
           },
+          {
+            "name" => "copilot-swe-agent[bot]",
+            "login" => "copilot",
+            "count" => 2,
+          },
         ],
       }
     )
@@ -177,10 +182,13 @@ class ProjectsRakeTest < ActiveSupport::TestCase
     contributor = project.project_contributors.first
     assert_equal "Ada Lovelace", contributor.name
     assert_equal 4, contributor.contributions_count
+    copilot = project.project_contributors.find_by!(login: "copilot")
+    assert_equal "bot", copilot.account_kind
+    assert_equal "name_bot_suffix", copilot.classification_reason
     assert project.reload.contributors_indexed_at.present?
     assert_includes output, "selected: 1"
     assert_includes output, "indexed: 1"
-    assert_includes output, "contributors: 1"
+    assert_includes output, "contributors: 2"
   end
 
   test "sync_author_identities links realistic indexed evidence through the rake entrypoint" do
@@ -226,6 +234,73 @@ class ProjectsRakeTest < ActiveSupport::TestCase
     assert_includes output, "selected: 1"
     assert_includes output, "linked_contributors: 1"
     assert_includes output, "account_author_links: 1"
+  end
+
+  test "sync_author_identities handles inferred ORCIDs and provider conflicts through the rake entrypoint" do
+    host = Host.create!(name: "Rake Conflict GitHub")
+    email_only = Project.create!(
+      url: "https://github.com/test/email-only-rake",
+      science_score: 20,
+      host: host,
+      citation_file: <<~CFF,
+        cff-version: 1.2.0
+        message: Cite this software
+        title: Email-only Software
+        authors:
+          - given-names: Ada
+            family-names: Lovelace
+            email: shared@example.edu
+      CFF
+      commits: {
+        "committers" => [
+          {
+            "name" => "First",
+            "login" => "shared",
+            "uuid" => "42",
+            "count" => 2,
+          },
+          {
+            "name" => "Second",
+            "login" => "shared",
+            "uuid" => "84",
+            "count" => 3,
+          },
+        ],
+      }
+    )
+    identified = Project.create!(
+      url: "https://github.com/test/identified-rake",
+      science_score: 20,
+      citation_file: <<~CFF,
+        cff-version: 1.2.0
+        message: Cite this software
+        title: Identified Software
+        authors:
+          - given-names: Ada
+            family-names: Lovelace
+            email: shared@example.edu
+            orcid: https://orcid.org/0000-0002-1825-0097
+      CFF
+      commits: { "committers" => [] }
+    )
+    [email_only, identified].each do |project|
+      ProjectCitationAuthorIndexer.new(project).sync!
+      ProjectContributorIndexer.new(project).sync!
+    end
+    ENV["LIMIT"] = "1"
+
+    output, = capture_io do
+      Rake::Task["projects:sync_author_identities"].execute
+    end
+
+    author = email_only.project_authors.first.author
+    assert_equal "orcid:0000-0002-1825-0097", author.canonical_key
+    assert_equal "0000-0002-1825-0097",
+      author.identifiers.find_by!(scheme: "orcid").value
+    assert_empty email_only.project_contributors.reload.where.not(
+      developer_account_id: nil
+    )
+    assert_includes output, "ambiguous: 2"
   end
 
   test "sync_repository_aliases indexes a bounded batch through the rake entrypoint" do

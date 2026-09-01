@@ -65,21 +65,29 @@ class ProjectContributorIndexerTest < ActiveSupport::TestCase
             "type" => "Bot",
             "count" => 1,
           },
+          {
+            "name" => "copilot-swe-agent[bot]",
+            "login" => "copilot",
+            "count" => 3,
+          },
         ],
       }
     )
 
     result = ProjectContributorIndexer.new(project).sync!
 
-    assert_equal 2, result.fetch(:bots)
+    assert_equal 3, result.fetch(:bots)
     dependabot = project.project_contributors.find_by!(login: "dependabot[bot]")
     human = project.project_contributors.find_by!(login: "release-bot")
     source_bot = project.project_contributors.find_by!(login: "service-account")
+    copilot = project.project_contributors.find_by!(login: "copilot")
     assert_equal "49699333", dependabot.provider_uuid
     assert_equal "noreply_bot_email", dependabot.classification_reason
     assert_equal "unknown", human.account_kind
     assert_nil human.classification_reason
     assert_equal "source_account_kind", source_bot.classification_reason
+    assert_equal "bot", copilot.account_kind
+    assert_equal "name_bot_suffix", copilot.classification_reason
   end
 
   test "collapses duplicate source keys and combines contribution counts" do

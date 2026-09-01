@@ -2,7 +2,7 @@ require "digest"
 require "uri"
 
 class ProjectContributorIndexer
-  CURRENT_VERSION = 1
+  CURRENT_VERSION = 2
   DEFAULT_LIMIT = 250
   MAX_LIMIT = 1_000
   UPSERT_BATCH_SIZE = 1_000
@@ -356,6 +356,8 @@ class ProjectContributorIndexer
     local_part = email&.split("@", 2)&.first
     return ["bot", "noreply_bot_email"] if local_part&.match?(/\[bot\]\z/i)
     return ["bot", "login_bot_suffix"] if login&.match?(/\[bot\]\z/i)
+    name = normalized_scalar(committer["name"] || committer[:name])
+    return ["bot", "name_bot_suffix"] if name&.match?(/\[bot\]\z/i)
     return ["bot", "known_bot_email"] if KNOWN_BOT_EMAILS.include?(email)
 
     ["unknown", nil]
