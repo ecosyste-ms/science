@@ -1,0 +1,24 @@
+<article class="list-group-item py-3" data-project-id="<%= project.id %>">
+  <div class="d-flex justify-content-between align-items-start gap-3">
+    <div>
+      <h3 class="h5 mb-1">
+        <%= link_to project.to_s, project_path(project), class: "text-decoration-none" %>
+      </h3>
+      <% if project.description.present? %>
+        <p class="text-muted small mb-0"><%= truncate(project.description, length: 240) %></p>
+      <% end %>
+    </div>
+
+    <div class="text-end small text-muted flex-shrink-0">
+      <% if contribution_counts.fetch(project.id, 0).positive? %>
+        <div>
+          <%= number_with_delimiter(contribution_counts.fetch(project.id)) %>
+          <%= "contribution".pluralize(contribution_counts.fetch(project.id)) %>
+        </div>
+      <% end %>
+      <% if project.science_score.present? %>
+        <div>Science <%= number_with_precision(project.science_score, precision: 0) %>%</div>
+      <% end %>
+    </div>
+  </div>
+</article>

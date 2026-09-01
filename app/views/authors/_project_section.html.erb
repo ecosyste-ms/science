@@ -1,0 +1,17 @@
+<% if pagy.count.positive? %>
+  <section class="mb-5" data-role="<%= role %>">
+    <h2 class="h3">
+      <%= heading %>
+      <small class="text-muted"><%= number_with_delimiter(pagy.count) %></small>
+    </h2>
+    <p class="text-muted"><%= description %></p>
+
+    <div class="list-group mb-3">
+      <%= render partial: "project",
+        collection: projects,
+        locals: { contribution_counts: contribution_counts } %>
+    </div>
+
+    <%== pagy_bootstrap_nav(pagy) if pagy.pages > 1 %>
+  </section>
+<% end %>

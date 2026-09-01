@@ -1,0 +1,44 @@
+<% counts = role_counts.fetch(author.id) %>
+
+<article class="list-group-item py-3" data-author-id="<%= author.id %>">
+  <div class="d-flex justify-content-between align-items-start gap-3">
+    <div>
+      <h2 class="h5 mb-2">
+        <%= link_to author.to_s, author_path(author), class: "text-decoration-none" %>
+      </h2>
+
+      <% author.public_identifiers.each do |identifier| %>
+        <% if identifier.public_url.present? %>
+          <%= link_to "#{identifier.scheme.upcase} #{identifier.value}",
+            identifier.public_url,
+            class: "small text-decoration-none me-2",
+            target: "_blank",
+            rel: "noopener noreferrer" %>
+        <% else %>
+          <span class="small text-muted me-2"><%= identifier.scheme.upcase %> <%= identifier.value %></span>
+        <% end %>
+      <% end %>
+    </div>
+
+    <div class="text-end small text-muted">
+      <% if counts[:software_projects].positive? %>
+        <div>
+          <%= number_with_delimiter(counts[:software_projects]) %>
+          software <%= "project".pluralize(counts[:software_projects]) %>
+        </div>
+      <% end %>
+      <% if counts[:preferred_citation_projects].positive? %>
+        <div>
+          <%= number_with_delimiter(counts[:preferred_citation_projects]) %>
+          preferred <%= "citation".pluralize(counts[:preferred_citation_projects]) %>
+        </div>
+      <% end %>
+      <% if counts[:contributed_projects].positive? %>
+        <div>
+          <%= number_with_delimiter(counts[:contributed_projects]) %>
+          contributed <%= "project".pluralize(counts[:contributed_projects]) %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</article>

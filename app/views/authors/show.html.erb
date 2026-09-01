@@ -1,0 +1,94 @@
+<% @meta_title = @author.to_s %>
+<% @meta_description = "Browse software authorship, preferred citations, and repository contributions linked to #{@author}." %>
+
+<div class="container-md">
+  <div class="mb-4">
+    <h1><%= @author.to_s %></h1>
+
+    <% if @author.public_identifiers.any? %>
+      <div class="d-flex flex-wrap gap-2 mt-3">
+        <% @author.public_identifiers.each do |identifier| %>
+          <% if identifier.public_url.present? %>
+            <%= link_to "#{identifier.scheme.upcase} #{identifier.value}",
+              identifier.public_url,
+              class: "badge rounded-pill bg-light text-dark text-decoration-none",
+              target: "_blank",
+              rel: "noopener noreferrer" %>
+          <% else %>
+            <span class="badge rounded-pill bg-light text-dark">
+              <%= identifier.scheme.upcase %> <%= identifier.value %>
+            </span>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <% if @account_pagy.count.positive? %>
+    <section class="mb-5" aria-labelledby="developer-accounts-heading">
+      <h2 id="developer-accounts-heading" class="h3">
+        Developer accounts
+        <small class="text-muted"><%= number_with_delimiter(@account_pagy.count) %></small>
+      </h2>
+      <p class="text-muted">Code-host accounts connected by deterministic identity evidence.</p>
+
+      <div class="list-group mb-3">
+        <% @developer_accounts.each do |account| %>
+          <div class="list-group-item" data-developer-account-id="<%= account.id %>">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+              <div>
+                <strong>
+                  <% if account.owner.present? %>
+                    <%= link_to account.login.presence || account.to_s,
+                      host_owner_path(account.host.name, account.owner.login),
+                      class: "text-decoration-none" %>
+                  <% elsif account.profile_url.present? %>
+                    <%= link_to account.login.presence || account.to_s,
+                      account.profile_url,
+                      class: "text-decoration-none",
+                      target: "_blank",
+                      rel: "noopener noreferrer" %>
+                  <% else %>
+                    <%= account.login.presence || account.to_s %>
+                  <% end %>
+                </strong>
+                <% if account.name.present? && account.name != account.login %>
+                  <div class="small text-muted"><%= account.name %></div>
+                <% end %>
+              </div>
+              <%= link_to account.host.name,
+                host_path(account.host.name),
+                class: "small text-muted text-decoration-none" %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <%== pagy_bootstrap_nav(@account_pagy) if @account_pagy.pages > 1 %>
+    </section>
+  <% end %>
+
+  <%= render "project_section",
+    role: "software-authorship",
+    heading: "Software authorship",
+    description: "Projects whose software citation names this person as an author.",
+    projects: @software_projects,
+    pagy: @software_pagy,
+    contribution_counts: {} %>
+
+  <%= render "project_section",
+    role: "preferred-citations",
+    heading: "Preferred citations",
+    description: "Projects whose preferred citation names this person as an author.",
+    projects: @citation_projects,
+    pagy: @citation_pagy,
+    contribution_counts: {} %>
+
+  <%= render "project_section",
+    role: "repository-contributions",
+    heading: "Repository contributions",
+    description: "Projects with repository contributions linked to this person.",
+    projects: @contributed_projects,
+    pagy: @contribution_pagy,
+    contribution_counts: @contribution_counts %>
+</div>

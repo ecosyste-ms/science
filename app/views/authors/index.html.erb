@@ -1,0 +1,18 @@
+<% @meta_title = "Authors of Open Source Science Software" %>
+<% @meta_description = "Browse authors and contributors linked to open source scientific software projects." %>
+
+<div class="container-md">
+  <div class="mb-4">
+    <h1>Authors</h1>
+    <p class="lead text-muted">
+      <%= number_with_delimiter(@pagy.count) %>
+      <%= "person".pluralize(@pagy.count) %> named in software citations or linked to repository contributions.
+    </p>
+  </div>
+
+  <div class="list-group mb-4">
+    <%= render partial: "author", collection: @authors, locals: { role_counts: @role_counts } %>
+  </div>
+
+  <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
+</div>

@@ -60,6 +60,8 @@ Rails.application.routes.draw do
   resources :packages, only: [:index]
 
   resources :issues, only: [:index]
+
+  resources :authors, only: [:index, :show]
   
   resources :contributors, only: [:index, :show] 
 
