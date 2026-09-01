@@ -42,6 +42,16 @@ module Project::Sync
         retry_errors: retry_errors
       )
     end
+
+    def sync_author_identities(
+      limit: AuthorIdentityIndexer::DEFAULT_LIMIT,
+      retry_errors: false
+    )
+      AuthorIdentityIndexer.sync_batch!(
+        limit: limit,
+        retry_errors: retry_errors
+      )
+    end
   end
 
   def sync

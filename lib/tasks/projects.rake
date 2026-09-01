@@ -135,6 +135,18 @@ namespace :projects do
     puts "Project contributors: #{result.inspect}"
   end
 
+  desc 'link project authors and developer accounts (LIMIT=250 RETRY_ERRORS=false)'
+  task :sync_author_identities => :environment do
+    retry_errors = ActiveModel::Type::Boolean.new.cast(
+      ENV.fetch('RETRY_ERRORS', 'false')
+    )
+    result = Project.sync_author_identities(
+      limit: ENV.fetch('LIMIT', AuthorIdentityIndexer::DEFAULT_LIMIT),
+      retry_errors: retry_errors
+    )
+    puts "Author identities: #{result.inspect}"
+  end
+
   desc 'index stored repository aliases (LIMIT=500 RETRY_ERRORS=false)'
   task :sync_repository_aliases => :environment do
     retry_errors = ActiveModel::Type::Boolean.new.cast(

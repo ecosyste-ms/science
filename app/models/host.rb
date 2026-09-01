@@ -1,6 +1,7 @@
 class Host < ApplicationRecord
   has_many :owners
   has_many :projects
+  has_many :developer_accounts
 
   validates :name, presence: true, uniqueness: { case_sensitive: false }
 

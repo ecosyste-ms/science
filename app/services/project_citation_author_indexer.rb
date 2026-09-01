@@ -22,6 +22,8 @@ class ProjectCitationAuthorIndexer
     source_path
     source_digest
     raw_data
+    author_id
+    author_match_kind
   ].freeze
 
   attr_reader :project, :retry_errors, :attempted_source_digest
@@ -113,7 +115,13 @@ class ProjectCitationAuthorIndexer
       now = Time.current
       rows.each_slice(UPSERT_BATCH_SIZE) do |batch|
         ProjectAuthor.upsert_all(
-          batch.map { |row| row.merge(project_id: project.id) },
+          batch.map do |row|
+            row.merge(
+              project_id: project.id,
+              author_id: nil,
+              author_match_kind: nil
+            )
+          end,
           unique_by: :index_project_authors_on_snapshot_position,
           update_only: UPSERT_COLUMNS,
           record_timestamps: true
@@ -128,6 +136,8 @@ class ProjectCitationAuthorIndexer
         citation_authors_index_error: nil,
         citation_authors_index_version: CURRENT_VERSION,
         citation_authors_source_digest: attempted_source_digest,
+        author_identities_indexed_at: nil,
+        author_identities_index_error: nil,
         updated_at: now
       )
     end

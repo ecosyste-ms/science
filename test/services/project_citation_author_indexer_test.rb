@@ -45,6 +45,10 @@ class ProjectCitationAuthorIndexerTest < ActiveSupport::TestCase
     project = create_project(citation_file: two_person_cff)
     ProjectCitationAuthorIndexer.new(project).sync!
     first_position_id = project.project_authors.find_by!(position: 1).id
+    project.update_columns(
+      author_identities_indexed_at: 1.day.ago,
+      author_identities_index_error: "old error"
+    )
 
     project.update!(citation_file: one_person_cff)
     result = ProjectCitationAuthorIndexer.new(project).sync!
@@ -55,6 +59,8 @@ class ProjectCitationAuthorIndexerTest < ActiveSupport::TestCase
     assert_equal first_position_id, author.id
     assert_equal "Second Author", author.display_name
     assert_equal 1, author.position
+    assert_nil project.reload.author_identities_indexed_at
+    assert_nil project.author_identities_index_error
   end
 
   test "skips an unchanged indexed snapshot" do

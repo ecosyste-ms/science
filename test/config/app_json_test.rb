@@ -65,6 +65,20 @@ class AppJsonTest < ActiveSupport::TestCase
     ], crons
   end
 
+  test "author identities are linked every ten minutes in bounded batches" do
+    config = JSON.parse(Rails.root.join("app.json").read)
+    crons = config.fetch("cron").select do |cron|
+      cron.fetch("command").include?("projects:sync_author_identities")
+    end
+
+    assert_equal [
+      {
+        "command" => "bundle exec rake projects:sync_author_identities",
+        "schedule" => "0,10,20,30,40,50 * * * *",
+      },
+    ], crons
+  end
+
   test "stale zero-score package projects are refreshed in bounded batches" do
     config = JSON.parse(Rails.root.join("app.json").read)
     crons = config.fetch("cron").select do |cron|

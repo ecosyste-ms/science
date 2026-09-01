@@ -136,6 +136,51 @@ class ProjectsRakeTest < ActiveSupport::TestCase
     assert_includes output, "contributors: 1"
   end
 
+  test "sync_author_identities links realistic indexed evidence through the rake entrypoint" do
+    host = Host.create!(name: "Rake Identity GitHub")
+    project = Project.create!(
+      url: "https://github.com/test/author-identity-rake",
+      science_score: 20,
+      host: host,
+      citation_file: <<~CFF,
+        cff-version: 1.2.0
+        message: Cite this software
+        title: Example Software
+        authors:
+          - given-names: Ada
+            family-names: Lovelace
+            email: ada@example.edu
+            orcid: https://orcid.org/0000-0002-1825-0097
+      CFF
+      commits: {
+        "committers" => [
+          {
+            "name" => "Ada Lovelace",
+            "email" => "ada@example.edu",
+            "login" => "adal",
+            "count" => 4,
+          },
+        ],
+      }
+    )
+    ProjectCitationAuthorIndexer.new(project).sync!
+    ProjectContributorIndexer.new(project).sync!
+    ENV["LIMIT"] = "1"
+
+    output, = capture_io do
+      Rake::Task["projects:sync_author_identities"].execute
+    end
+
+    author = Author.find_by!(canonical_key: "orcid:0000-0002-1825-0097")
+    contributor = project.project_contributors.first
+    assert_equal author, contributor.author
+    assert contributor.developer_account.present?
+    assert project.reload.author_identities_indexed_at.present?
+    assert_includes output, "selected: 1"
+    assert_includes output, "linked_contributors: 1"
+    assert_includes output, "account_author_links: 1"
+  end
+
   test "sync_repository_aliases indexes a bounded batch through the rake entrypoint" do
     project = Project.create!(
       url: "https://github.com/test/current-name",

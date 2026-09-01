@@ -3,6 +3,8 @@ class ProjectContributor < ApplicationRecord
 
   belongs_to :project
   belongs_to :owner, optional: true
+  belongs_to :author, optional: true
+  belongs_to :developer_account, optional: true
 
   validates :source, presence: true
   validates :source_key, presence: true,

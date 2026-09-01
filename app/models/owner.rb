@@ -1,6 +1,7 @@
 class Owner < ApplicationRecord
   belongs_to :host
   has_many :projects, foreign_key: 'owner_id'
+  has_one :developer_account, dependent: :nullify
 
   counter_culture :host, column_name: :owners_count
 

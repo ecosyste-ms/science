@@ -10,10 +10,50 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_01_080000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_01_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "author_developer_account_links", force: :cascade do |t|
+    t.bigint "author_id", null: false
+    t.decimal "confidence", precision: 6, scale: 5
+    t.datetime "created_at", null: false
+    t.boolean "deterministic", default: true, null: false
+    t.bigint "developer_account_id", null: false
+    t.jsonb "evidence", default: {}, null: false
+    t.string "matching_method", null: false
+    t.bigint "project_author_id"
+    t.bigint "project_contributor_id"
+    t.bigint "project_id"
+    t.string "source", null: false
+    t.string "source_digest", null: false
+    t.string "source_key", null: false
+    t.datetime "updated_at", null: false
+    t.index ["author_id", "developer_account_id"], name: "idx_on_author_id_developer_account_id_4aa3efdd55"
+    t.index ["developer_account_id", "author_id"], name: "index_author_account_links_on_account_and_author"
+    t.index ["project_id", "source"], name: "index_author_developer_account_links_on_project_id_and_source", where: "(project_id IS NOT NULL)"
+    t.index ["source", "source_key"], name: "index_author_account_links_on_source_key", unique: true
+  end
+
+  create_table "author_identifiers", force: :cascade do |t|
+    t.bigint "author_id", null: false
+    t.datetime "created_at", null: false
+    t.boolean "publicly_visible", default: false, null: false
+    t.string "scheme", null: false
+    t.datetime "updated_at", null: false
+    t.citext "value", null: false
+    t.index ["author_id", "scheme", "value"], name: "index_author_identifiers_on_author_and_value"
+    t.index ["scheme", "value"], name: "index_author_identifiers_on_scheme_and_value", unique: true
+  end
+
+  create_table "authors", force: :cascade do |t|
+    t.citext "canonical_key", null: false
+    t.datetime "created_at", null: false
+    t.text "display_name"
+    t.datetime "updated_at", null: false
+    t.index ["canonical_key"], name: "index_authors_on_canonical_key", unique: true
+  end
 
   create_table "collections", force: :cascade do |t|
     t.datetime "created_at", null: false
@@ -50,6 +90,33 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_080000) do
     t.integer "project_id"
     t.string "repository_url"
     t.datetime "updated_at", null: false
+  end
+
+  create_table "developer_account_identifiers", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "developer_account_id", null: false
+    t.bigint "host_id", null: false
+    t.string "scheme", null: false
+    t.datetime "updated_at", null: false
+    t.citext "value", null: false
+    t.index ["developer_account_id", "scheme", "value"], name: "index_developer_account_identifiers_on_account_and_value"
+    t.index ["host_id", "scheme", "value"], name: "index_developer_account_identifiers_on_host_and_value", unique: true
+  end
+
+  create_table "developer_accounts", force: :cascade do |t|
+    t.string "account_kind", null: false
+    t.citext "canonical_key", null: false
+    t.datetime "created_at", null: false
+    t.citext "email"
+    t.bigint "host_id", null: false
+    t.citext "login"
+    t.text "name"
+    t.bigint "owner_id"
+    t.string "provider_uuid"
+    t.datetime "updated_at", null: false
+    t.index ["canonical_key"], name: "index_developer_accounts_on_canonical_key", unique: true
+    t.index ["host_id", "login"], name: "index_developer_accounts_on_host_id_and_login", where: "(login IS NOT NULL)"
+    t.index ["owner_id"], name: "index_developer_accounts_on_owner_id", unique: true, where: "(owner_id IS NOT NULL)"
   end
 
   create_table "fields", force: :cascade do |t|
@@ -254,7 +321,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_080000) do
 
   create_table "project_authors", force: :cascade do |t|
     t.text "affiliation"
+    t.bigint "author_id"
     t.string "author_kind", null: false
+    t.string "author_match_kind"
     t.string "authorship_kind", null: false
     t.datetime "created_at", null: false
     t.text "display_name"
@@ -269,6 +338,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_080000) do
     t.string "source_digest", null: false
     t.string "source_path", null: false
     t.datetime "updated_at", null: false
+    t.index ["author_id", "project_id"], name: "index_project_authors_on_author_id_and_project_id", where: "(author_id IS NOT NULL)"
     t.index ["email"], name: "index_project_authors_on_email", where: "(email IS NOT NULL)"
     t.index ["orcid"], name: "index_project_authors_on_orcid", where: "(orcid IS NOT NULL)"
     t.index ["project_id", "source", "authorship_kind", "position"], name: "index_project_authors_on_snapshot_position", unique: true
@@ -276,9 +346,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_080000) do
 
   create_table "project_contributors", force: :cascade do |t|
     t.string "account_kind", null: false
+    t.bigint "author_id"
+    t.string "author_match_kind"
     t.string "classification_reason"
     t.bigint "contributions_count", default: 0, null: false
     t.datetime "created_at", null: false
+    t.bigint "developer_account_id"
+    t.string "developer_account_match_kind"
     t.citext "email"
     t.citext "login"
     t.text "name"
@@ -290,6 +364,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_080000) do
     t.string "source_digest", null: false
     t.string "source_key", null: false
     t.datetime "updated_at", null: false
+    t.index ["author_id", "project_id"], name: "index_project_contributors_on_author_id_and_project_id", where: "(author_id IS NOT NULL)"
+    t.index ["developer_account_id", "project_id"], name: "index_project_contributors_on_account_and_project", where: "(developer_account_id IS NOT NULL)"
     t.index ["email"], name: "index_project_contributors_on_email", where: "(email IS NOT NULL)"
     t.index ["login"], name: "index_project_contributors_on_login", where: "(login IS NOT NULL)"
     t.index ["owner_id"], name: "index_project_contributors_on_owner_id"
@@ -358,6 +434,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_080000) do
   end
 
   create_table "projects", force: :cascade do |t|
+    t.text "author_identities_index_error"
+    t.integer "author_identities_index_version"
+    t.datetime "author_identities_indexed_at"
+    t.string "author_identities_source_digest"
     t.jsonb "brief"
     t.string "category"
     t.text "citation_authors_index_error"
@@ -409,11 +489,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_080000) do
     t.json "works", default: {}
     t.text "zenodo"
     t.index "((joss_metadata ->> 'doi'::text))", name: "index_projects_on_joss_doi", where: "(joss_metadata IS NOT NULL)"
+    t.index ["author_identities_index_version", "id"], name: "index_projects_on_author_identity_version", where: "((science_score >= (20)::double precision) AND ((citation_authors_source_digest IS NOT NULL) OR (contributors_source_digest IS NOT NULL) OR (author_identities_source_digest IS NOT NULL)))"
     t.index ["category", "sub_category"], name: "index_projects_on_category_and_sub_category", where: "((category IS NOT NULL) AND (sub_category IS NOT NULL))"
     t.index ["citation_authors_index_version", "id"], name: "index_projects_on_citation_author_version", where: "((science_score >= (20)::double precision) AND ((citation_file ~ '^[[:space:]]*cff-version:'::text) OR (citation_authors_source_digest IS NOT NULL)))"
     t.index ["collection_id"], name: "index_projects_on_collection_id"
     t.index ["contributors_index_version", "id"], name: "index_projects_on_contributor_version", where: "((science_score >= (20)::double precision) AND (((commits IS NOT NULL) AND (json_typeof((commits -> 'committers'::text)) = 'array'::text)) OR (contributors_source_digest IS NOT NULL)))"
     t.index ["host_id"], name: "index_projects_on_host_id"
+    t.index ["id"], name: "index_projects_pending_author_identities", where: "((author_identities_indexed_at IS NULL) AND (author_identities_index_error IS NULL) AND ((science_score >= (20)::double precision) AND ((citation_authors_source_digest IS NOT NULL) OR (contributors_source_digest IS NOT NULL) OR (author_identities_source_digest IS NOT NULL))))"
     t.index ["id"], name: "index_projects_pending_citation_authors", where: "((citation_authors_indexed_at IS NULL) AND (citation_authors_index_error IS NULL) AND ((science_score >= (20)::double precision) AND ((citation_file ~ '^[[:space:]]*cff-version:'::text) OR (citation_authors_source_digest IS NOT NULL))))"
     t.index ["id"], name: "index_projects_pending_contributors", where: "((contributors_indexed_at IS NULL) AND (contributors_index_error IS NULL) AND ((science_score >= (20)::double precision) AND (((commits IS NOT NULL) AND (json_typeof((commits -> 'committers'::text)) = 'array'::text)) OR (contributors_source_digest IS NOT NULL))))"
     t.index ["id"], name: "index_projects_pending_dependency_index", where: "(((dependencies IS NOT NULL) OR (brief ? 'dependencies'::text)) AND (dependencies_indexed_at IS NULL) AND (dependencies_index_error IS NULL))"
@@ -468,9 +550,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_080000) do
     t.index ["project_id"], name: "index_votes_on_project_id"
   end
 
+  add_foreign_key "author_developer_account_links", "authors", on_delete: :cascade
+  add_foreign_key "author_developer_account_links", "developer_accounts", on_delete: :cascade
+  add_foreign_key "author_developer_account_links", "project_authors", on_delete: :cascade
+  add_foreign_key "author_developer_account_links", "project_contributors", on_delete: :cascade
+  add_foreign_key "author_developer_account_links", "projects", on_delete: :cascade
+  add_foreign_key "author_identifiers", "authors", on_delete: :cascade
+  add_foreign_key "developer_account_identifiers", "developer_accounts", on_delete: :cascade
+  add_foreign_key "developer_account_identifiers", "hosts", on_delete: :cascade
+  add_foreign_key "developer_accounts", "hosts", on_delete: :cascade
+  add_foreign_key "developer_accounts", "owners", on_delete: :nullify
   add_foreign_key "packages", "package_registries"
   add_foreign_key "packages", "projects", column: "published_by_project_id", on_delete: :nullify
+  add_foreign_key "project_authors", "authors", on_delete: :nullify
   add_foreign_key "project_authors", "projects", on_delete: :cascade
+  add_foreign_key "project_contributors", "authors", on_delete: :nullify
+  add_foreign_key "project_contributors", "developer_accounts", on_delete: :nullify
   add_foreign_key "project_contributors", "owners", on_delete: :nullify
   add_foreign_key "project_contributors", "projects", on_delete: :cascade
   add_foreign_key "project_dependencies", "packages", on_delete: :nullify

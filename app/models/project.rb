@@ -70,6 +70,7 @@ class Project < ApplicationRecord
   has_many :project_dependencies, dependent: :delete_all
   has_many :project_authors, dependent: :delete_all
   has_many :project_contributors, dependent: :delete_all
+  has_many :author_developer_account_links, dependent: :delete_all
   has_many :repository_aliases,
     class_name: "ProjectRepositoryAlias",
     dependent: :delete_all

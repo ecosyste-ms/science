@@ -3,6 +3,7 @@ class ProjectAuthor < ApplicationRecord
   AUTHOR_KINDS = %w[person organization].freeze
 
   belongs_to :project
+  belongs_to :author, optional: true
 
   validates :source, presence: true
   validates :authorship_kind, inclusion: { in: AUTHORSHIP_KINDS }

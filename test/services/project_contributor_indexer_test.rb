@@ -162,6 +162,10 @@ class ProjectContributorIndexerTest < ActiveSupport::TestCase
     retained_id = project.project_contributors.find_by!(
       email: "second@example.org"
     ).id
+    project.update_columns(
+      author_identities_indexed_at: 1.day.ago,
+      author_identities_index_error: "old error"
+    )
     project.update!(
       commits: {
         "committers" => [
@@ -177,6 +181,8 @@ class ProjectContributorIndexerTest < ActiveSupport::TestCase
     contributor = project.project_contributors.first
     assert_equal retained_id, contributor.id
     assert_equal 5, contributor.contributions_count
+    assert_nil project.reload.author_identities_indexed_at
+    assert_nil project.author_identities_index_error
   end
 
   test "clears contributors after the source is removed" do

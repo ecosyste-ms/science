@@ -21,6 +21,10 @@
       "schedule": "*/10 * * * *"
     },
     {
+      "command": "bundle exec rake projects:sync_author_identities",
+      "schedule": "0,10,20,30,40,50 * * * *"
+    },
+    {
       "command": "bundle exec rake projects:sync_citation_authors",
       "schedule": "1,11,21,31,41,51 * * * *"
     },

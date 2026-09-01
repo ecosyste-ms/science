@@ -25,6 +25,10 @@ class ProjectContributorIndexer
     contributions_count
     source_digest
     raw_data
+    author_id
+    author_match_kind
+    developer_account_id
+    developer_account_match_kind
   ].freeze
   MERGED_COLUMNS = %i[
     owner_id
@@ -135,7 +139,15 @@ class ProjectContributorIndexer
       now = Time.current
       rows.each_slice(UPSERT_BATCH_SIZE) do |batch|
         ProjectContributor.upsert_all(
-          batch.map { |row| row.merge(project_id: project.id) },
+          batch.map do |row|
+            row.merge(
+              project_id: project.id,
+              author_id: nil,
+              author_match_kind: nil,
+              developer_account_id: nil,
+              developer_account_match_kind: nil
+            )
+          end,
           unique_by: :index_project_contributors_on_source_key,
           update_only: UPSERT_COLUMNS,
           record_timestamps: true
@@ -150,6 +162,8 @@ class ProjectContributorIndexer
         contributors_index_error: nil,
         contributors_index_version: CURRENT_VERSION,
         contributors_source_digest: attempted_source_digest,
+        author_identities_indexed_at: nil,
+        author_identities_index_error: nil,
         updated_at: now
       )
     end
