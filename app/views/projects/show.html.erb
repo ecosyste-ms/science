@@ -3,141 +3,212 @@
 
 <div class="container-md">
   <div class="mb-4">
-    <h1 class="mb-3">
-      <%= @project.to_s %>
-    </h1>
+    <h1 class="mb-3"><%= @project.to_s %></h1>
 
     <% if @project.description.present? %>
-      <p class="lead text-muted mb-3">
-        <%= @project.description %>
-      </p>
+      <p class="lead text-muted mb-3"><%= @project.description %></p>
     <% end %>
 
     <% if @project.url.present? %>
-      <p>
-        <%= link_to @project.url, @project.url, class: "text-decoration-none" %>
-      </p>
+      <p><%= link_to @project.url, @project.url, class: "text-decoration-none" %></p>
     <% end %>
   </div>
 
-  <% if @project.science_score.present? && @project.science_score > 0 %>
-    <div class="card mb-4 border-0 shadow-sm">
-      <div class="card-header bg-white border-bottom">
-        <h4 class="mb-0">Science Score: <span class="text-primary"><%= number_with_precision(@project.science_score, precision: 1) %>%</span></h4>
-      </div>
-      <div class="card-body">
-        <% breakdown = @project.science_score_breakdown %>
-        <p class="text-muted mb-3">This score indicates how likely this project is to be science-related based on various indicators:</p>
-
-        <% if breakdown.present? && breakdown[:breakdown].present? %>
-          <ul class="list-group list-group-flush">
-            <% breakdown[:breakdown].each do |key, value| %>
-              <li class="list-group-item border-0 px-0">
-                <div class="d-flex align-items-start">
-                  <span class="me-2 <%= value[:present] ? 'text-success' : 'text-muted' %>" style="font-size: 1.25rem;">
-                    <%= value[:present] ? '✓' : '○' %>
-                  </span>
-                  <div>
-                    <strong><%= value[:description] %></strong>
-                    <% if value[:details].present? %>
-                      <br>
-                      <small class="text-muted"><%= value[:details] %></small>
-                    <% end %>
-                  </div>
-                </div>
-              </li>
-            <% end %>
-          </ul>
-        <% else %>
-          <p class="text-muted"><em>Score breakdown is being calculated...</em></p>
-        <% end %>
-      </div>
-    </div>
-  <% end %>
-      
   <% if @project.last_synced_at %>
-  
-    <% if @project.keywords.any? %>
-      <div class="mb-4">
-        <h4 class="mb-3">Keywords</h4>
-        <div>
-          <% @project.keywords.each do |keyword| %>
-            <span class="badge rounded-pill bg-light text-dark me-2 mb-2">
-              <%= keyword %>
-            </span>
-          <% end %>
-        </div>
-      </div>
-    <% end %>
-
-    <% if @project.keywords_from_contributors.any? %>
-      <div class="mb-4">
-        <h4 class="mb-3">Keywords from Contributors</h4>
-        <div>
-          <% @project.keywords_from_contributors.each do |keyword| %>
-            <span class="badge rounded-pill bg-light text-dark me-2 mb-2">
-              <%= keyword %>
-            </span>
-          <% end %>
-        </div>
-      </div>
-    <% end %>
-
-    <% if @project.open_alex_fields_with_scores.any? %>
-      <div class="mb-4">
-        <h4 class="mb-3">Scientific Fields</h4>
-        <% @project.open_alex_fields_with_scores.each do |field, score| %>
-          <div class="mb-2">
-            <span class="badge rounded-pill bg-primary me-2">
-              <%= link_to field.name, field_path(field), class: "text-white text-decoration-none" %>
-            </span>
-            <small class="text-muted">
-              <%= field.domain_display_name %>, classifier score
-              <%= number_with_precision(score, precision: 3) %>
-            </small>
-          </div>
-        <% end %>
-      </div>
-    <% end %>
-
-
-    <div class="mb-4">
-      <small class="text-muted">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-4 text-muted">
+      <small>
         Last synced: <%= distance_of_time_in_words_to_now @project.last_synced_at %> ago
-        &middot;
-        <%= link_to 'JSON representation', api_v1_project_path(@project), class: 'text-decoration-none' %>
-        <% if @project.citation_file.present? %>
-          &middot;
-          <div class="btn-group" role="group">
-            <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-              Export Citation
-            </button>
-            <ul class="dropdown-menu">
-              <li><%= link_to 'BibTeX', export_project_path(@project, format: 'bibtex'), class: 'dropdown-item' %></li>
-              <li><%= link_to 'APA Style', export_project_path(@project, format: 'apalike'), class: 'dropdown-item' %></li>
-            </ul>
-          </div>
-        <% end %>
       </small>
+      <span aria-hidden="true">&middot;</span>
+      <%= link_to "JSON representation",
+        api_v1_project_path(@project),
+        class: "small text-decoration-none" %>
+      <% if @project.citation_file.present? %>
+        <span aria-hidden="true">&middot;</span>
+        <div class="btn-group" role="group">
+          <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+            type="button"
+            data-bs-toggle="dropdown"
+            aria-expanded="false">
+            Export Citation
+          </button>
+          <ul class="dropdown-menu">
+            <li>
+              <%= link_to "BibTeX",
+                export_project_path(@project, format: "bibtex"),
+                class: "dropdown-item" %>
+            </li>
+            <li>
+              <%= link_to "APA Style",
+                export_project_path(@project, format: "apalike"),
+                class: "dropdown-item" %>
+            </li>
+          </ul>
+        </div>
+      <% end %>
     </div>
 
-    <%= render 'repository' %>
-    <%= render 'owner' %>
-    <%= render 'joss' %>
-    <%= render 'citation' %>
-    <%= render 'codemeta' %>
-    <%= render 'zenodo' %>
-    <%= render 'mentions' %>
-    <%= render 'events' %>
-    <%= render 'committers' %>
-    <%= render 'issues' %>
-    <%= render partial: 'packages', locals: {project: @project } %>
-    <%= render 'dependencies' %>
+    <ul class="nav nav-tabs flex-nowrap overflow-auto mb-4"
+      id="project-tabs"
+      role="tablist">
+      <% [
+        ["overview", "Overview"],
+        ["repository", "Repository"],
+        ["research", "Research"],
+        ["activity", "Activity"],
+        ["packages", "Packages"],
+      ].each_with_index do |(id, label), index| %>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link text-nowrap <%= "active" if index.zero? %>"
+            id="project-<%= id %>-tab"
+            data-bs-toggle="tab"
+            data-bs-target="#project-<%= id %>"
+            type="button"
+            role="tab"
+            aria-controls="project-<%= id %>"
+            aria-selected="<%= index.zero? %>">
+            <%= label %>
+          </button>
+        </li>
+      <% end %>
+    </ul>
+
+    <div class="tab-content" id="project-tab-content">
+      <div class="tab-pane fade show active"
+        id="project-overview"
+        role="tabpanel"
+        aria-labelledby="project-overview-tab"
+        tabindex="0">
+        <%= render "overview" %>
+      </div>
+      <div class="tab-pane fade"
+        id="project-repository"
+        role="tabpanel"
+        aria-labelledby="project-repository-tab"
+        tabindex="0">
+        <%= render "section_tabs",
+          section: "repository",
+          empty_message: "No repository metadata is available.",
+          tabs: [
+            {
+              id: "details",
+              label: "Details",
+              partial: "repository",
+              visible: @project.repository.present?,
+            },
+            {
+              id: "readme",
+              label: "README",
+              partial: "readme",
+              visible: @project.readme.present?,
+            },
+            {
+              id: "owner",
+              label: "Owner",
+              partial: "owner",
+              visible: @project.read_attribute(:owner).present?,
+            },
+          ] %>
+      </div>
+      <div class="tab-pane fade"
+        id="project-research"
+        role="tabpanel"
+        aria-labelledby="project-research-tab"
+        tabindex="0">
+        <%= render "section_tabs",
+          section: "research",
+          empty_message: "No research metadata is available.",
+          tabs: [
+            {
+              id: "joss",
+              label: "JOSS",
+              partial: "joss",
+              visible: @project.joss_metadata.present?,
+            },
+            {
+              id: "citation",
+              label: "Citation",
+              partial: "citation",
+              visible: @project.citation_file.present?,
+            },
+            {
+              id: "codemeta",
+              label: "CodeMeta",
+              partial: "codemeta",
+              visible: @project.codemeta.present?,
+            },
+            {
+              id: "zenodo",
+              label: "Zenodo",
+              partial: "zenodo",
+              visible: @project.zenodo.present?,
+            },
+            {
+              id: "papers",
+              label: "Papers",
+              partial: "mentions",
+              visible: @project.mentions.any?,
+            },
+          ] %>
+      </div>
+      <div class="tab-pane fade"
+        id="project-activity"
+        role="tabpanel"
+        aria-labelledby="project-activity-tab"
+        tabindex="0">
+        <%= render "section_tabs",
+          section: "activity",
+          empty_message: "No repository activity has been collected.",
+          tabs: [
+            {
+              id: "committers",
+              label: "Committers",
+              partial: "committers",
+              visible: @project.commits&.[]("last_synced_at").present?,
+            },
+            {
+              id: "issues",
+              label: "Issues and pull requests",
+              partial: "issues",
+              visible: @project.issue_stats&.[]("last_synced_at").present?,
+            },
+            {
+              id: "events",
+              label: "Events",
+              partial: "events",
+              visible: @project.events.present?,
+            },
+          ] %>
+      </div>
+      <div class="tab-pane fade"
+        id="project-packages"
+        role="tabpanel"
+        aria-labelledby="project-packages-tab"
+        tabindex="0">
+        <%= render "section_tabs",
+          section: "packages",
+          empty_message: "No package or dependency data is available.",
+          tabs: [
+            {
+              id: "published",
+              label: "Published packages",
+              partial: "packages",
+              locals: { project: @project },
+              visible: @project.packages.present?,
+            },
+            {
+              id: "dependencies",
+              label: "Dependencies",
+              partial: "dependencies",
+              visible: @project.dependencies.present?,
+            },
+          ] %>
+      </div>
+    </div>
   <% else %>
     <p>
       This project has not been synced yet. Check back in a few minutes.
       <meta http-equiv="refresh" content="10">
     </p>
   <% end %>
-
 </div>

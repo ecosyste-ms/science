@@ -1,0 +1,18 @@
+<% if @project.readme %>
+  <div class="mb-4">
+    <h2 class="h4 mb-3">
+      <%= link_to @project.readme_file_name,
+        @project.readme_url,
+        target: :_blank,
+        class: "text-decoration-none" %>
+    </h2>
+
+    <% if @project.readme_is_markdown? %>
+      <div class="card border-0 shadow-sm p-3">
+        <%== render_markdown @project.readme %>
+      </div>
+    <% else %>
+      <pre class="card border-0 shadow-sm p-3"><%== @project.readme %></pre>
+    <% end %>
+  </div>
+<% end %>

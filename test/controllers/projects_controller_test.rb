@@ -71,6 +71,70 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show organizes project data into tabs and section tabs" do
+    @project.update!(
+      last_synced_at: Time.current,
+      keywords: ["visualization"],
+      repository: {
+        "host" => { "name" => "GitHub" },
+        "owner" => "tidyverse",
+        "html_url" => @project.url,
+        "default_branch" => "main",
+        "stargazers_count" => 10,
+        "forks_count" => 2,
+        "open_issues_count" => 1,
+        "topics" => [],
+        "created_at" => 1.year.ago.iso8601,
+        "metadata" => {
+          "files" => { "readme" => "README.md" },
+        },
+      },
+      readme: "# ggplot2",
+      owner: { "name" => "Tidyverse" },
+      events: {
+        "total" => { "PushEvent" => 10 },
+        "last_year" => { "PushEvent" => 4 },
+      },
+      dependencies: [
+        {
+          "filepath" => "Gemfile",
+          "ecosystem" => "rubygems",
+          "kind" => "manifest",
+          "dependencies" => [],
+        },
+      ]
+    )
+
+    get project_url(@project)
+
+    assert_response :success
+    assert_select "#project-tabs[role='tablist']" do
+      assert_select "button[role='tab']", count: 5
+      assert_select "#project-overview-tab.active", text: "Overview"
+      assert_select "#project-repository-tab", text: "Repository"
+      assert_select "#project-research-tab", text: "Research"
+      assert_select "#project-activity-tab", text: "Activity"
+      assert_select "#project-packages-tab", text: "Packages"
+    end
+    assert_select "#project-overview.tab-pane.active" do
+      assert_select "[data-role='project-keywords']", text: /visualization/
+    end
+    assert_select "#project-repository" do
+      assert_select "#project-repository-tabs button", count: 3
+      assert_select "#project-repository-details", text: /Repository/
+      assert_select "#project-repository-readme", text: /ggplot2/
+      assert_select "#project-repository-owner", text: /Tidyverse/
+    end
+    assert_select "#project-activity" do
+      assert_select "#project-activity-tabs button", count: 1
+      assert_select "#project-activity-events", text: /GitHub Events/
+    end
+    assert_select "#project-packages" do
+      assert_select "#project-packages-tabs button", count: 1
+      assert_select "#project-packages-dependencies", text: /Dependencies/
+    end
+  end
+
   test "show links normalized JOSS publication authors and editors" do
     @project.update!(
       last_synced_at: Time.current,
@@ -98,7 +162,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     get project_url(@project)
 
     assert_response :success
-    assert_select "[data-role='joss-authors']" do
+    assert_select "#project-research-joss [data-role='joss-authors']" do
       assert_select "[data-paper-author-id='#{author_credit.id}']" do
         assert_select "a[href='#{author_path(author_credit.author)}']",
           text: "Ada Lovelace"

@@ -1,0 +1,37 @@
+<% visible_tabs = tabs.select { |tab| tab.fetch(:visible) } %>
+
+<% if visible_tabs.any? %>
+  <ul class="nav nav-pills flex-nowrap overflow-auto gap-2 mb-4"
+    id="project-<%= section %>-tabs"
+    role="tablist">
+    <% visible_tabs.each_with_index do |tab, index| %>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link text-nowrap <%= "active" if index.zero? %>"
+          id="project-<%= section %>-<%= tab.fetch(:id) %>-tab"
+          data-bs-toggle="pill"
+          data-bs-target="#project-<%= section %>-<%= tab.fetch(:id) %>"
+          type="button"
+          role="tab"
+          aria-controls="project-<%= section %>-<%= tab.fetch(:id) %>"
+          aria-selected="<%= index.zero? %>">
+          <%= tab.fetch(:label) %>
+        </button>
+      </li>
+    <% end %>
+  </ul>
+
+  <div class="tab-content" id="project-<%= section %>-tab-content">
+    <% visible_tabs.each_with_index do |tab, index| %>
+      <div class="tab-pane fade <%= "show active" if index.zero? %>"
+        id="project-<%= section %>-<%= tab.fetch(:id) %>"
+        role="tabpanel"
+        aria-labelledby="project-<%= section %>-<%= tab.fetch(:id) %>-tab"
+        tabindex="0">
+        <%= render partial: tab.fetch(:partial),
+          locals: tab.fetch(:locals, {}) %>
+      </div>
+    <% end %>
+  </div>
+<% else %>
+  <p class="text-muted"><%= empty_message %></p>
+<% end %>

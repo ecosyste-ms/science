@@ -3,9 +3,11 @@ class ProjectsController < ApplicationController
     @project = Project.visible
       .includes(:host, :owner_record, { project_fields: :field }, papers: :mentions)
       .find(params[:id])
-    @joss_publication_credits = @project.joss_publication_credits
-      .includes(:author)
-      .to_a
+    @joss_publication_credits = if @project.joss_metadata.present?
+      @project.joss_publication_credits.includes(:author).to_a
+    else
+      []
+    end
   end
 
   def export
