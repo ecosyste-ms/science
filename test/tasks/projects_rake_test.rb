@@ -231,6 +231,7 @@ class ProjectsRakeTest < ActiveSupport::TestCase
     assert_equal author, contributor.author
     assert contributor.developer_account.present?
     assert project.reload.author_identities_indexed_at.present?
+    assert_equal 2, author.reload.public_evidence_count
     assert_includes output, "selected: 1"
     assert_includes output, "linked_contributors: 1"
     assert_includes output, "account_author_links: 1"

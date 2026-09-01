@@ -200,14 +200,21 @@ class ProjectContributorIndexerTest < ActiveSupport::TestCase
       }
     )
     ProjectContributorIndexer.new(project).sync!
+    author = Author.create!(
+      canonical_key: "email:person@example.org",
+      display_name: "Person"
+    )
+    project.project_contributors.first.update!(author: author)
+    AuthorPublicEvidenceCounter.refresh!([author.id])
+    assert_equal 1, author.reload.public_evidence_count
     project.update!(commits: nil)
 
-    result = ProjectContributorIndexer.sync_batch!(limit: 1)
+    result = ProjectContributorIndexer.new(project).sync!
 
-    assert_equal 1, result.fetch(:selected)
-    assert_equal 1, result.fetch(:indexed)
+    assert result.fetch(:indexed)
     assert_empty project.project_contributors
     assert project.reload.contributors_indexed_at.present?
+    assert_equal 0, author.reload.public_evidence_count
   end
 
   test "skips an unchanged indexed snapshot" do

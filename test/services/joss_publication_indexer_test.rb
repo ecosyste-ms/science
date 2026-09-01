@@ -109,16 +109,20 @@ class JossPublicationIndexerTest < ActiveSupport::TestCase
   test "removes JOSS evidence and authors when metadata is removed" do
     project = create_project(joss_metadata)
     JossPublicationIndexer.new(project).sync!
+    AuthorIdentityIndexer.new(project).sync!
     paper = project.papers.first
+    authors = paper.paper_authors.reload.filter_map(&:author).uniq
+    assert_equal [1, 1], authors.map(&:public_evidence_count)
 
     project.update!(joss_metadata: nil)
-    result = JossPublicationIndexer.sync_batch!(limit: 1)
+    result = JossPublicationIndexer.new(project).sync!
 
     assert result.fetch(:indexed)
     assert_empty project.mention_sources.reload
     assert_empty project.mentions.reload
     assert_empty paper.paper_authors.reload
     assert project.reload.joss_publication_indexed_at.present?
+    assert_equal [0, 0], authors.map { |author| author.reload.public_evidence_count }
   end
 
   test "reuses an existing paper with a differently cased DOI" do

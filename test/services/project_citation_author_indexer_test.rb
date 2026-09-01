@@ -127,16 +127,19 @@ class ProjectCitationAuthorIndexerTest < ActiveSupport::TestCase
   end
 
   test "clears authors after the CFF source is removed" do
-    project = create_project(citation_file: one_person_cff)
+    project = create_project(citation_file: full_cff)
     ProjectCitationAuthorIndexer.new(project).sync!
+    AuthorIdentityIndexer.new(project).sync!
+    authors = project.project_authors.reload.filter_map(&:author).uniq
+    assert_equal [1], authors.map(&:public_evidence_count)
     project.update!(citation_file: nil)
 
-    result = ProjectCitationAuthorIndexer.sync_batch!(limit: 1)
+    result = ProjectCitationAuthorIndexer.new(project).sync!
 
-    assert_equal 1, result.fetch(:selected)
-    assert_equal 1, result.fetch(:indexed)
+    assert result.fetch(:indexed)
     assert_empty project.project_authors
     assert project.reload.citation_authors_indexed_at.present?
+    assert_equal [0], authors.map { |author| author.reload.public_evidence_count }
   end
 
   test "processes a bounded batch of visible scientific projects" do

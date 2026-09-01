@@ -107,6 +107,11 @@ class AuthorIdentityIndexer
         .to_a
       project_contributors = project.project_contributors.order(:id).to_a
       paper_authors = joss_paper_authors.to_a
+      affected_author_ids = [
+        *project_authors.map(&:author_id),
+        *project_contributors.map(&:author_id),
+        *paper_authors.map(&:author_id),
+      ].compact
       counts[:author_observations] = project_authors.length
       counts[:paper_author_observations] = paper_authors.length
 
@@ -146,6 +151,12 @@ class AuthorIdentityIndexer
         contributor_author_assignments
       )
       replace_account_author_links!(links)
+      affected_author_ids.concat(
+        author_assignments.values.pluck(:author_id),
+        paper_author_assignments.values.pluck(:author_id),
+        contributor_author_assignments.values.pluck(:author_id)
+      )
+      AuthorPublicEvidenceCounter.refresh!(affected_author_ids)
 
       now = Time.current
       project.update_columns(

@@ -135,6 +135,11 @@ class ProjectContributorIndexer
           !retry_errors
         return counts.merge(indexed: false)
       end
+      affected_author_ids = project.project_contributors
+        .where(source: SOURCE)
+        .where.not(author_id: nil)
+        .distinct
+        .pluck(:author_id)
 
       now = Time.current
       rows.each_slice(UPSERT_BATCH_SIZE) do |batch|
@@ -166,6 +171,7 @@ class ProjectContributorIndexer
         author_identities_index_error: nil,
         updated_at: now
       )
+      AuthorPublicEvidenceCounter.refresh!(affected_author_ids)
     end
 
     counts.merge(indexed: true)

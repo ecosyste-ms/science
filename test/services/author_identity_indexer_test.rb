@@ -47,6 +47,7 @@ class AuthorIdentityIndexerTest < ActiveSupport::TestCase
       link.evidence.fetch("email_sha256")
     assert_not link.evidence.key?("email")
     assert project.reload.author_identities_indexed_at.present?
+    assert_equal 2, author.reload.public_evidence_count
   end
 
   test "uses the sole global ORCID for an email-only CFF author" do

@@ -26,6 +26,8 @@ class Owner < ApplicationRecord
 
   before_validation :classify_research_organization_domain,
     if: -> { new_record? || will_save_change_to_website? || will_save_change_to_kind? }
+  after_update_commit :refresh_public_evidence_counts,
+    if: :saved_change_to_hidden?
 
   def self.reclassify_research_organizations!(scope: all, progress: nil)
     counts = { processed: 0, institutional: 0, updated: 0 }
@@ -102,6 +104,10 @@ class Owner < ApplicationRecord
       followers: nil,
       following: nil
     )
+  end
+
+  def refresh_public_evidence_counts
+    AuthorPublicEvidenceCounter.refresh_for_projects!(projects.select(:id))
   end
 
 end

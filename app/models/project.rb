@@ -90,6 +90,10 @@ class Project < ApplicationRecord
     if: :will_save_change_to_commits?
   before_save :reset_joss_publication_index,
     if: :will_save_change_to_joss_metadata?
+  before_destroy :capture_public_evidence_author_ids, prepend: true
+  after_update_commit :refresh_public_evidence_counts,
+    if: :public_author_visibility_changed?
+  after_destroy_commit :refresh_destroyed_public_evidence_counts
 
   has_many :good_first_issues, -> { good_first_issue }, class_name: 'Issue'
 
@@ -293,6 +297,23 @@ class Project < ApplicationRecord
   def reset_joss_publication_index
     self.joss_publication_indexed_at = nil
     self.joss_publication_index_error = nil
+  end
+
+  def public_author_visibility_changed?
+    saved_change_to_science_score? || saved_change_to_owner_id?
+  end
+
+  def refresh_public_evidence_counts
+    AuthorPublicEvidenceCounter.refresh_for_projects!([id])
+  end
+
+  def capture_public_evidence_author_ids
+    @public_evidence_author_ids =
+      AuthorPublicEvidenceCounter.author_ids_for_projects([id])
+  end
+
+  def refresh_destroyed_public_evidence_counts
+    AuthorPublicEvidenceCounter.refresh!(@public_evidence_author_ids)
   end
 
   def joss_publication_credits

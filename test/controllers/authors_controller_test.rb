@@ -53,6 +53,7 @@ class AuthorsControllerTest < ActionDispatch::IntegrationTest
     )
     create_project_author(unscientific_author, unscientific_project, "software")
 
+    refresh_public_evidence_counts
     get authors_url
 
     assert_response :success
@@ -139,6 +140,7 @@ class AuthorsControllerTest < ActionDispatch::IntegrationTest
       deterministic: false
     )
 
+    refresh_public_evidence_counts
     get author_url(author)
 
     assert_response :success
@@ -186,6 +188,7 @@ class AuthorsControllerTest < ActionDispatch::IntegrationTest
     create_project_author(author, project, "software")
     owner.update_column(:hidden, true)
 
+    refresh_public_evidence_counts
     get author_url(author)
 
     assert_response :not_found
@@ -203,6 +206,7 @@ class AuthorsControllerTest < ActionDispatch::IntegrationTest
       project
     end
 
+    refresh_public_evidence_counts
     get author_url(author), params: { software_page: 2 }
 
     assert_response :success
@@ -228,6 +232,7 @@ class AuthorsControllerTest < ActionDispatch::IntegrationTest
     create_paper_author(author, authored, "author")
     create_paper_author(author, edited, "editor")
 
+    refresh_public_evidence_counts
     get authors_url
 
     assert_response :success
@@ -263,6 +268,7 @@ class AuthorsControllerTest < ActionDispatch::IntegrationTest
     create_paper_author(author, paper, "author")
     owner.update_column(:hidden, true)
 
+    refresh_public_evidence_counts
     get author_url(author)
 
     assert_response :not_found
@@ -270,6 +276,10 @@ class AuthorsControllerTest < ActionDispatch::IntegrationTest
 
   def create_author(canonical_key, display_name)
     Author.create!(canonical_key: canonical_key, display_name: display_name)
+  end
+
+  def refresh_public_evidence_counts
+    AuthorPublicEvidenceCounter.refresh!(Author.pluck(:id))
   end
 
   def create_project(key, name, owner: nil, science_score: 60)

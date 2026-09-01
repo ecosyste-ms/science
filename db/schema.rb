@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_01_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_01_181500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -51,7 +51,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_130000) do
     t.citext "canonical_key", null: false
     t.datetime "created_at", null: false
     t.text "display_name"
+    t.integer "public_evidence_count", default: 0, null: false
     t.datetime "updated_at", null: false
+    t.index "lower(COALESCE(NULLIF(btrim(display_name), ''::text), (canonical_key)::text)), id", name: "index_authors_on_public_alphabetical", where: "(public_evidence_count > 0)"
     t.index ["canonical_key"], name: "index_authors_on_canonical_key", unique: true
   end
 

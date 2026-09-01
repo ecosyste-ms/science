@@ -18,24 +18,7 @@ class Author < ApplicationRecord
     presence: true,
     uniqueness: { case_sensitive: false }
 
-  scope :with_public_evidence, -> {
-    authored = ProjectAuthor
-      .joins(:project)
-      .merge(Project.visible.scientific)
-      .select(:author_id)
-    contributed = ProjectContributor
-      .joins(:project)
-      .merge(Project.visible.scientific)
-      .select(:author_id)
-    published = PaperAuthor
-      .joins(paper: { mentions: :project })
-      .merge(Project.visible.scientific)
-      .select(:author_id)
-
-    where(id: authored)
-      .or(where(id: contributed))
-      .or(where(id: published))
-  }
+  scope :with_public_evidence, -> { where("public_evidence_count > 0") }
   scope :alphabetical, -> {
     order(Arel.sql(
       "LOWER(COALESCE(NULLIF(BTRIM(display_name), ''), canonical_key::text)), id"

@@ -107,6 +107,7 @@ class JossPublicationIndexer
           !retry_errors
         return counts.merge(indexed: false)
       end
+      affected_author_ids = linked_author_ids
 
       if publication
         paper = upsert_paper!(publication)
@@ -132,6 +133,7 @@ class JossPublicationIndexer
         author_identities_index_error: nil,
         updated_at: now
       )
+      AuthorPublicEvidenceCounter.refresh!(affected_author_ids)
     end
 
     counts.merge(indexed: true)
@@ -275,6 +277,19 @@ class JossPublicationIndexer
       .where(source: SOURCE)
       .where.not(source_digest: attempted_source_digest)
       .delete_all
+  end
+
+  def linked_author_ids
+    PaperAuthor
+      .where.not(author_id: nil)
+      .joins(paper: { mentions: :sources })
+      .where(
+        paper_authors: { source: SOURCE },
+        mentions: { project_id: project.id },
+        mention_sources: { source: SOURCE }
+      )
+      .distinct
+      .pluck(:author_id)
   end
 
   def remove_stale_sources!(current_identifier = nil)
