@@ -71,6 +71,50 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show links normalized JOSS publication authors and editors" do
+    @project.update!(
+      last_synced_at: Time.current,
+      joss_metadata: {
+        "doi" => "10.21105/joss.12345",
+        "title" => "Example Paper",
+        "authors" => [
+          {
+            "given_name" => "Ada",
+            "last_name" => "Lovelace",
+            "orcid" => "0000-0002-1825-0097",
+            "affiliation" => "Example University",
+          },
+        ],
+        "editor_name" => "Grace Hopper",
+        "editor_orcid" => "0000-0001-5109-3700",
+      }
+    )
+    JossPublicationIndexer.new(@project).sync!
+    AuthorIdentityIndexer.new(@project).sync!
+    paper = @project.papers.first
+    author_credit = paper.paper_authors.find_by!(role: "author")
+    editor_credit = paper.paper_authors.find_by!(role: "editor")
+
+    get project_url(@project)
+
+    assert_response :success
+    assert_select "[data-role='joss-authors']" do
+      assert_select "[data-paper-author-id='#{author_credit.id}']" do
+        assert_select "a[href='#{author_path(author_credit.author)}']",
+          text: "Ada Lovelace"
+        assert_select "a[href='https://orcid.org/0000-0002-1825-0097']",
+          text: "ORCID"
+        assert_select "small", text: "Example University"
+      end
+    end
+    assert_select "[data-role='joss-editors']" do
+      assert_select "[data-paper-author-id='#{editor_credit.id}']" do
+        assert_select "a[href='#{author_path(editor_credit.author)}']",
+          text: "Grace Hopper"
+      end
+    end
+  end
+
   test "hidden owner project returns 404 from html and api" do
     host = Host.create!(name: "GitHub", url: "https://github.com")
     owner = Owner.create!(host: host, login: "hidden-owner")

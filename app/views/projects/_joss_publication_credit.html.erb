@@ -1,0 +1,19 @@
+<div class="mb-2" data-paper-author-id="<%= credit.id %>">
+  <% name = credit.display_name.presence || credit.author&.to_s || "Unnamed author" %>
+  <% if credit.author.present? %>
+    <%= link_to name, author_path(credit.author), class: "text-decoration-none" %>
+  <% else %>
+    <%= name %>
+  <% end %>
+  <% if credit.orcid.present? %>
+    <%= link_to "ORCID",
+      "https://orcid.org/#{credit.orcid}",
+      class: "small text-decoration-none ms-1",
+      target: "_blank",
+      rel: "noopener noreferrer" %>
+  <% end %>
+  <% if credit.affiliation.present? %>
+    <br>
+    <small class="text-muted"><%= credit.affiliation %></small>
+  <% end %>
+</div>

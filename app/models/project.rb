@@ -295,6 +295,18 @@ class Project < ApplicationRecord
     self.joss_publication_index_error = nil
   end
 
+  def joss_publication_credits
+    PaperAuthor
+      .joins(paper: { mentions: :sources })
+      .where(
+        paper_authors: { source: JossPublicationIndexer::SOURCE },
+        mentions: { project_id: id },
+        mention_sources: { source: JossPublicationIndexer::SOURCE }
+      )
+      .distinct
+      .order(:role, :position, :id)
+  end
+
   def github_pages_to_repo_url(github_pages_url)
     return if github_pages_url.blank?
     match = github_pages_url.chomp('/').match(/https?:\/\/(.+)\.github\.io\/(.+)/)

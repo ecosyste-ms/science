@@ -28,7 +28,17 @@
           </small>
         </div>
 
-        <% if @project.joss_metadata['authors'].present? %>
+        <% normalized_authors = @joss_publication_credits.select { |credit| credit.role == "author" } %>
+        <% normalized_editors = @joss_publication_credits.select { |credit| credit.role == "editor" } %>
+
+        <% if normalized_authors.any? %>
+          <div class="mb-3 pt-3 border-top" data-role="joss-authors">
+            <h6 class="text-muted text-uppercase small mb-2">Authors</h6>
+            <%= render partial: "joss_publication_credit",
+              collection: normalized_authors,
+              as: :credit %>
+          </div>
+        <% elsif @project.joss_metadata['authors'].present? %>
           <div class="mb-3 pt-3 border-top">
             <h6 class="text-muted text-uppercase small mb-2">Authors</h6>
             <% @project.joss_metadata['authors'].each do |author| %>
@@ -45,7 +55,14 @@
           </div>
         <% end %>
 
-        <% if @project.joss_metadata['editor_name'].present? %>
+        <% if normalized_editors.any? %>
+          <div class="mb-3 pt-3 border-top" data-role="joss-editors">
+            <h6 class="text-muted text-uppercase small mb-2">Editor</h6>
+            <%= render partial: "joss_publication_credit",
+              collection: normalized_editors,
+              as: :credit %>
+          </div>
+        <% elsif @project.joss_metadata['editor_name'].present? %>
           <div class="mb-3 pt-3 border-top">
             <h6 class="text-muted text-uppercase small mb-2">Editor</h6>
             <%= @project.joss_metadata['editor_name'] %>
