@@ -29,6 +29,10 @@
       "schedule": "1,11,21,31,41,51 * * * *"
     },
     {
+      "command": "bundle exec rake projects:sync_joss_publications",
+      "schedule": "2,12,22,32,42,52 * * * *"
+    },
+    {
       "command": "bundle exec rake packages:refresh_projects",
       "schedule": "2,12,22,32,42,52 * * * *"
     },

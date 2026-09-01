@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_01_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_01_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -189,12 +189,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_100000) do
     t.index ["created_at"], name: "index_joss_vocabulary_models_on_created_at"
   end
 
+  create_table "mention_sources", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "mention_id", null: false
+    t.jsonb "raw_data", default: {}, null: false
+    t.string "source", null: false
+    t.string "source_digest", null: false
+    t.string "source_identifier", null: false
+    t.datetime "updated_at", null: false
+    t.index ["mention_id", "source"], name: "index_mention_sources_on_mention_id_and_source", unique: true
+    t.index ["source", "source_identifier"], name: "index_mention_sources_on_source_and_source_identifier", unique: true
+  end
+
   create_table "mentions", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.string "created_by_source"
     t.integer "paper_id"
     t.integer "project_id"
     t.datetime "updated_at", null: false
-    t.index ["paper_id"], name: "index_mentions_on_paper_id"
+    t.index ["paper_id", "project_id"], name: "index_mentions_on_paper_and_project"
     t.index ["project_id"], name: "index_mentions_on_project_id"
   end
 
@@ -305,6 +318,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_100000) do
     t.index ["repository_checked_at"], name: "index_packages_on_repository_checked_at"
   end
 
+  create_table "paper_authors", force: :cascade do |t|
+    t.text "affiliation"
+    t.bigint "author_id"
+    t.string "author_match_kind"
+    t.datetime "created_at", null: false
+    t.text "display_name"
+    t.citext "email"
+    t.text "family_names"
+    t.text "given_names"
+    t.string "orcid"
+    t.bigint "paper_id", null: false
+    t.integer "position", null: false
+    t.jsonb "raw_data", default: {}, null: false
+    t.string "role", null: false
+    t.string "source", null: false
+    t.string "source_digest", null: false
+    t.string "source_path", null: false
+    t.datetime "updated_at", null: false
+    t.index ["author_id", "paper_id", "role"], name: "index_paper_authors_on_author_id_and_paper_id_and_role", where: "(author_id IS NOT NULL)"
+    t.index ["email"], name: "index_paper_authors_on_email", where: "(email IS NOT NULL)"
+    t.index ["orcid"], name: "index_paper_authors_on_orcid", where: "(orcid IS NOT NULL)"
+    t.index ["paper_id", "source", "role", "position"], name: "index_paper_authors_on_snapshot_position", unique: true
+  end
+
   create_table "papers", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "doi"
@@ -316,6 +353,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_100000) do
     t.string "title"
     t.datetime "updated_at", null: false
     t.text "urls", default: [], array: true
+    t.index "lower((doi)::text)", name: "index_papers_on_lower_doi", where: "(doi IS NOT NULL)"
     t.index ["doi"], name: "index_papers_on_doi"
   end
 
@@ -463,6 +501,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_100000) do
     t.integer "host_id"
     t.json "issues_stats"
     t.json "joss_metadata"
+    t.text "joss_publication_index_error"
+    t.integer "joss_publication_index_version"
+    t.datetime "joss_publication_indexed_at"
+    t.string "joss_publication_source_digest"
     t.string "keywords", default: [], array: true
     t.string "keywords_from_contributors", default: [], array: true
     t.datetime "last_synced_at"
@@ -489,17 +531,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_100000) do
     t.json "works", default: {}
     t.text "zenodo"
     t.index "((joss_metadata ->> 'doi'::text))", name: "index_projects_on_joss_doi", where: "(joss_metadata IS NOT NULL)"
-    t.index ["author_identities_index_version", "id"], name: "index_projects_on_author_identity_version", where: "((science_score >= (20)::double precision) AND ((citation_authors_source_digest IS NOT NULL) OR (contributors_source_digest IS NOT NULL) OR (author_identities_source_digest IS NOT NULL)))"
+    t.index ["author_identities_index_version", "id"], name: "index_projects_on_author_identity_version", where: "((science_score >= (20)::double precision) AND ((citation_authors_source_digest IS NOT NULL) OR (contributors_source_digest IS NOT NULL) OR (joss_publication_source_digest IS NOT NULL) OR (author_identities_source_digest IS NOT NULL)))"
     t.index ["category", "sub_category"], name: "index_projects_on_category_and_sub_category", where: "((category IS NOT NULL) AND (sub_category IS NOT NULL))"
     t.index ["citation_authors_index_version", "id"], name: "index_projects_on_citation_author_version", where: "((science_score >= (20)::double precision) AND ((citation_file ~ '^[[:space:]]*cff-version:'::text) OR (citation_authors_source_digest IS NOT NULL)))"
     t.index ["collection_id"], name: "index_projects_on_collection_id"
     t.index ["contributors_index_version", "id"], name: "index_projects_on_contributor_version", where: "((science_score >= (20)::double precision) AND (((commits IS NOT NULL) AND (json_typeof((commits -> 'committers'::text)) = 'array'::text)) OR (contributors_source_digest IS NOT NULL)))"
     t.index ["host_id"], name: "index_projects_on_host_id"
-    t.index ["id"], name: "index_projects_pending_author_identities", where: "((author_identities_indexed_at IS NULL) AND (author_identities_index_error IS NULL) AND ((science_score >= (20)::double precision) AND ((citation_authors_source_digest IS NOT NULL) OR (contributors_source_digest IS NOT NULL) OR (author_identities_source_digest IS NOT NULL))))"
+    t.index ["id"], name: "index_projects_pending_author_identities", where: "((author_identities_indexed_at IS NULL) AND (author_identities_index_error IS NULL) AND ((science_score >= (20)::double precision) AND ((citation_authors_source_digest IS NOT NULL) OR (contributors_source_digest IS NOT NULL) OR (joss_publication_source_digest IS NOT NULL) OR (author_identities_source_digest IS NOT NULL))))"
     t.index ["id"], name: "index_projects_pending_citation_authors", where: "((citation_authors_indexed_at IS NULL) AND (citation_authors_index_error IS NULL) AND ((science_score >= (20)::double precision) AND ((citation_file ~ '^[[:space:]]*cff-version:'::text) OR (citation_authors_source_digest IS NOT NULL))))"
     t.index ["id"], name: "index_projects_pending_contributors", where: "((contributors_indexed_at IS NULL) AND (contributors_index_error IS NULL) AND ((science_score >= (20)::double precision) AND (((commits IS NOT NULL) AND (json_typeof((commits -> 'committers'::text)) = 'array'::text)) OR (contributors_source_digest IS NOT NULL))))"
     t.index ["id"], name: "index_projects_pending_dependency_index", where: "(((dependencies IS NOT NULL) OR (brief ? 'dependencies'::text)) AND (dependencies_indexed_at IS NULL) AND (dependencies_index_error IS NULL))"
+    t.index ["id"], name: "index_projects_pending_joss_publications", where: "((joss_publication_indexed_at IS NULL) AND (joss_publication_index_error IS NULL) AND ((joss_metadata IS NOT NULL) OR (joss_publication_source_digest IS NOT NULL)))"
     t.index ["id"], name: "index_projects_pending_repository_aliases", where: "((repository IS NOT NULL) AND (repository_aliases_indexed_at IS NULL))"
+    t.index ["joss_publication_index_version", "id"], name: "index_projects_on_joss_publication_version", where: "((joss_metadata IS NOT NULL) OR (joss_publication_source_digest IS NOT NULL))"
     t.index ["owner_id"], name: "index_projects_on_owner_id"
     t.index ["reviewed"], name: "index_projects_on_reviewed"
     t.index ["url"], name: "index_projects_on_url", unique: true
@@ -560,8 +604,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_100000) do
   add_foreign_key "developer_account_identifiers", "hosts", on_delete: :cascade
   add_foreign_key "developer_accounts", "hosts", on_delete: :cascade
   add_foreign_key "developer_accounts", "owners", on_delete: :nullify
+  add_foreign_key "mention_sources", "mentions", on_delete: :cascade
   add_foreign_key "packages", "package_registries"
   add_foreign_key "packages", "projects", column: "published_by_project_id", on_delete: :nullify
+  add_foreign_key "paper_authors", "authors", on_delete: :nullify
+  add_foreign_key "paper_authors", "papers", on_delete: :cascade
   add_foreign_key "project_authors", "authors", on_delete: :nullify
   add_foreign_key "project_authors", "projects", on_delete: :cascade
   add_foreign_key "project_contributors", "authors", on_delete: :nullify

@@ -211,6 +211,63 @@ class AuthorsControllerTest < ActionDispatch::IntegrationTest
       count: 1
   end
 
+  test "index and show keep paper authorship and editorial roles separate" do
+    author = create_author("orcid:0000-0002-1825-0097", "Ada Lovelace")
+    project = create_project("papers", "Paper Project")
+    authored = Paper.create!(
+      doi: "10.21105/joss.12345",
+      title: "Authored Paper",
+      publication_date: Time.zone.parse("2026-08-30")
+    )
+    edited = Paper.create!(
+      doi: "10.21105/joss.54321",
+      title: "Edited Paper"
+    )
+    Mention.create!(project: project, paper: authored)
+    Mention.create!(project: project, paper: edited)
+    create_paper_author(author, authored, "author")
+    create_paper_author(author, edited, "editor")
+
+    get authors_url
+
+    assert_response :success
+    assert_select "[data-author-id='#{author.id}']" do
+      assert_select "div", text: /1 authored paper/
+      assert_select "div", text: /1 edited paper/
+    end
+
+    get author_url(author)
+
+    assert_response :success
+    assert_select "[data-role='paper-authorship']" do
+      assert_select "[data-paper-id='#{authored.id}']" do
+        assert_select "h3", text: authored.title
+        assert_select "a[href='https://doi.org/#{authored.doi}']",
+          text: authored.doi
+        assert_select "time[datetime='2026-08-30']"
+      end
+      assert_select "[data-paper-id='#{edited.id}']", count: 0
+    end
+    assert_select "[data-role='paper-editing']" do
+      assert_select "[data-paper-id='#{authored.id}']", count: 0
+      assert_select "[data-paper-id='#{edited.id}']", count: 1
+    end
+  end
+
+  test "paper evidence from a hidden project is not public" do
+    author = create_author("orcid:0000-0002-1825-0097", "Hidden Paper Author")
+    owner = Owner.create!(host: @host, login: "hidden-paper-owner")
+    project = create_project("hidden-paper", "Hidden Paper", owner: owner)
+    paper = Paper.create!(doi: "10.21105/joss.99999", title: "Hidden Paper")
+    Mention.create!(project: project, paper: paper)
+    create_paper_author(author, paper, "author")
+    owner.update_column(:hidden, true)
+
+    get author_url(author)
+
+    assert_response :not_found
+  end
+
   def create_author(canonical_key, display_name)
     Author.create!(canonical_key: canonical_key, display_name: display_name)
   end
@@ -248,6 +305,20 @@ class AuthorsControllerTest < ActionDispatch::IntegrationTest
       account_kind: "unknown",
       contributions_count: contributions_count,
       source_digest: "contributor-#{project.id}-#{source_key}"
+    )
+  end
+
+  def create_paper_author(author, paper, role)
+    PaperAuthor.create!(
+      paper: paper,
+      author: author,
+      source: "joss",
+      role: role,
+      position: 1,
+      display_name: author.display_name,
+      orcid: author.canonical_key.delete_prefix("orcid:"),
+      source_path: role == "author" ? "authors[0]" : "editor",
+      source_digest: "paper-author-#{paper.id}-#{role}"
     )
   end
 

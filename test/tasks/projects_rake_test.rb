@@ -106,6 +106,53 @@ class ProjectsRakeTest < ActiveSupport::TestCase
     assert_includes output, "authors: 1"
   end
 
+  test "sync_joss_publications normalizes paper authors for identity linking" do
+    project = Project.create!(
+      url: "https://github.com/test/joss-publication-rake",
+      science_score: 20,
+      citation_file: <<~CFF,
+        cff-version: 1.2.0
+        message: Cite this software
+        title: Example Software
+        authors:
+          - given-names: Ada
+            family-names: Lovelace
+            orcid: https://orcid.org/0000-0002-1825-0097
+      CFF
+      joss_metadata: {
+        "doi" => "10.21105/joss.12345",
+        "title" => "Example Paper",
+        "published_at" => "2026-08-30",
+        "authors" => [
+          {
+            "given_name" => "Ada",
+            "last_name" => "Lovelace",
+            "orcid" => "0000-0002-1825-0097",
+          },
+        ],
+      }
+    )
+    ProjectCitationAuthorIndexer.new(project).sync!
+    ENV["LIMIT"] = "1"
+
+    output, = capture_io do
+      Rake::Task["projects:sync_joss_publications"].execute
+    end
+    identity_output, = capture_io do
+      Rake::Task["projects:sync_author_identities"].execute
+    end
+
+    project_author = project.project_authors.first
+    paper_author = project.papers.first.paper_authors.first
+    assert_equal project_author.author, paper_author.author
+    assert_equal "orcid:0000-0002-1825-0097",
+      paper_author.author.canonical_key
+    assert_equal "orcid", paper_author.author_match_kind
+    assert_includes output, "selected: 1"
+    assert_includes output, "authors: 1"
+    assert_includes identity_output, "linked_paper_author_observations: 1"
+  end
+
   test "sync_contributors indexes a bounded batch through the rake entrypoint" do
     project = Project.create!(
       url: "https://github.com/test/contributor-rake",

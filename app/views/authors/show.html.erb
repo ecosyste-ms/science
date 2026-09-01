@@ -1,5 +1,5 @@
 <% @meta_title = @author.to_s %>
-<% @meta_description = "Browse software authorship, preferred citations, and repository contributions linked to #{@author}." %>
+<% @meta_description = "Browse software authorship, papers, preferred citations, and repository contributions linked to #{@author}." %>
 
 <div class="container-md">
   <div class="mb-4">
@@ -75,6 +75,20 @@
     projects: @software_projects,
     pagy: @software_pagy,
     contribution_counts: {} %>
+
+  <%= render "paper_section",
+    role: "paper-authorship",
+    heading: "Paper authorship",
+    description: "Papers that name this person as an author.",
+    papers: @authored_papers,
+    pagy: @paper_pagy %>
+
+  <%= render "paper_section",
+    role: "paper-editing",
+    heading: "Editorial roles",
+    description: "Papers that name this person as an editor.",
+    papers: @edited_papers,
+    pagy: @editor_pagy %>
 
   <%= render "project_section",
     role: "preferred-citations",

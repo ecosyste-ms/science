@@ -51,6 +51,20 @@ class AppJsonTest < ActiveSupport::TestCase
     ], crons
   end
 
+  test "JOSS publications are indexed every ten minutes in bounded batches" do
+    config = JSON.parse(Rails.root.join("app.json").read)
+    crons = config.fetch("cron").select do |cron|
+      cron.fetch("command").include?("projects:sync_joss_publications")
+    end
+
+    assert_equal [
+      {
+        "command" => "bundle exec rake projects:sync_joss_publications",
+        "schedule" => "2,12,22,32,42,52 * * * *",
+      },
+    ], crons
+  end
+
   test "project contributors are indexed every ten minutes in bounded batches" do
     config = JSON.parse(Rails.root.join("app.json").read)
     crons = config.fetch("cron").select do |cron|

@@ -69,6 +69,7 @@ class Project < ApplicationRecord
   has_many :dependency_records, class_name: 'Dependency', dependent: :nullify
   has_many :project_dependencies, dependent: :delete_all
   has_many :project_authors, dependent: :delete_all
+  has_many :mention_sources, through: :mentions, source: :sources
   has_many :project_contributors, dependent: :delete_all
   has_many :author_developer_account_links, dependent: :delete_all
   has_many :repository_aliases,
@@ -87,6 +88,8 @@ class Project < ApplicationRecord
     if: :will_save_change_to_citation_file?
   before_save :reset_contributor_index,
     if: :will_save_change_to_commits?
+  before_save :reset_joss_publication_index,
+    if: :will_save_change_to_joss_metadata?
 
   has_many :good_first_issues, -> { good_first_issue }, class_name: 'Issue'
 
@@ -285,6 +288,11 @@ class Project < ApplicationRecord
   def reset_repository_alias_index
     self.repository_aliases_indexed_at = nil
     self.repository_aliases_index_error = nil
+  end
+
+  def reset_joss_publication_index
+    self.joss_publication_indexed_at = nil
+    self.joss_publication_index_error = nil
   end
 
   def github_pages_to_repo_url(github_pages_url)

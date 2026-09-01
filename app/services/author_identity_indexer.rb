@@ -10,6 +10,7 @@ class AuthorIdentityIndexer
   CANDIDATE_SQL = <<~SQL.squish.freeze
     citation_authors_source_digest IS NOT NULL
     OR contributors_source_digest IS NOT NULL
+    OR joss_publication_source_digest IS NOT NULL
     OR author_identities_source_digest IS NOT NULL
   SQL
 
@@ -72,6 +73,8 @@ class AuthorIdentityIndexer
       skipped: 0,
       author_observations: 0,
       linked_author_observations: 0,
+      paper_author_observations: 0,
+      linked_paper_author_observations: 0,
       account_observations: 0,
       linked_account_observations: 0,
       linked_contributors: 0,
@@ -103,12 +106,19 @@ class AuthorIdentityIndexer
         .order(:id)
         .to_a
       project_contributors = project.project_contributors.order(:id).to_a
+      paper_authors = joss_paper_authors.to_a
       counts[:author_observations] = project_authors.length
+      counts[:paper_author_observations] = paper_authors.length
 
       author_assignments, author_ambiguities =
-        ProjectAuthorIdentityResolver.new(project_authors).resolve
+        AuthorObservationIdentityResolver.new(project_authors).resolve
       counts[:linked_author_observations] = author_assignments.length
       counts[:ambiguous] += author_ambiguities
+
+      paper_author_assignments, paper_author_ambiguities =
+        AuthorObservationIdentityResolver.new(paper_authors).resolve
+      counts[:linked_paper_author_observations] = paper_author_assignments.length
+      counts[:ambiguous] += paper_author_ambiguities
 
       account_assignments, account_observations, account_ambiguities =
         ProjectDeveloperAccountResolver.new(
@@ -129,6 +139,7 @@ class AuthorIdentityIndexer
       counts[:account_author_links] = links.length
 
       apply_project_author_assignments!(project_authors, author_assignments)
+      apply_paper_author_assignments!(paper_authors, paper_author_assignments)
       apply_project_contributor_assignments!(
         project_contributors,
         account_assignments,
@@ -255,6 +266,23 @@ class AuthorIdentityIndexer
     )
   end
 
+  def apply_paper_author_assignments!(paper_authors, assignments)
+    ids = paper_authors.map(&:id)
+    PaperAuthor.where(id: ids).update_all(
+      author_id: nil,
+      author_match_kind: nil
+    ) if ids.any?
+    rows = assignments.map do |paper_author_id, assignment|
+      [paper_author_id, assignment.fetch(:author_id), assignment.fetch(:match_kind)]
+    end
+    update_assignment_rows!(
+      "paper_authors",
+      %w[author_id author_match_kind],
+      rows,
+      project_scoped: false
+    )
+  end
+
   def apply_project_contributor_assignments!(
     project_contributors,
     account_assignments,
@@ -289,7 +317,7 @@ class AuthorIdentityIndexer
     )
   end
 
-  def update_assignment_rows!(table, columns, rows)
+  def update_assignment_rows!(table, columns, rows, project_scoped: true)
     connection = ActiveRecord::Base.connection
     rows.each_slice(WRITE_BATCH_SIZE) do |batch|
       values = batch.map do |row|
@@ -300,12 +328,14 @@ class AuthorIdentityIndexer
         cast = column.end_with?("_id") ? "::bigint" : "::varchar"
         "#{column} = assignment.#{column}#{cast}"
       end.join(", ")
+      project_condition = project_scoped ?
+        "AND record.project_id = #{connection.quote(project.id)}" : ""
       connection.execute(<<~SQL.squish)
         UPDATE #{connection.quote_table_name(table)} AS record
         SET #{assignments}
         FROM (VALUES #{values}) AS assignment(#{aliases})
         WHERE record.id = assignment.id::bigint
-          AND record.project_id = #{connection.quote(project.id)}
+          #{project_condition}
       SQL
     end
   end
@@ -355,9 +385,30 @@ class AuthorIdentityIndexer
       :account_kind,
       :source_digest
     )
-    Digest::SHA256.hexdigest(
-      ActiveSupport::JSON.encode([author_rows, contributor_rows])
+    paper_author_rows = joss_paper_authors.pluck(
+      :id,
+      :display_name,
+      :email,
+      :orcid,
+      :role,
+      :source_digest
     )
+    Digest::SHA256.hexdigest(
+      ActiveSupport::JSON.encode(
+        [author_rows, contributor_rows, paper_author_rows]
+      )
+    )
+  end
+
+  def joss_paper_authors
+    PaperAuthor
+      .joins(paper: { mentions: :sources })
+      .where(
+        mentions: { project_id: project.id },
+        mention_sources: { source: JossPublicationIndexer::SOURCE }
+      )
+      .distinct
+      .order(:id)
   end
 
   def already_indexed?

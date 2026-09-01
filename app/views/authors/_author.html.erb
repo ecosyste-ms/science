@@ -39,6 +39,18 @@
           contributed <%= "project".pluralize(counts[:contributed_projects]) %>
         </div>
       <% end %>
+      <% if counts[:authored_papers].positive? %>
+        <div>
+          <%= number_with_delimiter(counts[:authored_papers]) %>
+          authored <%= "paper".pluralize(counts[:authored_papers]) %>
+        </div>
+      <% end %>
+      <% if counts[:edited_papers].positive? %>
+        <div>
+          <%= number_with_delimiter(counts[:edited_papers]) %>
+          edited <%= "paper".pluralize(counts[:edited_papers]) %>
+        </div>
+      <% end %>
     </div>
   </div>
 </article>

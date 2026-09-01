@@ -1,6 +1,6 @@
 require "set"
 
-class ProjectAuthorIdentityResolver
+class AuthorObservationIdentityResolver
   WRITE_BATCH_SIZE = 1_000
   KNOWN_BOT_NAMES = %w[
     dependabot
@@ -9,40 +9,40 @@ class ProjectAuthorIdentityResolver
     renovate[bot]
   ].freeze
 
-  attr_reader :project_authors
+  attr_reader :observations
 
-  def initialize(project_authors)
-    @project_authors = project_authors
+  def initialize(observations)
+    @observations = observations
   end
 
   def resolve
-    emails = project_authors.filter_map(&:email).uniq
+    emails = observations.filter_map(&:email).uniq
     orcids_by_email = global_orcids_by_email(emails)
     desired = {}
     ambiguous = 0
 
-    project_authors.each do |project_author|
-      next if bot_author_observation?(project_author)
+    observations.each do |observation|
+      next if bot_author_observation?(observation)
 
-      if project_author.orcid.present?
-        desired[project_author.id] = {
-          canonical_key: "orcid:#{project_author.orcid}",
+      if observation.orcid.present?
+        desired[observation.id] = {
+          canonical_key: "orcid:#{observation.orcid}",
           match_kind: "orcid",
-          project_author: project_author,
+          observation: observation,
         }
         next
       end
-      next if project_author.email.blank?
+      next if observation.email.blank?
 
-      orcids = orcids_by_email.fetch(project_author.email.downcase, [])
+      orcids = orcids_by_email.fetch(observation.email.downcase, [])
       if orcids.length > 1
         ambiguous += 1
         next
       end
-      desired[project_author.id] = {
-        canonical_key: orcids.one? ? "orcid:#{orcids.first}" : "email:#{project_author.email.downcase}",
+      desired[observation.id] = {
+        canonical_key: orcids.one? ? "orcid:#{orcids.first}" : "email:#{observation.email.downcase}",
         match_kind: orcids.one? ? "email_to_orcid" : "email",
-        project_author: project_author,
+        observation: observation,
       }
     end
 
@@ -55,19 +55,19 @@ class ProjectAuthorIdentityResolver
 
     identifiers = author_identifier_map(desired.values)
     assignments = {}
-    desired.each do |project_author_id, resolution|
+    desired.each do |observation_id, resolution|
       author = authors_by_key[resolution.fetch(:canonical_key).downcase]
       next unless author
 
-      project_author = resolution.fetch(:project_author)
+      observation = resolution.fetch(:observation)
       if resolution.fetch(:match_kind).start_with?("email")
-        email_author_id = identifiers[["email", project_author.email.downcase]]
+        email_author_id = identifiers[["email", observation.email.downcase]]
         unless email_author_id == author.id
           ambiguous += 1
           next
         end
       end
-      assignments[project_author_id] = {
+      assignments[observation_id] = {
         author_id: author.id,
         match_kind: resolution.fetch(:match_kind),
       }
@@ -76,31 +76,37 @@ class ProjectAuthorIdentityResolver
     [assignments, ambiguous]
   end
 
-  def bot_author_observation?(project_author)
-    email = project_author.email&.downcase
+  def bot_author_observation?(observation)
+    email = observation.email&.downcase
     local_part = email&.split("@", 2)&.first
     return true if local_part&.match?(/\[bot\]\z/i)
     return true if ProjectContributorIndexer::KNOWN_BOT_EMAILS.include?(email)
 
-    KNOWN_BOT_NAMES.include?(project_author.display_name.to_s.downcase)
+    KNOWN_BOT_NAMES.include?(observation.display_name.to_s.downcase)
   end
 
   def global_orcids_by_email(emails)
     return {} if emails.empty?
 
-    ProjectAuthor.where(author_kind: "person", email: emails)
+    rows = ProjectAuthor.where(author_kind: "person", email: emails)
       .where.not(orcid: nil)
       .distinct
       .pluck(:email, :orcid)
-      .each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |(email, orcid), result|
-        result[email.downcase] << orcid unless result[email.downcase].include?(orcid)
-      end
+    rows.concat(
+      PaperAuthor.where(email: emails)
+        .where.not(orcid: nil)
+        .distinct
+        .pluck(:email, :orcid)
+    )
+    rows.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |(email, orcid), result|
+      result[email.downcase] << orcid unless result[email.downcase].include?(orcid)
+    end
   end
 
   def promote_email_authors!(resolutions)
-    resolutions.group_by { |resolution| resolution.fetch(:project_author).email&.downcase }
+    resolutions.group_by { |resolution| resolution.fetch(:observation).email&.downcase }
       .each_value do |email_resolutions|
-        email = email_resolutions.first.fetch(:project_author).email&.downcase
+        email = email_resolutions.first.fetch(:observation).email&.downcase
         next if email.blank?
 
         canonical_keys = email_resolutions.pluck(:canonical_key).uniq
@@ -122,7 +128,7 @@ class ProjectAuthorIdentityResolver
         {
           canonical_key: canonical_key,
           display_name: grouped.filter_map do |resolution|
-            resolution.fetch(:project_author).display_name
+            resolution.fetch(:observation).display_name
           end.first,
         }
       end
@@ -137,22 +143,22 @@ class ProjectAuthorIdentityResolver
 
   def create_author_identifiers!(resolutions, authors_by_key)
     rows = resolutions.flat_map do |resolution|
-      project_author = resolution.fetch(:project_author)
+      observation = resolution.fetch(:observation)
       author = authors_by_key.fetch(resolution.fetch(:canonical_key).downcase)
       identifiers = []
-      if project_author.orcid.present?
+      if observation.orcid.present?
         identifiers << {
           author_id: author.id,
           scheme: "orcid",
-          value: project_author.orcid,
+          value: observation.orcid,
           publicly_visible: true,
         }
       end
-      if project_author.email.present?
+      if observation.email.present?
         identifiers << {
           author_id: author.id,
           scheme: "email",
-          value: project_author.email.downcase,
+          value: observation.email.downcase,
           publicly_visible: false,
         }
       end
@@ -170,10 +176,10 @@ class ProjectAuthorIdentityResolver
 
   def author_identifier_map(resolutions)
     pairs = resolutions.flat_map do |resolution|
-      project_author = resolution.fetch(:project_author)
+      observation = resolution.fetch(:observation)
       [
-        ["orcid", project_author.orcid],
-        ["email", project_author.email&.downcase],
+        ["orcid", observation.orcid],
+        ["email", observation.email&.downcase],
       ]
     end.reject { |_, value| value.blank? }.uniq
     return {} if pairs.empty?

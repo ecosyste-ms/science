@@ -123,6 +123,18 @@ namespace :projects do
     puts "Project citation authors: #{result.inspect}"
   end
 
+  desc 'index stored JOSS publications and authors (LIMIT=250 RETRY_ERRORS=false)'
+  task :sync_joss_publications => :environment do
+    retry_errors = ActiveModel::Type::Boolean.new.cast(
+      ENV.fetch('RETRY_ERRORS', 'false')
+    )
+    result = Project.sync_joss_publications(
+      limit: ENV.fetch('LIMIT', JossPublicationIndexer::DEFAULT_LIMIT),
+      retry_errors: retry_errors
+    )
+    puts "JOSS publications: #{result.inspect}"
+  end
+
   desc 'index stored repository contributors (LIMIT=250 RETRY_ERRORS=false)'
   task :sync_contributors => :environment do
     retry_errors = ActiveModel::Type::Boolean.new.cast(

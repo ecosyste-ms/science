@@ -33,6 +33,16 @@ module Project::Sync
       )
     end
 
+    def sync_joss_publications(
+      limit: JossPublicationIndexer::DEFAULT_LIMIT,
+      retry_errors: false
+    )
+      JossPublicationIndexer.sync_batch!(
+        limit: limit,
+        retry_errors: retry_errors
+      )
+    end
+
     def sync_contributors(
       limit: ProjectContributorIndexer::DEFAULT_LIMIT,
       retry_errors: false

@@ -1,5 +1,6 @@
 class AuthorsController < ApplicationController
   PROJECTS_PER_SECTION = 20
+  PAPERS_PER_SECTION = 20
   ACCOUNTS_PER_PAGE = 20
 
   def index
@@ -31,6 +32,16 @@ class AuthorsController < ApplicationController
       @author.contributed_projects,
       limit: PROJECTS_PER_SECTION,
       page_param: :contribution_page
+    )
+    @paper_pagy, @authored_papers = pagy(
+      @author.authored_papers,
+      limit: PAPERS_PER_SECTION,
+      page_param: :paper_page
+    )
+    @editor_pagy, @edited_papers = pagy(
+      @author.edited_papers,
+      limit: PAPERS_PER_SECTION,
+      page_param: :editor_page
     )
     @account_pagy, @developer_accounts = pagy(
       @author.public_developer_accounts,

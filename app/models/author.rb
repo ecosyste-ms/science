@@ -6,6 +6,7 @@ class Author < ApplicationRecord
     -> { publicly_displayable.order(:scheme, :value) },
     class_name: "AuthorIdentifier"
   has_many :project_authors, dependent: :nullify
+  has_many :paper_authors, dependent: :nullify
   has_many :project_contributors, dependent: :nullify
   has_many :developer_account_links,
     class_name: "AuthorDeveloperAccountLink",
@@ -26,8 +27,14 @@ class Author < ApplicationRecord
       .joins(:project)
       .merge(Project.visible.scientific)
       .select(:author_id)
+    published = PaperAuthor
+      .joins(paper: { mentions: :project })
+      .merge(Project.visible.scientific)
+      .select(:author_id)
 
-    where(id: authored).or(where(id: contributed))
+    where(id: authored)
+      .or(where(id: contributed))
+      .or(where(id: published))
   }
   scope :alphabetical, -> {
     order(Arel.sql(
@@ -42,6 +49,8 @@ class Author < ApplicationRecord
         software_projects: 0,
         preferred_citation_projects: 0,
         contributed_projects: 0,
+        authored_papers: 0,
+        edited_papers: 0,
       }
     end
     return counts if author_ids.empty?
@@ -67,6 +76,20 @@ class Author < ApplicationRecord
         counts.fetch(author_id)[:contributed_projects] = count
       end
 
+    PaperAuthor
+      .joins(paper: :mentions)
+      .where(
+        author_id: author_ids,
+        mentions: { project_id: public_project_ids }
+      )
+      .group(:author_id, :role)
+      .distinct
+      .count(:paper_id)
+      .each do |(author_id, role), count|
+        key = role == "editor" ? :edited_papers : :authored_papers
+        counts.fetch(author_id)[key] = count
+      end
+
     counts
   end
 
@@ -86,6 +109,14 @@ class Author < ApplicationRecord
         "projects.science_score DESC NULLS LAST, " \
           "LOWER(COALESCE(projects.name, projects.url)), projects.id"
       ))
+  end
+
+  def authored_papers
+    papers_for_role("author")
+  end
+
+  def edited_papers
+    papers_for_role("editor")
   end
 
   def public_developer_accounts
@@ -117,6 +148,21 @@ class Author < ApplicationRecord
       .order(Arel.sql(
         "projects.science_score DESC NULLS LAST, " \
           "LOWER(COALESCE(projects.name, projects.url)), projects.id"
+      ))
+  end
+
+  def papers_for_role(role)
+    paper_ids = paper_authors.where(role: role).select(:paper_id)
+    public_project_ids = Project.visible.scientific.select(:id)
+    mentioned_paper_ids = Mention
+      .where(project_id: public_project_ids)
+      .select(:paper_id)
+    Paper
+      .where(id: paper_ids)
+      .where(id: mentioned_paper_ids)
+      .order(Arel.sql(
+        "papers.publication_date DESC NULLS LAST, " \
+          "LOWER(COALESCE(papers.title, papers.doi)), papers.id"
       ))
   end
 

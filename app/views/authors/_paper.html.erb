@@ -1,0 +1,21 @@
+<article class="list-group-item py-3" data-paper-id="<%= paper.id %>">
+  <div class="d-flex justify-content-between align-items-start gap-3">
+    <div>
+      <h3 class="h5 mb-1"><%= paper.to_s %></h3>
+      <% if paper.doi.present? %>
+        <%= link_to paper.doi,
+          "https://doi.org/#{paper.doi}",
+          class: "small text-decoration-none",
+          target: "_blank",
+          rel: "noopener noreferrer" %>
+      <% end %>
+    </div>
+
+    <% if paper.publication_date.present? %>
+      <time class="small text-muted flex-shrink-0"
+        datetime="<%= paper.publication_date.to_date.iso8601 %>">
+        <%= paper.publication_date.to_date.to_fs(:long) %>
+      </time>
+    <% end %>
+  </div>
+</article>
