@@ -41,7 +41,7 @@
         <% elsif @project.joss_metadata['authors'].present? %>
           <div class="mb-3 pt-3 border-top">
             <h6 class="text-muted text-uppercase small mb-2">Authors</h6>
-            <% @project.joss_metadata['authors'].each do |author| %>
+            <% @project.joss_metadata_authors.each do |author| %>
               <div class="mb-2">
                 <%= author['given_name'] %> <%= author['middle_name'] %> <%= author['last_name'] %>
                 <% if author['orcid'].present? %>

@@ -296,7 +296,7 @@ class Project < ApplicationRecord
   end
 
   def joss_publication_credits
-    PaperAuthor
+    credits = PaperAuthor
       .joins(paper: { mentions: :sources })
       .where(
         paper_authors: { source: JossPublicationIndexer::SOURCE },
@@ -304,7 +304,22 @@ class Project < ApplicationRecord
         mention_sources: { source: JossPublicationIndexer::SOURCE }
       )
       .distinct
-      .order(:role, :position, :id)
+      .includes(:author)
+
+    credits.sort_by do |credit|
+      name = credit.display_name.presence || credit.author&.to_s
+      [credit.role, name.to_s.downcase, credit.id]
+    end
+  end
+
+  def joss_metadata_authors
+    Array(joss_metadata&.fetch("authors", nil)).sort_by do |author|
+      author
+        .values_at("given_name", "middle_name", "last_name")
+        .compact_blank
+        .join(" ")
+        .downcase
+    end
   end
 
   def github_pages_to_repo_url(github_pages_url)

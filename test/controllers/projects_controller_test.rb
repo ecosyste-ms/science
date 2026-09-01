@@ -143,6 +143,10 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
         "title" => "Example Paper",
         "authors" => [
           {
+            "given_name" => "Zoe",
+            "last_name" => "Zimmer",
+          },
+          {
             "given_name" => "Ada",
             "last_name" => "Lovelace",
             "orcid" => "0000-0002-1825-0097",
@@ -156,12 +160,24 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     JossPublicationIndexer.new(@project).sync!
     AuthorIdentityIndexer.new(@project).sync!
     paper = @project.papers.first
-    author_credit = paper.paper_authors.find_by!(role: "author")
+    author_credit = paper.paper_authors.find_by!(
+      role: "author",
+      display_name: "Ada Lovelace"
+    )
+    zoe_credit = paper.paper_authors.find_by!(
+      role: "author",
+      display_name: "Zoe Zimmer"
+    )
     editor_credit = paper.paper_authors.find_by!(role: "editor")
 
     get project_url(@project)
 
     assert_response :success
+    assert_equal [author_credit.id.to_s, zoe_credit.id.to_s],
+      css_select(
+        "#project-research-joss [data-role='joss-authors'] " \
+          "[data-paper-author-id]"
+      ).map { |credit| credit["data-paper-author-id"] }
     assert_select "#project-research-joss [data-role='joss-authors']" do
       assert_select "[data-paper-author-id='#{author_credit.id}']" do
         assert_select "a[href='#{author_path(author_credit.author)}']",
@@ -177,6 +193,28 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
           text: "Grace Hopper"
       end
     end
+  end
+
+  test "show sorts raw JOSS publication authors alphabetically" do
+    @project.update!(
+      last_synced_at: Time.current,
+      joss_metadata: {
+        "title" => "Unindexed Paper",
+        "authors" => [
+          { "given_name" => "Zoe", "last_name" => "Zimmer" },
+          { "given_name" => "ada", "last_name" => "Lovelace" },
+          { "given_name" => "Charles", "last_name" => "Babbage" },
+        ],
+      }
+    )
+
+    get project_url(@project)
+
+    assert_response :success
+    assert_equal ["ada Lovelace", "Charles Babbage", "Zoe Zimmer"],
+      css_select("#project-research-joss h6").find { |heading| heading.text == "Authors" }
+        .parent.css("div.mb-2")
+        .map { |author| author.text.squish }
   end
 
   test "hidden owner project returns 404 from html and api" do
