@@ -740,10 +740,12 @@ module Project::Importers
           existing_project = Project.find_by(url: repo_url)
           if existing_project.present?
             total_existing += 1
-            # Update JOSS metadata if project exists
-            existing_project.update(
+            metadata_updated = existing_project.update(
               joss_metadata: paper
             )
+            if metadata_updated && existing_project.saved_change_to_joss_metadata?
+              existing_project.update_science_score
+            end
           else
             project = Project.create(
               url: repo_url,

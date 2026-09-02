@@ -47,6 +47,35 @@ class ProjectsRakeTest < ActiveSupport::TestCase
     assert_empty FetchBriefWorker.jobs
   end
 
+  test "import_joss rescores an existing project when JOSS metadata changes" do
+    project = Project.create!(
+      url: "https://github.com/test/joss-import",
+      science_score: 0,
+      science_score_breakdown: {
+        "score" => 0,
+        "breakdown" => {
+          "has_joss_paper" => { "present" => false },
+        },
+      }
+    )
+    paper = {
+      software_repository: "https://github.com/Test/Joss-Import",
+      title: "Imported JOSS Paper",
+      year: 2026,
+      doi: "10.21105/joss.12345",
+    }
+    stub_request(:get, "https://joss.theoj.org/papers/published.json?page=1")
+      .to_return(status: 200, body: [paper].to_json)
+    stub_request(:get, "https://joss.theoj.org/papers/published.json?page=2")
+      .to_return(status: 200, body: [].to_json)
+
+    capture_io { Rake::Task["projects:import_joss"].execute }
+
+    project.reload
+    assert_operator project.science_score, :>=, 85
+    assert project.science_score_breakdown.dig(:breakdown, :has_joss_paper, :present)
+  end
+
   test "sync_dependencies indexes a bounded project batch through the rake entrypoint" do
     project = Project.create!(
       url: "https://github.com/test/dependency-rake",
