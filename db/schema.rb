@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_01_181500) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_02_121500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -535,12 +535,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_181500) do
     t.index "((joss_metadata ->> 'doi'::text))", name: "index_projects_on_joss_doi", where: "(joss_metadata IS NOT NULL)"
     t.index ["author_identities_index_version", "id"], name: "index_projects_on_author_identity_version", where: "((science_score >= (20)::double precision) AND ((citation_authors_source_digest IS NOT NULL) OR (contributors_source_digest IS NOT NULL) OR (joss_publication_source_digest IS NOT NULL) OR (author_identities_source_digest IS NOT NULL)))"
     t.index ["category", "sub_category"], name: "index_projects_on_category_and_sub_category", where: "((category IS NOT NULL) AND (sub_category IS NOT NULL))"
-    t.index ["citation_authors_index_version", "id"], name: "index_projects_on_citation_author_version", where: "((science_score >= (20)::double precision) AND ((citation_file ~ '^[[:space:]]*cff-version:'::text) OR (citation_authors_source_digest IS NOT NULL)))"
+    t.index ["citation_authors_index_version", "id"], name: "index_projects_on_citation_author_version", where: "((science_score >= (20)::double precision) AND ((citation_file ~ '^[[:space:]]*cff-version:'::text) OR ((NULLIF(citation_file, ''::text) IS NOT NULL) AND ((repository #>> '{metadata,files,citation}'::text[]) ~* '[.]cff$'::text)) OR (citation_authors_source_digest IS NOT NULL)))"
     t.index ["collection_id"], name: "index_projects_on_collection_id"
     t.index ["contributors_index_version", "id"], name: "index_projects_on_contributor_version", where: "((science_score >= (20)::double precision) AND (((commits IS NOT NULL) AND (json_typeof((commits -> 'committers'::text)) = 'array'::text)) OR (contributors_source_digest IS NOT NULL)))"
     t.index ["host_id"], name: "index_projects_on_host_id"
     t.index ["id"], name: "index_projects_pending_author_identities", where: "((author_identities_indexed_at IS NULL) AND (author_identities_index_error IS NULL) AND ((science_score >= (20)::double precision) AND ((citation_authors_source_digest IS NOT NULL) OR (contributors_source_digest IS NOT NULL) OR (joss_publication_source_digest IS NOT NULL) OR (author_identities_source_digest IS NOT NULL))))"
-    t.index ["id"], name: "index_projects_pending_citation_authors", where: "((citation_authors_indexed_at IS NULL) AND (citation_authors_index_error IS NULL) AND ((science_score >= (20)::double precision) AND ((citation_file ~ '^[[:space:]]*cff-version:'::text) OR (citation_authors_source_digest IS NOT NULL))))"
+    t.index ["id"], name: "index_projects_pending_citation_authors", where: "((citation_authors_indexed_at IS NULL) AND (citation_authors_index_error IS NULL) AND ((science_score >= (20)::double precision) AND ((citation_file ~ '^[[:space:]]*cff-version:'::text) OR ((NULLIF(citation_file, ''::text) IS NOT NULL) AND ((repository #>> '{metadata,files,citation}'::text[]) ~* '[.]cff$'::text)) OR (citation_authors_source_digest IS NOT NULL))))"
     t.index ["id"], name: "index_projects_pending_contributors", where: "((contributors_indexed_at IS NULL) AND (contributors_index_error IS NULL) AND ((science_score >= (20)::double precision) AND (((commits IS NOT NULL) AND (json_typeof((commits -> 'committers'::text)) = 'array'::text)) OR (contributors_source_digest IS NOT NULL))))"
     t.index ["id"], name: "index_projects_pending_dependency_index", where: "(((dependencies IS NOT NULL) OR (brief ? 'dependencies'::text)) AND (dependencies_indexed_at IS NULL) AND (dependencies_index_error IS NULL))"
     t.index ["id"], name: "index_projects_pending_joss_publications", where: "((joss_publication_indexed_at IS NULL) AND (joss_publication_index_error IS NULL) AND ((joss_metadata IS NOT NULL) OR (joss_publication_source_digest IS NOT NULL)))"

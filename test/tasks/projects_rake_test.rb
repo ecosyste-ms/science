@@ -112,7 +112,12 @@ class ProjectsRakeTest < ActiveSupport::TestCase
     project = Project.create!(
       url: "https://github.com/test/citation-author-rake",
       science_score: 20,
+      repository: {
+        "metadata" => { "files" => { "citation" => "CITATION.CFF" } },
+      },
       citation_file: <<~CFF
+        # Generated citation metadata
+        ---
         cff-version: 1.2.0
         message: Cite this software
         title: Example Software

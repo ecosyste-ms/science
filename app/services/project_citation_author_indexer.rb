@@ -6,11 +6,7 @@ class ProjectCitationAuthorIndexer
   MAX_LIMIT = 1_000
   UPSERT_BATCH_SIZE = 1_000
   SOURCE = "citation_cff"
-  CFF_PATTERN = /\A\s*cff-version:/
-  CANDIDATE_SQL = <<~SQL.squish.freeze
-    citation_file ~ '^[[:space:]]*cff-version:'
-    OR citation_authors_source_digest IS NOT NULL
-  SQL
+  CANDIDATE_SQL = Project::Citation::CFF_CANDIDATE_SQL
   UPSERT_COLUMNS = %i[
     author_kind
     display_name
@@ -175,7 +171,7 @@ class ProjectCitationAuthorIndexer
   end
 
   def rows_for(content, source_digest)
-    return [] unless content.to_s.match?(CFF_PATTERN)
+    return [] unless project.citation_cff_content?
 
     cff = CFF::Index.read(content)
     rows = actor_rows(

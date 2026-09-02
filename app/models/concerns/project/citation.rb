@@ -1,6 +1,26 @@
 module Project::Citation
   extend ActiveSupport::Concern
 
+  CFF_CONTENT_PATTERN = /
+    \A
+    (?:
+      \s
+      |
+      \#[^\r\n]*(?:\r\n?|\n)
+      |
+      ---[\t ]*(?:\r\n?|\n)
+    )*
+    cff-version:
+  /x
+  CFF_FILE_NAME_PATTERN = /[.]cff\z/i
+  CFF_CANDIDATE_SQL = <<~SQL.squish.freeze
+    citation_file ~ '^[[:space:]]*cff-version:'
+    OR (
+      NULLIF(citation_file, '') IS NOT NULL
+      AND (repository #>> '{metadata,files,citation}') ~* '[.]cff$'
+    )
+    OR citation_authors_source_digest IS NOT NULL
+  SQL
   BIBTEX_DOI_FIELD_PATTERN = /
     (?:\A|[,\n])\s*doi\s*=\s*
     (?:\{([^{}]+)\}|"([^"]+)"|([^,\s}]+))
@@ -53,12 +73,20 @@ module Project::Citation
   end
 
   def citation_cff
-    return nil unless citation_file.present?
-    return nil unless citation_file.match?(/^\s*cff-version:/)
+    return nil unless citation_cff_content?
     CFF::Index.read(citation_file)
   rescue StandardError => e
     puts "Error parsing CFF for project #{id} (#{url}): #{e.message}"
     nil
+  end
+
+  def citation_cff_content?
+    return false unless citation_file.present?
+
+    file_name_is_cff = has_attribute?(:repository) &&
+      citation_file_name.to_s.match?(CFF_FILE_NAME_PATTERN)
+    file_name_is_cff ||
+      citation_file.match?(CFF_CONTENT_PATTERN)
   end
 
   def reset_citation_author_index
@@ -215,7 +243,7 @@ module Project::Citation
 
   def citation_bib_content?
     return false unless citation_file.present?
-    return false if citation_file.match?(/^\s*cff-version:/)
+    return false if citation_cff_content?
     citation_file.match?(/^\s*@\w+\s*[{(]/i)
   end
 

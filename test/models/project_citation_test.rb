@@ -50,6 +50,50 @@ class ProjectCitationTest < ActiveSupport::TestCase
     assert_empty project.citation_cff_preferred_doi_candidates
   end
 
+  test "citation_cff parses a CFF path with a comment and document marker" do
+    project = Project.new(
+      url: "https://github.com/x/y",
+      repository: {
+        "metadata" => { "files" => { "citation" => "docs/CITATION.CFF" } },
+      },
+      citation_file: <<~CFF
+        # Generated citation metadata
+        ---
+        cff-version: 1.2.0
+        message: Cite this software.
+        title: Commented CFF
+        authors:
+          - family-names: Doe
+            given-names: Jane
+      CFF
+    )
+
+    assert_equal "Commented CFF", project.citation_cff.title
+  end
+
+  test "citation_cff parses leading YAML lines on a partial project record" do
+    project = Project.create!(
+      url: "https://github.com/x/partial-cff",
+      repository: {
+        "metadata" => { "files" => { "citation" => "CITATION.cff" } },
+      },
+      citation_file: <<~CFF
+        # Generated citation metadata
+        ---
+        cff-version: 1.2.0
+        message: Cite this software.
+        title: Partial CFF
+        authors:
+          - family-names: Doe
+            given-names: Jane
+      CFF
+    )
+
+    partial_project = Project.select(:id, :url, :citation_file).find(project.id)
+
+    assert_equal "Partial CFF", partial_project.citation_cff.title
+  end
+
   test "extracts DOI fields and resolver URLs from BibTeX citation content" do
     project = Project.new(
       url: "https://github.com/x/y",
