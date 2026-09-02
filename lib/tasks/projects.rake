@@ -132,6 +132,15 @@ namespace :projects do
     puts "Project citation scores: #{result.inspect}"
   end
 
+  desc 'rescore overlapping science signals (LIMIT=250 AFTER_ID=0)'
+  task :rescore_overlapping_science_signals => :environment do
+    result = Project.rescore_overlapping_science_signals(
+      limit: ENV.fetch('LIMIT', Project::Scoring::CITATION_RESCORE_DEFAULT_LIMIT),
+      after_id: ENV.fetch('AFTER_ID', '0')
+    )
+    puts "Project overlapping science signals: #{result.inspect}"
+  end
+
   desc 'index stored JOSS publications and authors (LIMIT=250 RETRY_ERRORS=false)'
   task :sync_joss_publications => :environment do
     retry_errors = ActiveModel::Type::Boolean.new.cast(

@@ -186,6 +186,59 @@ class ProjectsRakeTest < ActiveSupport::TestCase
     assert_includes second_output, "updated: 1"
   end
 
+  test "rescore_overlapping_science_signals updates only the bounded target scope" do
+    zenodo = Project.create!(
+      url: "https://github.com/test/archived-result",
+      repository: { "full_name" => "test/archived-result" },
+      readme: <<~README,
+        Archive: https://doi.org/10.5281/zenodo.1234
+        Record: https://zenodo.org/records/1234
+      README
+      science_score: 21,
+      science_score_breakdown: old_overlapping_signal_breakdown
+    )
+    homework = Project.create!(
+      url: "https://github.com/test/ase-homework-group22",
+      repository: { "full_name" => "test/ase-homework-group22" },
+      readme: <<~README,
+        Paper: https://doi.org/10.1234/example
+        Preprint: https://arxiv.org/abs/1234.5678
+      README
+      science_score: 21,
+      science_score_breakdown: old_science_score_breakdown
+    )
+    legitimate = Project.create!(
+      url: "https://github.com/test/traffic_assignment",
+      repository: { "full_name" => "test/traffic_assignment" },
+      readme: homework.readme,
+      science_score: 21,
+      science_score_breakdown: old_science_score_breakdown
+    )
+    ENV["LIMIT"] = "10"
+
+    output, = capture_io do
+      Rake::Task["projects:rescore_overlapping_science_signals"].execute
+    end
+
+    assert_equal 13.0, zenodo.reload.science_score
+    assert_equal "has_doi_in_readme", zenodo.science_score_breakdown.dig(
+      :breakdown,
+      :has_academic_links,
+      :duplicate_of
+    )
+    assert_equal 4.2, homework.reload.science_score
+    assert_includes homework.science_score_breakdown.dig(
+      :breakdown,
+      :negative_indicators,
+      :details
+    ), "name:homework"
+    assert_equal 21, legitimate.reload.science_score
+    assert_equal old_science_score_breakdown.with_indifferent_access,
+      legitimate.science_score_breakdown
+    assert_includes output, "selected: 2"
+    assert_includes output, "updated: 2"
+  end
+
   test "sync_joss_publications normalizes paper authors for identity linking" do
     project = Project.create!(
       url: "https://github.com/test/joss-publication-rake",
@@ -479,6 +532,35 @@ class ProjectsRakeTest < ActiveSupport::TestCase
           "description" => "CITATION.cff file",
         },
       },
+    }
+  end
+
+  def old_overlapping_signal_breakdown
+    old_science_score_breakdown.deep_merge(
+      "breakdown" => {
+        "has_doi_in_readme" => {
+          "present" => true,
+          "archive_dois" => 1,
+        },
+        "has_academic_links" => {
+          "present" => true,
+          "details" => "Links to: zenodo.org",
+        },
+      }
+    )
+  end
+
+  def old_science_score_breakdown
+    {
+      "score" => 21,
+      "breakdown" => {
+        "negative_indicators" => {
+          "present" => false,
+          "penalty" => 0.0,
+          "details" => nil,
+        },
+      },
+      "max_score" => 100,
     }
   end
 

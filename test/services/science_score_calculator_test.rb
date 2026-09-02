@@ -123,6 +123,48 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     assert_equal "Academic publication links", result[:description]
     assert_match(/arxiv\.org/, result[:details])
     assert_match(/researchgate\.net/, result[:details])
+    assert_equal ["arxiv.org", "researchgate.net"], result[:sites]
+  end
+
+  test "calculate counts a sole Zenodo link once when an archive DOI is present" do
+    @project.readme = <<~README
+      Archive: https://doi.org/10.5281/zenodo.1234
+      Record: https://zenodo.org/records/1234
+    README
+
+    result = ScienceScoreCalculator.new(@project).calculate
+    doi = result[:breakdown][:has_doi_in_readme]
+    links = result[:breakdown][:has_academic_links]
+
+    assert_equal 13.0, result[:score]
+    assert_equal 1, doi[:archive_dois]
+    refute links[:present]
+    assert_equal ["zenodo.org"], links[:sites]
+    assert_equal "has_doi_in_readme", links[:duplicate_of]
+  end
+
+  test "calculate retains a distinct academic link alongside an archive DOI" do
+    @project.readme = <<~README
+      Archive: https://doi.org/10.5281/zenodo.1234
+      Preprint: https://arxiv.org/abs/1234.5678
+      Record: https://zenodo.org/records/1234
+    README
+
+    result = ScienceScoreCalculator.new(@project).calculate
+    links = result[:breakdown][:has_academic_links]
+
+    assert_equal 21.0, result[:score]
+    assert links[:present]
+    assert_equal ["arxiv.org", "zenodo.org"], links[:sites]
+  end
+
+  test "calculate retains a Zenodo academic link without an archive DOI" do
+    @project.readme = "Record: https://zenodo.org/records/1234"
+
+    result = ScienceScoreCalculator.new(@project).calculate
+
+    assert_equal 8.0, result[:score]
+    assert result[:breakdown][:has_academic_links][:present]
   end
 
   test "check_academic_committers detects academic emails" do
@@ -618,6 +660,32 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     result = ScienceScoreCalculator.new(@project).check_negative_indicators
     assert result[:present]
     assert_equal 0.8, result[:penalty]
+  end
+
+  test "check_negative_indicators detects coursework repository names" do
+    {
+      "user/ase-homework-group22" => "name:homework",
+      "user/assignment5_proj" => "name:numbered-assignment",
+      "user/hsci478_assignment" => "name:course-assignment",
+    }.each do |full_name, evidence|
+      @project.repository = { "full_name" => full_name, "topics" => [] }
+      result = ScienceScoreCalculator.new(@project).check_negative_indicators
+
+      assert_equal 0.8, result[:penalty], full_name
+      assert_includes result[:details], evidence, full_name
+    end
+  end
+
+  test "check_negative_indicators ignores non-coursework assignment names" do
+    %w[
+      traffic_assignment task-assignment speaker_reassignment
+      speciesassignment intervalassignment
+    ].each do |name|
+      @project.repository = { "full_name" => "user/#{name}", "topics" => [] }
+      result = ScienceScoreCalculator.new(@project).check_negative_indicators
+
+      refute result[:present], name
+    end
   end
 
   test "check_negative_indicators absent for normal project" do

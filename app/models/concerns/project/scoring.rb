@@ -6,12 +6,87 @@ module Project::Scoring
   CITATION_FORMAT_SQL = <<~SQL.squish.freeze
     science_score_breakdown #>> '{breakdown,has_citation_file,format}'
   SQL
+  REPOSITORY_BASENAME_SQL = <<~SQL.squish.freeze
+    LOWER(
+      regexp_replace(
+        regexp_replace(
+          COALESCE(NULLIF(repository ->> 'full_name', ''), url, ''),
+          '/+$',
+          ''
+        ),
+        '^.*/',
+        ''
+      )
+    )
+  SQL
+  OVERLAPPING_SCIENCE_SIGNAL_SQL = <<~SQL.squish.freeze
+    (
+      (
+        science_score_breakdown #>>
+          '{breakdown,has_academic_links,details}' = 'Links to: zenodo.org'
+        AND COALESCE(
+          NULLIF(
+            science_score_breakdown #>>
+              '{breakdown,has_doi_in_readme,archive_dois}',
+            ''
+          ),
+          '0'
+        )::integer > 0
+      )
+      OR
+      (
+        COALESCE(
+          science_score_breakdown #>>
+            '{breakdown,negative_indicators,details}',
+          ''
+        ) !~ 'name:(homework|numbered-assignment|course-assignment)'
+        AND
+        (
+          #{REPOSITORY_BASENAME_SQL} ~ '(^|[-_])homework([-_0-9]|$)'
+          OR #{REPOSITORY_BASENAME_SQL} ~ '(^|[-_])assignment[-_]?[0-9]'
+          OR (
+            #{REPOSITORY_BASENAME_SQL} ~
+              '(^|[-_])[a-z]{2,6}[0-9]{3,4}([-_]|$)'
+            AND #{REPOSITORY_BASENAME_SQL} ~
+              '(^|[-_])assignment([-_]|$)'
+          )
+        )
+      )
+    )
+  SQL
 
   class_methods do
     def rescore_citations(
       limit: CITATION_RESCORE_DEFAULT_LIMIT,
       after_id: 0
     )
+      scope = visible
+        .where("NULLIF(citation_file, '') IS NOT NULL")
+        .where("#{CITATION_FORMAT_SQL} IS NULL")
+      rescore_science_score_scope(
+        scope,
+        limit: limit,
+        after_id: after_id,
+        failure_label: "Citation score"
+      )
+    end
+
+    def rescore_overlapping_science_signals(
+      limit: CITATION_RESCORE_DEFAULT_LIMIT,
+      after_id: 0
+    )
+      scope = visible
+        .where("joss_metadata IS NULL OR joss_metadata::text = '{}'")
+        .where(OVERLAPPING_SCIENCE_SIGNAL_SQL)
+      rescore_science_score_scope(
+        scope,
+        limit: limit,
+        after_id: after_id,
+        failure_label: "Overlapping science signal score"
+      )
+    end
+
+    def rescore_science_score_scope(scope, limit:, after_id:, failure_label:)
       limit = Integer(limit, exception: false)
       after_id = Integer(after_id, exception: false)
       unless limit&.between?(1, CITATION_RESCORE_MAX_LIMIT)
@@ -22,9 +97,7 @@ module Project::Scoring
         raise ArgumentError, "after_id must be zero or greater"
       end
 
-      project_ids = visible
-        .where("NULLIF(citation_file, '') IS NOT NULL")
-        .where("#{CITATION_FORMAT_SQL} IS NULL")
+      project_ids = scope
         .where("projects.id > ?", after_id)
         .order(:id)
         .limit(limit)
@@ -45,14 +118,14 @@ module Project::Scoring
         else
           result[:failed] += 1
           Rails.logger.error(
-            "Citation score update failed for project #{project.id}: " \
+            "#{failure_label} update failed for project #{project.id}: " \
               "#{project.errors.full_messages.join(', ')}"
           )
         end
       rescue StandardError => error
         result[:failed] += 1
         Rails.logger.error(
-          "Citation score update failed for project #{project_id}: " \
+          "#{failure_label} update failed for project #{project_id}: " \
             "#{error.class}: #{error.message}"
         )
       end

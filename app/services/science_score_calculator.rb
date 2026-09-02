@@ -7,6 +7,10 @@ class ScienceScoreCalculator
     cff: 1.0,
     bibtex: 0.5,
   }.freeze
+  HOMEWORK_NAME_PATTERN = /(?:\A|[-_])homework(?:[-_\d]|\z)/i
+  NUMBERED_ASSIGNMENT_NAME_PATTERN = /(?:\A|[-_])assignment[-_]?\d/i
+  COURSE_CODE_NAME_PATTERN = /(?:\A|[-_])[a-z]{2,6}\d{3,4}(?:[-_]|\z)/i
+  ASSIGNMENT_NAME_PATTERN = /(?:\A|[-_])assignment(?:[-_]|\z)/i
 
   def self.academic_domain?(domain)
     ResearchOrganizationDomainMatcher.academic?(domain)
@@ -65,7 +69,21 @@ class ScienceScoreCalculator
       @breakdown[:joss_vocabulary_similarity] = check_joss_vocabulary_similarity
     end
 
+    suppress_duplicate_zenodo_academic_link
     calculate_score
+  end
+
+  def suppress_duplicate_zenodo_academic_link
+    academic_links = @breakdown[:has_academic_links]
+    doi = @breakdown[:has_doi_in_readme]
+    return unless academic_links[:sites] == ["zenodo.org"]
+    return unless doi[:archive_dois].to_i.positive?
+
+    academic_links.merge!(
+      present: false,
+      details: "Zenodo link already counted by archive DOI",
+      duplicate_of: "has_doi_in_readme"
+    )
   end
 
   def calculate_score
@@ -429,13 +447,20 @@ class ScienceScoreCalculator
 
   def check_negative_indicators
     topics = (project.repository&.dig('topics') || []).map(&:downcase)
-    name = (project.repository&.dig('full_name') || project.url).to_s.downcase
+    full_name = (project.repository&.dig('full_name').presence || project.url).to_s
+    name = full_name.delete_suffix('/').split('/').last.to_s.downcase
     description = project.description.to_s.downcase
 
     matches = []
     matches.concat((topics & NEGATIVE_TOPICS_STRONG).map { |t| [:strong, "topic:#{t}"] })
     matches.concat((topics & NEGATIVE_TOPICS_WEAK).map { |t| [:weak, "topic:#{t}"] })
-    matches << [:strong, 'name:awesome-'] if name.match?(%r{/awesome-})
+    matches << [:strong, 'name:awesome-'] if name.start_with?('awesome-')
+    matches << [:strong, 'name:homework'] if name.match?(HOMEWORK_NAME_PATTERN)
+    if name.match?(NUMBERED_ASSIGNMENT_NAME_PATTERN)
+      matches << [:strong, 'name:numbered-assignment']
+    elsif name.match?(COURSE_CODE_NAME_PATTERN) && name.match?(ASSIGNMENT_NAME_PATTERN)
+      matches << [:strong, 'name:course-assignment']
+    end
     matches << [:weak, 'name:-template'] if name.match?(/-template\b/)
     matches << [:weak, 'name:-example'] if name.match?(/-examples?\b/)
     matches << [:weak, 'desc:list-of'] if description.match?(/\b(curated )?list of\b/)
@@ -476,7 +501,14 @@ class ScienceScoreCalculator
   end
 
   def check_academic_links
-    return { present: false, description: "Academic links in README", details: nil } unless project.readme.present?
+    unless project.readme.present?
+      return {
+        present: false,
+        description: "Academic links in README",
+        details: nil,
+        sites: [],
+      }
+    end
     
     readme_text = project.readme.downcase
     academic_sites = []
@@ -491,7 +523,8 @@ class ScienceScoreCalculator
     {
       present: academic_sites.any?,
       description: "Academic publication links",
-      details: academic_sites.any? ? "Links to: #{academic_sites.uniq.join(', ')}" : nil
+      details: academic_sites.any? ? "Links to: #{academic_sites.uniq.join(', ')}" : nil,
+      sites: academic_sites.uniq
     }
   end
 
