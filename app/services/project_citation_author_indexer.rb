@@ -1,7 +1,7 @@
 require "digest"
 
 class ProjectCitationAuthorIndexer
-  CURRENT_VERSION = 1
+  CURRENT_VERSION = 2
   DEFAULT_LIMIT = 250
   MAX_LIMIT = 1_000
   UPSERT_BATCH_SIZE = 1_000
@@ -171,9 +171,11 @@ class ProjectCitationAuthorIndexer
   end
 
   def rows_for(content, source_digest)
-    return [] unless project.citation_cff_content?
+    classification = project.citation_content_classification
+    raise classification.error if classification.invalid?
+    return [] unless classification.cff?
 
-    cff = CFF::Index.read(content)
+    cff = classification.cff
     rows = actor_rows(
       cff.authors,
       authorship_kind: "software",

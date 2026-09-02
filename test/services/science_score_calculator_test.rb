@@ -44,15 +44,62 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     assert_equal 100, result[:max_score]
   end
 
-  test "check_citation_file detects citation file" do
-    @project.citation_file = 'test citation content'
+  test "check_citation_file gives full strength to validated CFF" do
+    @project.citation_file = valid_cff
     calculator = ScienceScoreCalculator.new(@project)
     
     result = calculator.check_citation_file
     
     assert result[:present]
-    assert_equal "CITATION.cff file", result[:description]
-    assert_equal "Found CITATION.cff file", result[:details]
+    assert_equal 1.0, result[:strength]
+    assert_equal "cff", result[:format]
+    assert_equal "Citation metadata", result[:description]
+    assert_equal "Validated CITATION.cff metadata", result[:details]
+  end
+
+  test "check_citation_file gives half strength to BibTeX" do
+    @project.citation_file = <<~BIBTEX
+      @software{example,
+        title = {Example Software}
+      }
+    BIBTEX
+
+    result = ScienceScoreCalculator.new(@project).calculate
+
+    assert_equal 8.0, result[:score]
+    assert result[:breakdown][:has_citation_file][:present]
+    assert_equal 0.5, result[:breakdown][:has_citation_file][:strength]
+    assert_equal "bibtex", result[:breakdown][:has_citation_file][:format]
+  end
+
+  test "JOSS citation bonus gives half strength to BibTeX" do
+    @project.joss_metadata = { "title" => "Example Paper" }
+    @project.citation_file = <<~BIBTEX
+      @software{example,
+        title = {Example Software}
+      }
+    BIBTEX
+
+    result = ScienceScoreCalculator.new(@project).calculate
+
+    assert_equal 87.5, result[:score]
+    assert_equal 0.5, result[:breakdown][:has_citation_file][:strength]
+  end
+
+  test "check_citation_file rejects invalid and unstructured content" do
+    @project.citation_file = "cff-version: 1.2.0\ntitle: Missing required fields\n"
+    invalid = ScienceScoreCalculator.new(@project).check_citation_file
+
+    assert_not invalid[:present]
+    assert_equal "invalid", invalid[:format]
+    assert_match "CFF::ValidationError", invalid[:details]
+
+    @project.citation_file = "Please cite the project README."
+    unstructured = ScienceScoreCalculator.new(@project).check_citation_file
+
+    assert_not unstructured[:present]
+    assert_equal "unstructured", unstructured[:format]
+    assert_equal "Found unstructured citation instructions", unstructured[:details]
   end
 
   test "check_doi_in_readme detects DOIs" do
@@ -97,7 +144,7 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
   end
 
   test "calculate_score returns percentage based on present indicators" do
-    @project.citation_file = 'test citation content'
+    @project.citation_file = valid_cff
     @project.readme = "DOI: 10.1234/example"
     @project.joss_metadata = {'title' => 'Test Paper'}
     
@@ -410,7 +457,7 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
   end
 
   test "calculate does not add Python maturity points without scientific vocabulary" do
-    @project.citation_file = "citation"
+    @project.citation_file = valid_cff
     @project.brief = {
       "languages" => [{ "name" => "Python" }],
       "tools" => {
@@ -581,7 +628,7 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
   end
 
   test "negative_indicators penalty is applied to final score" do
-    @project.citation_file = 'x'
+    @project.citation_file = valid_cff
     @project.readme = 'https://doi.org/10.1234/example'
     base = ScienceScoreCalculator.new(@project).calculate[:score]
 
@@ -592,7 +639,7 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
   end
 
   test "negative_indicators penalty does not apply to JOSS projects" do
-    @project.citation_file = 'x'
+    @project.citation_file = valid_cff
     @project.joss_metadata = { 'title' => 'x' }
     base = ScienceScoreCalculator.new(@project).calculate[:score]
 
@@ -694,5 +741,16 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     assert signal[:present]
     assert_equal 0.4, signal[:strength]
     assert_equal 4.0, result[:score]
+  end
+
+  def valid_cff
+    <<~CFF
+      cff-version: 1.2.0
+      message: Cite this software
+      title: Example Software
+      authors:
+        - given-names: Ada
+          family-names: Lovelace
+    CFF
   end
 end

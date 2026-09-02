@@ -123,6 +123,15 @@ namespace :projects do
     puts "Project citation authors: #{result.inspect}"
   end
 
+  desc 'rescore stored citation metadata (LIMIT=250 AFTER_ID=0)'
+  task :rescore_citations => :environment do
+    result = Project.rescore_citations(
+      limit: ENV.fetch('LIMIT', Project::Scoring::CITATION_RESCORE_DEFAULT_LIMIT),
+      after_id: ENV.fetch('AFTER_ID', '0')
+    )
+    puts "Project citation scores: #{result.inspect}"
+  end
+
   desc 'index stored JOSS publications and authors (LIMIT=250 RETRY_ERRORS=false)'
   task :sync_joss_publications => :environment do
     retry_errors = ActiveModel::Type::Boolean.new.cast(

@@ -502,6 +502,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
   test "should export project with citation_file to apalike" do
     cff_content = <<~CFF
       cff-version: 1.2.0
+      message: "If you use this software, please cite it as below."
       title: "ggplot2"
       authors:
         - family-names: "Wickham"
@@ -524,6 +525,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
   test "should support bibtex and apalike export formats" do
     cff_content = <<~CFF
       cff-version: 1.2.0
+      message: "If you use this software, please cite it as below."
       title: "ggplot2"
       authors:
         - family-names: "Wickham"

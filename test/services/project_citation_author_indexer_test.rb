@@ -113,6 +113,56 @@ class ProjectCitationAuthorIndexerTest < ActiveSupport::TestCase
       ProjectCitationAuthorIndexer.sync_batch!(limit: 1).fetch(:selected)
   end
 
+  test "records CFF schema validation errors" do
+    project = create_project(
+      citation_file: <<~CFF,
+        Please cite this release:
+
+        cff-version: 1.2.0
+        message: Cite this software
+        title: Example Software
+        authors:
+          - given-names: Ada
+            family-names: Lovelace
+      CFF
+      repository: {
+        "metadata" => { "files" => { "citation" => "CITATION.cff" } },
+      }
+    )
+
+    result = ProjectCitationAuthorIndexer.sync_batch!(limit: 1)
+
+    assert_equal 1, result.fetch(:selected)
+    assert_equal 1, result.fetch(:failed)
+    assert_match "CFF::ValidationError",
+      project.reload.citation_authors_index_error
+    assert_empty project.project_authors
+  end
+
+  test "classifies BibTeX stored at a CFF path without indexing authors" do
+    project = create_project(
+      citation_file: <<~BIBTEX,
+        Please cite this software using:
+
+        @software{example,
+          author = {Lovelace, Ada},
+          title = {Example Software}
+        }
+      BIBTEX
+      repository: {
+        "metadata" => { "files" => { "citation" => "CITATION.cff" } },
+      }
+    )
+
+    result = ProjectCitationAuthorIndexer.sync_batch!(limit: 1)
+
+    assert_equal 1, result.fetch(:selected)
+    assert_equal 1, result.fetch(:indexed)
+    assert_equal 0, result.fetch(:authors)
+    assert_nil project.reload.citation_authors_index_error
+    assert_empty project.project_authors
+  end
+
   test "retries an error recorded by an older parser version" do
     project = create_project(citation_file: "cff-version: 1.2.0\ntitle: [\n")
     ProjectCitationAuthorIndexer.sync_batch!(limit: 1)
@@ -163,12 +213,13 @@ class ProjectCitationAuthorIndexerTest < ActiveSupport::TestCase
     assert_equal "limit must be between 1 and 1000", error.message
   end
 
-  def create_project(citation_file:, science_score: 20)
+  def create_project(citation_file:, science_score: 20, repository: nil)
     @project_number = @project_number.to_i + 1
     Project.create!(
       url: "https://github.com/test/cff-index-#{@project_number}",
       science_score: science_score,
-      citation_file: citation_file
+      citation_file: citation_file,
+      repository: repository
     )
   end
 

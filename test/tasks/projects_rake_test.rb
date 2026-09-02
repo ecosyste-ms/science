@@ -2,7 +2,9 @@ require "test_helper"
 require "rake"
 
 class ProjectsRakeTest < ActiveSupport::TestCase
-  ENV_KEYS = %w[LIMIT COHORT SHARD_COUNT SHARD DRY_RUN RETRY_ERRORS].freeze
+  ENV_KEYS = %w[
+    LIMIT COHORT SHARD_COUNT SHARD DRY_RUN RETRY_ERRORS AFTER_ID
+  ].freeze
 
   setup do
     Rails.application.load_tasks unless Rake::Task.task_defined?("projects:fetch_brief")
@@ -138,6 +140,50 @@ class ProjectsRakeTest < ActiveSupport::TestCase
     assert_includes output, "selected: 1"
     assert_includes output, "indexed: 1"
     assert_includes output, "authors: 1"
+  end
+
+  test "rescore_citations persists classified citation weights in batches" do
+    cff = Project.create!(
+      url: "https://github.com/test/rescore-cff",
+      science_score: 0,
+      science_score_breakdown: old_citation_breakdown,
+      citation_file: valid_cff
+    )
+    bibtex = Project.create!(
+      url: "https://github.com/test/rescore-bibtex",
+      science_score: 0,
+      science_score_breakdown: old_citation_breakdown,
+      citation_file: "@software{example, title = {Example Software}}"
+    )
+    unstructured = Project.create!(
+      url: "https://github.com/test/rescore-unstructured",
+      science_score: 16,
+      science_score_breakdown: old_citation_breakdown,
+      citation_file: "Please cite the project README."
+    )
+    ENV["LIMIT"] = "2"
+
+    first_output, = capture_io do
+      Rake::Task["projects:rescore_citations"].execute
+    end
+
+    assert_equal 16.0, cff.reload.science_score
+    assert_equal "cff", citation_format(cff)
+    assert_equal 8.0, bibtex.reload.science_score
+    assert_equal "bibtex", citation_format(bibtex)
+    assert_equal 16, unstructured.reload.science_score
+    assert_includes first_output, "selected: 2"
+    assert_includes first_output, "updated: 2"
+
+    ENV["AFTER_ID"] = bibtex.id.to_s
+    second_output, = capture_io do
+      Rake::Task["projects:rescore_citations"].execute
+    end
+
+    assert_equal 0.0, unstructured.reload.science_score
+    assert_equal "unstructured", citation_format(unstructured)
+    assert_includes second_output, "selected: 1"
+    assert_includes second_output, "updated: 1"
   end
 
   test "sync_joss_publications normalizes paper authors for identity linking" do
@@ -414,5 +460,36 @@ class ProjectsRakeTest < ActiveSupport::TestCase
       brief: brief,
       joss_metadata: joss ? { "doi" => "10.21105/joss.test" } : nil
     )
+  end
+
+  def citation_format(project)
+    project.science_score_breakdown.dig(
+      :breakdown,
+      :has_citation_file,
+      :format
+    )
+  end
+
+  def old_citation_breakdown
+    {
+      "score" => 16,
+      "breakdown" => {
+        "has_citation_file" => {
+          "present" => true,
+          "description" => "CITATION.cff file",
+        },
+      },
+    }
+  end
+
+  def valid_cff
+    <<~CFF
+      cff-version: 1.2.0
+      message: Cite this software
+      title: Example Software
+      authors:
+        - given-names: Ada
+          family-names: Lovelace
+    CFF
   end
 end

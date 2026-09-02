@@ -3,6 +3,10 @@ class ScienceScoreCalculator
 
   RESEARCH_TOOLING_BONUS = 0.20
   SCIENTIFIC_DEPENDENCY_BONUS = 0.08
+  CITATION_STRENGTHS = {
+    cff: 1.0,
+    bibtex: 0.5,
+  }.freeze
 
   def self.academic_domain?(domain)
     ResearchOrganizationDomainMatcher.academic?(domain)
@@ -83,7 +87,8 @@ class ScienceScoreCalculator
       
       @breakdown.each do |key, value|
         if value[:present] && bonus_weights[key]
-          bonus_weight += bonus_weights[key]
+          strength = key == :has_citation_file ? value[:strength] : 1.0
+          bonus_weight += bonus_weights[key] * strength
         end
       end
       
@@ -144,11 +149,42 @@ class ScienceScoreCalculator
   end
 
   def check_citation_file
-    {
-      present: project.citation_file.present?,
-      description: "CITATION.cff file",
-      details: project.citation_file.present? ? "Found CITATION.cff file" : nil
+    classification = project.citation_content_classification
+    format = project.citation_file.present? ?
+      classification.format.to_s : "none"
+    signal = {
+      present: false,
+      strength: 0.0,
+      format: format,
+      description: "Citation metadata",
+      details: nil,
     }
+
+    case classification.format
+    when :cff
+      signal.merge(
+        present: true,
+        strength: CITATION_STRENGTHS.fetch(:cff),
+        details: "Validated CITATION.cff metadata"
+      )
+    when :bibtex
+      signal.merge(
+        present: true,
+        strength: CITATION_STRENGTHS.fetch(:bibtex),
+        details: "Found structured BibTeX citation metadata"
+      )
+    when :invalid
+      error = classification.error
+      details = "Invalid citation metadata: #{error.class}: #{error.message}"
+      signal.merge(
+        details: details.truncate(500)
+      )
+    when :unstructured
+      signal.merge(
+        details: project.citation_file.present? ?
+          "Found unstructured citation instructions" : nil
+      )
+    end
   end
 
   def check_codemeta_file

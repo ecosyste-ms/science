@@ -43,7 +43,7 @@ class ProjectTest < ActiveSupport::TestCase
         }
       }
     }
-    project.citation_file = 'test citation content'
+    project.citation_file = valid_cff
     
     project.update_science_score
     
@@ -86,7 +86,7 @@ class ProjectTest < ActiveSupport::TestCase
         }
       }
     }
-    project.citation_file = 'test citation content'
+    project.citation_file = valid_cff
     project.readme = 'This paper has DOI: 10.1234/example'
 
     result = project.calculate_science_score_breakdown
@@ -862,6 +862,7 @@ class ProjectTest < ActiveSupport::TestCase
     project = Project.create!(url: 'https://github.com/test/fallback')
     cff_content = <<~CFF
       cff-version: 1.2.0
+      message: Cite this software
       title: "Fallback Test"
       authors:
         - family-names: "Smith"
@@ -887,6 +888,7 @@ class ProjectTest < ActiveSupport::TestCase
     project = Project.create!(url: 'https://github.com/test/export')
     cff_content = <<~CFF
       cff-version: 1.2.0
+      message: Cite this software
       title: "Export Test"
       authors:
         - family-names: "Author"
@@ -904,6 +906,7 @@ class ProjectTest < ActiveSupport::TestCase
     project = Project.create!(url: 'https://github.com/test/export-apa')
     cff_content = <<~CFF
       cff-version: 1.2.0
+      message: Cite this software
       title: "Export Test"
       authors:
         - family-names: "Author"
@@ -923,5 +926,16 @@ class ProjectTest < ActiveSupport::TestCase
     result = project.export_citation(format: 'bibtex')
 
     assert_nil result
+  end
+
+  def valid_cff
+    <<~CFF
+      cff-version: 1.2.0
+      message: Cite this software
+      title: Example Software
+      authors:
+        - given-names: Ada
+          family-names: Lovelace
+    CFF
   end
 end

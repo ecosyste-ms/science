@@ -1,7 +1,65 @@
 module Project::Scoring
   extend ActiveSupport::Concern
 
+  CITATION_RESCORE_DEFAULT_LIMIT = 250
+  CITATION_RESCORE_MAX_LIMIT = 1_000
+  CITATION_FORMAT_SQL = <<~SQL.squish.freeze
+    science_score_breakdown #>> '{breakdown,has_citation_file,format}'
+  SQL
+
   class_methods do
+    def rescore_citations(
+      limit: CITATION_RESCORE_DEFAULT_LIMIT,
+      after_id: 0
+    )
+      limit = Integer(limit, exception: false)
+      after_id = Integer(after_id, exception: false)
+      unless limit&.between?(1, CITATION_RESCORE_MAX_LIMIT)
+        raise ArgumentError,
+          "limit must be between 1 and #{CITATION_RESCORE_MAX_LIMIT}"
+      end
+      unless after_id && after_id >= 0
+        raise ArgumentError, "after_id must be zero or greater"
+      end
+
+      project_ids = visible
+        .where("NULLIF(citation_file, '') IS NOT NULL")
+        .where("#{CITATION_FORMAT_SQL} IS NULL")
+        .where("projects.id > ?", after_id)
+        .order(:id)
+        .limit(limit)
+        .pluck(:id)
+      result = {
+        selected: project_ids.length,
+        updated: 0,
+        failed: 0,
+        last_id: project_ids.last,
+      }
+
+      project_ids.each do |project_id|
+        project = find_by(id: project_id)
+        next unless project
+
+        if project.update_science_score
+          result[:updated] += 1
+        else
+          result[:failed] += 1
+          Rails.logger.error(
+            "Citation score update failed for project #{project.id}: " \
+              "#{project.errors.full_messages.join(', ')}"
+          )
+        end
+      rescue StandardError => error
+        result[:failed] += 1
+        Rails.logger.error(
+          "Citation score update failed for project #{project_id}: " \
+            "#{error.class}: #{error.message}"
+        )
+      end
+
+      result
+    end
+
     def calculate_idf(projects)
       return [] if projects.empty?
 
