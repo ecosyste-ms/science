@@ -18,7 +18,7 @@ class ProjectRepositoryAliasIndexerTest < ActiveSupport::TestCase
     assert_equal [
       "https://github.com/science-org/old-name",
       "https://github.com/science-org/older-name",
-    ], project.repository_aliases.order(:url).pluck(:url)
+    ], project.repository_aliases.pluck(:url).sort
     assert project.repository_aliases_indexed_at.present?
     assert_nil project.repository_aliases_index_error
   end

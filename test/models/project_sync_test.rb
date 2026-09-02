@@ -127,6 +127,7 @@ class ProjectSyncTest < ActiveSupport::TestCase
       published_by_project: other_project,
       repository_checked_at: checked_at
     )
+    checked_at = package.reload.repository_checked_at
     records = [
       package_record(
         name: "numpy",
