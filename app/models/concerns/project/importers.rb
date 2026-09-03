@@ -741,8 +741,16 @@ module Project::Importers
           next if repo_url.blank?
 
           matching_projects = projects_by_repository_url(repo_url)
-          if matching_projects.one?
+          source_project_id = joss_source_project_id(paper['doi'])
+          existing_project = matching_projects.find do |project|
+            project.id == source_project_id
+          end
+          if existing_project.nil? && source_project_id.nil? &&
+              matching_projects.one?
             existing_project = matching_projects.first
+          end
+
+          if existing_project
             total_existing += 1
             metadata_updated = existing_project.update(
               joss_metadata: paper
@@ -750,7 +758,7 @@ module Project::Importers
             if metadata_updated && existing_project.saved_change_to_joss_metadata?
               existing_project.update_science_score
             end
-          elsif matching_projects.many?
+          elsif source_project_id || matching_projects.many?
             total_ambiguous += 1
           else
             project = Project.create(
@@ -787,19 +795,23 @@ module Project::Importers
         "#{normalized_url}.git",
         "#{normalized_url}.git/",
       ]
-      projects = Project.where(url: variants).order(:id).limit(variants.length).to_a
-      exact = projects.select do |project|
-        project.url.to_s.casecmp?(normalized_url)
-      end
-      return exact if exact.one?
-      return projects if projects.any?
-
-      project_ids = ProjectRepositoryAlias
+      direct_ids = Project.where(url: variants).pluck(:id)
+      alias_ids = ProjectRepositoryAlias
         .where(url: normalized_url)
         .distinct
         .limit(2)
         .pluck(:project_id)
-      Project.where(id: project_ids).order(:id).to_a
+      Project.where(id: (direct_ids + alias_ids).uniq).order(:id).to_a
+    end
+
+    def joss_source_project_id(value)
+      doi = Project.extract_dois(value).first&.downcase
+      return if doi.blank?
+
+      MentionSource
+        .joins(:mention)
+        .where(source: JossPublicationIndexer::SOURCE, source_identifier: doi)
+        .pick("mentions.project_id")
     end
   end
 end

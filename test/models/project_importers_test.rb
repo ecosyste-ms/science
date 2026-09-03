@@ -221,6 +221,46 @@ class ProjectImportersTest < ActiveSupport::TestCase
     assert_includes output, "Total ambiguous repositories skipped: 1"
   end
 
+  test "import_from_joss skips a repository change with an existing DOI source" do
+    source_project = Project.create!(
+      url: "https://example.com/research/old",
+      joss_metadata: { "doi" => "10.21105/joss.12348", "title" => "Old title" }
+    )
+    incoming_project = Project.create!(
+      url: "https://example.com/research/new"
+    )
+    paper = Paper.create!(doi: "10.21105/joss.12348")
+    mention = Mention.create!(
+      project: source_project,
+      paper: paper,
+      created_by_source: "joss"
+    )
+    MentionSource.create!(
+      mention: mention,
+      source: "joss",
+      source_identifier: "10.21105/joss.12348",
+      source_digest: "old",
+      raw_data: {}
+    )
+    stub_request(:get, "https://joss.theoj.org/papers/published.json?page=1")
+      .to_return(status: 200, body: [
+        {
+          software_repository: incoming_project.url,
+          title: "Current title",
+          year: 2026,
+          doi: "10.21105/joss.12348",
+        },
+      ].to_json)
+    stub_request(:get, "https://joss.theoj.org/papers/published.json?page=2")
+      .to_return(status: 200, body: [].to_json)
+
+    output, = capture_io { Project.import_from_joss }
+
+    assert_equal "Old title", source_project.reload.joss_metadata.fetch("title")
+    assert_nil incoming_project.reload.joss_metadata
+    assert_includes output, "Total ambiguous repositories skipped: 1"
+  end
+
   # ---- import_from_ost ----
 
   test "import_from_ost creates github projects only" do

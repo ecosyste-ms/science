@@ -106,6 +106,50 @@ class ProjectsRakeTest < ActiveSupport::TestCase
       project.reload.joss_metadata.fetch("title")
   end
 
+  test "import_joss keeps an existing JOSS source when a duplicate URL exists" do
+    project = Project.create!(
+      url: "https://github.com/research/current-name",
+      science_score: 20,
+      joss_metadata: { "doi" => "10.21105/joss.12347", "title" => "Old title" }
+    )
+    ProjectRepositoryAlias.create!(
+      project: project,
+      url: "https://github.com/research/old-name"
+    )
+    duplicate = Project.create!(
+      url: "https://github.com/research/old-name",
+      science_score: 20
+    )
+    paper_record = Paper.create!(doi: "10.21105/joss.12347")
+    mention = Mention.create!(
+      project: project,
+      paper: paper_record,
+      created_by_source: "joss"
+    )
+    MentionSource.create!(
+      mention: mention,
+      source: "joss",
+      source_identifier: "10.21105/joss.12347",
+      source_digest: "old",
+      raw_data: {}
+    )
+    paper = {
+      software_repository: "https://github.com/research/old-name",
+      title: "Current title",
+      year: 2026,
+      doi: "10.21105/joss.12347",
+    }
+    stub_request(:get, "https://joss.theoj.org/papers/published.json?page=1")
+      .to_return(status: 200, body: [paper].to_json)
+    stub_request(:get, "https://joss.theoj.org/papers/published.json?page=2")
+      .to_return(status: 200, body: [].to_json)
+
+    capture_io { Rake::Task["projects:import_joss"].execute }
+
+    assert_equal "Current title", project.reload.joss_metadata.fetch("title")
+    assert_nil duplicate.reload.joss_metadata
+  end
+
   test "sync_dependencies indexes a bounded project batch through the rake entrypoint" do
     project = Project.create!(
       url: "https://github.com/test/dependency-rake",
