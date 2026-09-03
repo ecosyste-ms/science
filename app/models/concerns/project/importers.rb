@@ -713,6 +713,7 @@ module Project::Importers
       page = 1
       total_created = 0
       total_existing = 0
+      total_ambiguous = 0
 
       loop do
         puts "Fetching page #{page}..."
@@ -734,11 +735,14 @@ module Project::Importers
         papers.each do |paper|
           next if paper['software_repository'].blank?
 
-          # Normalize the URL (lowercase and remove trailing slash)
-          repo_url = paper['software_repository'].downcase.chomp('/')
+          repo_url = RepositoryUrlNormalizer.normalize(
+            paper['software_repository']
+          )
+          next if repo_url.blank?
 
-          existing_project = Project.find_by(url: repo_url)
-          if existing_project.present?
+          matching_projects = projects_by_repository_url(repo_url)
+          if matching_projects.one?
+            existing_project = matching_projects.first
             total_existing += 1
             metadata_updated = existing_project.update(
               joss_metadata: paper
@@ -746,6 +750,8 @@ module Project::Importers
             if metadata_updated && existing_project.saved_change_to_joss_metadata?
               existing_project.update_science_score
             end
+          elsif matching_projects.many?
+            total_ambiguous += 1
           else
             project = Project.create(
               url: repo_url,
@@ -767,7 +773,33 @@ module Project::Importers
       puts "JOSS import complete!"
       puts "Total new projects created: #{total_created}"
       puts "Total existing projects found: #{total_existing}"
+      puts "Total ambiguous repositories skipped: #{total_ambiguous}"
       puts "Grand total: #{total_created + total_existing}"
+    end
+
+    def projects_by_repository_url(value)
+      normalized_url = RepositoryUrlNormalizer.normalize(value)
+      return [] if normalized_url.blank?
+
+      variants = [
+        normalized_url,
+        "#{normalized_url}/",
+        "#{normalized_url}.git",
+        "#{normalized_url}.git/",
+      ]
+      projects = Project.where(url: variants).order(:id).limit(variants.length).to_a
+      exact = projects.select do |project|
+        project.url.to_s.casecmp?(normalized_url)
+      end
+      return exact if exact.one?
+      return projects if projects.any?
+
+      project_ids = ProjectRepositoryAlias
+        .where(url: normalized_url)
+        .distinct
+        .limit(2)
+        .pluck(:project_id)
+      Project.where(id: project_ids).order(:id).to_a
     end
   end
 end

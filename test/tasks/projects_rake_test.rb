@@ -78,6 +78,34 @@ class ProjectsRakeTest < ActiveSupport::TestCase
     assert project.science_score_breakdown.dig(:breakdown, :has_joss_paper, :present)
   end
 
+  test "import_joss reuses a project found through a repository alias" do
+    project = Project.create!(
+      url: "https://github.com/research/current-name",
+      science_score: 20
+    )
+    ProjectRepositoryAlias.create!(
+      project: project,
+      url: "https://github.com/research/old-name"
+    )
+    paper = {
+      software_repository: "https://github.com/Research/Old-Name.git/",
+      title: "Renamed Research Software",
+      year: 2026,
+      doi: "10.21105/joss.12346",
+    }
+    stub_request(:get, "https://joss.theoj.org/papers/published.json?page=1")
+      .to_return(status: 200, body: [paper].to_json)
+    stub_request(:get, "https://joss.theoj.org/papers/published.json?page=2")
+      .to_return(status: 200, body: [].to_json)
+
+    assert_no_difference "Project.count" do
+      capture_io { Rake::Task["projects:import_joss"].execute }
+    end
+
+    assert_equal "Renamed Research Software",
+      project.reload.joss_metadata.fetch("title")
+  end
+
   test "sync_dependencies indexes a bounded project batch through the rake entrypoint" do
     project = Project.create!(
       url: "https://github.com/test/dependency-rake",

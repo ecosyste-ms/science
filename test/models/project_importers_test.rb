@@ -179,7 +179,7 @@ class ProjectImportersTest < ActiveSupport::TestCase
     existing = Project.create!(url: "https://github.com/old/paper")
     stub_request(:get, "https://joss.theoj.org/papers/published.json?page=1")
       .to_return(status: 200, body: [
-        { software_repository: "https://github.com/New/Paper", title: "New Paper", year: 2024 },
+        { software_repository: "https://github.com/New/Paper.git/", title: "New Paper", year: 2024 },
         { software_repository: "https://github.com/Old/Paper", title: "Old Paper", year: 2020 },
         { software_repository: "" },
       ].to_json)
@@ -189,6 +189,36 @@ class ProjectImportersTest < ActiveSupport::TestCase
     capture_io { Project.import_from_joss }
     assert Project.exists?(url: "https://github.com/new/paper")
     assert_equal "Old Paper", existing.reload.joss_metadata["title"]
+  end
+
+  test "import_from_joss skips an ambiguous repository alias" do
+    first = Project.create!(url: "https://github.com/one/current")
+    second = Project.create!(url: "https://github.com/two/current")
+    [first, second].each do |project|
+      ProjectRepositoryAlias.create!(
+        project: project,
+        url: "https://github.com/research/shared"
+      )
+    end
+    stub_request(:get, "https://joss.theoj.org/papers/published.json?page=1")
+      .to_return(status: 200, body: [
+        {
+          software_repository: "https://github.com/research/shared",
+          title: "Ambiguous Paper",
+          year: 2026,
+        },
+      ].to_json)
+    stub_request(:get, "https://joss.theoj.org/papers/published.json?page=2")
+      .to_return(status: 200, body: [].to_json)
+
+    output = nil
+    assert_no_difference "Project.count" do
+      output, = capture_io { Project.import_from_joss }
+    end
+
+    assert_nil first.reload.joss_metadata
+    assert_nil second.reload.joss_metadata
+    assert_includes output, "Total ambiguous repositories skipped: 1"
   end
 
   # ---- import_from_ost ----
