@@ -119,6 +119,38 @@ class PackagesRakeTest < ActiveSupport::TestCase
     assert_includes output, "dependency_rows: 1"
   end
 
+  test "skips a dependency identity which already failed through the rake entrypoint" do
+    PackageRegistry.create!(
+      name: "rubygems.org",
+      url: "https://rubygems.org",
+      ecosystem: "rubygems",
+      purl_type: "gem",
+      default: true
+    )
+    first_project = Project.create!(url: "https://github.com/example/first-deb")
+    ProjectDependency.create!(
+      project: first_project,
+      ecosystem: "deb",
+      package_name: "libexample",
+      direct: true
+    )
+    ENV["LIMIT"] = "1"
+
+    capture_io { Rake::Task["packages:resolve_dependencies"].invoke }
+    second_project = Project.create!(url: "https://github.com/example/second-deb")
+    second = ProjectDependency.create!(
+      project: second_project,
+      ecosystem: "deb",
+      package_name: "libexample",
+      direct: true
+    )
+    Rake::Task["packages:resolve_dependencies"].reenable
+    output, = capture_io { Rake::Task["packages:resolve_dependencies"].invoke }
+
+    assert_nil second.reload.package_resolution_attempted_at
+    assert_includes output, "selected: 0"
+  end
+
   test "syncs package metadata through the rake entrypoint" do
     registry = PackageRegistry.create!(
       name: "rubygems.org",
@@ -174,6 +206,66 @@ class PackagesRakeTest < ActiveSupport::TestCase
     assert_nil low_usage_package.reload.ecosystems_checked_at
     assert_includes output, "selected: 1"
     assert_includes output, "matched: 1"
+  end
+
+  test "stops a missing package after one rake invocation" do
+    registry = PackageRegistry.create!(
+      name: "rubygems.org",
+      url: "https://rubygems.org",
+      ecosystem: "rubygems",
+      purl_type: "gem",
+      default: true
+    )
+    package = Package.create!(
+      package_registry: registry,
+      name: "missing-package",
+      purl: "pkg:gem/missing-package"
+    )
+    request = stub_request(
+      :get,
+      "https://packages.ecosyste.ms/api/v1/packages/lookup"
+    ).with(query: { "purl" => package.purl }).to_return(
+      status: 200,
+      body: [].to_json
+    )
+    ENV["LIMIT"] = "1"
+
+    first_output, = capture_io { Rake::Task["packages:sync_metadata"].invoke }
+    Rake::Task["packages:sync_metadata"].reenable
+    second_output, = capture_io { Rake::Task["packages:sync_metadata"].invoke }
+
+    assert_requested request, times: 1
+    assert_equal "unavailable", package.reload.ecosystems_sync_status
+    assert_nil package.ecosystems_retry_at
+    assert_includes first_output, "unavailable: 1"
+    assert_includes second_output, "selected: 0"
+  end
+
+  test "skips known missing package metadata through the rake entrypoint" do
+    registry = PackageRegistry.create!(
+      name: "github actions",
+      url: "https://github.com",
+      ecosystem: "actions",
+      purl_type: "githubactions",
+      default: true
+    )
+    Package.create!(
+      package_registry: registry,
+      name: "google/clusterfuzzlite/actions/run_fuzzers",
+      ecosystems_sync_status: "transient_error",
+      ecosystems_checked_at: 1.day.ago,
+      ecosystems_retry_at: 1.minute.ago
+    )
+    request = stub_request(
+      :get,
+      "https://packages.ecosyste.ms/api/v1/packages/lookup"
+    )
+    ENV["LIMIT"] = "1"
+
+    output, = capture_io { Rake::Task["packages:sync_metadata"].invoke }
+
+    assert_not_requested request
+    assert_includes output, "selected: 0"
   end
 
   test "matches package projects through the rake entrypoint" do

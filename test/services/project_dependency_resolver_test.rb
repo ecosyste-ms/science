@@ -191,6 +191,12 @@ class ProjectDependencyResolverTest < ActiveSupport::TestCase
     )
 
     first = ProjectDependencyResolver.resolve_batch!(limit: 1)
+    later_dependency = create_dependency(
+      "later-private-registry",
+      ecosystem: "npm",
+      package_name: "internal-package",
+      purl: "pkg:npm/internal-package?repository_url=https://npm.example.com"
+    )
     second = ProjectDependencyResolver.resolve_batch!(limit: 1)
     retry_result = ProjectDependencyResolver.resolve_batch!(limit: 1, retry_errors: true)
 
@@ -200,7 +206,42 @@ class ProjectDependencyResolverTest < ActiveSupport::TestCase
     assert_match "no package registry for https://npm.example.com",
       dependency.reload.package_resolution_error
     assert dependency.package_resolution_attempted_at.present?
+    assert later_dependency.reload.package_resolution_attempted_at.present?
     assert_nil dependency.package_id
+  end
+
+  test "skips a known failed coordinate until errors are retried" do
+    Rails.logger.stubs(:error)
+    create_registry(
+      name: "rubygems.org",
+      url: "https://rubygems.org",
+      ecosystem: "rubygems",
+      purl_type: "gem"
+    )
+    dependency = create_dependency(
+      "first-deb",
+      ecosystem: "deb",
+      package_name: "libexample"
+    )
+
+    first = ProjectDependencyResolver.resolve_batch!(limit: 1)
+    later_dependency = create_dependency(
+      "later-deb",
+      ecosystem: "deb",
+      package_name: "libexample"
+    )
+    second = ProjectDependencyResolver.resolve_batch!(limit: 1)
+    retry_result = ProjectDependencyResolver.resolve_batch!(
+      limit: 1,
+      retry_errors: true
+    )
+
+    assert_equal 1, first.fetch(:failed)
+    assert_equal 0, second.fetch(:selected)
+    assert_nil later_dependency.package_resolution_attempted_at
+    assert_equal 1, retry_result.fetch(:failed)
+    assert dependency.reload.package_resolution_attempted_at.present?
+    assert later_dependency.reload.package_resolution_attempted_at.present?
   end
 
   test "does not mark dependencies when the registry catalog is empty" do

@@ -57,9 +57,7 @@ class ProjectDependencyResolver
   end
 
   def identities
-    scope = candidate_scope
-    purls = scope
-      .where.not(purl: nil)
+    purls = purl_candidate_scope
       .distinct
       .order(:purl)
       .limit(limit)
@@ -68,8 +66,7 @@ class ProjectDependencyResolver
     remaining = limit - selected.length
     return selected if remaining.zero?
 
-    coordinates = scope
-      .where(purl: nil)
+    coordinates = coordinate_candidate_scope
       .distinct
       .order(:ecosystem, :package_name)
       .limit(remaining)
@@ -80,9 +77,41 @@ class ProjectDependencyResolver
   end
 
   def candidate_scope
-    scope = ProjectDependency.unresolved
-    scope = scope.where(package_resolution_attempted_at: nil) unless retry_errors
-    scope
+    return ProjectDependency.unresolved if retry_errors
+
+    ProjectDependency.pending_package_resolution
+  end
+
+  def purl_candidate_scope
+    scope = candidate_scope.where.not(purl: nil)
+    return scope if retry_errors
+
+    scope.where(<<~SQL.squish)
+      NOT EXISTS (
+        SELECT 1
+        FROM project_dependencies failed_dependencies
+        WHERE failed_dependencies.package_id IS NULL
+          AND failed_dependencies.package_resolution_error IS NOT NULL
+          AND failed_dependencies.purl = project_dependencies.purl
+      )
+    SQL
+  end
+
+  def coordinate_candidate_scope
+    scope = candidate_scope.where(purl: nil)
+    return scope if retry_errors
+
+    scope.where(<<~SQL.squish)
+      NOT EXISTS (
+        SELECT 1
+        FROM project_dependencies failed_dependencies
+        WHERE failed_dependencies.package_id IS NULL
+          AND failed_dependencies.purl IS NULL
+          AND failed_dependencies.package_resolution_error IS NOT NULL
+          AND failed_dependencies.ecosystem = project_dependencies.ecosystem
+          AND failed_dependencies.package_name = project_dependencies.package_name
+      )
+    SQL
   end
 
   def resolve_identity!(identity)

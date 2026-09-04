@@ -10,10 +10,11 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_02_121500) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_04_123000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
+  enable_extension "pg_stat_statements"
 
   create_table "author_developer_account_links", force: :cascade do |t|
     t.bigint "author_id", null: false
@@ -425,6 +426,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_02_121500) do
     t.bigint "project_id", null: false
     t.text "purl"
     t.datetime "updated_at", null: false
+    t.index ["ecosystem", "package_name"], name: "index_project_dependencies_failed_name_resolution", where: "((package_id IS NULL) AND (purl IS NULL) AND (package_resolution_error IS NOT NULL))"
     t.index ["ecosystem", "package_name"], name: "index_project_dependencies_on_package_coordinates"
     t.index ["ecosystem", "package_name"], name: "index_project_dependencies_pending_name_resolution", where: "((package_id IS NULL) AND (purl IS NULL) AND (package_resolution_attempted_at IS NULL))"
     t.index ["package_id"], name: "index_project_dependencies_on_package_id"
@@ -433,6 +435,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_02_121500) do
     t.index ["project_id", "package_id"], name: "index_project_dependencies_on_resolved_package", unique: true, where: "(package_id IS NOT NULL)"
     t.index ["project_id", "purl"], name: "index_project_dependencies_on_unresolved_purl", unique: true, where: "((package_id IS NULL) AND (purl IS NOT NULL))"
     t.index ["project_id"], name: "index_project_dependencies_on_project_id"
+    t.index ["purl"], name: "index_project_dependencies_failed_purl_resolution", where: "((package_id IS NULL) AND (purl IS NOT NULL) AND (package_resolution_error IS NOT NULL))"
     t.index ["purl"], name: "index_project_dependencies_pending_purl_resolution", where: "((package_id IS NULL) AND (purl IS NOT NULL) AND (package_resolution_attempted_at IS NULL))"
   end
 

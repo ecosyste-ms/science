@@ -39,7 +39,6 @@ class Package < ApplicationRecord
     failed
   ].freeze
   MINIMUM_REPOSITORY_SCIENCE_SCORE = 5.0
-  MISSING_RETRY_DELAYS = [1.day, 7.days].freeze
   ERROR_RETRY_DELAYS = [1.hour, 6.hours, 1.day].freeze
 
   belongs_to :package_registry
@@ -242,18 +241,16 @@ class Package < ApplicationRecord
 
   def record_ecosystems_missing!(now: Time.current)
     count = ecosystems_miss_count + 1
-    delay = MISSING_RETRY_DELAYS[count - 1]
-    status = delay ? "missing" : "unavailable"
     update!(
-      ecosystems_sync_status: status,
+      ecosystems_sync_status: "unavailable",
       ecosystems_checked_at: now,
-      ecosystems_retry_at: delay ? now + delay : nil,
+      ecosystems_retry_at: nil,
       ecosystems_sync_started_at: nil,
       ecosystems_miss_count: count,
       ecosystems_error_count: 0,
       ecosystems_error: nil
     )
-    status.to_sym
+    :unavailable
   end
 
   def record_ecosystems_ambiguous!(count, now: Time.current)

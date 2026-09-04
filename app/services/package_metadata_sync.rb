@@ -2,7 +2,13 @@ class PackageMetadataSync
   DEFAULT_LIMIT = 100
   MAX_LIMIT = 100
   REFRESH_AFTER = 30.days
-  STOPPED_STATUSES = %w[unavailable ambiguous failed].freeze
+  STOPPED_STATUSES = %w[missing unavailable ambiguous failed].freeze
+  SKIPPED_METADATA_IDENTITIES = {
+    "github actions" => %w[
+      google/clusterfuzzlite/actions/build_fuzzers
+      google/clusterfuzzlite/actions/run_fuzzers
+    ],
+  }.freeze
 
   attr_reader :client, :limit, :retry_stopped
 
@@ -76,8 +82,10 @@ class PackageMetadataSync
         :package_id,
         "COUNT(*) AS project_dependents_count"
       )
+    transient_retries = Package.where(ecosystems_sync_status: "transient_error")
+      .where("ecosystems_retry_at <= ?", now)
     due = Package.where(ecosystems_checked_at: nil)
-      .or(Package.where("ecosystems_retry_at <= ?", now))
+      .or(transient_retries)
       .or(Package.where(
         "ecosystems_sync_status = ? AND ecosystems_checked_at < ?",
         "matched",
@@ -86,6 +94,7 @@ class PackageMetadataSync
     if retry_stopped
       due = due.or(Package.where(ecosystems_sync_status: STOPPED_STATUSES))
     end
+    due = exclude_skipped_metadata_identities(due)
 
     due.joins(
       "LEFT JOIN (#{dependency_counts.to_sql}) package_usage_counts " \
@@ -104,6 +113,19 @@ class PackageMetadataSync
         :id
       )
       .limit(limit)
+  end
+
+  def exclude_skipped_metadata_identities(scope)
+    SKIPPED_METADATA_IDENTITIES.reduce(scope) do |remaining, (registry_name, names)|
+      registry_ids = PackageRegistry
+        .where("LOWER(name) = ?", registry_name.downcase)
+        .select(:id)
+      skipped_ids = Package
+        .where(package_registry_id: registry_ids)
+        .where("LOWER(name) IN (?)", names.map(&:downcase))
+        .select(:id)
+      remaining.where.not(id: skipped_ids)
+    end
   end
 
   def sync_package!(package)

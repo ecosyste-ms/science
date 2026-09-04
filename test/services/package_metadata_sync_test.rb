@@ -66,29 +66,66 @@ class PackageMetadataSyncTest < ActiveSupport::TestCase
     assert_equal 124, package.reload.ecosystems_id
   end
 
-  test "spaces missing retries and stops after three misses" do
+  test "stops missing packages after one lookup" do
     package = create_package(name: "internal-gem", purl: "pkg:gem/internal-gem")
     client = mock
-    client.expects(:package_lookup).times(3).returns([])
+    client.expects(:package_lookup).once.returns([])
 
     first = PackageMetadataSync.sync_batch!(client: client, limit: 1)
-    assert_equal 1, first.fetch(:missing)
-    assert_in_delta 1.day.from_now, package.reload.ecosystems_retry_at, 2.seconds
-
-    package.update_column(:ecosystems_retry_at, 1.minute.ago)
-    second = PackageMetadataSync.sync_batch!(client: client, limit: 1)
-    assert_equal 1, second.fetch(:missing)
-    assert_in_delta 7.days.from_now, package.reload.ecosystems_retry_at, 2.seconds
-
-    package.update_column(:ecosystems_retry_at, 1.minute.ago)
-    third = PackageMetadataSync.sync_batch!(client: client, limit: 1)
-    assert_equal 1, third.fetch(:unavailable)
+    assert_equal 1, first.fetch(:unavailable)
     assert_equal "unavailable", package.reload.ecosystems_sync_status
-    assert_equal 3, package.ecosystems_miss_count
+    assert_equal 1, package.ecosystems_miss_count
     assert_nil package.ecosystems_retry_at
 
-    fourth = PackageMetadataSync.sync_batch!(client: client, limit: 1)
-    assert_equal 0, fourth.fetch(:selected)
+    second = PackageMetadataSync.sync_batch!(client: client, limit: 1)
+    assert_equal 0, second.fetch(:selected)
+  end
+
+  test "retries missing packages only when stopped retries are requested" do
+    package = create_package(
+      name: "internal-gem",
+      purl: "pkg:gem/internal-gem",
+      ecosystems_sync_status: "missing",
+      ecosystems_checked_at: 1.day.ago,
+      ecosystems_retry_at: 1.minute.ago
+    )
+    client = mock
+    client.expects(:package_lookup).once.returns([])
+
+    automatic = PackageMetadataSync.sync_batch!(client: client, limit: 1)
+    explicit = PackageMetadataSync.sync_batch!(
+      client: client,
+      limit: 1,
+      retry_stopped: true
+    )
+
+    assert_equal 0, automatic.fetch(:selected)
+    assert_equal 1, explicit.fetch(:unavailable)
+    assert_equal "unavailable", package.reload.ecosystems_sync_status
+    assert_equal 1, package.ecosystems_miss_count
+    assert_nil package.ecosystems_retry_at
+  end
+
+  test "skips known missing metadata identities" do
+    registry = PackageRegistry.create!(
+      name: "GitHub Actions",
+      url: "https://github.com",
+      ecosystem: "actions",
+      purl_type: "githubactions"
+    )
+    create_package(
+      package_registry: registry,
+      name: "Google/ClusterFuzzLite/Actions/Build_Fuzzers",
+      ecosystems_sync_status: "transient_error",
+      ecosystems_checked_at: 1.day.ago,
+      ecosystems_retry_at: 1.minute.ago
+    )
+    client = mock
+    client.expects(:package_lookup).never
+
+    result = PackageMetadataSync.sync_batch!(client: client, limit: 1)
+
+    assert_equal 0, result.fetch(:selected)
   end
 
   test "records an ambiguous result without retrying it automatically" do
