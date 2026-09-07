@@ -4,6 +4,7 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 ruby file: ".ruby-version"
 
 gem "rails", "~> 8.1.1"
+gem "json", "< 3" # rails/rails#58601
 
 gem "secure_headers"
 gem "sprockets-rails"
