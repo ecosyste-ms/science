@@ -208,6 +208,68 @@ class PackagesRakeTest < ActiveSupport::TestCase
     assert_includes output, "matched: 1"
   end
 
+  test "sync_metadata stops an identity conflict and continues through the rake entrypoint" do
+    registry = PackageRegistry.create!(
+      name: "rubygems.org",
+      url: "https://rubygems.org",
+      ecosystem: "rubygems",
+      purl_type: "gem",
+      default: true
+    )
+    existing = Package.create!(
+      package_registry: registry,
+      name: "canonical-gem",
+      purl: "pkg:gem/canonical-gem",
+      ecosystems_sync_status: "matched",
+      ecosystems_checked_at: Time.current
+    )
+    conflict = Package.create!(
+      package_registry: registry,
+      name: "conflicting-gem"
+    )
+    valid = Package.create!(
+      package_registry: registry,
+      name: "valid-gem",
+      purl: "pkg:gem/valid-gem"
+    )
+    stub_request(
+      :get,
+      "https://packages.ecosyste.ms/api/v1/registries/rubygems.org/lookup"
+    ).with(query: {
+      "ecosystem" => "rubygems",
+      "name" => conflict.name,
+    }).to_return(
+      status: 200,
+      body: [{
+        id: 124,
+        name: conflict.name,
+        purl: existing.purl,
+        registry: { name: registry.name },
+      }].to_json
+    )
+    stub_request(
+      :get,
+      "https://packages.ecosyste.ms/api/v1/packages/lookup"
+    ).with(query: { "purl" => valid.purl }).to_return(
+      status: 200,
+      body: [{
+        id: 125,
+        name: valid.name,
+        purl: valid.purl,
+        registry: { name: registry.name },
+      }].to_json
+    )
+    ENV["LIMIT"] = "2"
+
+    output, = capture_io { Rake::Task["packages:sync_metadata"].invoke }
+
+    assert_equal "ambiguous", conflict.reload.ecosystems_sync_status
+    assert_includes conflict.ecosystems_error, existing.id.to_s
+    assert_equal "matched", valid.reload.ecosystems_sync_status
+    assert_includes output, "ambiguous: 1"
+    assert_includes output, "matched: 1"
+  end
+
   test "stops a missing package after one rake invocation" do
     registry = PackageRegistry.create!(
       name: "rubygems.org",

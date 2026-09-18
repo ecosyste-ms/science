@@ -4,7 +4,6 @@ class ProjectCitationAuthorIndexer
   CURRENT_VERSION = 2
   DEFAULT_LIMIT = 250
   MAX_LIMIT = 1_000
-  UPSERT_BATCH_SIZE = 1_000
   SOURCE = "citation_cff"
   CANDIDATE_SQL = Project::Citation::CFF_CANDIDATE_SQL
   UPSERT_COLUMNS = %i[
@@ -114,15 +113,16 @@ class ProjectCitationAuthorIndexer
         .pluck(:author_id)
 
       now = Time.current
-      rows.each_slice(UPSERT_BATCH_SIZE) do |batch|
+      upsert_rows = rows.map do |row|
+        row.merge(
+          project_id: project.id,
+          author_id: nil,
+          author_match_kind: nil
+        )
+      end
+      QueryBatch.each(upsert_rows) do |batch|
         ProjectAuthor.upsert_all(
-          batch.map do |row|
-            row.merge(
-              project_id: project.id,
-              author_id: nil,
-              author_match_kind: nil
-            )
-          end,
+          batch,
           unique_by: :index_project_authors_on_snapshot_position,
           update_only: UPSERT_COLUMNS,
           record_timestamps: true

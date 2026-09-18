@@ -181,10 +181,12 @@ class RorResearchOrganizationDomainImporter
     def flush_rows!(rows)
       return if rows.empty?
 
-      ResearchOrganizationDomain.insert_all(
-        rows,
-        unique_by: :index_research_domains_on_source_version_domain_id
-      )
+      QueryBatch.each(rows) do |batch|
+        ResearchOrganizationDomain.insert_all(
+          batch,
+          unique_by: :index_research_domains_on_source_version_domain_id
+        )
+      end
       rows.clear
     end
 

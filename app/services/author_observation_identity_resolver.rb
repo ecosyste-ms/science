@@ -1,7 +1,6 @@
 require "set"
 
 class AuthorObservationIdentityResolver
-  WRITE_BATCH_SIZE = 1_000
   KNOWN_BOT_NAMES = %w[
     dependabot
     dependabot[bot]
@@ -48,9 +47,15 @@ class AuthorObservationIdentityResolver
 
     promote_email_authors!(desired.values)
     create_authors!(desired.values)
-    authors_by_key = Author.where(
-      canonical_key: desired.values.pluck(:canonical_key).uniq
-    ).index_by { |author| author.canonical_key.downcase }
+    authors_by_key = {}
+    QueryBatch.each(
+      desired.values.pluck(:canonical_key).uniq,
+      arguments_per_row: 1
+    ) do |batch|
+      Author.where(canonical_key: batch).each do |author|
+        authors_by_key[author.canonical_key.downcase] = author
+      end
+    end
     create_author_identifiers!(desired.values, authors_by_key)
 
     identifiers = author_identifier_map(desired.values)
@@ -93,16 +98,25 @@ class AuthorObservationIdentityResolver
   def global_orcids_by_email(emails)
     return {} if emails.empty?
 
-    rows = ProjectAuthor.where(author_kind: "person", email: emails)
-      .where.not(orcid: nil)
-      .distinct
-      .pluck(:email, :orcid)
-    rows.concat(
-      PaperAuthor.where(email: emails)
-        .where.not(orcid: nil)
-        .distinct
-        .pluck(:email, :orcid)
-    )
+    rows = []
+    QueryBatch.each(
+      emails,
+      arguments_per_row: 1,
+      fixed_arguments: 2
+    ) do |batch|
+      rows.concat(
+        ProjectAuthor.where(author_kind: "person", email: batch)
+          .where.not(orcid: nil)
+          .distinct
+          .pluck(:email, :orcid)
+      )
+      rows.concat(
+        PaperAuthor.where(email: batch)
+          .where.not(orcid: nil)
+          .distinct
+          .pluck(:email, :orcid)
+      )
+    end
     rows.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |(email, orcid), result|
       result[email.downcase] << orcid unless result[email.downcase].include?(orcid)
     end
@@ -137,7 +151,7 @@ class AuthorObservationIdentityResolver
           end.first,
         }
       end
-    rows.each_slice(WRITE_BATCH_SIZE) do |batch|
+    QueryBatch.each(rows) do |batch|
       Author.insert_all(
         batch,
         unique_by: :index_authors_on_canonical_key,
@@ -171,7 +185,7 @@ class AuthorObservationIdentityResolver
       identifiers
     end
     rows.uniq! { |row| [row.fetch(:scheme), row.fetch(:value)] }
-    rows.each_slice(WRITE_BATCH_SIZE) do |batch|
+    QueryBatch.each(rows) do |batch|
       AuthorIdentifier.insert_all(
         batch,
         unique_by: :index_author_identifiers_on_scheme_and_value,
@@ -193,12 +207,20 @@ class AuthorObservationIdentityResolver
     schemes = pairs.pluck(0).uniq
     values = pairs.pluck(1).uniq
     allowed = pairs.to_set
-    AuthorIdentifier.where(scheme: schemes, value: values)
-      .pluck(:scheme, :value, :author_id)
-      .each_with_object({}) do |(scheme, value, author_id), result|
-        key = [scheme, value.downcase]
-        result[key] = author_id if allowed.include?(key)
-      end
+    result = {}
+    QueryBatch.each(
+      values,
+      arguments_per_row: 1,
+      fixed_arguments: schemes.length
+    ) do |batch|
+      AuthorIdentifier.where(scheme: schemes, value: batch)
+        .pluck(:scheme, :value, :author_id)
+        .each do |scheme, value, author_id|
+          key = [scheme, value.downcase]
+          result[key] = author_id if allowed.include?(key)
+        end
+    end
+    result
   end
 
   def resolution_orcid(resolution)

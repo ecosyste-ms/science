@@ -1,7 +1,6 @@
 class AuthorPublicEvidenceCounter
   DEFAULT_LIMIT = 1_000
   MAX_LIMIT = 10_000
-  REFRESH_BATCH_SIZE = 500
 
   def self.sync_batch!(limit: DEFAULT_LIMIT, after_id: 0)
     limit = Integer(limit, exception: false)
@@ -26,7 +25,11 @@ class AuthorPublicEvidenceCounter
     author_ids = Array(author_ids).compact.map(&:to_i).uniq
     result = { authors: author_ids.length, updated: 0 }
 
-    author_ids.each_slice(REFRESH_BATCH_SIZE) do |batch|
+    QueryBatch.each(
+      author_ids,
+      arguments_per_row: 1,
+      fixed_arguments: 3
+    ) do |batch|
       counts = public_evidence_counts(batch)
       counts.group_by { |_, count| count }.each do |count, entries|
         ids = entries.map(&:first)

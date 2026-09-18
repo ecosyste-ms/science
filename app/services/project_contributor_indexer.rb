@@ -5,7 +5,6 @@ class ProjectContributorIndexer
   CURRENT_VERSION = 2
   DEFAULT_LIMIT = 250
   MAX_LIMIT = 1_000
-  UPSERT_BATCH_SIZE = 1_000
   SOURCE = "commits_ecosyste_ms"
   CANDIDATE_SQL = <<~SQL.squish.freeze
     (
@@ -142,17 +141,18 @@ class ProjectContributorIndexer
         .pluck(:author_id)
 
       now = Time.current
-      rows.each_slice(UPSERT_BATCH_SIZE) do |batch|
+      upsert_rows = rows.map do |row|
+        row.merge(
+          project_id: project.id,
+          author_id: nil,
+          author_match_kind: nil,
+          developer_account_id: nil,
+          developer_account_match_kind: nil
+        )
+      end
+      QueryBatch.each(upsert_rows) do |batch|
         ProjectContributor.upsert_all(
-          batch.map do |row|
-            row.merge(
-              project_id: project.id,
-              author_id: nil,
-              author_match_kind: nil,
-              developer_account_id: nil,
-              developer_account_match_kind: nil
-            )
-          end,
+          batch,
           unique_by: :index_project_contributors_on_source_key,
           update_only: UPSERT_COLUMNS,
           record_timestamps: true
@@ -281,16 +281,25 @@ class ProjectContributorIndexer
     provider_uuids = rows.filter_map { |row| row[:provider_uuid] }.uniq
     logins = rows.filter_map { |row| row[:login]&.downcase }.uniq
     owners = Owner.visible.where(host_id: project.host_id)
-    owners_by_uuid = if provider_uuids.any?
-      owners.where(uuid: provider_uuids).index_by { |owner| owner.uuid.to_s.downcase }
-    else
-      {}
+    owners_by_uuid = {}
+    QueryBatch.each(
+      provider_uuids,
+      arguments_per_row: 1,
+      fixed_arguments: 1
+    ) do |batch|
+      owners.where(uuid: batch).each do |owner|
+        owners_by_uuid[owner.uuid.to_s.downcase] = owner
+      end
     end
-    owners_by_login = if logins.any?
-      owners.where("lower(login) IN (?)", logins)
-        .index_by { |owner| owner.login.downcase }
-    else
-      {}
+    owners_by_login = {}
+    QueryBatch.each(
+      logins,
+      arguments_per_row: 1,
+      fixed_arguments: 1
+    ) do |batch|
+      owners.where("lower(login) IN (?)", batch).each do |owner|
+        owners_by_login[owner.login.downcase] = owner
+      end
     end
 
     rows.each do |row|

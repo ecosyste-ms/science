@@ -162,6 +162,66 @@ class PackageMetadataSyncTest < ActiveSupport::TestCase
     assert_in_delta 1.hour.from_now, package.ecosystems_retry_at, 2.seconds
   end
 
+  test "stops a local identity conflict and continues the batch" do
+    existing = create_package(
+      name: "canonical-gem",
+      purl: "pkg:gem/canonical-gem",
+      ecosystems_sync_status: "matched",
+      ecosystems_checked_at: Time.current
+    )
+    conflict = create_package(name: "conflicting-gem")
+    valid = create_package(name: "valid-gem", purl: "pkg:gem/valid-gem")
+    client = mock
+    client.expects(:package_lookup)
+      .with(
+        registry_name: @registry.name,
+        ecosystem: @registry.ecosystem,
+        name: conflict.name
+      )
+      .returns([package_record(
+        id: 124,
+        name: conflict.name,
+        purl: existing.purl
+      )])
+    client.expects(:package_lookup)
+      .with(purl: valid.purl)
+      .returns([package_record(id: 125, name: valid.name, purl: valid.purl)])
+
+    result = PackageMetadataSync.sync_batch!(client: client, limit: 2)
+
+    assert_equal 1, result.fetch(:ambiguous)
+    assert_equal 1, result.fetch(:matched)
+    assert_equal "ambiguous", conflict.reload.ecosystems_sync_status
+    assert_includes conflict.ecosystems_error, existing.id.to_s
+    assert_equal "matched", valid.reload.ecosystems_sync_status
+  end
+
+  test "continues after matched metadata fails package validation" do
+    Rails.logger.stubs(:error)
+    invalid = create_package(name: "invalid-gem", purl: "pkg:gem/invalid-gem")
+    valid = create_package(name: "valid-gem", purl: "pkg:gem/valid-gem")
+    client = mock
+    client.expects(:package_lookup)
+      .with(purl: invalid.purl)
+      .returns([package_record(
+        id: 124,
+        name: invalid.name,
+        purl: "pkg:npm/invalid-gem"
+      )])
+    client.expects(:package_lookup)
+      .with(purl: valid.purl)
+      .returns([package_record(id: 125, name: valid.name, purl: valid.purl)])
+
+    result = PackageMetadataSync.sync_batch!(client: client, limit: 2)
+
+    assert_equal 1, result.fetch(:transient_error)
+    assert_equal 1, result.fetch(:matched)
+    invalid.reload
+    assert_equal "pkg:gem/invalid-gem", invalid.purl
+    assert_equal "transient_error", invalid.ecosystems_sync_status
+    assert_equal "matched", valid.reload.ecosystems_sync_status
+  end
+
   test "refreshes matched packages after thirty days" do
     package = create_package(
       name: "rails",

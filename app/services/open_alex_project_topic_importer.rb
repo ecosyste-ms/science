@@ -111,9 +111,14 @@ class OpenAlexProjectTopicImporter
       topic_ids = works.flat_map { |work| work_topics(work) }
         .filter_map { |topic| topic["id"] }
         .uniq
-      local_topic_ids = OpenAlexTopic.where(openalex_id: topic_ids)
-        .pluck(:openalex_id, :id)
-        .to_h
+      local_topic_ids = {}
+      QueryBatch.each(topic_ids, arguments_per_row: 1) do |batch|
+        local_topic_ids.merge!(
+          OpenAlexTopic.where(openalex_id: batch)
+            .pluck(:openalex_id, :id)
+            .to_h
+        )
+      end
       now = Time.current
       rows = []
       matched_project_ids = []
@@ -176,7 +181,9 @@ class OpenAlexProjectTopicImporter
           (matched_project_ids + skipped_project_ids).uniq,
           source
         )
-        ProjectOpenAlexTopic.insert_all!(rows) if rows.any?
+        QueryBatch.each(rows) do |batch|
+          ProjectOpenAlexTopic.insert_all!(batch)
+        end
       end
 
       counts[:processed] += projects.length

@@ -268,9 +268,14 @@ class MetadataRepositoryImporter
 
     def existing_repository_urls(candidates, gitlab_hosts:)
       lookup_urls = candidates.flat_map { |url| [url, "#{url}/"] }
-      Project.where(url: lookup_urls).pluck(:url).filter_map do |url|
-        normalize_repository_url(url, gitlab_hosts: gitlab_hosts)
-      end.to_set
+      existing = Set.new
+      QueryBatch.each(lookup_urls, arguments_per_row: 1) do |batch|
+        Project.where(url: batch).pluck(:url).each do |url|
+          normalized = normalize_repository_url(url, gitlab_hosts: gitlab_hosts)
+          existing << normalized if normalized
+        end
+      end
+      existing
     end
 
     def repository_alias_urls

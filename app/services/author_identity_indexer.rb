@@ -5,7 +5,6 @@ class AuthorIdentityIndexer
   CURRENT_VERSION = 2
   DEFAULT_LIMIT = 250
   MAX_LIMIT = 1_000
-  WRITE_BATCH_SIZE = 1_000
   LINK_SOURCE = "same_project_email"
   CANDIDATE_SQL = <<~SQL.squish.freeze
     citation_authors_source_digest IS NOT NULL
@@ -219,17 +218,26 @@ class AuthorIdentityIndexer
 
     assignments = {}
     links = []
-    non_person_account_ids = DeveloperAccount
-      .left_joins(:owner)
-      .where(id: account_assignments.values.pluck(:developer_account_id))
-      .where(
-        "developer_accounts.account_kind = :bot " \
-          "OR lower(owners.kind) = :organization",
-        bot: "bot",
-        organization: "organization"
+    non_person_account_ids = Set.new
+    account_ids = account_assignments.values.pluck(:developer_account_id).uniq
+    QueryBatch.each(
+      account_ids,
+      arguments_per_row: 1,
+      fixed_arguments: 2
+    ) do |batch|
+      non_person_account_ids.merge(
+        DeveloperAccount
+          .left_joins(:owner)
+          .where(id: batch)
+          .where(
+            "developer_accounts.account_kind = :bot " \
+              "OR lower(owners.kind) = :organization",
+            bot: "bot",
+            organization: "organization"
+          )
+          .pluck(:id)
       )
-      .pluck(:id)
-      .to_set
+    end
     project_contributors.each do |contributor|
       next if contributor.account_kind == "bot" || contributor.email.blank?
       account_id = account_assignments.dig(contributor.id, :developer_account_id)
@@ -266,7 +274,12 @@ class AuthorIdentityIndexer
 
   def apply_project_author_assignments!(project_authors, assignments)
     ids = project_authors.map(&:id)
-    ProjectAuthor.where(id: ids).update_all(author_id: nil, author_match_kind: nil) if ids.any?
+    clear_assignments!(
+      ProjectAuthor,
+      ids,
+      author_id: nil,
+      author_match_kind: nil
+    )
     rows = assignments.map do |project_author_id, assignment|
       [project_author_id, assignment.fetch(:author_id), assignment.fetch(:match_kind)]
     end
@@ -279,10 +292,12 @@ class AuthorIdentityIndexer
 
   def apply_paper_author_assignments!(paper_authors, assignments)
     ids = paper_authors.map(&:id)
-    PaperAuthor.where(id: ids).update_all(
+    clear_assignments!(
+      PaperAuthor,
+      ids,
       author_id: nil,
       author_match_kind: nil
-    ) if ids.any?
+    )
     rows = assignments.map do |paper_author_id, assignment|
       [paper_author_id, assignment.fetch(:author_id), assignment.fetch(:match_kind)]
     end
@@ -300,14 +315,14 @@ class AuthorIdentityIndexer
     author_assignments
   )
     ids = project_contributors.map(&:id)
-    if ids.any?
-      ProjectContributor.where(id: ids).update_all(
-        author_id: nil,
-        author_match_kind: nil,
-        developer_account_id: nil,
-        developer_account_match_kind: nil
-      )
-    end
+    clear_assignments!(
+      ProjectContributor,
+      ids,
+      author_id: nil,
+      author_match_kind: nil,
+      developer_account_id: nil,
+      developer_account_match_kind: nil
+    )
     rows = ids.filter_map do |contributor_id|
       account = account_assignments[contributor_id]
       author = author_assignments[contributor_id]
@@ -330,7 +345,7 @@ class AuthorIdentityIndexer
 
   def update_assignment_rows!(table, columns, rows, project_scoped: true)
     connection = ActiveRecord::Base.connection
-    rows.each_slice(WRITE_BATCH_SIZE) do |batch|
+    QueryBatch.each(rows, arguments_per_row: columns.length + 1) do |batch|
       values = batch.map do |row|
         "(#{row.map { |value| connection.quote(value) }.join(", ")})"
       end.join(", ")
@@ -352,7 +367,7 @@ class AuthorIdentityIndexer
   end
 
   def replace_account_author_links!(links)
-    links.each_slice(WRITE_BATCH_SIZE) do |batch|
+    QueryBatch.each(links) do |batch|
       AuthorDeveloperAccountLink.upsert_all(
         batch,
         unique_by: :index_author_account_links_on_source_key,
@@ -375,6 +390,16 @@ class AuthorIdentityIndexer
       .where(source: LINK_SOURCE)
       .where.not(source_digest: attempted_source_digest)
       .delete_all
+  end
+
+  def clear_assignments!(model, ids, attributes)
+    QueryBatch.each(
+      ids,
+      arguments_per_row: 1,
+      fixed_arguments: attributes.length
+    ) do |batch|
+      model.where(id: batch).update_all(attributes)
+    end
   end
 
   def source_digest

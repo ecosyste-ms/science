@@ -1,6 +1,5 @@
 class OpenAlexTaxonomyImporter
   MINIMUM_TOPICS = 4_000
-  UPSERT_BATCH_SIZE = 500
 
   class << self
     def sync!(
@@ -29,19 +28,23 @@ class OpenAlexTaxonomyImporter
       now = Time.current
       rows = topics.map { |topic| attributes_for(topic, now) }
       ids = rows.pluck(:openalex_id)
-      existing = OpenAlexTopic.where(openalex_id: ids).count
-      deactivated = 0
+      existing = 0
+      active_existing = 0
+      QueryBatch.each(ids, arguments_per_row: 1) do |batch|
+        existing += OpenAlexTopic.where(openalex_id: batch).count
+        active_existing += OpenAlexTopic.active.where(openalex_id: batch).count
+      end
+      deactivated = OpenAlexTopic.active.count - active_existing
 
       OpenAlexTopic.transaction do
-        rows.each_slice(UPSERT_BATCH_SIZE) do |batch|
+        OpenAlexTopic.active.update_all(active: false, updated_at: now)
+        QueryBatch.each(rows) do |batch|
           OpenAlexTopic.upsert_all(
             batch,
             unique_by: :openalex_id,
             update_only: update_columns
           )
         end
-        deactivated = OpenAlexTopic.where.not(openalex_id: ids)
-          .update_all(active: false, updated_at: now)
       end
 
       {

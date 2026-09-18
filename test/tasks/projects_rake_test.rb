@@ -442,6 +442,52 @@ class ProjectsRakeTest < ActiveSupport::TestCase
     assert_includes output, "account_author_links: 1"
   end
 
+  test "sync_author_identities limits contributor updates through the rake entrypoint" do
+    host = Host.create!(name: "Bounded Rake Identity GitHub")
+    project = Project.create!(
+      url: "https://github.com/test/bounded-author-identity-rake",
+      science_score: 20,
+      host: host,
+      commits: {
+        "committers" => 120.times.map do |index|
+          {
+            "name" => "Contributor #{index}",
+            "login" => "bounded-contributor-#{index}",
+            "count" => 1,
+          }
+        end,
+      }
+    )
+    ProjectContributorIndexer.new(project).sync!
+    ENV["LIMIT"] = "1"
+    statements = []
+    subscriber = lambda do |_name, _started, _finished, _id, payload|
+      sql = payload.fetch(:sql)
+      statements << sql if sql.start_with?('UPDATE "project_contributors"')
+    end
+
+    output, = capture_io do
+      ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") do
+        Rake::Task["projects:sync_author_identities"].execute
+      end
+    end
+
+    clear_statements = statements.reject { |sql| sql.include?(" AS record ") }
+    assignment_statements = statements.select { |sql| sql.include?(" AS record ") }
+    assert_equal 2, clear_statements.length
+    assert_equal 6, assignment_statements.length
+    assert clear_statements.all? do |sql|
+      sql.match(/ IN \(([^)]+)\)/).captures.sole.split(",").length <= 96
+    end
+    assert assignment_statements.all? do |sql|
+      sql.scan("), (").length + 1 <= 20
+    end
+    assert_equal 120, project.project_contributors.reload.where.not(
+      developer_account_id: nil
+    ).count
+    assert_includes output, "indexed: 1"
+  end
+
   test "sync_author_identities handles inferred ORCIDs and provider conflicts through the rake entrypoint" do
     host = Host.create!(name: "Rake Conflict GitHub")
     email_only = Project.create!(

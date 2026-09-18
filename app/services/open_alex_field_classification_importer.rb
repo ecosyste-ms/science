@@ -33,8 +33,19 @@ class OpenAlexFieldClassificationImporter
       project_ids = projects.map(&:id)
 
       ProjectField.transaction do
-        ProjectField.where(project_id: project_ids, field_id: fields.values).delete_all
-        ProjectField.insert_all!(rows) if rows.any?
+        QueryBatch.each(
+          project_ids,
+          arguments_per_row: 1,
+          fixed_arguments: fields.length
+        ) do |batch|
+          ProjectField.where(
+            project_id: batch,
+            field_id: fields.values
+          ).delete_all
+        end
+        QueryBatch.each(rows) do |batch|
+          ProjectField.insert_all!(batch)
+        end
       end
 
       counts[:projects] += projects.length

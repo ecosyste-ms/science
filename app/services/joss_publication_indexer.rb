@@ -4,7 +4,6 @@ class JossPublicationIndexer
   CURRENT_VERSION = 1
   DEFAULT_LIMIT = 250
   MAX_LIMIT = 1_000
-  UPSERT_BATCH_SIZE = 1_000
   SOURCE = "joss"
   CANDIDATE_SQL = <<~SQL.squish.freeze
     joss_metadata IS NOT NULL
@@ -265,9 +264,10 @@ class JossPublicationIndexer
   end
 
   def upsert_authors!(paper, rows)
-    rows.each_slice(UPSERT_BATCH_SIZE) do |batch|
+    upsert_rows = rows.map { |row| row.merge(paper_id: paper.id) }
+    QueryBatch.each(upsert_rows) do |batch|
       PaperAuthor.upsert_all(
-        batch.map { |row| row.merge(paper_id: paper.id) },
+        batch,
         unique_by: :index_paper_authors_on_snapshot_position,
         update_only: AUTHOR_UPDATE_COLUMNS,
         record_timestamps: true

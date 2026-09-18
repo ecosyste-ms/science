@@ -61,12 +61,7 @@ class PackageMetadataSync
       outcome = sync_package!(package)
       result[outcome] += 1
     rescue StandardError => error
-      outcome = package.record_ecosystems_error!(error)
-      result[outcome] += 1
-      Rails.logger.error(
-        "Package metadata sync failed for package #{package.id}: " \
-        "#{error.class}: #{error.message}"
-      )
+      record_sync_error!(package, error, result)
     ensure
       package&.release_ecosystems_sync! if claimed
     end
@@ -145,6 +140,52 @@ class PackageMetadataSync
     return package.record_ecosystems_missing! if matches.empty?
     return package.record_ecosystems_ambiguous!(matches.length) if matches.many?
 
-    package.record_ecosystems_match!(matches.sole)
+    record = matches.sole
+    conflict = local_identity_conflict(package, record)
+    return package.record_ecosystems_conflict!(conflict) if conflict
+
+    package.record_ecosystems_match!(record)
+  end
+
+  def local_identity_conflict(package, record)
+    ecosystems_id = Integer(record["id"], exception: false)
+    if ecosystems_id
+      package_id = Package.where(ecosystems_id: ecosystems_id)
+        .where.not(id: package.id)
+        .pick(:id)
+      if package_id
+        return "ecosystems package #{ecosystems_id} already belongs to package #{package_id}"
+      end
+    end
+
+    purl = record["purl"].presence
+    return unless purl
+
+    normalized_purl = Purl.parse(purl).with(version: nil, subpath: nil).to_s
+    package_id = Package.where(purl: normalized_purl)
+      .where.not(id: package.id)
+      .pick(:id)
+    if package_id
+      "PURL #{normalized_purl} already belongs to package #{package_id}"
+    end
+  rescue Purl::Error => error
+    "invalid upstream PURL #{purl.inspect}: #{error.message}"
+  end
+
+  def record_sync_error!(package, error, result)
+    package.reload
+    outcome = package.record_ecosystems_error!(error)
+    result[outcome] += 1
+    Rails.logger.error(
+      "Package metadata sync failed for package #{package.id}: " \
+      "#{error.class}: #{error.message}"
+    )
+  rescue StandardError => recording_error
+    result[:failed] += 1
+    Rails.logger.error(
+      "Package metadata sync error could not be recorded for package " \
+      "#{package&.id}: #{recording_error.class}: #{recording_error.message}; " \
+      "original error: #{error.class}: #{error.message}"
+    )
   end
 end

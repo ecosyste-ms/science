@@ -79,15 +79,19 @@ class PackagePublicationMatcher
     variants = repository_urls.flat_map do |url|
       [url, "#{url}/", "#{url}.git", "#{url}.git/"]
     end
-    Project.where(url: variants).pluck(:id, :url).each do |project_id, url|
-      normalized = RepositoryUrlNormalizer.normalize(url)
-      matches[normalized] << project_id if normalized
+    QueryBatch.each(variants, arguments_per_row: 1) do |batch|
+      Project.where(url: batch).pluck(:id, :url).each do |project_id, url|
+        normalized = RepositoryUrlNormalizer.normalize(url)
+        matches[normalized] << project_id if normalized
+      end
     end
 
-    ProjectRepositoryAlias.where(url: repository_urls)
-      .pluck(:project_id, :url).each do |project_id, url|
-      normalized = RepositoryUrlNormalizer.normalize(url)
-      matches[normalized] << project_id if normalized
+    QueryBatch.each(repository_urls, arguments_per_row: 1) do |batch|
+      ProjectRepositoryAlias.where(url: batch)
+        .pluck(:project_id, :url).each do |project_id, url|
+          normalized = RepositoryUrlNormalizer.normalize(url)
+          matches[normalized] << project_id if normalized
+        end
     end
     matches
   end

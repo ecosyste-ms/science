@@ -35,7 +35,9 @@ class ManualResearchOrganizationDomainImporter
           updated_at: now,
         }
       end
-      ResearchOrganizationDomain.insert_all!(rows)
+      QueryBatch.each(rows) do |batch|
+        ResearchOrganizationDomain.insert_all!(batch)
+      end
       ResearchOrganizationDomain.activate_version!(source: "manual", version: version)
       { source: "manual", version: version, domains: rows.length, imported: true }
     rescue StandardError

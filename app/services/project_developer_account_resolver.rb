@@ -1,8 +1,6 @@
 require "set"
 
 class ProjectDeveloperAccountResolver
-  WRITE_BATCH_SIZE = 1_000
-
   attr_reader :project, :project_contributors
 
   def initialize(project, project_contributors)
@@ -24,12 +22,16 @@ class ProjectDeveloperAccountResolver
 
     components = account_components(observations)
     existing_by_identifier = existing_accounts_by_identifier(components)
-    existing_by_owner = DeveloperAccount.where(
-      owner_id: components.flat_map do |component|
-        component.flat_map { |observation| observation.fetch(:identifiers) }
-          .filter_map { |scheme, value| value.to_i if scheme == "owner" }
-      end.uniq
-    ).index_by(&:owner_id)
+    owner_ids = components.flat_map do |component|
+      component.flat_map { |observation| observation.fetch(:identifiers) }
+        .filter_map { |scheme, value| value.to_i if scheme == "owner" }
+    end.uniq
+    existing_by_owner = {}
+    QueryBatch.each(owner_ids, arguments_per_row: 1) do |batch|
+      DeveloperAccount.where(owner_id: batch).each do |account|
+        existing_by_owner[account.owner_id] = account
+      end
+    end
     conflicting_account_ids = conflicting_existing_account_ids(
       existing_by_identifier.values + existing_by_owner.values.map(&:id)
     )
@@ -64,9 +66,15 @@ class ProjectDeveloperAccountResolver
     end
 
     create_developer_accounts!(resolved.select { |resolution| resolution[:account_id].nil? })
-    accounts_by_key = DeveloperAccount.where(
-      canonical_key: resolved.pluck(:canonical_key)
-    ).index_by { |account| account.canonical_key.downcase }
+    accounts_by_key = {}
+    QueryBatch.each(
+      resolved.pluck(:canonical_key),
+      arguments_per_row: 1
+    ) do |batch|
+      DeveloperAccount.where(canonical_key: batch).each do |account|
+        accounts_by_key[account.canonical_key.downcase] = account
+      end
+    end
     resolved.each do |resolution|
       resolution[:account_id] ||= accounts_by_key[resolution.fetch(:canonical_key).downcase]&.id
     end
@@ -150,14 +158,22 @@ class ProjectDeveloperAccountResolver
     schemes = identifiers.pluck(0).uniq
     values = identifiers.pluck(1).uniq
     allowed = identifiers.to_set
-    DeveloperAccountIdentifier.where(
-      host_id: project.host_id,
-      scheme: schemes,
-      value: values
-    ).pluck(:scheme, :value, :developer_account_id).each_with_object({}) do |(scheme, value, account_id), result|
-      key = [scheme, value.downcase]
-      result[key] = account_id if allowed.include?(key)
+    result = {}
+    QueryBatch.each(
+      values,
+      arguments_per_row: 1,
+      fixed_arguments: schemes.length + 1
+    ) do |batch|
+      DeveloperAccountIdentifier.where(
+        host_id: project.host_id,
+        scheme: schemes,
+        value: batch
+      ).pluck(:scheme, :value, :developer_account_id).each do |scheme, value, account_id|
+        key = [scheme, value.downcase]
+        result[key] = account_id if allowed.include?(key)
+      end
     end
+    result
   end
 
   def account_canonical_key(identifiers)
@@ -182,12 +198,21 @@ class ProjectDeveloperAccountResolver
     account_ids = account_ids.compact.uniq
     return Set.new if account_ids.empty?
 
-    DeveloperAccountIdentifier
-      .where(developer_account_id: account_ids, scheme: %w[owner provider])
-      .group(:developer_account_id, :scheme)
-      .having("COUNT(DISTINCT LOWER(value)) > 1")
-      .pluck(:developer_account_id)
-      .to_set
+    result = Set.new
+    QueryBatch.each(
+      account_ids,
+      arguments_per_row: 1,
+      fixed_arguments: 2
+    ) do |batch|
+      result.merge(
+        DeveloperAccountIdentifier
+          .where(developer_account_id: batch, scheme: %w[owner provider])
+          .group(:developer_account_id, :scheme)
+          .having("COUNT(DISTINCT LOWER(value)) > 1")
+          .pluck(:developer_account_id)
+      )
+    end
+    result
   end
 
   def create_developer_accounts!(resolutions)
@@ -197,7 +222,7 @@ class ProjectDeveloperAccountResolver
         host_id: project.host_id
       )
     end
-    rows.each_slice(WRITE_BATCH_SIZE) do |batch|
+    QueryBatch.each(rows) do |batch|
       DeveloperAccount.insert_all(
         batch,
         unique_by: :index_developer_accounts_on_canonical_key,
@@ -220,7 +245,7 @@ class ProjectDeveloperAccountResolver
       end
     end
     rows.uniq! { |row| [row.fetch(:host_id), row.fetch(:scheme), row.fetch(:value)] }
-    rows.each_slice(WRITE_BATCH_SIZE) do |batch|
+    QueryBatch.each(rows) do |batch|
       DeveloperAccountIdentifier.insert_all(
         batch,
         unique_by: :index_developer_account_identifiers_on_host_and_value,
@@ -230,9 +255,13 @@ class ProjectDeveloperAccountResolver
   end
 
   def update_developer_accounts!(resolutions, assignments)
-    accounts = DeveloperAccount.where(
-      id: resolutions.filter_map { |resolution| resolution[:account_id] }
-    ).index_by(&:id)
+    accounts = {}
+    account_ids = resolutions.filter_map { |resolution| resolution[:account_id] }
+    QueryBatch.each(account_ids, arguments_per_row: 1) do |batch|
+      DeveloperAccount.where(id: batch).each do |account|
+        accounts[account.id] = account
+      end
+    end
     account_rows = resolutions.filter_map do |resolution|
       account_id = resolution[:account_id]
       next unless account_id
@@ -258,7 +287,7 @@ class ProjectDeveloperAccountResolver
         :account_kind
       ).merge(attributes)
     end
-    account_rows.each_slice(WRITE_BATCH_SIZE) do |batch|
+    QueryBatch.each(account_rows) do |batch|
       DeveloperAccount.upsert_all(
         batch,
         unique_by: :id,

@@ -264,6 +264,17 @@ class Package < ApplicationRecord
     :ambiguous
   end
 
+  def record_ecosystems_conflict!(message, now: Time.current)
+    update!(
+      ecosystems_sync_status: "ambiguous",
+      ecosystems_checked_at: now,
+      ecosystems_retry_at: nil,
+      ecosystems_sync_started_at: nil,
+      ecosystems_error: message
+    )
+    :ambiguous
+  end
+
   def record_ecosystems_error!(error, now: Time.current)
     count = ecosystems_error_count + 1
     delay = ERROR_RETRY_DELAYS[count - 1]
