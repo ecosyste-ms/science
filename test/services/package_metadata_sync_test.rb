@@ -66,6 +66,69 @@ class PackageMetadataSyncTest < ActiveSupport::TestCase
     assert_equal 124, package.reload.ecosystems_id
   end
 
+  test "lowercases NuGet Purls for metadata lookup" do
+    registry = PackageRegistry.create!(
+      name: "nuget.org",
+      url: "https://nuget.org",
+      ecosystem: "nuget",
+      purl_type: "nuget",
+      default: true
+    )
+    package = create_package(
+      package_registry: registry,
+      name: "System.Runtime.Serialization.Formatters",
+      purl: "pkg:nuget/System.Runtime.Serialization.Formatters"
+    )
+    client = mock
+    client.expects(:package_lookup)
+      .with(purl: "pkg:nuget/system.runtime.serialization.formatters")
+      .returns([{
+        "id" => 8_910_484,
+        "name" => package.name.downcase,
+        "purl" => "pkg:nuget/system.runtime.serialization.formatters",
+        "registry" => { "name" => registry.name },
+      }])
+
+    result = PackageMetadataSync.sync_batch!(client: client, limit: 1)
+
+    assert_equal 1, result.fetch(:matched)
+    package.reload
+    assert_equal 8_910_484, package.ecosystems_id
+    assert_equal "pkg:nuget/system.runtime.serialization.formatters", package.purl
+  end
+
+  test "lowercases NuGet names for registry-scoped metadata lookup" do
+    registry = PackageRegistry.create!(
+      name: "nuget.org",
+      url: "https://nuget.org",
+      ecosystem: "nuget",
+      purl_type: "nuget",
+      default: true
+    )
+    package = create_package(
+      package_registry: registry,
+      name: "Microsoft.Extensions.AI.OpenAI"
+    )
+    client = mock
+    client.expects(:package_lookup)
+      .with(
+        registry_name: registry.name,
+        ecosystem: registry.ecosystem,
+        name: "microsoft.extensions.ai.openai"
+      )
+      .returns([{
+        "id" => 8_910_485,
+        "name" => package.name.downcase,
+        "purl" => "pkg:nuget/microsoft.extensions.ai.openai",
+        "registry" => { "name" => registry.name },
+      }])
+
+    result = PackageMetadataSync.sync_batch!(client: client, limit: 1)
+
+    assert_equal 1, result.fetch(:matched)
+    assert_equal 8_910_485, package.reload.ecosystems_id
+  end
+
   test "stops missing packages after one lookup" do
     package = create_package(name: "internal-gem", purl: "pkg:gem/internal-gem")
     client = mock

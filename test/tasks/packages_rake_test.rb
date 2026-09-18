@@ -208,6 +208,46 @@ class PackagesRakeTest < ActiveSupport::TestCase
     assert_includes output, "matched: 1"
   end
 
+  test "syncs mixed-case NuGet metadata through the rake entrypoint" do
+    registry = PackageRegistry.create!(
+      name: "nuget.org",
+      url: "https://nuget.org",
+      ecosystem: "nuget",
+      purl_type: "nuget",
+      default: true
+    )
+    package = Package.create!(
+      package_registry: registry,
+      name: "System.Runtime.Serialization.Formatters",
+      purl: "pkg:nuget/System.Runtime.Serialization.Formatters"
+    )
+    request = stub_request(
+      :get,
+      "https://packages.ecosyste.ms/api/v1/packages/lookup"
+    ).with(query: {
+      "purl" => "pkg:nuget/system.runtime.serialization.formatters",
+    }).to_return(
+      status: 200,
+      body: [{
+        id: 8_910_484,
+        name: package.name.downcase,
+        namespace: nil,
+        purl: "pkg:nuget/system.runtime.serialization.formatters",
+        registry: { name: registry.name },
+      }].to_json
+    )
+    ENV["LIMIT"] = "1"
+
+    output, = capture_io { Rake::Task["packages:sync_metadata"].invoke }
+
+    assert_requested request
+    package.reload
+    assert_equal 8_910_484, package.ecosystems_id
+    assert_equal "pkg:nuget/system.runtime.serialization.formatters", package.purl
+    assert_equal "matched", package.ecosystems_sync_status
+    assert_includes output, "matched: 1"
+  end
+
   test "sync_metadata stops an identity conflict and continues through the rake entrypoint" do
     registry = PackageRegistry.create!(
       name: "rubygems.org",

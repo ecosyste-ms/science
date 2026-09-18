@@ -125,12 +125,12 @@ class PackageMetadataSync
 
   def sync_package!(package)
     records = if package.purl.present?
-      client.package_lookup(purl: package.purl)
+      client.package_lookup(purl: metadata_lookup_purl(package))
     else
       client.package_lookup(
         registry_name: package.package_registry.name,
         ecosystem: package.package_registry.ecosystem,
-        name: package.name
+        name: metadata_lookup_name(package)
       )
     end
     matches = records.select do |record|
@@ -145,6 +145,23 @@ class PackageMetadataSync
     return package.record_ecosystems_conflict!(conflict) if conflict
 
     package.record_ecosystems_match!(record)
+  end
+
+  def metadata_lookup_purl(package)
+    return package.purl unless nuget_package?(package)
+
+    parsed = Purl.parse(package.purl)
+    parsed.with(name: parsed.name.downcase).to_s
+  end
+
+  def metadata_lookup_name(package)
+    return package.name unless nuget_package?(package)
+
+    package.name.downcase
+  end
+
+  def nuget_package?(package)
+    package.package_registry.purl_type.to_s.casecmp?("nuget")
   end
 
   def local_identity_conflict(package, record)
