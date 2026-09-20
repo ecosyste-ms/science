@@ -75,6 +75,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     @project.update!(
       last_synced_at: Time.current,
       keywords: ["visualization"],
+      swhids: swhid_result,
       repository: {
         "host" => { "name" => "GitHub" },
         "owner" => "tidyverse",
@@ -120,8 +121,10 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       assert_select "[data-role='project-keywords']", text: /visualization/
     end
     assert_select "#project-repository" do
-      assert_select "#project-repository-tabs button", count: 3
+      assert_select "#project-repository-tabs button", count: 4
       assert_select "#project-repository-details", text: /Repository/
+      assert_select "#project-repository-swhids-tab", text: "SWHIDs"
+      assert_select "#project-repository-swhids", text: /swh:1:rev:/
       assert_select "#project-repository-readme", text: /ggplot2/
       assert_select "#project-repository-owner", text: /Tidyverse/
     end
@@ -193,6 +196,94 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
           text: "Grace Hopper"
       end
     end
+  end
+
+  test "show displays calculated SWHIDs and provenance in the repository section" do
+    @project.update!(last_synced_at: Time.current, swhids: swhid_result)
+
+    get project_url(@project)
+
+    assert_response :success
+    assert_select "#project-repository-swhids-tab", text: "SWHIDs"
+    assert_select "#project-repository-swhids" do
+      assert_select "[data-role='swhid-revision'] code", text: "swh:1:rev:817c61051b31ce4d0eb73d1b873c02de87ce1f81"
+      assert_select "[data-role='swhid-directory'] code", text: "swh:1:dir:b3bb6ae45c8b3cb7ee9d9c3b84b1319cda7060d0"
+      assert_select "code", text: "817c61051b31ce4d0eb73d1b873c02de87ce1f81"
+      assert_select "dd", text: "https://github.com/simonehagey/orbdot"
+      assert_select "dt", text: "Calculated"
+      assert_select "time[datetime='2026-09-20T12:44:07Z']", text: "September 20, 2026 at 12:44 UTC"
+      assert_select "p", text: /Software Heritage archive availability has not been checked/
+      assert_select ".alert", count: 0
+    end
+    assert_not_includes response.body, "/tmp/science-swhid"
+  end
+
+  test "show omits the SWHID tab before a scan" do
+    @project.update!(last_synced_at: Time.current)
+
+    get project_url(@project)
+
+    assert_response :success
+    assert_select "#project-repository-swhids-tab", count: 0
+    assert_select "#project-repository-swhids", count: 0
+  end
+
+  test "show handles a failed clone without exposing command diagnostics" do
+    @project.update!(last_synced_at: Time.current, swhids: {
+      "status" => "error",
+      "origin" => @project.url,
+      "attempted_at" => "2026-09-20T12:44:07Z",
+      "error" => "fatal: /tmp/science-swhid/repository: permission denied"
+    })
+
+    get project_url(@project)
+
+    assert_response :success
+    assert_select "#project-repository-swhids" do
+      assert_select ".alert-warning", text: "SWHID calculation did not complete."
+      assert_select "[data-role='swhid-revision']", text: "Unavailable"
+      assert_select "[data-role='swhid-directory']", text: "Unavailable"
+      assert_select "dt", text: "Last attempted"
+    end
+    assert_not_includes response.body, "permission denied"
+    assert_not_includes response.body, "/tmp/science-swhid"
+  end
+
+  test "show retains a successful revision when directory calculation fails" do
+    result = swhid_result
+    result["status"] = "error"
+    result["directory"] = { "status" => "error", "error" => "command timed out" }
+    @project.update!(last_synced_at: Time.current, swhids: result)
+
+    get project_url(@project)
+
+    assert_response :success
+    assert_select "#project-repository-swhids" do
+      assert_select ".alert-warning"
+      assert_select "[data-role='swhid-revision'] code", text: result.dig("revision", "swhid")
+      assert_select "[data-role='swhid-directory']", text: "Unavailable"
+    end
+  end
+
+  def swhid_result
+    {
+      "status" => "success",
+      "commit" => "817c61051b31ce4d0eb73d1b873c02de87ce1f81",
+      "origin" => "https://github.com/simonehagey/orbdot",
+      "attempted_at" => "2026-09-20T12:44:07Z",
+      "duration_ms" => 1451,
+      "revision" => {
+        "status" => "success",
+        "swhid" => "swh:1:rev:817c61051b31ce4d0eb73d1b873c02de87ce1f81",
+        "binary_version" => "swhid 0.1.0",
+        "input" => { "path" => "/tmp/science-swhid/repository" }
+      },
+      "directory" => {
+        "status" => "success",
+        "swhid" => "swh:1:dir:b3bb6ae45c8b3cb7ee9d9c3b84b1319cda7060d0",
+        "binary_version" => "swhid 0.1.0"
+      }
+    }
   end
 
   test "show sorts raw JOSS publication authors alphabetically" do

@@ -1,0 +1,49 @@
+<% data = @project.swhids %>
+
+<section class="mb-4">
+  <h2 class="mb-3">SWHIDs</h2>
+  <p class="text-muted">
+    Software Hash Identifiers identify a specific revision or directory of source code.
+    Software Heritage archive availability has not been checked.
+  </p>
+
+  <% if data["status"] == "error" %>
+    <p class="alert alert-warning">SWHID calculation did not complete.</p>
+  <% end %>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <dl class="row mb-0">
+        <% [["revision", "Revision"], ["directory", "Directory"]].each do |type, label| %>
+          <dt class="col-md-3 mb-2"><%= label %></dt>
+          <dd class="col-md-9 mb-3" data-role="swhid-<%= type %>">
+            <% if data.dig(type, "status") == "success" && data.dig(type, "swhid").present? %>
+              <code class="text-break user-select-all"><%= data.dig(type, "swhid") %></code>
+            <% else %>
+              <span class="text-muted">Unavailable</span>
+            <% end %>
+          </dd>
+        <% end %>
+
+        <% if data["commit"].present? %>
+          <dt class="col-md-3 mb-2">Commit</dt>
+          <dd class="col-md-9 mb-3">
+            <code class="text-break user-select-all"><%= data["commit"] %></code>
+          </dd>
+        <% end %>
+
+        <% if data["origin"].present? %>
+          <dt class="col-md-3 mb-2">Source</dt>
+          <dd class="col-md-9 mb-3 text-break"><%= data["origin"] %></dd>
+        <% end %>
+
+        <% if data["attempted_at"].present? %>
+          <dt class="col-md-3 mb-2"><%= data["status"] == "success" ? "Calculated" : "Last attempted" %></dt>
+          <dd class="col-md-9 mb-0">
+            <%= time_tag Time.iso8601(data["attempted_at"]).utc, format: "%B %d, %Y at %H:%M UTC" %>
+          </dd>
+        <% end %>
+      </dl>
+    </div>
+  </div>
+</section>

@@ -97,6 +97,12 @@
               visible: @project.repository.present?,
             },
             {
+              id: "swhids",
+              label: "SWHIDs",
+              partial: "swhids",
+              visible: @project.swhids.present?,
+            },
+            {
               id: "readme",
               label: "README",
               partial: "readme",
