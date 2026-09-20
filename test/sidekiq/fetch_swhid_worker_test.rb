@@ -25,13 +25,19 @@ class FetchSwhidWorkerTest < ActiveSupport::TestCase
   end
 
   test "worker stores real CLI revision and directory results without changing score" do
+    commit = git("-C", @repository, "rev-parse", "HEAD").strip
+    tree = git("-C", @repository, "rev-parse", "HEAD^{tree}").strip
+    request = stub_request(:post, SwhidArchiveChecker::ENDPOINT)
+      .with(body: ["swh:1:rev:#{commit}", "swh:1:dir:#{tree}"].to_json, headers: { "Content-Type" => "application/json", "User-Agent" => "science.ecosyste.ms (+https://science.ecosyste.ms)" })
+      .to_return(status: 200, body: {
+        "swh:1:rev:#{commit}" => { "known" => true },
+        "swh:1:dir:#{tree}" => { "known" => false }
+      }.to_json)
     @project.fetch_swhids_async
     assert_equal [[@project.id]], FetchSwhidWorker.jobs.map { |job| job["args"] }
     FetchSwhidWorker.drain
 
     result = @project.reload.swhids
-    commit = git("-C", @repository, "rev-parse", "HEAD").strip
-    tree = git("-C", @repository, "rev-parse", "HEAD^{tree}").strip
     assert_equal "success", result["status"]
     assert_equal commit, result["commit"]
     assert_equal @repository, result["origin"]
@@ -43,6 +49,10 @@ class FetchSwhidWorkerTest < ActiveSupport::TestCase
     assert_operator result["duration_ms"], :>=, 0
     assert_equal 42, @project.science_score
     assert_not File.exist?(result.dig("directory", "input", "path"))
+    assert_equal "archived", result.dig("revision", "archive", "status")
+    assert_equal "not_found", result.dig("directory", "archive", "status")
+    assert result.dig("revision", "archive", "checked_at")
+    assert_requested request, times: 1
   end
 
   test "worker records an unavailable repository without enqueuing another scan" do

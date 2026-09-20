@@ -588,7 +588,8 @@ module Project::Sync
 
   def fetch_swhids_async
     return unless persisted?
-    return unless Project.visible.scientific.with_repository.needing_swhids.exists?(id: id)
+    return unless Project.visible.scientific.with_repository.exists?(id: id)
+    return unless swhids.nil? || SwhidArchiveChecker.new(swhids).due?
 
     FetchSwhidWorker.perform_async(id)
   end
@@ -597,6 +598,14 @@ module Project::Sync
     return unless repository.present?
 
     update!(swhids: ProjectSwhidScanner.new(self).scan)
+    swhids
+  end
+
+  def check_swhid_archive
+    checker = SwhidArchiveChecker.new(swhids)
+    return unless checker.due?
+
+    update!(swhids: checker.check)
     swhids
   end
 

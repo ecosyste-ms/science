@@ -208,11 +208,14 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#project-repository-swhids" do
       assert_select "[data-role='swhid-revision'] code", text: "swh:1:rev:817c61051b31ce4d0eb73d1b873c02de87ce1f81"
       assert_select "[data-role='swhid-directory'] code", text: "swh:1:dir:b3bb6ae45c8b3cb7ee9d9c3b84b1319cda7060d0"
+      assert_select "[data-role='swhid-revision'] a[href='https://archive.softwareheritage.org/browse/revision/817c61051b31ce4d0eb73d1b873c02de87ce1f81/']", text: "swh:1:rev:817c61051b31ce4d0eb73d1b873c02de87ce1f81"
+      assert_select "[data-role='swhid-directory'] a[href='https://archive.softwareheritage.org/browse/directory/b3bb6ae45c8b3cb7ee9d9c3b84b1319cda7060d0/']", text: "swh:1:dir:b3bb6ae45c8b3cb7ee9d9c3b84b1319cda7060d0"
       assert_select "code", text: "817c61051b31ce4d0eb73d1b873c02de87ce1f81"
       assert_select "dd", text: "https://github.com/simonehagey/orbdot"
       assert_select "dt", text: "Calculated"
       assert_select "time[datetime='2026-09-20T12:44:07Z']", text: "September 20, 2026 at 12:44 UTC"
-      assert_select "p", text: /Software Heritage archive availability has not been checked/
+      assert_select "[data-role='swhid-revision-archive'] .badge", text: "Not checked"
+      assert_select "[data-role='swhid-directory-archive'] .badge", text: "Not checked"
       assert_select ".alert", count: 0
     end
     assert_not_includes response.body, "/tmp/science-swhid"
@@ -226,6 +229,38 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "#project-repository-swhids-tab", count: 0
     assert_select "#project-repository-swhids", count: 0
+  end
+
+  test "show displays cached archive coverage for each identifier" do
+    result = swhid_result
+    result["revision"]["archive"] = { "status" => "archived", "checked_at" => "2026-09-20T12:45:00Z" }
+    result["directory"]["archive"] = { "status" => "not_found", "checked_at" => "2026-09-20T12:45:00Z" }
+    @project.update!(last_synced_at: Time.current, swhids: result)
+
+    get project_url(@project)
+
+    assert_response :success
+    assert_select "[data-role='swhid-revision-archive']" do
+      assert_select ".badge", text: "Archived"
+      assert_select "time[datetime='2026-09-20T12:45:00Z']"
+    end
+    assert_select "[data-role='swhid-directory-archive'] .badge", text: "Not found"
+  end
+
+  test "show distinguishes a failed archive check from a missing object" do
+    result = swhid_result
+    result["revision"]["archive"] = { "status" => "error", "attempted_at" => "2026-09-20T12:45:00Z", "error" => "HTTP 429" }
+    @project.update!(last_synced_at: Time.current, swhids: result)
+
+    get project_url(@project)
+
+    assert_response :success
+    assert_select "[data-role='swhid-revision-archive']" do
+      assert_select ".badge", text: "Check failed"
+      assert_select "time[datetime='2026-09-20T12:45:00Z']"
+    end
+    assert_select "[data-role='swhid-directory-archive'] .badge", text: "Not checked"
+    assert_not_includes response.body, "HTTP 429"
   end
 
   test "show handles a failed clone without exposing command diagnostics" do
@@ -244,6 +279,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       assert_select "[data-role='swhid-revision']", text: "Unavailable"
       assert_select "[data-role='swhid-directory']", text: "Unavailable"
       assert_select "dt", text: "Last attempted"
+      assert_select "a", count: 0
     end
     assert_not_includes response.body, "permission denied"
     assert_not_includes response.body, "/tmp/science-swhid"
@@ -262,6 +298,8 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       assert_select ".alert-warning"
       assert_select "[data-role='swhid-revision'] code", text: result.dig("revision", "swhid")
       assert_select "[data-role='swhid-directory']", text: "Unavailable"
+      assert_select "[data-role='swhid-revision'] a[href='https://archive.softwareheritage.org/browse/revision/817c61051b31ce4d0eb73d1b873c02de87ce1f81/']", text: result.dig("revision", "swhid")
+      assert_select "[data-role='swhid-directory'] a", count: 0
     end
   end
 

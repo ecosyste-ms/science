@@ -32,17 +32,19 @@ class SwhidCalculatorTest < ActiveSupport::TestCase
   end
 
   test "timeout terminates and reaps the subprocess" do
-    Dir.mktmpdir do |directory|
-      executable = File.join(directory, "slow-swhid")
-      pid_file = File.join(directory, "pid")
-      File.write(executable, "#!#{RbConfig.ruby}\nFile.write(#{pid_file.inspect}, Process.pid.to_s)\nsleep 60\n")
-      File.chmod(0755, executable)
-      result = SwhidCalculator.new(binary: executable, timeout: 0.5).calculate(type: "directory", path: directory)
-      assert_equal "error", result["status"]
-      assert_includes result["error"], "timed out"
-      pid = Integer(File.read(pid_file))
-      assert_raises(Errno::ESRCH) { Process.kill(0, pid) }
-      assert_raises(Errno::ECHILD) { Process.wait(pid) }
+    pid = Process.spawn(RbConfig.ruby, "-e", "sleep 60", pgroup: true)
+    Process.expects(:spawn).returns(pid)
+
+    result = SwhidCalculator.new(timeout: 0.5).calculate(type: "directory", path: ".")
+
+    assert_equal "error", result["status"]
+    assert_includes result["error"], "timed out"
+    assert_raises(Errno::ESRCH) { Process.kill(0, pid) }
+    assert_raises(Errno::ECHILD) { Process.wait(pid) }
+  ensure
+    if pid
+      Process.kill("KILL", -pid) rescue Errno::ESRCH
+      Process.wait(pid) rescue Errno::ECHILD
     end
   end
 

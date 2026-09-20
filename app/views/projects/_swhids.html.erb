@@ -4,7 +4,6 @@
   <h2 class="mb-3">SWHIDs</h2>
   <p class="text-muted">
     Software Hash Identifiers identify a specific revision or directory of source code.
-    Software Heritage archive availability has not been checked.
   </p>
 
   <% if data["status"] == "error" %>
@@ -18,7 +17,29 @@
           <dt class="col-md-3 mb-2"><%= label %></dt>
           <dd class="col-md-9 mb-3" data-role="swhid-<%= type %>">
             <% if data.dig(type, "status") == "success" && data.dig(type, "swhid").present? %>
-              <code class="text-break user-select-all"><%= data.dig(type, "swhid") %></code>
+              <% identifier = data.dig(type, "swhid") %>
+              <code class="text-break user-select-all"><%= link_to identifier, "https://archive.softwareheritage.org/browse/#{type}/#{identifier.split(':').last}/" %></code>
+              <% archive = data.dig(type, "archive") || {} %>
+              <div class="small mt-1" data-role="swhid-<%= type %>-archive">
+                <% if archive["status"] == "archived" %>
+                  <span class="badge bg-success">Archived</span>
+                <% elsif archive["status"] == "not_found" %>
+                  <span class="badge bg-light text-dark">Not found</span>
+                <% elsif archive["status"] == "error" %>
+                  <span class="badge bg-warning text-dark">Check failed</span>
+                <% else %>
+                  <span class="badge bg-light text-dark">Not checked</span>
+                <% end %>
+                <% if archive["checked_at"].present? %>
+                  <span class="text-muted">
+                    Checked <%= time_tag Time.iso8601(archive["checked_at"]).utc, format: "%B %d, %Y at %H:%M UTC" %>
+                  </span>
+                <% elsif archive["attempted_at"].present? %>
+                  <span class="text-muted">
+                    Last attempted <%= time_tag Time.iso8601(archive["attempted_at"]).utc, format: "%B %d, %Y at %H:%M UTC" %>
+                  </span>
+                <% end %>
+              </div>
             <% else %>
               <span class="text-muted">Unavailable</span>
             <% end %>

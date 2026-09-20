@@ -51,7 +51,7 @@ Selected IDs are sent to `SyncProjectWorker` on the default Sidekiq queue. Sidek
 5. Import issue rows and repository metadata files.
 6. Sync releases, committer records, and contributor-derived keywords.
 7. Set `last_synced_at`, update popularity and Science scores, then ping upstream records for refresh.
-8. Queue SWHID generation for scientific projects with repository metadata and no stored attempt. [SWHID scanning](swhids.md) runs in a separate Sidekiq job.
+8. Queue SWHID generation or due archive coverage checks for scientific projects with repository metadata. [SWHID scanning](swhids.md) runs in a separate Sidekiq job.
 
 The repository lookup supplies host data, archive URLs, metadata filenames, release endpoints, and manifest endpoints. Other stages call packages.ecosyste.ms, commits.ecosyste.ms, issues.ecosyste.ms, timeline.ecosyste.ms, and archives.ecosyste.ms. Project keywords combine repository topics with package keywords case-insensitively.
 
