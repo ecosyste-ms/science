@@ -1,9 +1,9 @@
-<% @meta_title = "Releases" %>
-<% @meta_description = "Browse recent releases of open source scientific software projects" %>
+<% @meta_title = "Releases and tags" %>
+<% @meta_description = "Browse recent releases and tags of open source scientific software projects" %>
 
 <div class="container-sm">
   <h1 class='mb-3'>
-    Recent Releases of
+    Recent Releases and Tags of
     <% if @project.present? %>
       <%= link_to @project.to_s, project_url(@project) %>
     <% else %>

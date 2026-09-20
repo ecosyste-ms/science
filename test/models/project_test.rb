@@ -198,22 +198,22 @@ class ProjectTest < ActiveSupport::TestCase
       repository: { 'releases_url' => 'https://example.com/releases' }
     )
     other_project = Project.create!(url: 'https://github.com/test/other-project')
-    response = stub(
-      success?: true,
-      body: [{
+    stub_request(:get, 'https://example.com/releases')
+      .with(query: { per_page: '100', page: '1', sort: 'id', order: 'asc' })
+      .to_return(body: [{
         'uuid' => 'release-1',
+        'tag_name' => 'v1',
         'name' => 'Version 1',
         'immutable' => true,
         'project_id' => other_project.id
-      }].to_json
-    )
-    project.stubs(:ecosystem_http_client).returns(stub(get: response))
+      }].to_json)
 
-    assert_nothing_raised { project.sync_releases }
+    assert_nothing_raised { SyncProjectReleasesWorker.new.perform(project.id, 'releases') }
 
     release = project.releases.find_by!(uuid: 'release-1')
     assert_equal 'Version 1', release.name
     assert_equal project.id, release.project_id
+    assert_equal true, release.immutable
   end
 
   test "calculate_idf class method returns array of hashes" do

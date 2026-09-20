@@ -1,0 +1,19 @@
+<% @meta_title = "#{@project} #{@release.title}" %>
+
+<div class="container-sm">
+  <h1><%= @release.title %></h1>
+  <p><%= link_to @project, project_path(@project) %></p>
+  <%= render @release %>
+  <dl>
+    <dt>Tag</dt>
+    <dd><%= @release.tag_name %></dd>
+    <% if @release.tag_sha.present? %>
+      <dt>Tag target SHA</dt>
+      <dd><code><%= @release.tag_sha %></code></dd>
+    <% end %>
+  </dl>
+  <% if @release.source_url.present? %>
+    <p><%= link_to "View on forge", @release.source_url %></p>
+  <% end %>
+  <p><%= link_to "All releases and tags", project_releases_path(@project) %></p>
+</div>

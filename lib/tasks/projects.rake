@@ -1,6 +1,16 @@
 require 'csv'
 
 namespace :projects do
+  desc 'preview duplicate release cleanup (LIMIT=100 AFTER_ID=0 DRY_RUN=true)'
+  task :deduplicate_releases => :environment do
+    result = ReleaseDeduplicator.run(
+      limit: ENV.fetch('LIMIT', 100),
+      after_id: ENV.fetch('AFTER_ID', 0),
+      dry_run: ENV.fetch('DRY_RUN', 'true') != 'false'
+    )
+    puts "Duplicate releases: #{result.inspect}"
+  end
+
   desc 'sync projects'
   task :sync => :environment do
     Project.sync_least_recently_synced

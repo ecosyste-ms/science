@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_20_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_20_170100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -520,6 +520,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_20_130000) do
     t.integer "owner_id"
     t.json "packages"
     t.text "readme"
+    t.jsonb "release_sync_state", default: {}, null: false
     t.json "repository"
     t.text "repository_aliases_index_error"
     t.datetime "repository_aliases_indexed_at"
@@ -560,18 +561,33 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_20_130000) do
     t.string "author"
     t.text "body"
     t.datetime "created_at", null: false
+    t.text "download_url"
     t.boolean "draft"
+    t.datetime "forge_created_at"
     t.string "html_url"
+    t.boolean "immutable"
     t.datetime "last_synced_at"
+    t.text "manifests_url"
     t.string "name"
     t.boolean "prerelease"
     t.integer "project_id"
     t.datetime "published_at"
+    t.text "purl"
+    t.datetime "release_fetched_at"
+    t.text "release_url"
+    t.datetime "tag_fetched_at"
+    t.text "tag_html_url"
+    t.string "tag_kind"
     t.string "tag_name"
+    t.datetime "tag_published_at"
+    t.string "tag_sha"
     t.string "tag_url"
     t.string "target_commitish"
     t.datetime "updated_at", null: false
     t.string "uuid"
+    t.index "COALESCE(published_at, tag_published_at) DESC NULLS LAST, id DESC", name: "index_releases_on_display_date"
+    t.index "project_id, COALESCE(published_at, tag_published_at) DESC NULLS LAST, id DESC", name: "index_releases_on_project_display_date"
+    t.index ["project_id", "tag_name"], name: "index_releases_on_project_id_and_tag_name"
     t.index ["project_id", "uuid"], name: "index_releases_on_project_id_and_uuid"
   end
 

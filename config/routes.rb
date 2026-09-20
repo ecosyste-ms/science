@@ -23,6 +23,7 @@ Rails.application.routes.draw do
       end
       resources :jobs
       resources :projects, constraints: { id: /.*/ }, only: [:index, :show] do
+        resources :releases, only: [:index, :show]
         collection do
           get :lookup
           get :packages

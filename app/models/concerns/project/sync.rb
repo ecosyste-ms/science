@@ -699,17 +699,6 @@ module Project::Sync
   end
 
   def sync_releases
-    return unless repository.present?
-    return unless repository['releases_url'].present?
-
-    conn = ecosystem_http_client(repository['releases_url'] + '?per_page=1000')
-    response = conn.get
-    return unless response.success?
-    releases = JSON.parse(response.body)
-
-    releases.each do |release|
-      r = Release.find_or_create_by(project_id: id, uuid: release['uuid'])
-      r.update(Release.sync_attributes(release))
-    end
+    ProjectReleaseSync.enqueue(self)
   end
 end

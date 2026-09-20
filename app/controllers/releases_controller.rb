@@ -1,6 +1,6 @@
 class ReleasesController < ApplicationController
   def index
-    @releases = Release.joins(:project).merge(Project.visible).order('published_at DESC')
+    @releases = Release.joins(:project).merge(Project.visible).includes(:project).recent
 
     if params[:project_id]
       @project = Project.visible.find(params[:project_id])
@@ -11,6 +11,7 @@ class ReleasesController < ApplicationController
   end
 
   def show
-    @release = Release.joins(:project).merge(Project.visible).find(params[:id])
+    @project = Project.visible.find(params[:project_id])
+    @release = @project.releases.find(params[:id])
   end
 end

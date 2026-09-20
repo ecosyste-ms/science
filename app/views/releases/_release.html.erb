@@ -4,12 +4,12 @@
       
       <div class="flex-grow-1 ms-3 text-break">
         <h5 class='card-title'>
-          <%= link_to release.project.to_s, project_url(release.project) %> - <%= link_to release.name, release.html_url %>
+          <%= link_to release.project.to_s, project_url(release.project) %> - <%= link_to release.title, project_release_path(release.project, release) %>
         </h5>
 
-        <p class="card-text">
-          <%== render_markdown release.body %>
-        </p>
+        <% if release.body.present? %>
+          <div class="card-text"><%== render_markdown release.body %></div>
+        <% end %>
       
         <p class="card-subtitle mb-2 text-muted"><small>
           <% if release.project.category %>
@@ -19,12 +19,21 @@
             - <%= release.project.language %>
           <% end %>
           <br/>
-          Published by <%= release.author %> <%= time_ago_in_words(release.published_at) %> ago
+          <% if release.published_at.present? %>
+            Released <%= time_ago_in_words(release.published_at) %> ago
+          <% elsif release.tag_published_at.present? %>
+            Tag dated <%= time_ago_in_words(release.tag_published_at) %> ago
+          <% else %>
+            Date unavailable
+          <% end %>
+          <% if release.author.present? %>
+            by <%= release.author %>
+          <% end %>
           <br />
         </small></p>
       </div>
       <div class="flex-shrink-0">
-        <img src="<%= release.project.avatar_url %>" class="rounded" height='40' width='40' onerror="this.style.display='none'">
+        <img src="<%= release.project.avatar_url %>" class="rounded" height="40" width="40" alt="" loading="lazy">
       </div>  
     </div>
   </div>
