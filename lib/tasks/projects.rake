@@ -111,7 +111,7 @@ namespace :projects do
     puts "Project dependencies: #{result.inspect}"
   end
 
-  desc 'index stored CFF authors (LIMIT=250 RETRY_ERRORS=false)'
+  desc 'index stored CFF, CodeMeta and Zenodo authors (LIMIT=250 RETRY_ERRORS=false)'
   task :sync_citation_authors => :environment do
     retry_errors = ActiveModel::Type::Boolean.new.cast(
       ENV.fetch('RETRY_ERRORS', 'false')

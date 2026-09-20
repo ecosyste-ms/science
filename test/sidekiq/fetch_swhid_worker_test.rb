@@ -66,6 +66,33 @@ class FetchSwhidWorkerTest < ActiveSupport::TestCase
     assert_empty FetchSwhidWorker.jobs
   end
 
+  test "worker records metadata evidence from Git objects without checking more SWHIDs" do
+    content = { "name" => "Research software" }.to_json
+    File.write(File.join(@repository, "codemeta.json"), content)
+    git("-C", @repository, "add", "codemeta.json")
+    git("-C", @repository, "-c", "user.name=Test", "-c", "user.email=test@example.org",
+      "-c", "commit.gpgsign=false", "commit", "-m", "Add metadata")
+    commit = git("-C", @repository, "rev-parse", "HEAD").strip
+    tree = git("-C", @repository, "rev-parse", "HEAD^{tree}").strip
+    blob = git("-C", @repository, "rev-parse", "HEAD:codemeta.json").strip
+    @project.update!(codemeta: content)
+    request = stub_request(:post, SwhidArchiveChecker::ENDPOINT)
+      .with(body: ["swh:1:rev:#{commit}", "swh:1:dir:#{tree}"].to_json)
+      .to_return(status: 200, body: {
+        "swh:1:rev:#{commit}" => { "known" => true }, "swh:1:dir:#{tree}" => { "known" => true }
+      }.to_json)
+
+    @project.fetch_swhids_async
+    FetchSwhidWorker.drain
+
+    evidence = @project.reload.swhids.dig("metadata", "codemeta")
+    assert_equal Digest::SHA256.hexdigest(content), evidence["content_digest"]
+    assert_equal "swh:1:cnt:#{blob}", evidence["content_swhid"]
+    assert_equal "swh:1:rev:#{commit}", evidence["revision_swhid"]
+    assert_equal "codemeta.json", evidence["path"]
+    assert_requested request, times: 1
+  end
+
   test "uses a low priority queue with the same retry setting as Brief" do
     assert_equal "swhid", FetchSwhidWorker.get_sidekiq_options["queue"]
     assert_equal 3, FetchSwhidWorker.get_sidekiq_options["retry"]

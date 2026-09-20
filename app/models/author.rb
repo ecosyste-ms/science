@@ -45,13 +45,16 @@ class Author < ApplicationRecord
       .distinct
       .count(:project_id)
       .each do |(author_id, authorship_kind), count|
+        next if ProjectAuthor::CONTRIBUTION_KINDS.include?(authorship_kind)
+
         key = authorship_kind == "software" ?
           :software_projects : :preferred_citation_projects
         counts.fetch(author_id)[key] = count
       end
 
-    ProjectContributor
-      .where(author_id: author_ids, project_id: public_project_ids)
+    repository_credits = ProjectContributor.where(author_id: author_ids, project_id: public_project_ids).select(:author_id, :project_id)
+    metadata_credits = ProjectAuthor.where(author_id: author_ids, project_id: public_project_ids, authorship_kind: ProjectAuthor::CONTRIBUTION_KINDS).select(:author_id, :project_id)
+    ProjectContributor.from("(#{repository_credits.to_sql} UNION #{metadata_credits.to_sql}) project_contributors")
       .group(:author_id)
       .distinct
       .count(:project_id)
@@ -85,9 +88,9 @@ class Author < ApplicationRecord
   end
 
   def contributed_projects
-    Project.visible
-      .scientific
-      .where(id: project_contributors.select(:project_id))
+    scope = Project.visible.scientific
+    scope.where(id: project_contributors.select(:project_id))
+      .or(scope.where(id: project_authors.where(authorship_kind: ProjectAuthor::CONTRIBUTION_KINDS).select(:project_id)))
       .order(Arel.sql(
         "projects.science_score DESC NULLS LAST, " \
           "LOWER(COALESCE(projects.name, projects.url)), projects.id"

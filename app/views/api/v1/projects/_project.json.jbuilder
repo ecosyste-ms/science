@@ -1,9 +1,10 @@
 json.extract! project, :id, :name, :description, :url, :last_synced_at, :repository, :owner, :packages, :commits, :issues_stats, :events, :keywords, :dependencies, :score, :science_score, :science_score_breakdown, :created_at, :updated_at, :avatar_url, :language, :category, :sub_category, :monthly_downloads, :funding_links, :readme_doi_urls, :arxiv_ids, :orcids, :works, :citation_counts, :total_citations, :keywords_from_contributors
 json.project_url api_v1_project_url(project, format: :json)
 json.html_url project_url(project)
-if project.citation_file.present?
+if project.citation_export_available?
   json.bibtex_url export_project_url(project, format: 'bibtex')
   json.apalike_url export_project_url(project, format: 'apalike')
+  json.csl_url export_project_url(project, format: 'csl')
 end
 json.fields project.open_alex_fields_with_scores do |field, score|
   json.id field.openalex_id

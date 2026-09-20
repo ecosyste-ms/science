@@ -23,7 +23,7 @@
       <%= link_to "JSON representation",
         api_v1_project_path(@project),
         class: "small text-decoration-none" %>
-      <% if @project.citation_file.present? %>
+      <% if @project.citation_export_available? %>
         <span aria-hidden="true">&middot;</span>
         <div class="btn-group" role="group">
           <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
@@ -41,6 +41,11 @@
             <li>
               <%= link_to "APA Style",
                 export_project_path(@project, format: "apalike"),
+                class: "dropdown-item" %>
+            </li>
+            <li>
+              <%= link_to "CSL JSON",
+                export_project_path(@project, format: "csl"),
                 class: "dropdown-item" %>
             </li>
           </ul>

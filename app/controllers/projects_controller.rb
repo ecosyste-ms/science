@@ -124,6 +124,7 @@ class ProjectsController < ApplicationController
   def mime_type_for_format(format)
     case format
     when 'bibtex' then 'application/x-bibtex'
+    when 'csl' then 'application/vnd.citationstyles.csl+json'
     when 'apalike', 'apa' then 'text/plain'
     else 'text/plain'
     end

@@ -316,26 +316,21 @@ module Project::Citation
   end
 
   def export_citation(format: 'bibtex')
-    case format.to_s
-    when 'bibtex'
-      export_bibtex
-    when 'apalike', 'apa'
-      export_apalike
-    else
-      nil
-    end
+    ProjectCitationExport.new(self).export(format)
   rescue StandardError => e
     puts "Error exporting citation for project #{id} (#{url}) to #{format}: #{e.message}"
     nil
   end
 
   def export_bibtex
-    return citation_cff.to_bibtex if citation_cff.present?
-    nil
+    export_citation(format: "bibtex")
   end
 
   def export_apalike
-    return citation_cff.to_apalike if citation_cff.present?
-    nil
+    export_citation(format: "apalike")
+  end
+
+  def citation_export_available?
+    citation_file.present? || ProjectCitationExport.new(self).model.present?
   end
 end

@@ -85,7 +85,7 @@ class Project < ApplicationRecord
   before_save :reset_repository_alias_index,
     if: :will_save_change_to_repository?
   before_save :reset_citation_author_index,
-    if: :will_save_change_to_citation_file?
+    if: -> { will_save_change_to_citation_file? || will_save_change_to_codemeta? || will_save_change_to_zenodo? }
   before_save :reset_contributor_index,
     if: :will_save_change_to_commits?
   before_save :reset_joss_publication_index,

@@ -3,7 +3,7 @@ require "rake"
 
 class ProjectsRakeTest < ActiveSupport::TestCase
   ENV_KEYS = %w[
-    LIMIT COHORT SHARD_COUNT SHARD DRY_RUN RETRY_ERRORS AFTER_ID
+    LIMIT COHORT SHARD_COUNT SHARD DRY_RUN RETRY_ERRORS
   ].freeze
 
   setup do
@@ -17,6 +17,61 @@ class ProjectsRakeTest < ActiveSupport::TestCase
     ENV_KEYS.each { |key| ENV.delete(key) }
     FetchBriefWorker.jobs.clear
     SyncProjectWorker.jobs.clear
+  end
+
+  test "sync_citation_authors indexes CodeMeta and Zenodo authors and updates changed sources" do
+    project = Project.create!(
+      url: "https://github.com/test/metadata-people", science_score: 50,
+      codemeta: {
+        "author" => [
+          { "@type" => "Person", "givenName" => "Ada", "familyName" => "Lovelace", "@id" => "https://orcid.org/0000-0002-1825-0097", "affiliation" => { "name" => "Example University" } },
+          { "@type" => "Organization", "name" => "Research Group" }
+        ]
+      }.to_json,
+      zenodo: { "creators" => [{ "name" => "Hopper, Grace", "affiliation" => "Research Institute" }] }.to_json
+    )
+
+    capture_io { Rake::Task["projects:sync_citation_authors"].execute }
+
+    assert_equal 3, project.project_authors.count
+    ada = project.project_authors.find_by!(source: "codemeta", position: 1)
+    assert_equal "Ada Lovelace", ada.display_name
+    assert_equal "0000-0002-1825-0097", ada.orcid
+    assert_equal "Example University", ada.affiliation
+    assert_equal "author[0]", ada.source_path
+    assert_equal "organization", project.project_authors.find_by!(source: "codemeta", position: 2).author_kind
+    grace = project.project_authors.find_by!(source: "zenodo")
+    assert_equal "Grace", grace.given_names
+    assert_equal "Hopper", grace.family_names
+    assert_equal "Research Institute", grace.affiliation
+
+    project.reload.update!(codemeta: nil, zenodo: { "creators" => [{ "name" => "New Author" }] }.to_json)
+    assert_nil project.citation_authors_indexed_at
+    capture_io { Rake::Task["projects:sync_citation_authors"].execute }
+
+    assert_equal ["New Author"], project.project_authors.reload.pluck(:display_name)
+    project.reload.update!(zenodo: "{")
+    capture_io { Rake::Task["projects:sync_citation_authors"].execute }
+    assert project.reload.citation_authors_index_error.present?
+    assert_equal ["New Author"], project.project_authors.reload.pluck(:display_name)
+  end
+
+  test "metadata contributors retain their role in author pages and counts" do
+    project = Project.create!(url: "https://github.com/test/metadata-contributor", science_score: 50,
+      codemeta: { "maintainer" => { "name" => "Ada Lovelace", "@id" => "https://orcid.org/0000-0002-1825-0097" } }.to_json)
+
+    capture_io { Rake::Task["projects:sync_citation_authors"].execute }
+    AuthorIdentityIndexer.new(project.reload).sync!
+
+    credit = project.project_authors.find_by!(authorship_kind: "maintainer")
+    assert_equal "maintainer[0]", credit.source_path
+    author = credit.author
+    assert author.present?
+    assert_empty author.software_projects
+    assert_equal [project.id], author.contributed_projects.pluck(:id)
+    counts = Author.role_counts([author.id]).fetch(author.id)
+    assert_equal 1, counts[:contributed_projects]
+    assert_equal 0, counts[:preferred_citation_projects]
   end
 
   test "fetch_brief enqueues eligible projects through the application service" do

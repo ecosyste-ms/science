@@ -1,11 +1,12 @@
 require "digest"
 
 class ProjectCitationAuthorIndexer
-  CURRENT_VERSION = 2
+  CURRENT_VERSION = 3
   DEFAULT_LIMIT = 250
   MAX_LIMIT = 1_000
   SOURCE = "citation_cff"
-  CANDIDATE_SQL = Project::Citation::CFF_CANDIDATE_SQL
+  SOURCES = %w[citation_cff codemeta zenodo].freeze
+  CANDIDATE_SQL = "(#{Project::Citation::CFF_CANDIDATE_SQL}) OR NULLIF(codemeta, '') IS NOT NULL OR NULLIF(zenodo, '') IS NOT NULL".freeze
   UPSERT_COLUMNS = %i[
     author_kind
     display_name
@@ -94,8 +95,8 @@ class ProjectCitationAuthorIndexer
 
   def sync!
     content = project.citation_file
-    @attempted_source_digest = digest_for(content)
-    rows = rows_for(content, attempted_source_digest)
+    @attempted_source_digest = source_digest
+    rows = rows_for(content, digest_for(content)) + json_author_rows
     counts = counts_for(rows)
 
     project.with_lock do
@@ -107,7 +108,7 @@ class ProjectCitationAuthorIndexer
         return counts.merge(indexed: false)
       end
       affected_author_ids = project.project_authors
-        .where(source: SOURCE)
+        .where(source: SOURCES)
         .where.not(author_id: nil)
         .distinct
         .pluck(:author_id)
@@ -120,18 +121,18 @@ class ProjectCitationAuthorIndexer
           author_match_kind: nil
         )
       end
+      persisted_ids = []
       QueryBatch.each(upsert_rows) do |batch|
-        ProjectAuthor.upsert_all(
+        inserted = ProjectAuthor.upsert_all(
           batch,
           unique_by: :index_project_authors_on_snapshot_position,
           update_only: UPSERT_COLUMNS,
-          record_timestamps: true
+          record_timestamps: true,
+          returning: %w[id]
         )
+        persisted_ids.concat(inserted.rows.flatten)
       end
-      project.project_authors
-        .where(source: SOURCE)
-        .where.not(source_digest: attempted_source_digest)
-        .delete_all
+      project.project_authors.where(source: SOURCES).where.not(id: persisted_ids).delete_all
       project.update_columns(
         citation_authors_indexed_at: now,
         citation_authors_index_error: nil,
@@ -276,7 +277,7 @@ class ProjectCitationAuthorIndexer
     counts = self.class.empty_counts.except(:indexed, :failed, :skipped)
     rows.each do |row|
       counts[:authors] += 1
-      prefix = row.fetch(:authorship_kind) == "software" ? "software" : "publication"
+      prefix = row.fetch(:authorship_kind) == "preferred_citation" ? "publication" : "software"
       suffix = row.fetch(:author_kind) == "person" ? "people" : "organizations"
       counts["#{prefix}_#{suffix}".to_sym] += 1
     end
@@ -287,8 +288,44 @@ class ProjectCitationAuthorIndexer
     Digest::SHA256.hexdigest(content.to_s)
   end
 
+  def source_digest
+    return digest_for(project.citation_file) if project.codemeta.blank? && project.zenodo.blank?
+
+    digest_for([project.citation_file, project.codemeta, project.zenodo].to_json)
+  end
+
+  def json_author_rows
+    metadata = ProjectMetadata.new(project)
+    %w[codemeta zenodo].flat_map do |source|
+      document = metadata.json_document(source, strict: true)
+      json_author_fields(source).flat_map do |field, kind|
+        metadata.actor_list(document[field]).each_with_index.filter_map do |actor, index|
+          person = metadata.person(source, actor)
+          next unless person
+
+          {
+            source: source, authorship_kind: kind, position: index + 1,
+            author_kind: person["type"] == "Organization" ? "organization" : "person",
+            display_name: person["name"], given_names: person["givenName"], family_names: person["familyName"],
+            email: person["email"], orcid: person["orcid"], affiliation: person["affiliation"],
+            source_path: "#{field}[#{index}]", source_digest: digest_for(project.public_send(source)),
+            raw_data: actor.is_a?(Hash) ? actor : { "name" => actor }
+          }
+        end
+      end
+    end
+  end
+
+  def json_author_fields(source)
+    if source == "codemeta"
+      { "author" => "software", "contributor" => "contributor", "maintainer" => "maintainer" }
+    else
+      { "creators" => "software", "contributors" => "contributor" }
+    end
+  end
+
   def current_source?
-    digest_for(project.citation_file) == attempted_source_digest
+    source_digest == attempted_source_digest
   end
 
   def already_indexed?

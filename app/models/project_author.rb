@@ -1,5 +1,6 @@
 class ProjectAuthor < ApplicationRecord
-  AUTHORSHIP_KINDS = %w[software preferred_citation].freeze
+  AUTHORSHIP_KINDS = %w[software preferred_citation contributor maintainer].freeze
+  CONTRIBUTION_KINDS = %w[contributor maintainer].freeze
   AUTHOR_KINDS = %w[person organization].freeze
 
   belongs_to :project
