@@ -3,3 +3,4 @@
 :queues:
   - [default, 5]
   - [brief, 1]
+  - [swhid, 1]

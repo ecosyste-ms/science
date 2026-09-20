@@ -1,6 +1,9 @@
 require "test_helper"
 
 class ProjectSyncTest < ActiveSupport::TestCase
+  setup { FetchSwhidWorker.jobs.clear }
+  teardown { FetchSwhidWorker.jobs.clear }
+
   def repo_hash
     {
       "full_name" => "numpy/numpy",
@@ -478,7 +481,7 @@ class ProjectSyncTest < ActiveSupport::TestCase
       fetch_dependencies fetch_packages import_mentions fetch_readme combine_keywords
       fetch_commits fetch_events fetch_issue_stats sync_issues fetch_citation_file
       fetch_codemeta fetch_zenodo_file sync_releases update_committers
-      update_keywords_from_contributors update_score update_science_score
+      update_keywords_from_contributors update_score update_science_score fetch_swhids_async
     ].each { |m| p.expects(m).once }
 
     assert_nil p.last_synced_at
@@ -501,6 +504,38 @@ class ProjectSyncTest < ActiveSupport::TestCase
     end
 
     p.log_sync_timings({ fetch_repository: 1.2345, sync_issues: 6.7894 }, 31.2346)
+  end
+
+  test "sync worker enqueues SWHID generation after scoring a newly imported scientific project" do
+    project = Project.create!(url: "https://github.com/numpy/numpy", joss_metadata: { "title" => "Scientific arrays" })
+    stub_request(:get, project.url).to_return(status: 200)
+    stub_request(:get, project.repos_api_url).to_return(status: 200, body: repo_hash.to_json)
+    %i[
+      find_or_create_host fetch_owner find_or_create_owner fetch_dependencies
+      fetch_packages import_mentions fetch_readme combine_keywords fetch_commits
+      fetch_events fetch_issue_stats sync_issues fetch_citation_file fetch_codemeta
+      fetch_zenodo_file sync_releases update_committers update_keywords_from_contributors
+      update_score
+    ].each { |method| Project.any_instance.stubs(method) }
+    ProjectSwhidScanner.expects(:new).never
+
+    SyncProjectWorker.new.perform(project.id)
+
+    assert_operator project.reload.science_score, :>=, Project::SCIENCE_SCORE_THRESHOLD
+    assert_equal [[project.id]], FetchSwhidWorker.jobs.map { |job| job["args"] }
+    assert_nil project.swhids
+  end
+
+  test "SWHID enqueueing skips ineligible projects and stored attempts" do
+    project = build_project(science_score: Project::SCIENCE_SCORE_THRESHOLD - 1)
+    assert_nil project.fetch_swhids_async
+    project.update!(science_score: 42, repository: nil)
+    assert_nil project.fetch_swhids_async
+    project.update!(repository: repo_hash, swhids: { "status" => "success" })
+    assert_nil project.fetch_swhids_async
+    project.update!(swhids: { "status" => "error" })
+    assert_nil project.fetch_swhids_async
+    assert_empty FetchSwhidWorker.jobs
   end
 
   test "fast sync timings are not logged" do

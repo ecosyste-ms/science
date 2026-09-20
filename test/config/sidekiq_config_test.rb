@@ -13,7 +13,7 @@ class SidekiqConfigTest < ActiveSupport::TestCase
     )
 
     assert_equal 10, config[:concurrency]
-    assert_equal [["default", 5], ["brief", 1]], config[:queues]
+    assert_equal [["default", 5], ["brief", 1], ["swhid", 1]], config[:queues]
   end
 
   test "the Procfile starts one Sidekiq process" do

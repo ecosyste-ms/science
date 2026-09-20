@@ -39,6 +39,12 @@ RUN ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/') \
     | tar -xz -C /usr/local/bin brief \
  && brief --version
 
+ARG SWHID_VERSION=0.1.0
+RUN ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/') \
+ && wget -qO- "https://github.com/andrew/swhid-go/releases/download/v${SWHID_VERSION}/swhid_${SWHID_VERSION}_linux_${ARCH}.tar.gz" \
+    | tar -xz -C /usr/local/bin swhid \
+ && swhid --version
+
 ENV LD_PRELOAD=/usr/lib/libjemalloc.so.2
 ENV RUBY_YJIT_ENABLE=1
 

@@ -100,6 +100,7 @@ module Project::Sync
     end
     run_sync_stage(stage_durations, :update_score) { update_score }
     run_sync_stage(stage_durations, :update_science_score) { update_science_score }
+    run_sync_stage(stage_durations, :fetch_swhids_async) { fetch_swhids_async }
   ensure
     if sync_started_at
       total_duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - sync_started_at
@@ -584,6 +585,20 @@ module Project::Sync
     return unless repository.present?
     "#{repository['html_url']}/raw/#{repository['default_branch']}/#{path}"
   end 
+
+  def fetch_swhids_async
+    return unless persisted?
+    return unless Project.visible.scientific.with_repository.needing_swhids.exists?(id: id)
+
+    FetchSwhidWorker.perform_async(id)
+  end
+
+  def fetch_swhids
+    return unless repository.present?
+
+    update!(swhids: ProjectSwhidScanner.new(self).scan)
+    swhids
+  end
 
   BRIEF_TIMEOUT = 120
 

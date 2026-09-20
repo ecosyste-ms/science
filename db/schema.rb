@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_04_123000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_20_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -529,6 +529,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_123000) do
     t.json "science_score_breakdown", default: {}
     t.float "score", default: 0.0
     t.string "sub_category"
+    t.jsonb "swhids"
     t.datetime "updated_at", null: false
     t.citext "url"
     t.integer "vote_count", default: 0

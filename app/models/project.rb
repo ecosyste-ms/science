@@ -117,6 +117,7 @@ class Project < ApplicationRecord
   scope :needing_brief_dependencies, -> {
     where("brief IS NULL OR (NOT (brief ? 'dependencies') AND NOT (brief ? 'error'))")
   }
+  scope :needing_swhids, -> { where(swhids: nil) }
   scope :with_readme, -> { where.not(readme: nil) }
   scope :without_readme, -> { where(readme: nil) }
   scope :with_codemeta_file, -> { where("repository IS NOT NULL").where("(repository::jsonb->'metadata'->'files'->>'codemeta') IS NOT NULL") }
