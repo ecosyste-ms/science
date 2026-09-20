@@ -16,7 +16,9 @@ class SwhidArchiver
   def due?
     request = project.swhids&.dig("archival")
     if request
-      %w[submitting pending].include?(request["status"]) && Time.iso8601(request.fetch("next_check_at")) <= Time.current
+      return true if request["status"] == "uncertain" && retryable_submission?(request)
+
+      %w[submitting pending rate_limited].include?(request["status"]) && Time.iso8601(request.fetch("next_check_at")) <= Time.current
     else
       origin = URI.parse(project.swhids&.dig("origin").to_s)
       %w[http https].include?(origin.scheme) && origin.host.present? &&
@@ -27,22 +29,27 @@ class SwhidArchiver
   end
 
   def run
+    return unless due?
+
+    SwhidApi.check_rate_limit!
+    previous = project.swhids["archival"]
+    return if (previous.nil? || retryable_submission?(previous)) && !prepare_submission
+
     request = claim
     return unless request
 
     if request["status"] == "submitting"
-      response = SwhidArchiveChecker.client(ENDPOINT).post do |message|
-        message.params = { visit_type: "git", origin_url: request.fetch("origin") }
-      end
+      response = SwhidApi.request(:post, ENDPOINT, params: { visit_type: "git", origin_url: request.fetch("origin") })
       result = parse_response(response, request)
       request["attribution_eligible"] = Time.iso8601(result.fetch("save_request_date")) >= Time.iso8601(request.fetch("attempted_at"))
     else
-      response = SwhidArchiveChecker.client("#{ENDPOINT}#{request.fetch('id')}/").get
+      response = SwhidApi.request(:get, "#{ENDPOINT}#{request.fetch('id')}/")
       result = parse_response(response, request)
     end
 
     request.merge!(result.slice("id", "save_request_date", "save_request_status", "save_task_status", "visit_status"))
     request.delete("error")
+    request.delete("retry_at")
     request["status"] = if result["save_request_status"] == "rejected"
       "rejected"
     elsif result["save_task_status"] == "failed"
@@ -52,12 +59,38 @@ class SwhidArchiver
     end
     confirm(request) if request["status"] == "pending" && result["save_task_status"] == "succeeded"
     persist(request)
+  rescue SwhidApi::RateLimited => error
+    retry_at = SwhidApi.retry_job_at(error)
+    if request
+      request["status"] = request["id"] ? "pending" : "rate_limited"
+      request["error"] = error.message
+      request["retry_at"] = error.retry_at.iso8601
+      request["next_check_at"] = retry_at.iso8601
+      persist(request)
+    else
+      FetchSwhidWorker.perform_at(retry_at, project.id)
+    end
   rescue Faraday::Error, JSON::ParserError, ResponseError, ArgumentError => error
     raise unless request
 
     request["status"] = "uncertain" if request["status"] == "submitting"
     request["error"] = error.message.to_s.scrub[0, 500]
     persist(request)
+  end
+
+  def retryable_submission?(request)
+    request["id"].blank? && (request["status"] == "rate_limited" || (request["status"] == "uncertain" && request["error"] == "HTTP 429"))
+  end
+
+  def prepare_submission
+    checker = SwhidArchiveChecker.new(project.swhids)
+    if project.swhids["archival"] || checker.objects.any? { |object| object.dig("archive", "checked_at").blank? || Time.iso8601(object.dig("archive", "checked_at")) <= 5.minutes.ago }
+      project.check_swhid_archive(force: true)
+    end
+    return true if SwhidArchiveChecker.new(project.swhids).objects.all? { |object| %w[archived not_found].include?(object.dig("archive", "status")) }
+
+    FetchSwhidWorker.perform_in(1.hour, project.id)
+    false
   end
 
   def claim
@@ -67,27 +100,31 @@ class SwhidArchiver
       data = project.swhids.deep_dup
       request = data["archival"]
       if request
-        if request["status"] == "submitting" || Time.iso8601(request["attempted_at"]) <= Time.current - POLL_LIMIT
+        if request["status"] == "submitting" || Time.iso8601(request["first_attempted_at"] || request["attempted_at"]) <= Time.current - POLL_LIMIT
           request["status"] = request["status"] == "submitting" ? "uncertain" : "expired"
           project.update!(swhids: data)
           return
         end
-      else
-        checker = SwhidArchiveChecker.new(data)
-        unless checker.objects.all? { |object| object.dig("archive", "checked_at").present? && Time.iso8601(object.dig("archive", "checked_at")) > 5.minutes.ago }
-          data = checker.check(force: true)
-          project.update!(swhids: data)
-        end
+      end
+      if request.nil? || retryable_submission?(request)
         objects = SwhidArchiveChecker.new(data).objects
         return unless objects.all? { |object| %w[archived not_found].include?(object.dig("archive", "status")) }
 
         missing = objects.select { |object| object.dig("archive", "status") == "not_found" }
-        return if missing.empty?
+        if missing.empty?
+          if request
+            request["status"] = "not_needed"
+            project.update!(swhids: data)
+          end
+          return
+        end
 
-        request = {
+        first_attempt = request&.dig("first_attempted_at") || request&.dig("attempted_at") || Time.current.iso8601
+        request = (request || {}).merge(
           "status" => "submitting", "origin" => data.fetch("origin"), "attempted_at" => Time.current.iso8601,
+          "first_attempted_at" => first_attempt,
           "before_request" => missing.to_h { |object| [object.fetch("swhid"), { "known" => false, "checked_at" => object.dig("archive", "checked_at") }] }
-        }
+        )
       end
       request["next_check_at"] = (Time.current + POLL_INTERVAL).iso8601
       data["archival"] = request
@@ -134,7 +171,7 @@ class SwhidArchiver
       project.update!(swhids: data)
       true
     end
-    if saved && request["status"] == "pending"
+    if saved && %w[pending rate_limited].include?(request["status"])
       CheckSwhidArchivalWorker.perform_at(Time.iso8601(request.fetch("next_check_at")), project.id)
     end
   end

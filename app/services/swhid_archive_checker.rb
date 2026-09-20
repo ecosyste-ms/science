@@ -3,7 +3,7 @@ class SwhidArchiveChecker
   REFRESH_AFTER = 7.days
   RETRY_AFTER = 1.hour
 
-  attr_reader :data
+  attr_reader :data, :rate_limit
 
   def initialize(data)
     @data = (data || {}).deep_dup
@@ -16,6 +16,8 @@ class SwhidArchiveChecker
   def due_objects
     objects.select do |object|
       archive = object["archive"] || {}
+      next Time.iso8601(archive["retry_at"]) <= Time.current if archive["retry_at"].present?
+
       timestamp = archive["status"] == "error" ? archive["attempted_at"] : archive["checked_at"]
       interval = archive["status"] == "error" ? RETRY_AFTER : REFRESH_AFTER
       timestamp.blank? || Time.iso8601(timestamp) <= Time.current - interval
@@ -28,25 +30,12 @@ class SwhidArchiveChecker
     end
   end
 
-  def self.client(url)
-    Faraday.new(url: url) do |connection|
-      connection.headers["User-Agent"] = "science.ecosyste.ms (+https://science.ecosyste.ms)"
-      connection.headers["Authorization"] = "Bearer #{ENV['SWH_API_TOKEN']}" if ENV["SWH_API_TOKEN"].present?
-      connection.headers["Accept"] = "application/json"
-      connection.headers["Content-Type"] = "application/json"
-      connection.options.open_timeout = 3
-      connection.options.timeout = 10
-      connection.request :instrumentation
-      connection.adapter Faraday.default_adapter
-    end
-  end
-
   def check(force: false)
     pending = force ? objects : due_objects
     return data if pending.empty?
 
     attempted_at = Time.current.iso8601
-    response = self.class.client(ENDPOINT).post { |request| request.body = pending.map { |object| object["swhid"] }.uniq.to_json }
+    response = SwhidApi.request(:post, ENDPOINT, body: pending.map { |object| object["swhid"] }.uniq.to_json)
     unless response.success?
       record_error(pending, "HTTP #{response.status}", attempted_at)
       return data
@@ -59,7 +48,7 @@ class SwhidArchiveChecker
       if known == true || known == false
         archive = object["archive"] || {}
         archive["first_check"] ||= { "known" => known, "checked_at" => Time.current.iso8601 }
-        object["archive"] = archive.except("error", "attempted_at").merge(
+        object["archive"] = archive.except("error", "attempted_at", "retry_at").merge(
           "status" => known ? "archived" : "not_found",
           "checked_at" => Time.current.iso8601
         )
@@ -68,6 +57,11 @@ class SwhidArchiveChecker
       end
     end
     data
+  rescue SwhidApi::RateLimited => error
+    @rate_limit = error
+    record_error(pending, error.message, attempted_at)
+    pending.each { |object| object["archive"]["retry_at"] = error.retry_at.iso8601 }
+    data
   rescue Faraday::Error, JSON::ParserError => error
     record_error(pending, error.message, attempted_at)
     data
@@ -75,7 +69,7 @@ class SwhidArchiveChecker
 
   def record_error(objects, message, attempted_at)
     objects.each do |object|
-      object["archive"] = (object["archive"] || {}).except("checked_at").merge(
+      object["archive"] = (object["archive"] || {}).except("checked_at", "retry_at").merge(
         "status" => "error",
         "attempted_at" => attempted_at,
         "error" => message.to_s.scrub[0, 500]

@@ -602,12 +602,15 @@ module Project::Sync
   end
 
   def check_swhid_archive(force: false)
-    with_lock do
+    rate_limit = with_lock do
       checker = SwhidArchiveChecker.new(swhids)
       return unless force || checker.due?
 
       update!(swhids: checker.check(force: force))
+      checker.rate_limit
     end
+    raise rate_limit if rate_limit
+
     swhids
   end
 
