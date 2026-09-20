@@ -10,5 +10,6 @@ class FetchSwhidWorker
 
     project.fetch_swhids if project.swhids.nil?
     project.check_swhid_archive
+    SwhidArchiver.new(project).run
   end
 end

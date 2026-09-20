@@ -8,6 +8,12 @@ The stored result includes the clone origin, commit, attempt time, total duratio
 
 After calculation, the worker checks both identifiers with Software Heritage's `POST /api/1/known/` endpoint. Each object's `archive` field records `archived` or `not_found` with `checked_at`. Lookups are cached for seven days. HTTP, transport, and invalid-response errors record `error` with `attempted_at` and become eligible after an hour. Normal project sync queues due checks, including for previously calculated identifiers, without cloning the repository again. Page requests read the stored result.
 
+Missing objects trigger a Git origin save request from the same worker. The pre-request lookup must be successful and less than five minutes old; older results are checked again. The worker stores the missing identifiers and their lookup timestamps in `swhids.archival.before_request` before submitting to Software Heritage. It then stores the returned request ID and status. `CheckSwhidArchivalWorker` follows pending requests every six hours for up to 30 days, on the `swhid` queue. A successful save task triggers another lookup of the exact identifiers.
+
+`swhids.archival.confirmed_swhids` records previously missing objects found after the save task succeeds. Requests dated before our submission are excluded from attribution, as the API may return an existing request. Failed or rejected requests do not count. A submission with an uncertain outcome is retained without automatic resubmission; failed follow-up lookups retry the existing request. Coverage refreshes preserve the request evidence and each object's first recorded successful lookup. Clearing `swhids` also clears this evidence.
+
+Count distinct identifiers across stored contribution records with `bundle exec rake swhids:contributions`. The task reports a total and separate revision and directory counts, using a PostgreSQL aggregate without loading projects into Ruby. It makes no archive requests. These counts mean "archived after our request"; another archive process could have handled the same objects concurrently, and historical contributions cannot be reconstructed from earlier coverage checks.
+
 The client sends `User-Agent: science.ecosyste.ms (+https://science.ecosyste.ms)`. Anonymous access works for coverage checks; set `SWH_API_TOKEN` to send an optional Software Heritage bearer token. Rate-limit exemptions depend on the account's permissions. Tokens are not stored in project results.
 
 Inspect a saved result in the Rails console:
@@ -30,6 +36,6 @@ pp SwhidCalculator.new.calculate(type: "directory", path: "/tmp/extracted/source
 
 `artifact` records the archive's SHA-256 beside the extracted-directory SWHID. The caller supplies the extracted path; the calculator does not download, extract, or normalize archives, or verify that the directory came from that artifact. Record extraction choices alongside the output when comparing archives.
 
-Directory calculation hashes the checkout or extracted filesystem using the CLI's handling of Git index modes and symlinks. Checkout filters can change file contents relative to Git's stored tree. Archive coverage refers to the exact calculated object; checking it does not submit an archival request.
+Directory calculation hashes the checkout or extracted filesystem using the CLI's handling of Git index modes and symlinks. Checkout filters can change file contents relative to Git's stored tree, so a successful origin save does not establish coverage of every calculated directory. Contributions require confirmation of the exact SWHID.
 
-The worker tests normally stub HTTP responses. Set `SWH_LIVE_TEST=true` when running `test/sidekiq/swhid_archive_check_test.rb` to include the live API check for orbdot's archived objects.
+The worker tests normally stub HTTP responses. Set `SWH_LIVE_TEST=true` when running `test/sidekiq/swhid_archive_check_test.rb` or `test/sidekiq/swhid_archival_test.rb` to include live checks of orbdot's archived objects and an existing save request. These live tests do not submit an archival request.

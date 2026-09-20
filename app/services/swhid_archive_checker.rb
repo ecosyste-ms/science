@@ -14,9 +14,7 @@ class SwhidArchiveChecker
   end
 
   def due_objects
-    data.values_at("revision", "directory").select do |object|
-      next false unless object.is_a?(Hash) && object["status"] == "success" && object["swhid"].present?
-
+    objects.select do |object|
       archive = object["archive"] || {}
       timestamp = archive["status"] == "error" ? archive["attempted_at"] : archive["checked_at"]
       interval = archive["status"] == "error" ? RETRY_AFTER : REFRESH_AFTER
@@ -24,12 +22,14 @@ class SwhidArchiveChecker
     end
   end
 
-  def check
-    pending = due_objects
-    return data if pending.empty?
+  def objects
+    data.values_at("revision", "directory").select do |object|
+      object.is_a?(Hash) && object["status"] == "success" && object["swhid"].present?
+    end
+  end
 
-    attempted_at = Time.current.iso8601
-    client = Faraday.new(url: ENDPOINT) do |connection|
+  def self.client(url)
+    Faraday.new(url: url) do |connection|
       connection.headers["User-Agent"] = "science.ecosyste.ms (+https://science.ecosyste.ms)"
       connection.headers["Authorization"] = "Bearer #{ENV['SWH_API_TOKEN']}" if ENV["SWH_API_TOKEN"].present?
       connection.headers["Accept"] = "application/json"
@@ -39,7 +39,14 @@ class SwhidArchiveChecker
       connection.request :instrumentation
       connection.adapter Faraday.default_adapter
     end
-    response = client.post { |request| request.body = pending.map { |object| object["swhid"] }.uniq.to_json }
+  end
+
+  def check(force: false)
+    pending = force ? objects : due_objects
+    return data if pending.empty?
+
+    attempted_at = Time.current.iso8601
+    response = self.class.client(ENDPOINT).post { |request| request.body = pending.map { |object| object["swhid"] }.uniq.to_json }
     unless response.success?
       record_error(pending, "HTTP #{response.status}", attempted_at)
       return data
@@ -50,10 +57,12 @@ class SwhidArchiveChecker
       entry = results.is_a?(Hash) ? results[object["swhid"]] : nil
       known = entry.is_a?(Hash) ? entry["known"] : nil
       if known == true || known == false
-        object["archive"] = {
+        archive = object["archive"] || {}
+        archive["first_check"] ||= { "known" => known, "checked_at" => Time.current.iso8601 }
+        object["archive"] = archive.except("error", "attempted_at").merge(
           "status" => known ? "archived" : "not_found",
           "checked_at" => Time.current.iso8601
-        }
+        )
       else
         record_error([object], "Invalid archive response", attempted_at)
       end
@@ -66,11 +75,11 @@ class SwhidArchiveChecker
 
   def record_error(objects, message, attempted_at)
     objects.each do |object|
-      object["archive"] = {
+      object["archive"] = (object["archive"] || {}).except("checked_at").merge(
         "status" => "error",
         "attempted_at" => attempted_at,
         "error" => message.to_s.scrub[0, 500]
-      }
+      )
     end
   end
 end
