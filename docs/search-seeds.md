@@ -83,3 +83,60 @@ Build a lookup from each normalized seed to all candidate project and package id
 Treat seed strings as literal search input and escape them if the matcher uses regular expressions. Preserve surrounding text and the matched seed's provenance for later filtering or human review. Neither a unique catalogue name nor a high Science Score establishes that an occurrence is a software mention.
 
 The existing `/api/v1/projects/names` endpoint remains a flat list of lowercase strings. Use the structured endpoint when the consumer needs identities or evidence. The [OpenAPI definition](../openapi/api/v1/openapi.yaml) describes the response schema; [package discovery](package-discovery-and-ranking.md) and [citation metadata](citation-metadata-and-discovery.md) describe how the underlying records are collected.
+
+## Local SQLite export
+
+`search_seeds:export` writes the same seed data directly from the configured local database into a SQLite file. It uses `ProjectSearchSeeds` for extraction, retaining the API's eligibility rules and provenance. The development and test bundle includes the `sqlite3` gem; run `bundle install` through the project's Ruby setup after updating dependencies.
+
+On a local checkout configured with rbenv, run:
+
+```sh
+RBENV_VERSION="$(cat .ruby-version)" /opt/homebrew/bin/rbenv exec bundle exec rake search_seeds:export
+```
+
+The default output is `tmp/search-seeds-YYYYMMDDTHHMMSSZ.sqlite3`, with a UTC timestamp. Set `OUTPUT` to choose a path and `LIMIT` to export the first N eligible projects in ID order:
+
+```sh
+OUTPUT=tmp/search-seeds-preview.sqlite3 LIMIT=1000 RBENV_VERSION="$(cat .ruby-version)" /opt/homebrew/bin/rbenv exec bundle exec rake search_seeds:export
+```
+
+Omit `LIMIT` for the full eligible catalogue. The task prints progress to stderr and a JSON summary to stdout with the output path, snapshot ID, and counts. It refuses to overwrite an existing path. Only a completed, checked database appears at the requested filename; failures remove the temporary export.
+
+PostgreSQL reads run in a read-only, repeatable-read transaction, with projects loaded in batches of 250. This keeps records and their associations consistent while other processes update the source database. The transaction remains open while source records are exported, so use the local database for large runs. Creating the SQLite file does not fetch upstream metadata or upload anything.
+
+The file has these tables:
+
+| Table | Contents |
+| --- | --- |
+| `metadata` | JSON values keyed by name: schema version, snapshot ID, start and completion times, selection rules, extractor source digest, isolation mode, and counts |
+| `projects` | Project IDs, repository URLs, Science Scores, and source timestamps |
+| `packages` | Package entries associated with projects, including nullable local package IDs and PURLs |
+| `seeds` | Project and package seeds with original values, normalized values, sources, and relations |
+| `project_fields` | Saved OpenAlex field assignments, names, domains, and confidence scores |
+
+`packages.id` is a row ID within this snapshot. `packages.package_id` is the local Science package ID and can be null. `seeds.package_entry_id` points to the snapshot package entry; null identifies a project-level seed. Preserve `project_id` when joining records, because the same software name can occur under multiple projects.
+
+Schema version 1 is stored both in `metadata` and SQLite's `PRAGMA user_version`. The extractor digest identifies the source file used to derive seeds. Snapshot IDs identify individual exports; project timestamps retain their source meaning and do not indicate when the export ran.
+
+Indexes support lookups by seed type and normalized value, project, package ID, PURL, repository URL, and field. For example, find every candidate for a normalized name:
+
+```sql
+SELECT s.project_id, p.repository_url, k.package_id, k.purl, s.source, s.relation
+FROM seeds s
+JOIN projects p ON p.project_id = s.project_id
+LEFT JOIN packages k ON k.id = s.package_entry_id
+WHERE s.type = 'name' AND s.normalized_value = 'stats';
+```
+
+Normalize names with Unicode NFC and lowercase before querying, as for the API. SQLite's built-in `lower()` and `NOCASE` only cover ASCII case folding, so they do not replace the seed normalization rules for non-ASCII names. URL path case and PURL identity are preserved by exact lookup.
+
+The `registry_coverage`, `field_coverage`, and `name_collisions` views provide summaries without loading the dataset into an application. Registry grouping and comparisons use `NOCASE`, so capitalized registry labels match. A shared name means it appears under multiple projects or package entries; repeated provenance for one identity does not increase those counts.
+
+```sql
+SELECT * FROM registry_coverage ORDER BY package_entries DESC;
+SELECT * FROM field_coverage ORDER BY projects DESC;
+SELECT * FROM name_collisions ORDER BY projects DESC, normalized_value LIMIT 20;
+SELECT value FROM metadata WHERE key = 'counts';
+```
+
+The counts include projects without packages, DOI seeds, or OpenAlex field assignments, and package entries without local IDs or PURLs. Field coverage uses saved project classifications and can count one project in several fields. These measures describe coverage of the exported population, rather than mention-detection accuracy.
