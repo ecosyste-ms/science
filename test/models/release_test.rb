@@ -22,7 +22,7 @@ class ReleaseTest < ActiveSupport::TestCase
     %w[v1 V1 1].each { |tag_name| project.releases.create!(tag_name: tag_name) }
     other.releases.create!(tag_name: "v1")
 
-    assert_equal %w[1 V1 v1], project.releases.order(:tag_name).pluck(:tag_name)
+    assert_equal %w[1 V1 v1], project.releases.pluck(:tag_name).sort
     assert_equal "v1", other.releases.sole.tag_name
   end
 

@@ -64,7 +64,7 @@ class SyncProjectReleasesWorkerTest < ActiveSupport::TestCase
 
     perform("tags")
 
-    assert_equal %w[1.0 V1.0 v1.0], @project.releases.order(:tag_name).pluck(:tag_name)
+    assert_equal %w[1.0 V1.0 v1.0], @project.releases.pluck(:tag_name).sort
   end
 
   test "imports one page per job and resumes using the next link" do
