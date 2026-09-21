@@ -188,6 +188,8 @@ class SyncProjectReleasesWorkerTest < ActiveSupport::TestCase
   end
 
   test "duplicate existing identities are reported without deleting records" do
+    # Recreate legacy duplicates within the test transaction.
+    Release.connection.remove_index :releases, name: "index_releases_on_unique_project_tag"
     %w[release-1 release-2].each { |uuid| @project.releases.create!(tag_name: "v1.0", uuid: uuid) }
     respond_with("tags", [tag, tag.merge("name" => "v2")])
 

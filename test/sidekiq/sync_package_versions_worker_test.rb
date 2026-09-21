@@ -179,6 +179,8 @@ class SyncPackageVersionsWorkerTest < ActiveSupport::TestCase
   end
 
   test "ambiguous or differently cased tag hints stay unlinked" do
+    # Recreate legacy duplicates within the test transaction.
+    Release.connection.remove_index :releases, name: "index_releases_on_unique_project_tag"
     2.times { @project.releases.create!(tag_name: "v1.0") }
     @project.releases.create!(tag_name: "V2.0")
     respond_with([version, version.merge("id" => 102, "number" => "2.0", "related_tag" => { "name" => "v2.0" })])
