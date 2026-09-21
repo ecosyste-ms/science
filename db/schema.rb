@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_21_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_21_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -617,7 +617,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_21_100000) do
     t.index "COALESCE(published_at, tag_published_at) DESC NULLS LAST, id DESC", name: "index_releases_on_display_date"
     t.index "project_id, COALESCE(published_at, tag_published_at) DESC NULLS LAST, id DESC", name: "index_releases_on_project_display_date"
     t.index ["project_id", "tag_name"], name: "index_releases_on_project_id_and_tag_name"
-    t.index ["project_id", "uuid"], name: "index_releases_on_project_id_and_uuid"
+    t.index ["project_id", "uuid"], name: "index_releases_on_unique_project_uuid", unique: true, where: "((uuid IS NOT NULL) AND ((uuid)::text <> ''::text))"
   end
 
   create_table "research_organization_domains", force: :cascade do |t|

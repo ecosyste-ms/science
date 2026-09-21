@@ -188,7 +188,7 @@ class SyncProjectReleasesWorkerTest < ActiveSupport::TestCase
   end
 
   test "duplicate existing identities are reported without deleting records" do
-    2.times { @project.releases.create!(tag_name: "v1.0", uuid: "release-1") }
+    %w[release-1 release-2].each { |uuid| @project.releases.create!(tag_name: "v1.0", uuid: uuid) }
     respond_with("tags", [tag, tag.merge("name" => "v2")])
 
     perform("tags")
@@ -197,6 +197,18 @@ class SyncProjectReleasesWorkerTest < ActiveSupport::TestCase
     assert_equal 1, @project.reload.release_sync_state.dig("tags", "conflicts")
     assert_includes @project.release_sync_state.dig("tags", "conflict_examples").first, "duplicate tag"
     assert @project.release_sync_state.dig("tags", "completed_at").present?
+  end
+
+  test "a forge UUID reused for another tag is reported without creating a duplicate" do
+    existing = @project.releases.create!(tag_name: "v1.0", uuid: "release-1", body: "Keep")
+    respond_with("releases", [forge_release.merge("tag_name" => "v2")])
+
+    perform("releases")
+
+    assert_equal existing.id, @project.releases.sole.id
+    assert_equal "Keep", existing.reload.body
+    assert_equal 1, @project.reload.release_sync_state.dig("releases", "conflicts")
+    assert @project.release_sync_state.dig("releases", "completed_at").present?
   end
 
   test "an active claim prevents an overlapping import and expired claims resume" do

@@ -3,6 +3,8 @@ require "rake"
 
 class ReleaseDeduplicationTest < ActiveSupport::TestCase
   setup do
+    # Recreate the legacy schema; the test transaction restores the index.
+    Release.connection.remove_index :releases, name: "index_releases_on_unique_project_uuid"
     Rails.application.load_tasks unless Rake::Task.task_defined?("projects:deduplicate_releases")
     @saved_env = ENV.to_h.slice("LIMIT", "AFTER_ID", "DRY_RUN")
     %w[LIMIT AFTER_ID DRY_RUN].each { |key| ENV.delete(key) }
