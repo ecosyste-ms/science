@@ -50,7 +50,7 @@ class Package < ApplicationRecord
 
   scope :version_importable, -> {
     where(published_by_project_id: Project.visible.scientific.select(:id))
-      .where("NULLIF(metadata->>'versions_url', '') IS NOT NULL")
+      .where("NULLIF(packages.metadata->>'versions_url', '') IS NOT NULL")
   }
 
   after_update :reset_version_release_matches, if: :saved_change_to_published_by_project_id?

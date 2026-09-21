@@ -14,6 +14,24 @@ class SyncPackageVersionsWorkerTest < ActiveSupport::TestCase
 
   teardown { SyncPackageVersionsWorker.jobs.clear }
 
+  test "joined console lookup queues and imports the selected package" do
+    @package.update!(name: "Tool")
+    @package.package_registry.update!(ecosystem: "PyPI")
+    respond_with([version])
+
+    package = Package.version_importable.joins(:package_registry)
+      .where(published_by_project_id: @project.id)
+      .where("LOWER(packages.name) = ? AND LOWER(package_registries.ecosystem) = ?", "tool", "pypi")
+      .first!
+    package.sync_versions
+
+    assert_equal @package.id, package.id
+    assert_equal [[@package.id]], SyncPackageVersionsWorker.jobs.map { |job| job["args"] }
+    SyncPackageVersionsWorker.drain
+    assert_equal "1.0", package.package_versions.sole.number
+    assert package.reload.version_sync_state["completed_at"]
+  end
+
   test "console entrypoint queues a catalog import with source metadata and a name-based release match" do
     release = @project.releases.create!(tag_name: "v1.0", tag_sha: "a" * 40)
     respond_with([version])
