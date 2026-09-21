@@ -28,23 +28,22 @@ class ReleaseDeduplicator
         tags = project.releases.where(tag_name: group.tag_name)
         if tags.where("uuid IS DISTINCT FROM ?", group.uuid).exists?
           result[:conflicts] += 1
-          outcome = "conflicting UUIDs"
+        end
+        duplicates = tags.where(uuid: group.uuid)
+        records = duplicates.order(:id).limit(MAX_GROUP_SIZE + 1).lock.to_a
+        if records.length > MAX_GROUP_SIZE
+          result[:oversized] += 1
+          outcome = "group exceeds #{MAX_GROUP_SIZE} rows"
+        elsif records.length < 2
+          next
+        elsif records.map { |record| record.attributes.except(*IGNORED_ATTRIBUTES) }.uniq.length > 1
+          result[:differing_payloads] += 1
+          outcome = "different stored metadata"
         else
-          records = tags.order(:id).limit(MAX_GROUP_SIZE + 1).lock.to_a
-          if records.length > MAX_GROUP_SIZE
-            result[:oversized] += 1
-            outcome = "group exceeds #{MAX_GROUP_SIZE} rows"
-          elsif records.length < 2
-            next
-          elsif records.map { |record| record.attributes.except(*IGNORED_ATTRIBUTES) }.uniq.length > 1
-            result[:differing_payloads] += 1
-            outcome = "different stored metadata"
-          else
-            keeper = records.first
-            result[:removable] += records.length - 1
-            result[:removed] += tags.where(id: records.drop(1).map(&:id)).delete_all unless dry_run
-            outcome = dry_run ? "would retain #{keeper.id}" : "retained #{keeper.id}"
-          end
+          keeper = records.first
+          result[:removable] += records.length - 1
+          result[:removed] += duplicates.where(id: records.drop(1).map(&:id)).delete_all unless dry_run
+          outcome = dry_run ? "would retain #{keeper.id}" : "retained #{keeper.id}"
         end
         if result[:examples].length < 10
           result[:examples] << { project_id: project.id, tag_name: group.tag_name, uuid: group.uuid, outcome: outcome }
