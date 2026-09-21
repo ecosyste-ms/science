@@ -68,4 +68,9 @@ class Api::V1::ProjectsController < Api::V1::ApplicationController
   def names
     render json: Project.all_package_and_project_names
   end
+
+  def search_seeds
+    @pagy, projects = pagy_countless(ProjectSearchSeeds.scope, limit_max: 100)
+    render json: projects.map { |project| ProjectSearchSeeds.new(project).as_json }
+  end
 end

@@ -187,6 +187,52 @@ paths:
                 type: array
                 items:
                   type: string
+  /projects/search_seeds:
+    get:
+      description: >-
+        Search seeds grouped by visible scientific project (Science Score at least 20),
+        including archived projects and projects without packages. Reads stored metadata
+        without fetching upstream data. Ordered by project ID. Follow the Link header
+        for the next page; total counts are not returned. This is a live view, not a
+        frozen dataset. The existing /projects/names response is unchanged.
+      operationId: getProjectSearchSeeds
+      tags:
+        - projects
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: per_page
+          in: query
+          description: Number of projects per page, capped at 100
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+      responses:
+        200:
+          description: Project and package seeds with provenance
+          headers:
+            Link:
+              description: Pagination links, including rel="next" when another page exists
+              schema:
+                type: string
+            Current-Page:
+              schema:
+                type: integer
+            Page-Items:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProjectSearchSeeds"
   /projects/images:
     get:
       description: get projects with images
@@ -264,6 +310,81 @@ paths:
                   $ref: "#/components/schemas/Issue"
 components:
   schemas:
+    SearchSeed:
+      type: object
+      required: [type, value, normalized_value, source, relation]
+      properties:
+        type:
+          type: string
+          enum: [name, repository_url, homepage_url, doi]
+        value:
+          type: string
+          description: Trimmed source value, or the DOI extracted from a source identifier
+        normalized_value:
+          type: string
+          description: >-
+            Names use Unicode NFC and lowercase without stemming or punctuation removal.
+            DOIs are lowercase. URL schemes and hosts are lowercase; path case is preserved.
+            Repository history URLs may already be normalized by the alias index.
+        source:
+          type: string
+          description: Stored metadata field, for example citation_cff.preferred-citation.doi
+        relation:
+          type: string
+          enum: [software, publication, preferred_citation, citation, reference]
+          description: >-
+            Relationship asserted by the source metadata, not verified evidence of a paper
+            using the software. Preferred citations and BibTeX citations are kept distinct
+            because they may describe software, a publication, or another resource.
+    ProjectSearchSeeds:
+      type: object
+      required: [project_id, repository_url, science_score, updated_at, last_synced_at, seeds, packages]
+      properties:
+        project_id:
+          type: integer
+        repository_url:
+          type: string
+        science_score:
+          type: number
+        updated_at:
+          type: string
+          format: date-time
+        last_synced_at:
+          type: string
+          format: date-time
+          nullable: true
+        seeds:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchSeed"
+        packages:
+          type: array
+          description: >-
+            Linked registry packages and unmatched package metadata stored on the project.
+            Identical names may belong to different packages or projects. Dependencies
+            and incidental README references are not included as software identities.
+          items:
+            type: object
+            required: [package_id, purl, registry, ecosystem, seeds]
+            properties:
+              package_id:
+                type: integer
+                nullable: true
+                description: Local package ID; null for unmatched project package metadata
+              purl:
+                type: string
+                nullable: true
+                description: Package URL without version or subpath, when available and valid
+              registry:
+                type: string
+                nullable: true
+              ecosystem:
+                type: string
+                nullable: true
+              seeds:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SearchSeed"
     Package:
       type: object
       properties:

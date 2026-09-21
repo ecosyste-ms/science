@@ -31,6 +31,7 @@ Rails.application.routes.draw do
           get :packages
           get :search
           get :names
+          get :search_seeds
         end
         member do
           get :ping
