@@ -16,6 +16,60 @@ externalDocs:
 servers:
   - url: https://science.ecosyste.ms/api/v1
 paths:
+  /software/lookup:
+    get:
+      description: Exact normalized software name or identifier lookup, with matching seed evidence grouped by visible scientific project. Read-only; index updates are asynchronous.
+      operationId: lookupSoftware
+      tags: [software]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 2000
+        - name: kind
+          in: query
+          schema:
+            type: string
+            enum: [name, doi, repository_url, homepage_url, purl]
+            default: name
+        - $ref: "#/components/parameters/SoftwareLimit"
+        - $ref: "#/components/parameters/SoftwareAfterId"
+      responses:
+        200:
+          description: Matching projects in project ID order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SoftwareResults"
+        400:
+          description: Invalid query, kind, limit, cursor or identifier
+  /software/search:
+    get:
+      description: Literal case-insensitive substring search over software names, including aliases and package names. Read-only; no relevance or confidence ranking.
+      operationId: searchSoftware
+      tags: [software]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 3
+            maxLength: 2000
+        - $ref: "#/components/parameters/SoftwareLimit"
+        - $ref: "#/components/parameters/SoftwareAfterId"
+      responses:
+        200:
+          description: Matching projects in project ID order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SoftwareResults"
+        400:
+          description: Invalid query, limit or cursor
   /packages:
     get:
       description: List packages ranked by the number of scientific projects that directly depend on them
@@ -335,7 +389,52 @@ paths:
                 items:
                   $ref: "#/components/schemas/Issue"
 components:
+  parameters:
+    SoftwareLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 25
+        default: 10
+    SoftwareAfterId:
+      name: after_id
+      in: query
+      description: Project ID cursor returned as next_after_id. Keep the same query and kind while paging.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
   schemas:
+    SoftwareResults:
+      type: object
+      required: [query, kind, match, next_after_id, projects]
+      properties:
+        query:
+          type: string
+        kind:
+          type: string
+          enum: [name, doi, repository_url, homepage_url, purl]
+        match:
+          type: string
+          enum: [exact, contains]
+        next_after_id:
+          type: integer
+          nullable: true
+          description: Null when finished. A live page can be empty with a non-null cursor if its indexed candidates no longer match current metadata.
+        projects:
+          type: array
+          items:
+            allOf:
+              - $ref: "#/components/schemas/ProjectSearchSeeds"
+              - type: object
+                required: [indexed_at]
+                properties:
+                  indexed_at:
+                    type: string
+                    format: date-time
+                    description: Time the project's normalized search fields were refreshed
     ContextEvidence:
       type: object
       required: [value, source]

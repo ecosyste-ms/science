@@ -54,6 +54,14 @@ class Package < ApplicationRecord
   }
 
   after_update :reset_version_release_matches, if: :saved_change_to_published_by_project_id?
+  after_commit :enqueue_software_search_index,
+    if: -> { destroyed? || (previous_changes.keys & %w[name purl metadata package_registry_id published_by_project_id]).any? }
+
+  def enqueue_software_search_index
+    ([published_by_project_id] + Array(previous_changes["published_by_project_id"])).compact.uniq.each do |project_id|
+      IndexSoftwareSearchWorker.perform_async(project_id)
+    end
+  end
 
   validates :name, presence: true
   validates :name, uniqueness: { scope: :package_registry_id }

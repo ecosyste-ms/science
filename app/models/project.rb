@@ -83,6 +83,13 @@ class Project < ApplicationRecord
     dependent: :nullify
   has_many :votes, dependent: :delete_all
 
+  after_save_commit :enqueue_software_search_index,
+    if: -> { (previous_changes.keys & %w[name url repository packages citation_file codemeta zenodo joss_metadata science_score owner_id]).any? }
+
+  def enqueue_software_search_index
+    IndexSoftwareSearchWorker.perform_async(id)
+  end
+
   before_save :reset_repository_alias_index,
     if: :will_save_change_to_repository?
   before_save :reset_citation_author_index,

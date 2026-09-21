@@ -69,6 +69,12 @@ Documentation for the REST API is available here: [https://science.ecosyste.ms/d
 
 The default rate limit for the API is 5000/req per hour based on your IP address, get in contact if you need to to increase your rate limit.
 
+## MCP
+
+[Science MCP](https://github.com/ecosyste-ms/science-mcp) provides Python MCP tools for Claude Code and Codex. Search software names or look up names, repository URLs, DOIs, and package URLs, then retrieve project descriptions, languages, and dependencies through the Science API. No local database is required for API lookup.
+
+The [MCP README](https://github.com/ecosyste-ms/science-mcp#readme) includes installation and client setup. The [search-seed guide](docs/search-seeds.md) describes the underlying endpoints and optional SQLite exports for offline lookup.
+
 ## Development
 
 For development and deployment documentation, see [DEVELOPMENT.md](DEVELOPMENT.md). More detailed project documentation is listed in [docs/README.md](docs/README.md).

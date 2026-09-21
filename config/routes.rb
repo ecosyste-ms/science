@@ -15,6 +15,8 @@ Rails.application.routes.draw do
 
   namespace :api, :defaults => {:format => :json} do
     namespace :v1 do
+      get "software/lookup", to: "software#lookup"
+      get "software/search", to: "software#search"
       resources :packages, only: [:index] do
         resources :versions, only: [:index, :show], controller: :package_versions
       end

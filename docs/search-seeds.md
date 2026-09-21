@@ -108,6 +108,26 @@ Dependencies come from the saved dependency index, including records that have n
 
 The request reads stored metadata without fetching or indexing it. Empty arrays indicate missing evidence, rather than proof that a project has no dependencies or packages. Check `dependencies_indexed_at` before interpreting an empty dependency list. Context can help assess a text match, but it does not establish that a paper used the software.
 
+## Search and lookup
+
+`GET /api/v1/software/lookup?q=orbdot&kind=name` finds exact normalized names or identifiers. Supported kinds are `name` (the default), `repository_url`, `homepage_url`, `doi`, and `purl`. Names use lowercase Unicode NFC. DOI resolver URLs are accepted, URL paths retain case, and PURLs are normalized without a version or subpath.
+
+`GET /api/v1/software/search?q=orbit` finds names containing the supplied text, including project names, aliases, and published package names. Search requires at least three characters. Matching is case insensitive and literal, so `%` and `_` are ordinary characters. Results are ordered by project ID, without relevance or confidence scores.
+
+Both endpoints return `query`, `kind`, `match`, `projects`, and `next_after_id`. Each project contains the same identity fields as the seed endpoint, plus `indexed_at`, with only matching seeds and packages. A PURL match retains the matching package identity and has an empty `seeds` array. Sources and citation relations retain their existing meaning; forks and projects with shared names remain separate candidates.
+
+Set `limit` between 1 and 25 (default 10). Pass `next_after_id` as `after_id` with the same query and kind until it is null. The cursor is a project ID. The result is a live view: metadata updates can change matches between pages, and a page can be empty while still returning a cursor if indexed candidates no longer match their current metadata. A missing result does not prove a project is absent from Science.
+
+These routes only read stored data. Names and identifiers are indexed on the `projects` table in `search_identifiers` (JSONB), with `search_names` for substring search and `search_indexed_at` for freshness. PostgreSQL GIN indexes support exact containment and trigram name search. Committed project metadata, published package, and repository alias changes queue index refreshes. Bulk writes that bypass callbacks require a reindex. Evidence is extracted from current metadata for the selected page.
+
+After deploying the migration, populate the fields once from the configured Science database:
+
+```sh
+RBENV_VERSION="$(cat .ruby-version)" /opt/homebrew/bin/rbenv exec bundle exec rake search_seeds:index
+```
+
+The task reads projects in batches of 250 and prints progress with the last project ID. Use `LIMIT=1000` for a bounded run or `AFTER_ID=12345` to resume after a reported ID. It is safe to rerun and does not fetch upstream metadata. Lookup coverage is incomplete until the backfill finishes; no SQLite file is needed by API or MCP users.
+
 ## Local SQLite export
 
 `search_seeds:export` writes the same seed data directly from the configured local database into a SQLite file. It uses `ProjectSearchSeeds` for extraction, retaining the API's eligibility rules and provenance. The development and test bundle includes the `sqlite3` gem; run `bundle install` through the project's Ruby setup after updating dependencies.

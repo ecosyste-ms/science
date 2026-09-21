@@ -10,11 +10,12 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_21_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_21_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
+  enable_extension "pg_trgm"
 
   create_table "author_developer_account_links", force: :cascade do |t|
     t.bigint "author_id", null: false
@@ -558,6 +559,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_21_130000) do
     t.float "science_score"
     t.json "science_score_breakdown", default: {}
     t.float "score", default: 0.0
+    t.jsonb "search_identifiers"
+    t.datetime "search_indexed_at"
+    t.text "search_names"
     t.string "sub_category"
     t.jsonb "swhids"
     t.datetime "updated_at", null: false
@@ -582,6 +586,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_21_130000) do
     t.index ["joss_publication_index_version", "id"], name: "index_projects_on_joss_publication_version", where: "((joss_metadata IS NOT NULL) OR (joss_publication_source_digest IS NOT NULL))"
     t.index ["owner_id"], name: "index_projects_on_owner_id"
     t.index ["reviewed"], name: "index_projects_on_reviewed"
+    t.index ["search_identifiers"], name: "index_projects_on_search_identifiers", opclass: :jsonb_path_ops, using: :gin
+    t.index ["search_names"], name: "index_projects_on_search_names", opclass: :gin_trgm_ops, using: :gin
     t.index ["url"], name: "index_projects_on_url", unique: true
   end
 
