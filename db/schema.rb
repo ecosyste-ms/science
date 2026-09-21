@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_20_170100) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_21_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -285,6 +285,34 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_20_170100) do
     t.index "lower((url)::text)", name: "index_package_registries_on_lower_url", unique: true
   end
 
+  create_table "package_versions", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "documentation_url"
+    t.text "download_url"
+    t.datetime "ecosystems_created_at"
+    t.bigint "ecosystems_id", null: false
+    t.datetime "ecosystems_updated_at"
+    t.datetime "fetched_at", null: false
+    t.boolean "immutable"
+    t.text "integrity"
+    t.text "licenses"
+    t.jsonb "metadata", default: {}, null: false
+    t.string "number", null: false
+    t.bigint "package_id", null: false
+    t.datetime "published_at"
+    t.text "purl"
+    t.text "registry_url"
+    t.jsonb "related_tag"
+    t.bigint "release_id"
+    t.string "release_match_method"
+    t.string "status"
+    t.datetime "updated_at", null: false
+    t.index "package_id, lower((number)::text)", name: "index_package_versions_on_package_and_number", unique: true
+    t.index ["package_id", "ecosystems_id"], name: "index_package_versions_on_package_id_and_ecosystems_id", unique: true
+    t.index ["package_id", "published_at", "id"], name: "index_package_versions_on_package_and_date", order: { published_at: "DESC NULLS LAST", id: :desc }
+    t.index ["release_id"], name: "index_package_versions_on_release_id"
+  end
+
   create_table "packages", force: :cascade do |t|
     t.float "average_top_percentage"
     t.datetime "created_at", null: false
@@ -310,6 +338,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_20_170100) do
     t.text "repository_match_error"
     t.text "repository_url"
     t.datetime "updated_at", null: false
+    t.jsonb "version_sync_state", default: {}, null: false
     t.index ["ecosystems_checked_at"], name: "index_packages_pending_ecosystems_sync", where: "(ecosystems_checked_at IS NULL)"
     t.index ["ecosystems_id"], name: "index_packages_on_ecosystems_id", unique: true, where: "(ecosystems_id IS NOT NULL)"
     t.index ["ecosystems_retry_at"], name: "index_packages_on_ecosystems_retry_at", where: "(ecosystems_retry_at IS NOT NULL)"
@@ -627,6 +656,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_20_170100) do
   add_foreign_key "developer_accounts", "hosts", on_delete: :cascade
   add_foreign_key "developer_accounts", "owners", on_delete: :nullify
   add_foreign_key "mention_sources", "mentions", on_delete: :cascade
+  add_foreign_key "package_versions", "packages", on_delete: :cascade
+  add_foreign_key "package_versions", "releases", on_delete: :nullify
   add_foreign_key "packages", "package_registries"
   add_foreign_key "packages", "projects", column: "published_by_project_id", on_delete: :nullify
   add_foreign_key "paper_authors", "authors", on_delete: :nullify

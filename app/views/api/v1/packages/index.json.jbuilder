@@ -6,6 +6,7 @@ json.array! @packages do |package|
     :purl,
     :repository_url
   json.description package.metadata["description"]
+  json.versions_url package.published_by_project_id ? api_v1_package_versions_url(package) : nil
   json.registry do
     json.name package.package_registry.name
     json.ecosystem package.package_registry.ecosystem

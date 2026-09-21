@@ -46,6 +46,14 @@ class Package < ApplicationRecord
 
   has_many :project_dependencies, dependent: :nullify
   has_many :dependent_projects, through: :project_dependencies, source: :project
+  has_many :package_versions, dependent: :delete_all
+
+  scope :version_importable, -> {
+    where(published_by_project_id: Project.visible.scientific.select(:id))
+      .where("NULLIF(metadata->>'versions_url', '') IS NOT NULL")
+  }
+
+  after_update :reset_version_release_matches, if: :saved_change_to_published_by_project_id?
 
   validates :name, presence: true
   validates :name, uniqueness: { scope: :package_registry_id }
@@ -58,6 +66,16 @@ class Package < ApplicationRecord
   before_validation :normalize_purl
   before_validation :normalize_ranking_metadata,
     if: :will_save_change_to_metadata?
+
+  def sync_versions
+    sync = PackageVersionSync.new(self)
+    SyncPackageVersionsWorker.perform_async(id) if sync.due?
+  end
+
+  def reset_version_release_matches
+    package_versions.where.not(release_id: nil).update_all(release_id: nil, release_match_method: nil)
+    update_column(:version_sync_state, {})
+  end
 
   def self.ranked_by_scientific_dependents(
     field_ids: nil,

@@ -15,7 +15,9 @@ Rails.application.routes.draw do
 
   namespace :api, :defaults => {:format => :json} do
     namespace :v1 do
-      resources :packages, only: [:index]
+      resources :packages, only: [:index] do
+        resources :versions, only: [:index, :show], controller: :package_versions
+      end
       resources :issues do
         collection do
           get :good_first_issue_counts

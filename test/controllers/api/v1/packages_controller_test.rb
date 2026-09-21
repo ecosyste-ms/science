@@ -43,6 +43,8 @@ class Api::V1::PackagesControllerTest < ActionDispatch::IntegrationTest
 
     numpy = packages.first
     assert_equal "pkg:pypi/numpy", numpy.fetch("purl")
+    assert_equal api_v1_package_versions_url(@numpy), numpy.fetch("versions_url")
+    assert_nil packages.last.fetch("versions_url")
     assert_equal "pypi", numpy.dig("registry", "ecosystem")
     assert_equal 2, numpy.fetch("scientific_projects_count")
     assert_equal 1_000, numpy.fetch("dependent_repositories_count")

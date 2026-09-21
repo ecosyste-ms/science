@@ -7,8 +7,8 @@ class PackagesApiClient
 
   attr_reader :connection
 
-  def initialize(connection: nil)
-    @connection = connection || build_connection
+  def initialize(connection: nil, retry_requests: true)
+    @connection = connection || build_connection(retry_requests: retry_requests)
   end
 
   def registries(limit: MAX_REGISTRIES)
@@ -67,7 +67,7 @@ class PackagesApiClient
     raise RequestError, "packages.ecosyste.ms request failed: #{error.class}"
   end
 
-  def build_connection
+  def build_connection(retry_requests: true)
     Faraday.new(url: BASE_URL) do |faraday|
       faraday.options.open_timeout = 5
       faraday.options.timeout = 20
@@ -76,12 +76,14 @@ class PackagesApiClient
         faraday.headers["X-API-Key"] = ENV["ECOSYSTEMS_API_KEY"]
       end
       faraday.request :instrumentation
-      faraday.request :retry,
-        max: 2,
-        interval: 0.5,
-        interval_randomness: 0.5,
-        backoff_factor: 2,
-        retry_statuses: RETRY_STATUSES
+      if retry_requests
+        faraday.request :retry,
+          max: 2,
+          interval: 0.5,
+          interval_randomness: 0.5,
+          backoff_factor: 2,
+          retry_statuses: RETRY_STATUSES
+      end
       faraday.response :follow_redirects
       faraday.adapter Faraday.default_adapter
     end
