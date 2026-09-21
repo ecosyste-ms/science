@@ -73,4 +73,9 @@ class Api::V1::ProjectsController < Api::V1::ApplicationController
     @pagy, projects = pagy_countless(ProjectSearchSeeds.scope, limit_max: 100)
     render json: projects.map { |project| ProjectSearchSeeds.new(project).as_json }
   end
+
+  def search_context
+    project = ProjectSearchContext.scope.find(params[:id])
+    render json: ProjectSearchContext.new(project).as_json
+  end
 end

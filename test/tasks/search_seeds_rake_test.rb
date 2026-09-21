@@ -25,7 +25,8 @@ class SearchSeedsRakeTest < ActiveSupport::TestCase
   test "rake task writes queryable identities, provenance, coverage and snapshot metadata" do
     project = create(Project,
       url: "https://github.com/export/climate", name: "Climate's Tools\nLab", science_score: 50,
-      repository: { "archived" => true, "previous_names" => ["export/ClimateLegacy"] },
+      description: "Climate models",
+      repository: { "archived" => true, "previous_names" => ["export/ClimateLegacy"], "language" => "Python" },
       packages: [{ "name" => "STATS", "ecosystem" => "conda" }],
       codemeta: { "identifier" => "10.1234/climate" }.to_json
     )
@@ -43,6 +44,8 @@ class SearchSeedsRakeTest < ActiveSupport::TestCase
     )
     field = create(Field, name: "Export Physics", domain: "Physical Sciences", openalex_id: "fields/31")
     create(ProjectField, project: project, field: field, confidence_score: 0.8)
+    create(ProjectDependency, project: project, package_name: "numpy", ecosystem: "pypi", direct: true,
+      metadata: { "source" => "repos_manifests", "occurrences" => [{ "filepath" => "requirements.txt" }] })
 
     output, progress = capture_io { Rake::Task["search_seeds:export"].invoke }
 
@@ -61,9 +64,19 @@ class SearchSeedsRakeTest < ActiveSupport::TestCase
       assert_equal 1, db.get_first_value("SELECT projects FROM field_coverage WHERE openalex_id = 'fields/31'")
       assert_equal 1, db.get_first_value("SELECT package_entries FROM registry_coverage WHERE registry = 'PyPI.ORG'")
       assert_equal 1, db.get_first_value("SELECT entries_without_purl FROM registry_coverage WHERE ecosystem = 'CONDA'")
-      assert_equal 1, db.get_first_value("PRAGMA user_version")
+      assert_equal 2, db.get_first_value("PRAGMA user_version")
+      assert_equal 2, db.get_first_value("SELECT COUNT(*) FROM project_contexts")
+      context = JSON.parse(db.get_first_value("SELECT data FROM project_contexts WHERE project_id = ?", project.id))
+      assert_equal "Climate models", context.fetch("descriptions").sole.fetch("value")
+      assert_equal "Python", context.fetch("languages").sole.fetch("value")
+      assert_equal "numpy", context.fetch("direct_dependencies").sole.fetch("name")
+      session = ActionDispatch::Integration::Session.new(Rails.application)
+      session.get("/api/v1/projects/#{project.id}/search_context")
+      assert_equal 200, session.response.status
+      assert_equal session.response.parsed_body, context
       metadata = db.execute("SELECT key, value FROM metadata").to_h.transform_values { |value| JSON.parse(value) }
       assert_equal result.fetch("snapshot_id"), metadata.fetch("snapshot_id")
+      assert_equal 2, metadata.fetch("schema_version")
       assert_equal 20, metadata.dig("selection", "minimum_science_score")
       assert_nil metadata.dig("selection", "limit")
       assert_equal "repeatable_read, read_only", metadata.fetch("source_isolation")
@@ -73,6 +86,8 @@ class SearchSeedsRakeTest < ActiveSupport::TestCase
       assert_equal 1, metadata.dig("counts", "package_entries_without_package_id")
       assert_equal 1, metadata.dig("counts", "package_entries_without_purl")
       assert_match(/\A[0-9a-f]{64}\z/, metadata.fetch("extractor_sha256"))
+      assert_match(/\A[0-9a-f]{64}\z/, metadata.fetch("context_extractor_sha256"))
+      assert_match(/\A[0-9a-f]{64}\z/, metadata.fetch("package_extractor_sha256"))
       assert_operator Time.iso8601(metadata.fetch("completed_at")), :>=, Time.iso8601(metadata.fetch("started_at"))
       plan = db.execute("EXPLAIN QUERY PLAN SELECT * FROM seeds WHERE type = 'name' AND normalized_value = 'stats'").flatten.join(" ")
       assert_includes plan, "seeds_lookup"

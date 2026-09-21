@@ -128,51 +128,17 @@ class ProjectSearchSeeds
   end
 
   def package_entries
-    packages = project.published_package_records.sort_by(&:id)
-    entries = packages.map do |package|
-      record = package.metadata.is_a?(Hash) ? package.metadata : {}
-      package_entry(
-        record.merge("name" => package.name, "purl" => package.purl),
-        source: "package", id: package.id,
-        registry: package.package_registry.name, ecosystem: package.package_registry.ecosystem
-      )
-    end
-    Array.wrap(project.packages).each_with_index do |record, index|
-      next unless record.is_a?(Hash)
-      purl = normalized_purl(record["purl"])
-      entry = package_entry(
-        record, source: "project.packages[#{index}]", id: nil,
-        registry: metadata.text(record["registry"]), ecosystem: metadata.text(record["ecosystem"])
-      )
-      existing = purl && entries.find { |item| item[:purl] == purl }
-      if existing
-        existing[:seeds] = (existing[:seeds] + entry[:seeds]).uniq
-      else
-        entries << entry
+    ProjectPackageEntries.new(project).entries.filter_map do |entry|
+      seeds = entry.fetch(:sources).flat_map do |item|
+        record = item.fetch(:record)
+        source = item.fetch(:source)
+        [
+          seed("name", record["name"], "#{source}.name"),
+          seed("homepage_url", record["homepage"], "#{source}.homepage"),
+        ].compact
       end
+      entry.except(:sources).merge(seeds: seeds.uniq) if seeds.any?
     end
-    entries.select { |entry| entry[:seeds].any? }
-  end
-
-  def package_entry(record, source:, id:, registry:, ecosystem:)
-    {
-      package_id: id,
-      purl: normalized_purl(record["purl"]),
-      registry: registry,
-      ecosystem: ecosystem,
-      seeds: [
-        seed("name", record["name"], "#{source}.name"),
-        seed("homepage_url", record["homepage"], "#{source}.homepage"),
-      ].compact,
-    }
-  end
-
-  def normalized_purl(value)
-    return unless value.is_a?(String) && value.present?
-
-    Purl.parse(value).with(version: nil, subpath: nil).to_s
-  rescue Purl::Error
-    nil
   end
 
   def doi_seeds(value, source, relation)

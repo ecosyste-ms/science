@@ -5,7 +5,7 @@ These documents explain parts of the application that need more detail than the 
 - [Science Score](science-score.md): how project evidence becomes the scientific eligibility score
 - [Project ingestion and sync](project-ingestion-and-sync.md): how repository URLs are discovered, queued, and enriched
 - [Package discovery and ranking](package-discovery-and-ranking.md): how dependencies become package identities, metadata, project links, and package rankings
-- [Software search seeds](search-seeds.md): how to retrieve names and identifiers with provenance through the API or a local SQLite export
+- [Software search seeds](search-seeds.md): how to retrieve names, identifiers, and disambiguation context through the API or a local SQLite export
 - [Citation metadata and repository discovery](citation-metadata-and-discovery.md): how CITATION, CodeMeta, and Zenodo files supply exports, DOI evidence, and related repositories
 - [Research organization domains](research-organization-domains.md): how manual and ROR domains classify owners and committer email evidence
 - [JOSS vocabulary scoring](joss-vocabulary.md): how JOSS project text becomes a reusable Science Score signal

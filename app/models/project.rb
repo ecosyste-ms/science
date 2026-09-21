@@ -68,6 +68,7 @@ class Project < ApplicationRecord
   has_many :papers, through: :mentions
   has_many :dependency_records, class_name: 'Dependency', dependent: :nullify
   has_many :project_dependencies, dependent: :delete_all
+  has_many :direct_project_dependencies, -> { where(direct: true) }, class_name: "ProjectDependency"
   has_many :project_authors, dependent: :delete_all
   has_many :mention_sources, through: :mentions, source: :sources
   has_many :project_contributors, dependent: :delete_all

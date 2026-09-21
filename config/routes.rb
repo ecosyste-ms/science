@@ -35,6 +35,7 @@ Rails.application.routes.draw do
         end
         member do
           get :ping
+          get :search_context
         end
       end
     end

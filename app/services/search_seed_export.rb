@@ -3,13 +3,14 @@ require "fileutils"
 require "tempfile"
 
 class SearchSeedExport
-  SCHEMA_VERSION = 1
+  SCHEMA_VERSION = 2
   BATCH_SIZE = 250
   COLUMNS = {
     projects: %i[project_id repository_url science_score updated_at last_synced_at],
     packages: %i[project_id package_id purl registry ecosystem],
     seeds: %i[project_id package_entry_id type value normalized_value source relation],
     project_fields: %i[project_id openalex_id name domain confidence_score],
+    project_contexts: %i[project_id data],
   }.freeze
 
   attr_reader :output, :limit, :batch_size, :progress, :database, :statements
@@ -55,6 +56,12 @@ class SearchSeedExport
       write_metadata("extractor_sha256", Digest::SHA256.file(
         Rails.root.join("app/services/project_search_seeds.rb")
       ).hexdigest)
+      write_metadata("context_extractor_sha256", Digest::SHA256.file(
+        Rails.root.join("app/services/project_search_context.rb")
+      ).hexdigest)
+      write_metadata("package_extractor_sha256", Digest::SHA256.file(
+        Rails.root.join("app/services/project_package_entries.rb")
+      ).hexdigest)
       write_metadata("source_isolation", "repeatable_read, read_only")
       export_projects
       @counts = coverage_counts
@@ -74,7 +81,8 @@ class SearchSeedExport
     Project.transaction(isolation: :repeatable_read) do
       Project.connection.execute("SET TRANSACTION READ ONLY")
       Project.uncached do
-        scope = ProjectSearchSeeds.scope.reorder(nil).preload(project_fields: :field)
+        scope = ProjectSearchSeeds.scope.select(*ProjectSearchContext::PROJECT_COLUMNS)
+          .reorder(nil).preload(:direct_project_dependencies, project_fields: :field)
         scope = scope.limit(limit) if limit
         count = 0
         scope.find_in_batches(batch_size: batch_size) do |projects|
@@ -89,6 +97,7 @@ class SearchSeedExport
   def write_project(project)
     record = ProjectSearchSeeds.new(project).as_json
     insert(:projects, record)
+    insert(:project_contexts, project_id: project.id, data: ProjectSearchContext.new(project).to_json)
     record.fetch(:seeds).each do |seed|
       insert(:seeds, seed.merge(project_id: project.id, package_entry_id: nil))
     end

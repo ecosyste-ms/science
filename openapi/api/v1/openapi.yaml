@@ -137,6 +137,32 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Project"
+  /projects/{id}/search_context:
+    get:
+      description: >-
+        Get stored descriptions, programming languages, published packages and indexed
+        direct dependencies for a visible project with a Science Score of at least 20.
+        Evidence retains its source. Empty arrays mean no stored evidence was found;
+        they do not establish that a project has no dependencies or packages.
+        No upstream requests or dependency indexing run during this request.
+      operationId: getProjectSearchContext
+      tags:
+        - projects
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Context for one software candidate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectSearchContext"
+        404:
+          description: Project is missing, hidden or below the scientific eligibility threshold
   /projects/lookup:
     get:
       description: lookup project by url
@@ -310,6 +336,119 @@ paths:
                   $ref: "#/components/schemas/Issue"
 components:
   schemas:
+    ContextEvidence:
+      type: object
+      required: [value, source]
+      properties:
+        value:
+          type: string
+          description: Trimmed source text, with original case preserved
+        source:
+          type: string
+          description: Stored metadata field supplying this value
+    ProjectSearchContext:
+      type: object
+      required: [project_id, repository_url, updated_at, last_synced_at, descriptions, languages, packages, dependencies_indexed_at, direct_dependencies]
+      properties:
+        project_id:
+          type: integer
+        repository_url:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+        last_synced_at:
+          type: string
+          format: date-time
+          nullable: true
+        descriptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContextEvidence"
+        languages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContextEvidence"
+        packages:
+          type: array
+          description: >-
+            Packages published by this project, grouped using the search-seed identity
+            rules. Descriptions and languages belong to each package. A project-level
+            dependency is not evidence that every package in this list depends on it.
+          items:
+            type: object
+            required: [package_id, purl, registry, ecosystem, names, descriptions, languages]
+            properties:
+              package_id:
+                type: integer
+                nullable: true
+              purl:
+                type: string
+                nullable: true
+              registry:
+                type: string
+                nullable: true
+              ecosystem:
+                type: string
+                nullable: true
+              names:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContextEvidence"
+              descriptions:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContextEvidence"
+              languages:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContextEvidence"
+        dependencies_indexed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last dependency indexing time; null means indexing has not completed
+        direct_dependencies:
+          type: array
+          description: Stored direct dependency records, including unresolved package identities
+          items:
+            type: object
+            required: [dependency_id, package_id, name, ecosystem, purl, source, occurrences, updated_at]
+            properties:
+              dependency_id:
+                type: integer
+              package_id:
+                type: integer
+                nullable: true
+              name:
+                type: string
+              ecosystem:
+                type: string
+              purl:
+                type: string
+                nullable: true
+              source:
+                type: string
+                nullable: true
+                description: Recorded dependency source, such as repos_manifests or brief
+              updated_at:
+                type: string
+                format: date-time
+              occurrences:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    filepath:
+                      type: string
+                    manifest_kind:
+                      type: string
+                    requirements:
+                      type: string
+                    kind:
+                      type: string
+                    optional:
+                      type: boolean
     SearchSeed:
       type: object
       required: [type, value, normalized_value, source, relation]

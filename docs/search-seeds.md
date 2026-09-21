@@ -84,6 +84,30 @@ Treat seed strings as literal search input and escape them if the matcher uses r
 
 The existing `/api/v1/projects/names` endpoint remains a flat list of lowercase strings. Use the structured endpoint when the consumer needs identities or evidence. The [OpenAPI definition](../openapi/api/v1/openapi.yaml) describes the response schema; [package discovery](package-discovery-and-ranking.md) and [citation metadata](citation-metadata-and-discovery.md) describe how the underlying records are collected.
 
+## Context for a candidate
+
+`GET /api/v1/projects/{id}/search_context` returns stored context for one candidate identified by a seed. It uses the same visibility and scientific eligibility rules as the seed endpoint; missing, hidden, or below-threshold projects return 404. The bulk seed response stays unchanged.
+
+The response includes `project_id`, `repository_url`, `updated_at`, and `last_synced_at`, followed by:
+
+- `descriptions`: text from the project description, repository metadata, and CodeMeta.
+- `languages`: the repository's primary language, Brief language names, and CodeMeta `programmingLanguage` values.
+- `packages`: packages published by this project, with their IDs, PURLs, registry, ecosystem, names, descriptions, and languages.
+- `dependencies_indexed_at`: the last completed dependency indexing time, or null.
+- `direct_dependencies`: indexed direct dependencies, with IDs, names, ecosystems, PURLs, source, manifest occurrences, and update timestamps.
+
+Names, descriptions, and languages are arrays of evidence objects. For example:
+
+```json
+{"value": "Python", "source": "repository.language"}
+```
+
+Values retain their original case. The same value can appear with several sources. Package metadata uses the same identity grouping as search seeds: records with the same normalized PURL share an entry, while distinct registry identities and forks remain separate. Package descriptions and languages come from linked package metadata and legacy package records stored on the project.
+
+Dependencies come from the saved dependency index, including records that have no resolved package ID or PURL. Each occurrence can include `filepath`, `manifest_kind`, `requirements`, `kind`, and `optional`. These distinguish development and optional dependencies from runtime requirements where source metadata supplies that detail. Dependencies belong to the project; they are not assigned to every package it publishes.
+
+The request reads stored metadata without fetching or indexing it. Empty arrays indicate missing evidence, rather than proof that a project has no dependencies or packages. Check `dependencies_indexed_at` before interpreting an empty dependency list. Context can help assess a text match, but it does not establish that a paper used the software.
+
 ## Local SQLite export
 
 `search_seeds:export` writes the same seed data directly from the configured local database into a SQLite file. It uses `ProjectSearchSeeds` for extraction, retaining the API's eligibility rules and provenance. The development and test bundle includes the `sqlite3` gem; run `bundle install` through the project's Ruby setup after updating dependencies.
@@ -113,10 +137,20 @@ The file has these tables:
 | `packages` | Package entries associated with projects, including nullable local package IDs and PURLs |
 | `seeds` | Project and package seeds with original values, normalized values, sources, and relations |
 | `project_fields` | Saved OpenAlex field assignments, names, domains, and confidence scores |
+| `project_contexts` | One row per project, with the context endpoint's JSON response in `data` |
 
 `packages.id` is a row ID within this snapshot. `packages.package_id` is the local Science package ID and can be null. `seeds.package_entry_id` points to the snapshot package entry; null identifies a project-level seed. Preserve `project_id` when joining records, because the same software name can occur under multiple projects.
 
-Schema version 1 is stored both in `metadata` and SQLite's `PRAGMA user_version`. The extractor digest identifies the source file used to derive seeds. Snapshot IDs identify individual exports; project timestamps retain their source meaning and do not indicate when the export ran.
+Schema version 2 is stored both in `metadata` and SQLite's `PRAGMA user_version`. Version 2 adds `project_contexts`; the seed tables retain their version 1 layout. Extractor digests identify the source files used for seeds, context, and package identity grouping. Snapshot IDs identify individual exports; project timestamps retain their source meaning and do not indicate when the export ran.
+
+The context table has an indexed `project_id` primary key. Retrieve the same JSON as the endpoint with `SELECT data FROM project_contexts WHERE project_id = 123`. SQLite JSON functions also support queries over the evidence, for example:
+
+```sql
+SELECT c.project_id, json_extract(d.value, '$.name') AS dependency,
+       json_extract(d.value, '$.purl') AS purl
+FROM project_contexts c, json_each(c.data, '$.direct_dependencies') d
+WHERE c.project_id = 123;
+```
 
 Indexes support lookups by seed type and normalized value, project, package ID, PURL, repository URL, and field. For example, find every candidate for a normalized name:
 

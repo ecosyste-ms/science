@@ -1,5 +1,5 @@
 PRAGMA foreign_keys = ON;
-PRAGMA user_version = 1;
+PRAGMA user_version = 2;
 
 CREATE TABLE metadata (
   key TEXT PRIMARY KEY,
@@ -21,6 +21,11 @@ CREATE TABLE packages (
   purl TEXT,
   registry TEXT,
   ecosystem TEXT
+);
+
+CREATE TABLE project_contexts (
+  project_id INTEGER PRIMARY KEY REFERENCES projects(project_id),
+  data TEXT NOT NULL CHECK (json_valid(data))
 );
 
 CREATE TABLE seeds (
