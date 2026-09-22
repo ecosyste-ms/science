@@ -1,8 +1,10 @@
 require "test_helper"
+require_relative "../support/swhid_pipeline"
 require "tmpdir"
 require "open3"
 
 class FetchSwhidWorkerTest < ActiveSupport::TestCase
+  include SwhidPipeline
   setup do
     FetchSwhidWorker.jobs.clear
     @directory = Dir.mktmpdir("science-swhid-test-")
@@ -35,7 +37,7 @@ class FetchSwhidWorkerTest < ActiveSupport::TestCase
       }.to_json)
     @project.fetch_swhids_async
     assert_equal [[@project.id]], FetchSwhidWorker.jobs.map { |job| job["args"] }
-    FetchSwhidWorker.drain
+    drain_fetch
 
     result = @project.reload.swhids
     assert_equal "success", result["status"]
@@ -57,13 +59,29 @@ class FetchSwhidWorkerTest < ActiveSupport::TestCase
 
   test "worker records an unavailable repository without enqueuing another scan" do
     @project.update!(repository: { "clone_url" => File.join(@directory, "missing") })
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
     result = @project.reload.swhids
     assert_equal "error", result["status"]
     assert_includes result["error"], "does not exist"
     assert_operator result["error"].length, :<=, 500
     @project.fetch_swhids_async
     assert_empty FetchSwhidWorker.jobs
+  end
+
+  test "local calculation continues while archive requests are paused" do
+    cache = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(cache)
+    cache.write(SwhidApi::COOLDOWN_KEY, 2.hours.from_now.to_f)
+
+    @project.fetch_swhids_async
+    drain_fetch
+
+    assert_equal "success", @project.reload.swhids["status"]
+    assert_equal "success", @project.swhids.dig("revision", "status")
+    assert_nil @project.swhids.dig("revision", "archive")
+    assert_equal 1, CheckSwhidBatchWorker.jobs.size
+    assert_empty FetchSwhidWorker.jobs
+    assert_not_requested :post, SwhidArchiveChecker::ENDPOINT
   end
 
   test "worker records metadata evidence from Git objects without checking more SWHIDs" do
@@ -83,7 +101,7 @@ class FetchSwhidWorkerTest < ActiveSupport::TestCase
       }.to_json)
 
     @project.fetch_swhids_async
-    FetchSwhidWorker.drain
+    drain_fetch
 
     evidence = @project.reload.swhids.dig("metadata", "codemeta")
     assert_equal Digest::SHA256.hexdigest(content), evidence["content_digest"]
@@ -102,7 +120,7 @@ class FetchSwhidWorkerTest < ActiveSupport::TestCase
     [{ "status" => "success" }, { "status" => "error", "error" => "timeout" }].each do |result|
       @project.update!(swhids: result)
       ProjectSwhidScanner.expects(:new).never
-      FetchSwhidWorker.new.perform(@project.id)
+      perform_fetch(@project.id)
       assert_equal result, @project.reload.swhids
     end
   end
@@ -110,10 +128,10 @@ class FetchSwhidWorkerTest < ActiveSupport::TestCase
   test "worker rechecks scientific eligibility and repository metadata" do
     ProjectSwhidScanner.expects(:new).never
     @project.update!(science_score: Project::SCIENCE_SCORE_THRESHOLD - 1)
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
     assert_nil @project.reload.swhids
     @project.update!(science_score: 42, repository: nil)
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
     assert_nil @project.reload.swhids
   end
 
@@ -123,10 +141,10 @@ class FetchSwhidWorkerTest < ActiveSupport::TestCase
     owner = Owner.create!(host: host, login: "test")
     @project.update!(owner_record: owner)
     owner.update!(hidden: true)
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
     assert_nil @project.reload.swhids
     @project.destroy!
-    assert_nil FetchSwhidWorker.new.perform(@project.id)
+    assert_nil perform_fetch(@project.id)
   end
 
   def git(*args)

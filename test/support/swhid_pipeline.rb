@@ -1,0 +1,39 @@
+module SwhidPipeline
+  extend ActiveSupport::Concern
+
+  included do
+    setup do
+      Sidekiq::Testing.server_middleware { |chain| chain.add SidekiqUniqueJobs::Middleware::Server }
+      clear_swhid_batch
+    end
+
+    teardown do
+      clear_swhid_batch
+    end
+  end
+
+  def clear_swhid_batch
+    CheckSwhidBatchWorker.clear
+    SidekiqUniqueJobs::Digests.new.delete_by_pattern("#{CheckSwhidBatchWorker.get_sidekiq_options.fetch('lock_prefix')}:*")
+    Sidekiq.redis { |redis| redis.call("DEL", CheckSwhidBatchWorker::PENDING_KEY) }
+  end
+
+  def perform_fetch(project_id)
+    FetchSwhidWorker.new.perform(project_id)
+    finish_swhid_checks
+  end
+
+  def drain_fetch
+    FetchSwhidWorker.drain
+    finish_swhid_checks
+  end
+
+  def finish_swhid_checks
+    CheckSwhidBatchWorker.perform_one if CheckSwhidBatchWorker.jobs.any?
+    CheckSwhidArchivalWorker.jobs.select { |job| job["at"].nil? }.each do |job|
+      Sidekiq::Queues.delete_for(job["jid"], job["queue"], job["class"])
+      CheckSwhidArchivalWorker.process_job(job)
+    end
+    nil
+  end
+end

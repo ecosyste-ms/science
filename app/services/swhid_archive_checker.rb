@@ -2,6 +2,7 @@ class SwhidArchiveChecker
   ENDPOINT = "https://archive.softwareheritage.org/api/1/known/"
   REFRESH_AFTER = 7.days
   RETRY_AFTER = 1.hour
+  MAX_IDENTIFIERS = 1_000
 
   attr_reader :data, :rate_limit
 
@@ -32,16 +33,31 @@ class SwhidArchiveChecker
 
   def check(force: false)
     pending = force ? objects : due_objects
-    return data if pending.empty?
+    self.class.check_batch([[self, pending]])
+    data
+  end
+
+  def self.check_batch(checks)
+    identifiers = checks.flat_map { |_, objects| objects.map { |object| object.fetch("swhid") } }.uniq
+    return if identifiers.empty?
+    raise ArgumentError, "Too many SWHIDs" if identifiers.size > MAX_IDENTIFIERS
 
     attempted_at = Time.current.iso8601
-    response = SwhidApi.request(:post, ENDPOINT, body: pending.map { |object| object["swhid"] }.uniq.to_json)
+    response = SwhidApi.request(:post, ENDPOINT, body: identifiers.to_json)
     unless response.success?
-      record_error(pending, "HTTP #{response.status}", attempted_at)
-      return data
+      checks.each { |checker, objects| checker.record_error(objects, "HTTP #{response.status}", attempted_at) }
+      return
     end
 
     results = JSON.parse(response.body)
+    checks.each { |checker, objects| checker.record_results(objects, results, attempted_at) }
+  rescue SwhidApi::RateLimited => error
+    checks.each { |checker, objects| checker.record_rate_limit(objects, error, attempted_at) }
+  rescue Faraday::Error, JSON::ParserError => error
+    checks.each { |checker, objects| checker.record_error(objects, error.message, attempted_at) }
+  end
+
+  def record_results(pending, results, attempted_at)
     pending.each do |object|
       entry = results.is_a?(Hash) ? results[object["swhid"]] : nil
       known = entry.is_a?(Hash) ? entry["known"] : nil
@@ -56,15 +72,12 @@ class SwhidArchiveChecker
         record_error([object], "Invalid archive response", attempted_at)
       end
     end
-    data
-  rescue SwhidApi::RateLimited => error
+  end
+
+  def record_rate_limit(pending, error, attempted_at)
     @rate_limit = error
     record_error(pending, error.message, attempted_at)
     pending.each { |object| object["archive"]["retry_at"] = error.retry_at.iso8601 }
-    data
-  rescue Faraday::Error, JSON::ParserError => error
-    record_error(pending, error.message, attempted_at)
-    data
   end
 
   def record_error(objects, message, attempted_at)

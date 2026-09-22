@@ -1,6 +1,8 @@
 require "test_helper"
+require_relative "../support/swhid_pipeline"
 
 class SwhidArchivalTest < ActiveSupport::TestCase
+  include SwhidPipeline
   REVISION = "swh:1:rev:817c61051b31ce4d0eb73d1b873c02de87ce1f81"
   DIRECTORY = "swh:1:dir:b3bb6ae45c8b3cb7ee9d9c3b84b1319cda7060d0"
   ORIGIN = "https://github.com/simonehagey/orbdot"
@@ -33,8 +35,8 @@ class SwhidArchivalTest < ActiveSupport::TestCase
     end
 
     @project.fetch_swhids_async
-    FetchSwhidWorker.drain
-    FetchSwhidWorker.new.perform(@project.id)
+    drain_fetch
+    perform_fetch(@project.id)
 
     request = @project.reload.swhids.fetch("archival")
     assert_equal "pending", request["status"]
@@ -60,7 +62,7 @@ class SwhidArchivalTest < ActiveSupport::TestCase
     assert_requested poll, times: 1
 
     travel 8.days
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
     assert_equal request, @project.reload.swhids["archival"]
     assert_requested submission, times: 1
   end
@@ -68,7 +70,7 @@ class SwhidArchivalTest < ActiveSupport::TestCase
   test "already known objects are never counted as contributions" do
     known_request(true, false)
     save_request.to_return(status: 200, body: api_result.to_json)
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
     assert_equal [DIRECTORY], @project.reload.swhids.dig("archival", "before_request").keys
 
     travel 6.hours
@@ -81,12 +83,12 @@ class SwhidArchivalTest < ActiveSupport::TestCase
 
   test "known objects and failed coverage checks never submit an archival request" do
     known_request(true, true)
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
     assert_nil @project.reload.swhids["archival"]
 
     travel 8.days
     stub_request(:post, SwhidArchiveChecker::ENDPOINT).to_return(status: 429)
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
     assert_nil @project.reload.swhids["archival"]
     assert_not_requested :post, SwhidArchiver::ENDPOINT
   end
@@ -98,7 +100,7 @@ class SwhidArchivalTest < ActiveSupport::TestCase
 
     known_request(true, true)
     @project.fetch_swhids_async
-    FetchSwhidWorker.drain
+    drain_fetch
 
     assert_equal "archived", @project.reload.swhids.dig("revision", "archive", "status")
     assert_nil @project.swhids["archival"]
@@ -111,7 +113,7 @@ class SwhidArchivalTest < ActiveSupport::TestCase
       .then.to_return(body: { REVISION => { known: true }, DIRECTORY => { known: true } }.to_json)
     save_request.to_return(status: 200, body: api_result(task: "succeeded", date: 1.day.ago.iso8601).to_json)
 
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
 
     request = @project.reload.swhids.fetch("archival")
     assert_equal false, request["attribution_eligible"]
@@ -125,7 +127,7 @@ class SwhidArchivalTest < ActiveSupport::TestCase
     known_request(false, false)
     save_request.to_return(status: 200, body: api_result(task: "succeeded").to_json)
 
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
 
     request = @project.reload.swhids.fetch("archival")
     assert_equal true, request["attribution_eligible"]
@@ -136,14 +138,14 @@ class SwhidArchivalTest < ActiveSupport::TestCase
   test "submission timeouts retain evidence and do not resubmit" do
     known_request(false, false)
     submission = save_request.to_timeout
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
 
     request = @project.reload.swhids.fetch("archival")
     assert_equal "uncertain", request["status"]
     assert_equal false, request.dig("before_request", REVISION, "known")
     assert request["error"]
     travel 8.days
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
     assert_equal 0, SwhidArchiver.contribution_counts["total"]
     assert_requested submission, times: 1
     assert_empty CheckSwhidArchivalWorker.jobs
@@ -152,7 +154,7 @@ class SwhidArchivalTest < ActiveSupport::TestCase
   test "failed polling retries the same request and preserves first observations" do
     known_request(false, false)
     submission = save_request.to_return(status: 200, body: api_result.to_json)
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
 
     travel 6.hours
     stub_request(:get, "#{SwhidArchiver::ENDPOINT}123/").to_return(status: 429)
@@ -167,7 +169,7 @@ class SwhidArchivalTest < ActiveSupport::TestCase
   test "rejected requests are retained without polling or contributing" do
     known_request(false, false)
     save_request.to_return(status: 200, body: api_result.merge("save_request_status" => "rejected", "save_task_status" => "not created").to_json)
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
 
     assert_equal "rejected", @project.reload.swhids.dig("archival", "status")
     assert_empty CheckSwhidArchivalWorker.jobs
@@ -177,7 +179,7 @@ class SwhidArchivalTest < ActiveSupport::TestCase
   test "pending requests expire without submitting again" do
     known_request(false, false)
     submission = save_request.to_return(status: 200, body: api_result.to_json)
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
 
     travel 31.days
     CheckSwhidArchivalWorker.new.perform(@project.id)
@@ -192,7 +194,7 @@ class SwhidArchivalTest < ActiveSupport::TestCase
     SwhidArchiver.new(@project).claim
 
     travel 6.hours
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
 
     assert_equal "uncertain", @project.reload.swhids.dig("archival", "status")
     assert_not_requested :post, SwhidArchiver::ENDPOINT
@@ -202,7 +204,7 @@ class SwhidArchivalTest < ActiveSupport::TestCase
     known_request(false, false)
     save_request.to_return(status: 200, body: api_result(task: "failed").to_json)
 
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
 
     assert_equal "failed", @project.reload.swhids.dig("archival", "status")
     assert_equal 0, SwhidArchiver.contribution_counts["total"]
@@ -213,9 +215,9 @@ class SwhidArchivalTest < ActiveSupport::TestCase
     known_request(false, false)
     submission = save_request.to_return(status: 200, body: api_result.merge("origin_url" => "https://github.com/another/repo").to_json)
 
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
     travel 8.days
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
 
     assert_equal "uncertain", @project.reload.swhids.dig("archival", "status")
     assert_equal "Invalid archival response", @project.swhids.dig("archival", "error")
@@ -225,7 +227,7 @@ class SwhidArchivalTest < ActiveSupport::TestCase
   test "a failed final coverage lookup is retried without losing the save request" do
     known_request(false, false)
     save_request.to_return(status: 200, body: api_result.to_json)
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
 
     travel 6.hours
     stub_request(:get, "#{SwhidArchiver::ENDPOINT}123/").to_return(status: 200, body: api_result(task: "succeeded").to_json)
@@ -250,7 +252,7 @@ class SwhidArchivalTest < ActiveSupport::TestCase
     known_request(false, false)
     submission = save_request.with(headers: { "Authorization" => "Bearer test-archival-token", "User-Agent" => "science.ecosyste.ms (+https://science.ecosyste.ms)" })
       .to_return(status: 200, body: api_result.to_json)
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
 
     travel 6.hours
     polling = stub_request(:get, "#{SwhidArchiver::ENDPOINT}123/").with(headers: { "Authorization" => "Bearer test-archival-token" })

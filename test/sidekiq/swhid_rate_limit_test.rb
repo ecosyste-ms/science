@@ -1,6 +1,8 @@
 require "test_helper"
+require_relative "../support/swhid_pipeline"
 
 class SwhidRateLimitTest < ActiveSupport::TestCase
+  include SwhidPipeline
   REVISION = "swh:1:rev:817c61051b31ce4d0eb73d1b873c02de87ce1f81"
   DIRECTORY = "swh:1:dir:b3bb6ae45c8b3cb7ee9d9c3b84b1319cda7060d0"
   ORIGIN = "https://github.com/simonehagey/orbdot"
@@ -30,7 +32,7 @@ class SwhidRateLimitTest < ActiveSupport::TestCase
     lookup = known_request(false, false)
     submission = save_request.to_return(status: 429, headers: { "Retry-After" => "7200" })
 
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
 
     request = @project.reload.swhids.fetch("archival")
     assert_equal "rate_limited", request["status"]
@@ -40,11 +42,11 @@ class SwhidRateLimitTest < ActiveSupport::TestCase
     assert_retry_between CheckSwhidArchivalWorker.jobs.last, 2.hours.from_now
     assert_equal 2.hours.from_now.iso8601, request["retry_at"]
 
-    other = Project.create!(url: "https://github.com/example/other", science_score: 42, repository: {}, swhids: nil)
-    FetchSwhidWorker.new.perform(other.id)
-    assert_nil other.reload.swhids
-    assert_equal [other.id], FetchSwhidWorker.jobs.last["args"]
-    assert_retry_between FetchSwhidWorker.jobs.last, 2.hours.from_now
+    other = Project.create!(url: "https://github.com/example/other", science_score: 42, repository: {}, swhids: @data)
+    perform_fetch(other.id)
+    assert_equal @data, other.reload.swhids
+    assert_empty FetchSwhidWorker.jobs
+    assert_retry_between CheckSwhidBatchWorker.jobs.last, 2.hours.from_now
     CheckSwhidArchivalWorker.new.perform(@project.id)
     assert_requested submission, times: 1
     assert_requested lookup, times: 1
@@ -54,7 +56,7 @@ class SwhidRateLimitTest < ActiveSupport::TestCase
   test "retry rechecks coverage and attributes only objects still missing before the accepted request" do
     known_request(false, false)
     save_request.to_return(status: 429, headers: { "Retry-After" => "7200" })
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
     first_attempt = @project.reload.swhids.dig("archival", "attempted_at")
     travel_to Time.iso8601(@project.swhids.dig("archival", "next_check_at")) + 1.second
     accepted_at = Time.current.iso8601
@@ -85,7 +87,7 @@ class SwhidRateLimitTest < ActiveSupport::TestCase
   test "retry skips submission if all objects became known while waiting" do
     known_request(false, false)
     submission = save_request.to_return(status: 429, headers: { "Retry-After" => "3600" })
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
     travel 2.hours
     known_request(true, true)
 
@@ -99,7 +101,7 @@ class SwhidRateLimitTest < ActiveSupport::TestCase
   test "previously uncertain HTTP 429 submissions can be recovered without clearing their evidence" do
     known_request(false, false)
     save_request.to_return(status: 429)
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
     data = @project.reload.swhids.deep_dup
     data["archival"]["status"] = "uncertain"
     data["archival"]["next_check_at"] = 6.hours.from_now.iso8601
@@ -118,7 +120,7 @@ class SwhidRateLimitTest < ActiveSupport::TestCase
   test "HTTP-date Retry-After delays polling without resubmitting the origin" do
     known_request(false, false)
     submission = save_request.to_return(status: 200, body: api_result.to_json)
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
     travel 6.hours
     deadline = 1.day.from_now
     stub_request(:get, "#{SwhidArchiver::ENDPOINT}123/")
@@ -141,7 +143,7 @@ class SwhidRateLimitTest < ActiveSupport::TestCase
       known_request(false, false)
       save_request.to_return(status: 429, headers: header ? { "Retry-After" => header } : {})
 
-      FetchSwhidWorker.new.perform(@project.id)
+      perform_fetch(@project.id)
 
       assert_equal "rate_limited", @project.reload.swhids.dig("archival", "status")
       assert_retry_between CheckSwhidArchivalWorker.jobs.last, 1.hour.from_now
@@ -151,7 +153,7 @@ class SwhidRateLimitTest < ActiveSupport::TestCase
   test "zero Retry-After uses a minimum delay instead of immediately retrying" do
     known_request(false, false)
     save_request.to_return(status: 429, headers: { "Retry-After" => "0" })
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
 
     assert_retry_between CheckSwhidArchivalWorker.jobs.last, 1.minute.from_now
   end
@@ -159,18 +161,18 @@ class SwhidRateLimitTest < ActiveSupport::TestCase
   test "coverage rate limits persist the server deadline and schedule a worker" do
     lookup = stub_request(:post, SwhidArchiveChecker::ENDPOINT).to_return(status: 429, headers: { "Retry-After" => "25200" })
 
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
 
     assert_equal "error", @project.reload.swhids.dig("revision", "archive", "status")
     assert_equal 7.hours.from_now.iso8601, @project.swhids.dig("revision", "archive", "retry_at")
-    assert_retry_between FetchSwhidWorker.jobs.last, 7.hours.from_now
+    assert_retry_between CheckSwhidBatchWorker.jobs.last, 7.hours.from_now
     travel 2.hours
     assert_nil @project.fetch_swhids_async
     assert_requested lookup, times: 1
 
     travel 6.hours
     known_request(true, true)
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
     assert_equal "archived", @project.reload.swhids.dig("revision", "archive", "status")
     assert_nil @project.swhids.dig("revision", "archive", "retry_at")
   end
@@ -178,7 +180,7 @@ class SwhidRateLimitTest < ActiveSupport::TestCase
   test "final coverage rate limits preserve the accepted request and reschedule confirmation" do
     known_request(false, false)
     save_request.to_return(status: 200, body: api_result.to_json)
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
     travel 6.hours
     stub_request(:get, "#{SwhidArchiver::ENDPOINT}123/").to_return(status: 200, body: api_result(task: "succeeded").to_json)
     stub_request(:post, SwhidArchiveChecker::ENDPOINT).to_return(status: 429, headers: { "Retry-After" => "86400" })
@@ -201,7 +203,7 @@ class SwhidRateLimitTest < ActiveSupport::TestCase
   test "rate limiting the coverage recheck postpones resubmission without losing its evidence" do
     known_request(false, false)
     submission = save_request.to_return(status: 429, headers: { "Retry-After" => "60" })
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
     evidence = @project.reload.swhids.dig("archival", "before_request")
     travel 1.hour
     stub_request(:post, SwhidArchiveChecker::ENDPOINT).to_return(status: 429, headers: { "Retry-After" => "25200" })
@@ -216,7 +218,7 @@ class SwhidRateLimitTest < ActiveSupport::TestCase
     travel 8.hours
     known_request(false, false)
     save_request.to_return(status: 200, body: api_result(date: Time.current.iso8601).to_json)
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
 
     assert_equal "pending", @project.reload.swhids.dig("archival", "status")
     assert_equal 123, @project.swhids.dig("archival", "id")
@@ -230,7 +232,7 @@ class SwhidRateLimitTest < ActiveSupport::TestCase
       { status: 429, headers: { "Retry-After" => "60" } }
     end
 
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
 
     assert_equal deadline.iso8601, @project.reload.swhids.dig("archival", "retry_at")
     assert_retry_between CheckSwhidArchivalWorker.jobs.last, deadline

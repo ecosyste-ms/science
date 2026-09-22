@@ -1,7 +1,9 @@
 require "test_helper"
 require "rake"
+require_relative "../support/swhid_pipeline"
 
 class SwhidsRakeTest < ActiveSupport::TestCase
+  include SwhidPipeline
   setup do
     Rails.application.load_tasks unless Rake::Task.task_defined?("swhids:contributions")
     Rake::Task["swhids:contributions"].reenable
@@ -28,7 +30,7 @@ class SwhidsRakeTest < ActiveSupport::TestCase
           { status: 200, body: { id: index + 1, origin_url: origin, visit_type: "git", save_request_date: Time.current.iso8601,
             save_request_status: "accepted", save_task_status: "succeeded" }.to_json }
         end
-      FetchSwhidWorker.new.perform(project.id)
+      perform_fetch(project.id)
     end
 
     output, = capture_io { Rake::Task["swhids:contributions"].invoke }

@@ -1,6 +1,8 @@
 require "test_helper"
+require_relative "../support/swhid_pipeline"
 
 class SwhidArchiveCheckTest < ActiveSupport::TestCase
+  include SwhidPipeline
   REVISION = "swh:1:rev:817c61051b31ce4d0eb73d1b873c02de87ce1f81"
   DIRECTORY = "swh:1:dir:b3bb6ae45c8b3cb7ee9d9c3b84b1319cda7060d0"
 
@@ -28,8 +30,8 @@ class SwhidArchiveCheckTest < ActiveSupport::TestCase
     @project.fetch_swhids_async
     assert_equal [[@project.id]], FetchSwhidWorker.jobs.map { |job| job["args"] }
 
-    FetchSwhidWorker.drain
-    FetchSwhidWorker.new.perform(@project.id)
+    drain_fetch
+    perform_fetch(@project.id)
 
     result = @project.reload.swhids
     assert_equal "success", result["status"]
@@ -43,12 +45,12 @@ class SwhidArchiveCheckTest < ActiveSupport::TestCase
 
   test "checks refresh after seven days" do
     request = archive_request.to_return(status: 200, body: { REVISION => { known: true }, DIRECTORY => { known: false } }.to_json)
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
     previous_check = @project.reload.swhids.dig("revision", "archive", "checked_at")
 
     travel 8.days do
       assert @project.fetch_swhids_async
-      FetchSwhidWorker.drain
+      drain_fetch
       assert_not_equal previous_check, @project.reload.swhids.dig("revision", "archive", "checked_at")
     end
     assert_requested request, times: 2
@@ -56,7 +58,7 @@ class SwhidArchiveCheckTest < ActiveSupport::TestCase
 
   test "rate limits are recorded separately and retried after an hour" do
     request = archive_request.to_return(status: 429)
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
 
     result = @project.reload.swhids
     assert_equal "success", result["status"]
@@ -67,13 +69,13 @@ class SwhidArchiveCheckTest < ActiveSupport::TestCase
       assert result.dig(type, "archive", "attempted_at")
     end
     assert_nil @project.fetch_swhids_async
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
     assert_requested request, times: 1
 
     archive_request.to_return(status: 200, body: { REVISION => { known: true }, DIRECTORY => { known: true } }.to_json)
     travel 2.hours do
       assert @project.fetch_swhids_async
-      FetchSwhidWorker.drain
+      drain_fetch
       assert_equal "archived", @project.reload.swhids.dig("revision", "archive", "status")
     end
   end
@@ -81,7 +83,7 @@ class SwhidArchiveCheckTest < ActiveSupport::TestCase
   test "timeouts preserve calculated identifiers" do
     archive_request.to_timeout
 
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
 
     result = @project.reload.swhids
     assert_equal "success", result["status"]
@@ -92,7 +94,7 @@ class SwhidArchiveCheckTest < ActiveSupport::TestCase
 
   test "missing and malformed results are never recorded as not found" do
     request = archive_request.to_return(status: 200, body: { REVISION => { known: true } }.to_json)
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
     assert_equal "archived", @project.reload.swhids.dig("revision", "archive", "status")
     assert_equal "error", @project.swhids.dig("directory", "archive", "status")
     assert_requested request, times: 1
@@ -101,7 +103,7 @@ class SwhidArchiveCheckTest < ActiveSupport::TestCase
       .with(body: [DIRECTORY].to_json)
       .to_return(status: 200, body: { DIRECTORY => { known: "false" } }.to_json)
     travel 2.hours do
-      FetchSwhidWorker.new.perform(@project.id)
+      perform_fetch(@project.id)
       assert_equal "archived", @project.reload.swhids.dig("revision", "archive", "status")
       assert_equal "error", @project.swhids.dig("directory", "archive", "status")
     end
@@ -111,7 +113,7 @@ class SwhidArchiveCheckTest < ActiveSupport::TestCase
   test "invalid JSON is recorded as a check error" do
     archive_request.to_return(status: 200, body: "<html>Service unavailable</html>")
 
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
 
     assert_equal "error", @project.reload.swhids.dig("revision", "archive", "status")
     assert_equal "success", @project.swhids["status"]
@@ -122,7 +124,7 @@ class SwhidArchiveCheckTest < ActiveSupport::TestCase
     request = archive_request.with(headers: { "Authorization" => "Bearer test-swh-token" })
       .to_return(status: 200, body: { REVISION => { known: true }, DIRECTORY => { known: true } }.to_json)
 
-    FetchSwhidWorker.new.perform(@project.id)
+    perform_fetch(@project.id)
 
     assert_requested request, times: 1
     assert_equal "archived", @project.reload.swhids.dig("revision", "archive", "status")
@@ -133,7 +135,7 @@ class SwhidArchiveCheckTest < ActiveSupport::TestCase
     test "live worker checks orbdot against Software Heritage and persists the response" do
       WebMock.disable_net_connect!(allow: "archive.softwareheritage.org", allow_localhost: true)
 
-      FetchSwhidWorker.new.perform(@project.id)
+      perform_fetch(@project.id)
 
       result = @project.reload.swhids
       assert_equal "archived", result.dig("revision", "archive", "status"), result.inspect
