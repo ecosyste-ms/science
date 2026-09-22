@@ -1,7 +1,7 @@
 class CheckSwhidOriginWorker
   include Sidekiq::Worker
 
-  sidekiq_options queue: "swhid", retry: 3, lock: :until_executing,
+  sidekiq_options queue: "swh_api", retry: 3, lock: :until_executing,
     lock_prefix: "science:#{Rails.env}:swhid-origin"
 
   def perform(project_id, force = false)

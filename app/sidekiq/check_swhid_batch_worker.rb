@@ -6,7 +6,7 @@ class CheckSwhidBatchWorker
   PENDING_KEY = "science:#{Rails.env}:swhid-checks"
   ADVISORY_LOCK = 7_349_401
 
-  sidekiq_options queue: "swhid", retry: 3, lock: :until_executing,
+  sidekiq_options queue: "swh_api", retry: 3, lock: :until_executing,
     lock_prefix: "science:#{Rails.env}:swhid-batch"
 
   def self.enqueue(project_id)

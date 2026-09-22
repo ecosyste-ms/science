@@ -1,6 +1,11 @@
 ---
-:concurrency: 10
+:concurrency: 9
 :queues:
   - [default, 5]
   - [brief, 1]
   - [swhid, 1]
+:capsules:
+  swh_api:
+    :concurrency: 1
+    :queues:
+      - swh_api

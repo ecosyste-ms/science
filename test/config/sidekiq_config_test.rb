@@ -12,7 +12,7 @@ class SidekiqConfigTest < ActiveSupport::TestCase
       permitted_classes: [Symbol]
     )
 
-    assert_equal 10, config[:concurrency]
+    assert_equal 9, config[:concurrency]
     assert_equal [["default", 5], ["brief", 1], ["swhid", 1]], config[:queues]
   end
 

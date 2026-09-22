@@ -1,4 +1,12 @@
 namespace :swhids do
+  desc "Move existing SWH API jobs to swh_api (DRY_RUN=true by default)"
+  task move_api_jobs: :environment do
+    dry_run = ENV.fetch("DRY_RUN", "true")
+    raise ArgumentError, "DRY_RUN must be true or false" unless %w[true false].include?(dry_run)
+
+    puts JSON.pretty_generate(SwhidApiQueueMigration.new.move(dry_run: dry_run == "true"))
+  end
+
   desc "Report repository coverage and classify archival requests"
   task coverage: :environment do
     puts JSON.pretty_generate(SwhidCoverageReport.counts)
