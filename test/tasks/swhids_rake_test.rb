@@ -37,15 +37,75 @@ class SwhidsRakeTest < ActiveSupport::TestCase
 
     output, = capture_io { Rake::Task["swhids:contributions"].invoke }
 
-    assert_equal "SWHIDs archived after our request: 2\nRevisions: 1\nDirectories: 1\n", output
+    assert_includes output, "Eligible science projects: 2\n"
+    assert_includes output, "Projects with new archival requests: 2/2 (100.0%)\n"
+    assert_includes output, "Projects with successful imports: 2/2 (100.0%)\n"
+    assert_includes output, "SWHIDs archived after our request: 2\nRevisions: 1\nDirectories: 1\n"
     assert_requested known, times: 4
   end
 
   test "contributions reports zero without submitting requests" do
     output, = capture_io { Rake::Task["swhids:contributions"].invoke }
 
-    assert_equal "SWHIDs archived after our request: 0\nRevisions: 0\nDirectories: 0\n", output
+    assert_includes output, "Eligible science projects: 0\n"
+    assert_includes output, "Projects with new archival requests: 0/0 (n/a)\n"
+    assert_includes output, "Projects with successful imports: 0/0 (n/a)\n"
+    assert_includes output, "SWHIDs archived after our request: 0\nRevisions: 0\nDirectories: 0\n"
     assert_not_requested :post, SwhidArchiver::ENDPOINT
+  end
+
+  test "contributions separates eligible project coverage from all recorded identifiers" do
+    coverage_project("versions", "archived", "missing_versions", imported: true)
+    coverage_project("repository", "not_found", "missing_repository")
+    historical = coverage_project("historical", "archived", "missing_versions", imported: true)
+    historical.update!(swhids: historical.swhids.deep_merge("archival" => {
+      "repository_before_request" => { "basis" => "visit_history" }
+    }))
+    coverage_project("unknown", "unknown", nil)
+    coverage_project("unchecked", nil, nil, request_id: nil)
+    reused = coverage_project("reused", "archived", "missing_versions", imported: true)
+    reused.update!(swhids: reused.swhids.deep_merge("archival" => { "attribution_eligible" => false }))
+    excluded = coverage_project("unscientific-contribution", "archived", "missing_versions", imported: true)
+    excluded.update!(science_score: 0, swhids: excluded.swhids.deep_merge("archival" => {
+      "status" => "completed", "confirmed_swhids" => ["swh:1:rev:#{'c' * 40}"]
+    }))
+
+    output, = capture_io { Rake::Task["swhids:contributions"].invoke }
+
+    assert_equal <<~REPORT, output
+      Eligible science projects: 6
+      Projects with new archival requests: 4/6 (66.7%)
+      Projects with successful imports: 2/6 (33.3%)
+
+      Repository coverage among eligible projects:
+        Archived snapshot found: 3
+        No snapshot found at checked URLs: 1
+        Unknown: 1
+        Unchecked: 1
+
+      Submitted projects by prior repository coverage:
+        Missing versions of previously archived repositories: 2
+        No repository snapshot found before submission: 1
+        Prior repository coverage unknown: 1
+
+      Imported projects by prior repository coverage:
+        Missing versions of previously archived repositories: 2
+        No repository snapshot found before submission: 0
+        Prior repository coverage unknown: 0
+
+      Submission evidence:
+        Observed before submission: 2
+        Inferred from historical visit dates: 1
+        Unknown: 1
+
+      Confirmed contributions across all recorded projects:
+      SWHIDs archived after our request: 1
+      Revisions: 1
+      Directories: 0
+    REPORT
+    assert_not_requested :any, /archive\.softwareheritage\.org/
+    assert_empty RepositoryScanWorker.jobs
+    assert_empty CheckSwhidBatchWorker.jobs
   end
 
   test "coverage report separates repository coverage and submission categories within eligible projects" do

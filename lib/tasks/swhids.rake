@@ -27,11 +27,8 @@ namespace :swhids do
     puts JSON.pretty_generate(selected: ids.size, queued: queued, last_project_id: ids.last || after_id)
   end
 
-  desc "Count distinct SWHIDs archived after this app requested archival"
+  desc "Report SWH contributions, eligible project coverage, requests, and imports"
   task contributions: :environment do
-    counts = SwhidArchiver.contribution_counts
-    puts "SWHIDs archived after our request: #{counts.fetch('total')}"
-    puts "Revisions: #{counts.fetch('revisions')}"
-    puts "Directories: #{counts.fetch('directories')}"
+    puts SwhidCoverageReport.contribution_summary
   end
 end
