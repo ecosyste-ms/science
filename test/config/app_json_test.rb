@@ -177,6 +177,13 @@ class AppJsonTest < ActiveSupport::TestCase
     ], crons
   end
 
+  test "SWHID stats are refreshed every six hours" do
+    config = JSON.parse(Rails.root.join("app.json").read)
+    crons = config.fetch("cron").select { |cron| cron.fetch("command").include?("swhids:refresh") }
+
+    assert_equal [{ "command" => "bundle exec rake swhids:refresh", "schedule" => "10 */6 * * *" }], crons
+  end
+
   test "ROR owner repositories are checked hourly in bounded batches" do
     config = JSON.parse(Rails.root.join("app.json").read)
     crons = config.fetch("cron").select do |cron|

@@ -1,0 +1,16 @@
+<div class="col-12 col-lg-6 mb-4">
+  <h2 class="h4"><%= title %></h2>
+  <table class="table">
+    <thead>
+      <tr><th scope="col"><%= category %></th><th scope="col" class="text-end">Count</th></tr>
+    </thead>
+    <tbody>
+      <% labels.each do |key, label| %>
+        <tr>
+          <th scope="row"><%= label %></th>
+          <td class="text-end"><%= number_with_delimiter(counts.fetch(key, 0)) %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

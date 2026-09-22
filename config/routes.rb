@@ -15,6 +15,7 @@ Rails.application.routes.draw do
 
   namespace :api, :defaults => {:format => :json} do
     namespace :v1 do
+      resources :swhids, only: [:index]
       get "software/lookup", to: "software#lookup"
       get "software/search", to: "software#search"
       resources :packages, only: [:index] do
@@ -63,6 +64,8 @@ Rails.application.routes.draw do
   end
 
   resources :releases, only: [:index]
+
+  resources :swhids, only: [:index]
 
   resources :packages, only: [:index]
 

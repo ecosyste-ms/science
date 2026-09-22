@@ -1,4 +1,10 @@
 namespace :swhids do
+  desc "Refresh SWHID stats stored in Redis"
+  task refresh: :environment do
+    stats = SwhidStats.refresh
+    puts "Stored SWHID stats for #{stats.fetch('eligible_projects')} eligible projects"
+  end
+
   desc "Move existing SWH API jobs to swh_api (DRY_RUN=true by default)"
   task move_api_jobs: :environment do
     dry_run = ENV.fetch("DRY_RUN", "true")

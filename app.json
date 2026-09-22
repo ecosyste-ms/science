@@ -73,6 +73,10 @@
       "schedule": "5 * * * *"
     },
     {
+      "command": "bundle exec rake swhids:refresh",
+      "schedule": "10 */6 * * *"
+    },
+    {
       "command": "bundle exec rake owners:check_ror_repositories",
       "schedule": "15 * * * *"
     },

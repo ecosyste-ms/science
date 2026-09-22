@@ -16,6 +16,62 @@ externalDocs:
 servers:
   - url: https://science.ecosyste.ms/api/v1
 paths:
+  /swhids:
+    get:
+      description: Software Heritage coverage among eligible science projects, archival requests, imports, and distinct confirmed contributions across all recorded projects. Refreshed every six hours; requests only read the last stored snapshot.
+      operationId: getSwhidStats
+      tags: [swhids]
+      responses:
+        200:
+          description: Last stored snapshot, which may be older than six hours if a refresh fails
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated_at:
+                    type: string
+                    format: date-time
+                  eligible_projects:
+                    type: integer
+                  repository_coverage:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                    example: {archived: 10, not_found: 2, unknown: 1, unchecked: 3}
+                  submitted_projects:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                    example: {missing_versions: 2, missing_repository: 1, unknown: 0}
+                  imported_projects:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                    example: {missing_versions: 1, missing_repository: 1, unknown: 0}
+                  submission_evidence:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                    example: {pre_submission: 2, visit_history: 1}
+                  contributions:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      revisions:
+                        type: integer
+                      directories:
+                        type: integer
+        503:
+          description: No stored snapshot is available yet
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
   /software/lookup:
     get:
       description: Exact normalized software name or identifier lookup, with matching seed evidence grouped by visible scientific project. Read-only; index updates are asynchronous.

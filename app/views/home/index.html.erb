@@ -20,6 +20,7 @@
 <div class="container mt-5">
   <% if @stats.present? %>
     <h2>Data coverage</h2>
+    <p><%= link_to "Software Heritage archival stats", swhids_path %></p>
     <%= render 'projects/stats', stats: @stats %>
   <% end %>
 

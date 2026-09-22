@@ -1,0 +1,59 @@
+<% @meta_title = "SWHID stats" %>
+<% @meta_description = "Software Heritage repository coverage, archival requests, imports, and confirmed SWHID contributions." %>
+<div class="container my-5">
+  <h1>SWHID stats</h1>
+  <p>Software Heritage repository coverage and archival contributions for research software. <%= link_to "JSON API", api_v1_swhids_path %></p>
+
+  <% if @stats %>
+    <p class="text-muted">Updated <%= time_tag Time.iso8601(@stats.fetch("updated_at")) %>. Refreshed every six hours.</p>
+
+    <h2 class="h4">Eligible science projects</h2>
+    <p>Visible projects with repository data and a science score of at least <%= Project::SCIENCE_SCORE_THRESHOLD %>.</p>
+    <dl class="row mb-4">
+      <dt class="col-sm-8">Eligible projects</dt>
+      <dd class="col-sm-4"><%= number_with_delimiter(@stats.fetch("eligible_projects")) %></dd>
+      <dt class="col-sm-8">Projects with new archival requests</dt>
+      <dd class="col-sm-4"><%= SwhidCoverageReport.fraction(@stats.fetch("submitted_projects").values.sum, @stats.fetch("eligible_projects")) %></dd>
+      <dt class="col-sm-8">Projects with successful imports</dt>
+      <dd class="col-sm-4"><%= SwhidCoverageReport.fraction(@stats.fetch("imported_projects").values.sum, @stats.fetch("eligible_projects")) %></dd>
+    </dl>
+
+    <div class="row">
+      <%= render "breakdown", title: "Repository coverage among eligible projects", category: "Repository coverage",
+        counts: @stats.fetch("repository_coverage"), labels: {
+          "archived" => "Archived snapshot found",
+          "not_found" => "No snapshot found at checked URLs",
+          "unknown" => "Unknown",
+          "unchecked" => "Unchecked"
+        } %>
+      <% classifications = {
+        "missing_versions" => "Missing versions of previously archived repositories",
+        "missing_repository" => "No repository snapshot found before submission",
+        "unknown" => "Prior repository coverage unknown"
+      } %>
+      <%= render "breakdown", title: "Submitted projects by prior repository coverage", category: "Prior repository coverage",
+        counts: @stats.fetch("submitted_projects"), labels: classifications %>
+      <%= render "breakdown", title: "Imported projects by prior repository coverage", category: "Prior repository coverage",
+        counts: @stats.fetch("imported_projects"), labels: classifications %>
+      <%= render "breakdown", title: "Submission evidence", category: "Evidence",
+        counts: @stats.fetch("submission_evidence"), labels: {
+          "pre_submission" => "Observed before submission",
+          "visit_history" => "Inferred from historical visit dates",
+          "unknown" => "Unknown"
+        } %>
+    </div>
+
+    <h2 class="h4">Confirmed contributions across all recorded projects</h2>
+    <p>Distinct SWHIDs confirmed archived after our request, including projects outside the eligible science set.</p>
+    <dl class="row">
+      <dt class="col-sm-8">SWHIDs archived after our request</dt>
+      <dd class="col-sm-4"><%= number_with_delimiter(@stats.fetch("contributions").fetch("total")) %></dd>
+      <dt class="col-sm-8">Revisions</dt>
+      <dd class="col-sm-4"><%= number_with_delimiter(@stats.fetch("contributions").fetch("revisions")) %></dd>
+      <dt class="col-sm-8">Directories</dt>
+      <dd class="col-sm-4"><%= number_with_delimiter(@stats.fetch("contributions").fetch("directories")) %></dd>
+    </dl>
+  <% else %>
+    <p>SWHID stats are not available yet. Please check back after the next refresh.</p>
+  <% end %>
+</div>
