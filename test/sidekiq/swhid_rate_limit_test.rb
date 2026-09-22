@@ -212,7 +212,7 @@ class SwhidRateLimitTest < ActiveSupport::TestCase
 
     assert_equal evidence, @project.reload.swhids.dig("archival", "before_request")
     assert_equal "rate_limited", @project.swhids.dig("archival", "status")
-    assert_retry_between FetchSwhidWorker.jobs.last, 7.hours.from_now
+    assert_retry_between CheckSwhidWorker.jobs.last, 7.hours.from_now
     assert_requested submission, times: 1
 
     travel 8.hours

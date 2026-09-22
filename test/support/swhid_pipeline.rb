@@ -15,6 +15,9 @@ module SwhidPipeline
   end
 
   def clear_swhid_batch
+    RepositoryScanWorker.clear
+    CheckSwhidWorker.clear
+    SidekiqUniqueJobs::Digests.new.delete_by_pattern("#{RepositoryScanWorker.get_sidekiq_options.fetch('lock_prefix')}:*")
     CheckSwhidBatchWorker.clear
     SidekiqUniqueJobs::Digests.new.delete_by_pattern("#{CheckSwhidBatchWorker.get_sidekiq_options.fetch('lock_prefix')}:*")
     Sidekiq.redis { |redis| redis.call("DEL", CheckSwhidBatchWorker::PENDING_KEY) }
@@ -29,6 +32,7 @@ module SwhidPipeline
 
   def drain_fetch
     FetchSwhidWorker.drain
+    RepositoryScanWorker.drain
     finish_swhid_checks
   end
 

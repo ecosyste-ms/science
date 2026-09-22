@@ -38,7 +38,7 @@ Repository links extracted from CITATION, CodeMeta, and Zenodo data follow a sep
 
 `projects:sync` calls `Project.sync_least_recently_synced`. Each run selects at most 500 projects whose `last_synced_at` is missing or older than one day. The recurring scope includes projects that have never received a Science Score, plus projects whose saved score is positive. A previously synced project with score zero drops out of this recurring refresh scope.
 
-Selected IDs are sent to `SyncProjectWorker` on the default Sidekiq queue. Sidekiq runs with concurrency 10; the default queue has weight 5, while the clone-heavy Brief and SWHID queues each have weight 1. Duplicate scheduled sync jobs remain possible because selection and queue insertion are separate operations.
+Selected IDs are sent to `SyncProjectWorker` on the default Sidekiq queue. Each Sidekiq process has nine general threads and one reserved for SWH API jobs. Repository analysis uses `RepositoryScanWorker` on the `swhid` queue, with one checkout for Brief, SWHIDs, and metadata provenance. Duplicate scheduled sync jobs remain possible because selection and queue insertion are separate operations.
 
 ## Sync stages
 
@@ -51,7 +51,7 @@ Selected IDs are sent to `SyncProjectWorker` on the default Sidekiq queue. Sidek
 5. Import issue rows and repository metadata files.
 6. Sync releases, committer records, and contributor-derived keywords.
 7. Set `last_synced_at`, update popularity and Science scores, then ping upstream records for refresh.
-8. Queue SWHID generation or due archive coverage checks for scientific projects with repository metadata. [SWHID scanning](swhids.md) runs in a separate Sidekiq job.
+8. Queue repository analysis or due archive coverage checks for scientific projects with repository metadata. [SWHID scanning](swhids.md) shares its checkout with Brief; API checks use a separate queue.
 
 The repository lookup supplies host data, archive URLs, metadata filenames, release endpoints, and manifest endpoints. Other stages call packages.ecosyste.ms, commits.ecosyste.ms, issues.ecosyste.ms, timeline.ecosyste.ms, and archives.ecosyste.ms. Project keywords combine repository topics with package keywords case-insensitively.
 

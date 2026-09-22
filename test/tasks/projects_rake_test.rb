@@ -1,7 +1,9 @@
 require "test_helper"
+require_relative "../support/swhid_pipeline"
 require "rake"
 
 class ProjectsRakeTest < ActiveSupport::TestCase
+  include SwhidPipeline
   ENV_KEYS = %w[
     LIMIT COHORT SHARD_COUNT SHARD DRY_RUN RETRY_ERRORS
   ].freeze
@@ -9,13 +11,13 @@ class ProjectsRakeTest < ActiveSupport::TestCase
   setup do
     Rails.application.load_tasks unless Rake::Task.task_defined?("projects:fetch_brief")
     ENV_KEYS.each { |key| ENV.delete(key) }
-    FetchBriefWorker.jobs.clear
+    RepositoryScanWorker.jobs.clear
     SyncProjectWorker.jobs.clear
   end
 
   teardown do
     ENV_KEYS.each { |key| ENV.delete(key) }
-    FetchBriefWorker.jobs.clear
+    RepositoryScanWorker.jobs.clear
     SyncProjectWorker.jobs.clear
   end
 
@@ -82,7 +84,7 @@ class ProjectsRakeTest < ActiveSupport::TestCase
 
     output, = capture_io { Rake::Task["projects:fetch_brief"].execute }
 
-    assert_equal [[joss.id]], FetchBriefWorker.jobs.map { |job| job["args"] }
+    assert_equal [[joss.id]], RepositoryScanWorker.jobs.map { |job| job["args"] }
     assert_includes output, "Enqueued 1 Brief jobs"
     assert_includes output, "cohort=joss"
   end
@@ -92,7 +94,7 @@ class ProjectsRakeTest < ActiveSupport::TestCase
 
     capture_io { Rake::Task["projects:fetch_brief"].execute }
 
-    assert_equal 50, FetchBriefWorker.jobs.size
+    assert_equal 50, RepositoryScanWorker.jobs.size
   end
 
   test "fetch_brief rejects an invalid cohort" do
@@ -101,7 +103,7 @@ class ProjectsRakeTest < ActiveSupport::TestCase
     assert_raises(SystemExit) do
       capture_io { Rake::Task["projects:fetch_brief"].execute }
     end
-    assert_empty FetchBriefWorker.jobs
+    assert_empty RepositoryScanWorker.jobs
   end
 
   test "import_joss rescores an existing project when JOSS metadata changes" do

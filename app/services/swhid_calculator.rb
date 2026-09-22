@@ -1,7 +1,5 @@
 require "digest"
 require "json"
-require "tempfile"
-require "timeout"
 require "time"
 
 class SwhidCalculator
@@ -10,7 +8,7 @@ class SwhidCalculator
   OUTPUT_LIMIT = 65_536
   ERROR_LIMIT = 500
 
-  class CommandError < StandardError; end
+  CommandError = RepositoryCommand::Error
 
   def initialize(binary: "swhid", timeout: TIMEOUT)
     @binary = binary
@@ -69,27 +67,6 @@ class SwhidCalculator
   end
 
   def run(command, input: File::NULL)
-    Tempfile.create("swhid-stdout") do |stdout|
-      Tempfile.create("swhid-stderr") do |stderr|
-        pid = Process.spawn({ "GIT_TERMINAL_PROMPT" => "0" }, *command, in: input, out: stdout, err: stderr, pgroup: true)
-        begin
-          _, status = Timeout.timeout(@timeout) { Process.wait2(pid) }
-        rescue Timeout::Error
-          Process.kill("KILL", -pid) rescue Errno::ESRCH
-          Process.wait(pid) rescue Errno::ECHILD
-          raise CommandError, "command timed out after #{@timeout} seconds"
-        end
-        stderr.rewind
-        unless status.success?
-          message = stderr.read(ERROR_LIMIT).to_s.force_encoding(Encoding::UTF_8).scrub.strip
-          raise CommandError, "command failed (exit #{status.exitstatus || 'signal'}): #{message}"
-        end
-        stdout.rewind
-        output = stdout.read(OUTPUT_LIMIT + 1).to_s
-        raise CommandError, "command output exceeds #{OUTPUT_LIMIT} bytes" if output.bytesize > OUTPUT_LIMIT
-
-        output
-      end
-    end
+    RepositoryCommand.new(timeout: @timeout, output_limit: OUTPUT_LIMIT).run(command, input: input)
   end
 end

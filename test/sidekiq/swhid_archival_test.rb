@@ -141,7 +141,7 @@ class SwhidArchivalTest < ActiveSupport::TestCase
 
     assert_nil @project.reload.swhids["archival"]
     assert_equal "unknown", @project.swhids.dig("origin_archive", "status")
-    assert_operator FetchSwhidWorker.jobs.last.fetch("at"), :>, 1.hour.from_now.to_f
+    assert_operator CheckSwhidWorker.jobs.last.fetch("at"), :>, 1.hour.from_now.to_f
     assert_not_requested :post, SwhidArchiver::ENDPOINT
   end
 

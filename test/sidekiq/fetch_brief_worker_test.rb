@@ -3,6 +3,7 @@ require "test_helper"
 class FetchBriefWorkerTest < ActiveSupport::TestCase
   setup do
     FetchBriefWorker.jobs.clear
+    ProjectRepositoryScanner.any_instance.stubs(:with_checkout).yields("/tmp/checkout", "https://github.com/test/repository", [])
   end
 
   test "uses the dedicated brief queue" do
@@ -14,7 +15,7 @@ class FetchBriefWorkerTest < ActiveSupport::TestCase
     project = Project.create!(
       url: "https://github.com/test/brief-worker",
       repository: { "clone_url" => "https://github.com/test/brief-worker.git" },
-      science_score: 1
+      swhids: { "status" => "success" }, science_score: 1
     )
     output = {
       version: "0.12.0",
@@ -33,7 +34,7 @@ class FetchBriefWorkerTest < ActiveSupport::TestCase
       ],
       lines: {},
     }.to_json
-    Open3.expects(:capture3).returns([output, "", stub(success?: true)])
+    RepositoryCommand.any_instance.expects(:run).with(["brief", "-json", "/tmp/checkout"]).returns(output)
 
     FetchBriefWorker.new.perform(project.id)
 
@@ -47,7 +48,7 @@ class FetchBriefWorkerTest < ActiveSupport::TestCase
     project = Project.create!(
       url: "https://github.com/test/r-markdown-report",
       repository: { "clone_url" => "https://github.com/test/r-markdown-report.git" },
-      science_score: 1
+      swhids: { "status" => "success" }, science_score: 1
     )
     output = {
       version: "0.12.0",
@@ -58,7 +59,7 @@ class FetchBriefWorkerTest < ActiveSupport::TestCase
       manifests: [],
       lines: {},
     }.to_json
-    Open3.expects(:capture3).returns([output, "", stub(success?: true)])
+    RepositoryCommand.any_instance.expects(:run).with(["brief", "-json", "/tmp/checkout"]).returns(output)
     JossVocabularyAnalyzer.stubs(:analyze_project).returns(score: 0, terms: [], model_id: nil)
 
     FetchBriefWorker.new.perform(project.id)
@@ -73,7 +74,7 @@ class FetchBriefWorkerTest < ActiveSupport::TestCase
     project = Project.create!(
       url: "https://github.com/test/already-scanned",
       repository: { "clone_url" => "https://github.com/test/already-scanned.git" },
-      science_score: 20,
+      swhids: { "status" => "success" }, science_score: 20,
       brief: { "version" => "0.12.1", "dependencies" => [] }
     )
     Project.any_instance.expects(:fetch_brief).never
@@ -85,7 +86,7 @@ class FetchBriefWorkerTest < ActiveSupport::TestCase
     project = Project.create!(
       url: "https://github.com/test/legacy-brief",
       repository: { "clone_url" => "https://github.com/test/legacy-brief.git" },
-      science_score: 20,
+      swhids: { "status" => "success" }, science_score: 20,
       brief: { "version" => "0.12.0", "languages" => [] },
       dependencies: [],
       dependencies_indexed_at: 1.day.ago
@@ -107,7 +108,7 @@ class FetchBriefWorkerTest < ActiveSupport::TestCase
       ],
       lines: {},
     }.to_json
-    Open3.expects(:capture3).returns([output, "", stub(success?: true)])
+    RepositoryCommand.any_instance.expects(:run).with(["brief", "-json", "/tmp/checkout"]).returns(output)
 
     FetchBriefWorker.new.perform(project.id)
 

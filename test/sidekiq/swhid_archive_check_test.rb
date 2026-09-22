@@ -28,7 +28,8 @@ class SwhidArchiveCheckTest < ActiveSupport::TestCase
     request = archive_request.with { |request| !request.headers.key?("Authorization") }
       .to_return(status: 200, body: { REVISION => { known: true }, DIRECTORY => { known: false } }.to_json)
     @project.fetch_swhids_async
-    assert_equal [[@project.id]], FetchSwhidWorker.jobs.map { |job| job["args"] }
+    assert_equal 1, CheckSwhidBatchWorker.jobs.size
+    assert_empty RepositoryScanWorker.jobs
 
     drain_fetch
     perform_fetch(@project.id)

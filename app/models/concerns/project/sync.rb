@@ -591,17 +591,31 @@ module Project::Sync
     return unless Project.visible.scientific.with_repository.exists?(id: id)
     return unless swhid_scan_due? || SwhidArchiveChecker.new(swhids).due? || SwhidArchiver.new(self).due?
 
-    FetchSwhidWorker.perform_async(id)
+    swhid_scan_due? ? RepositoryScanWorker.perform_async(id) : enqueue_swhid_check
   end
 
   def swhid_scan_due?
     swhids.nil? || swhids["status"].nil?
   end
 
-  def fetch_swhids
+  def enqueue_swhid_check
+    return unless Project.visible.scientific.with_repository.exists?(id: id)
+
+    if SwhidArchiveChecker.new(swhids).due?
+      CheckSwhidBatchWorker.enqueue(id)
+    elsif SwhidArchiver.new(self).due?
+      CheckSwhidArchivalWorker.perform_async(id)
+    end
+  end
+
+  def fetch_swhids(checkout:, origin:, clone_command:)
     return unless repository.present?
 
-    result = ProjectSwhidScanner.new(self).scan
+    result = ProjectSwhidScanner.new(self).scan(checkout: checkout, origin: origin, clone_command: clone_command)
+    store_swhids(result)
+  end
+
+  def store_swhids(result)
     with_lock { update!(swhids: (swhids || {}).slice("origin_archive").merge(result)) }
     swhids
   end
@@ -621,18 +635,14 @@ module Project::Sync
 
   BRIEF_TIMEOUT = 120
 
-  def fetch_brief
+  def brief_scan_due?
+    brief.nil? || (!brief.key?("dependencies") && !brief.key?("error"))
+  end
+
+  def fetch_brief(checkout:)
     return unless repository.present?
 
-    clone_url = repository['clone_url'].presence || repository_url
-    cmd = ['timeout', '-k', '10', BRIEF_TIMEOUT.to_s, 'brief', '-json', '-depth', '1', clone_url]
-    out, err, status = Open3.capture3(*cmd)
-    unless status.success?
-      msg = status.exitstatus == 124 ? 'timeout' : err.to_s.lines.last&.strip
-      Rails.logger.warn "brief failed for #{repository_url}: #{msg}"
-      return record_brief_error(msg)
-    end
-
+    out = RepositoryCommand.new(timeout: BRIEF_TIMEOUT, output_limit: 10.megabytes).run(["brief", "-json", checkout])
     data = JSON.parse(out)
     previous_brief_dependencies = brief.is_a?(Hash) ? brief['dependencies'] : nil
     self.brief = {
@@ -650,8 +660,8 @@ module Project::Sync
       self.dependencies_index_error = nil
     end
     save
-  rescue Errno::ENOENT
-    Rails.logger.warn "brief binary not found; skipping fetch_brief for #{repository_url}"
+  rescue RepositoryCommand::Error, SystemCallError => error
+    record_brief_error(error.message)
   rescue JSON::ParserError => e
     Rails.logger.warn "brief output not JSON for #{repository_url}: #{e.message}"
     record_brief_error("parse: #{e.message}")

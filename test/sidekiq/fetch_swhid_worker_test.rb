@@ -18,7 +18,8 @@ class FetchSwhidWorkerTest < ActiveSupport::TestCase
     git("-C", @repository, "add", ".")
     git("-C", @repository, "-c", "user.name=Test", "-c", "user.email=test@example.org",
       "-c", "commit.gpgsign=false", "commit", "-m", "Test input")
-    @project = Project.create!(url: "https://github.com/test/swhid-input", repository: { "clone_url" => @repository }, science_score: 42)
+    @project = Project.create!(url: "https://github.com/test/swhid-input", repository: { "clone_url" => @repository }, science_score: 42,
+      brief: { "dependencies" => [] })
   end
 
   teardown do
@@ -38,7 +39,7 @@ class FetchSwhidWorkerTest < ActiveSupport::TestCase
         "swh:1:dir:#{tree}" => { "known" => false }
       }.to_json)
     @project.fetch_swhids_async
-    assert_equal [[@project.id]], FetchSwhidWorker.jobs.map { |job| job["args"] }
+    assert_equal [[@project.id]], RepositoryScanWorker.jobs.map { |job| job["args"] }
     drain_fetch
 
     result = @project.reload.swhids

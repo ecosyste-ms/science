@@ -1,27 +1,19 @@
-require "tmpdir"
-
 class ProjectSwhidScanner
   def initialize(project)
     @project = project
     @calculator = SwhidCalculator.new
   end
 
-  def scan
+  def scan(checkout:, origin:, clone_command:)
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    origin = @project.repository&.dig("clone_url").presence || @project.url
-    result = { "origin" => origin, "attempted_at" => Time.now.utc.iso8601 }
+    result = { "origin" => origin, "attempted_at" => Time.now.utc.iso8601, "clone_command" => clone_command }
 
-    Dir.mktmpdir("science-swhid-") do |directory|
-      checkout = File.join(directory, "repository")
-      result["clone_command"] = ["git", "clone", "--depth", "1", "--no-tags", "--", origin, checkout]
-      @calculator.run(result["clone_command"])
-      commit = @calculator.run(["git", "-C", checkout, "rev-parse", "HEAD"]).strip
-      result["commit"] = commit
-      result["revision"] = @calculator.calculate(type: "revision", path: checkout, ref: commit, origin: origin)
-      result["directory"] = @calculator.calculate(type: "directory", path: checkout, origin: origin)
-      result["metadata"] = metadata_evidence(checkout, commit, origin)
-      result["status"] = %w[revision directory].all? { |type| result[type]["status"] == "success" } ? "success" : "error"
-    end
+    commit = @calculator.run(["git", "-C", checkout, "rev-parse", "HEAD"]).strip
+    result["commit"] = commit
+    result["revision"] = @calculator.calculate(type: "revision", path: checkout, ref: commit, origin: origin)
+    result["directory"] = @calculator.calculate(type: "directory", path: checkout, origin: origin)
+    result["metadata"] = metadata_evidence(checkout, commit, origin)
+    result["status"] = %w[revision directory].all? { |type| result[type]["status"] == "success" } ? "success" : "error"
     result
   rescue SwhidCalculator::CommandError, SystemCallError => error
     result.merge!("status" => "error", "error" => error.message.to_s.scrub[0, SwhidCalculator::ERROR_LIMIT])

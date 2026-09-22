@@ -68,7 +68,7 @@ class SwhidArchiver
       request["next_check_at"] = retry_at.iso8601
       persist(request)
     else
-      FetchSwhidWorker.perform_at(retry_at, project.id)
+      CheckSwhidWorker.perform_at(retry_at, project.id)
     end
   rescue Faraday::Error, JSON::ParserError, ResponseError, ArgumentError => error
     raise unless request
@@ -95,7 +95,7 @@ class SwhidArchiver
       return true
     end
 
-    FetchSwhidWorker.perform_in(1.hour, project.id)
+    CheckSwhidWorker.perform_in(1.hour, project.id)
     false
   end
 

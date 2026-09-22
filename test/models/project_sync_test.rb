@@ -1,8 +1,14 @@
 require "test_helper"
 
 class ProjectSyncTest < ActiveSupport::TestCase
-  setup { FetchSwhidWorker.jobs.clear }
-  teardown { FetchSwhidWorker.jobs.clear }
+  setup do
+    FetchSwhidWorker.jobs.clear
+    RepositoryScanWorker.clear
+  end
+  teardown do
+    FetchSwhidWorker.jobs.clear
+    RepositoryScanWorker.clear
+  end
 
   def repo_hash
     {
@@ -522,7 +528,7 @@ class ProjectSyncTest < ActiveSupport::TestCase
     SyncProjectWorker.new.perform(project.id)
 
     assert_operator project.reload.science_score, :>=, Project::SCIENCE_SCORE_THRESHOLD
-    assert_equal [[project.id]], FetchSwhidWorker.jobs.map { |job| job["args"] }
+    assert_equal [[project.id]], RepositoryScanWorker.jobs.map { |job| job["args"] }
     assert_nil project.swhids
   end
 
@@ -587,13 +593,9 @@ class ProjectSyncTest < ActiveSupport::TestCase
       tools: { test: [{ name: "pytest" }] }, resources: {}, manifests: [], lines: {},
       dependencies: [{ name: "numpy" }], git: {}, stats: {}
     }.to_json
-    Open3.expects(:capture3).with do |*args|
-      assert_equal "https://github.com/numpy/numpy.git", args.last
-      assert_includes args, "brief"
-      assert_includes args, "timeout"
-    end.returns([output, "", stub(success?: true)])
+    RepositoryCommand.any_instance.expects(:run).with(["brief", "-json", "/tmp/checkout"]).returns(output)
 
-    p.fetch_brief
+    p.fetch_brief(checkout: "/tmp/checkout")
     assert_equal "0.11.0", p.reload.brief["version"]
     assert_equal "pytest", p.brief.dig("tools", "test", 0, "name")
     assert_equal "numpy", p.brief.dig("dependencies", 0, "name")
@@ -604,35 +606,35 @@ class ProjectSyncTest < ActiveSupport::TestCase
 
   test "fetch_brief returns early when repository absent" do
     Open3.expects(:capture3).never
-    assert_nil Project.new(url: "https://github.com/x/y").fetch_brief
+    assert_nil Project.new(url: "https://github.com/x/y").fetch_brief(checkout: "/tmp/checkout")
   end
 
   test "fetch_brief handles missing binary" do
     p = build_project
-    Open3.expects(:capture3).raises(Errno::ENOENT)
-    assert_nothing_raised { p.fetch_brief }
-    assert_nil p.brief
+    RepositoryCommand.any_instance.expects(:run).raises(Errno::ENOENT)
+    assert_nothing_raised { p.fetch_brief(checkout: "/tmp/checkout") }
+    assert p.reload.brief["error"].present?
   end
 
   test "fetch_brief records error on non-zero exit" do
     p = build_project
-    Open3.expects(:capture3).returns(["", "fatal: clone failed", stub(success?: false, exitstatus: 128)])
-    assert_nothing_raised { p.fetch_brief }
-    assert_equal "fatal: clone failed", p.reload.brief["error"]
+    RepositoryCommand.any_instance.expects(:run).raises(RepositoryCommand::Error, "command failed (exit 1): brief failed")
+    assert_nothing_raised { p.fetch_brief(checkout: "/tmp/checkout") }
+    assert_equal "command failed (exit 1): brief failed", p.reload.brief["error"]
     assert p.brief["attempted_at"].present?
   end
 
   test "fetch_brief records timeout error" do
     p = build_project
-    Open3.expects(:capture3).returns(["", "", stub(success?: false, exitstatus: 124)])
-    p.fetch_brief
-    assert_equal "timeout", p.reload.brief["error"]
+    RepositoryCommand.any_instance.expects(:run).raises(RepositoryCommand::Error, "command timed out after 120 seconds")
+    p.fetch_brief(checkout: "/tmp/checkout")
+    assert_equal "command timed out after 120 seconds", p.reload.brief["error"]
   end
 
   test "fetch_brief records error on parse failure" do
     p = build_project
-    Open3.expects(:capture3).returns(["not json", "", stub(success?: true)])
-    p.fetch_brief
+    RepositoryCommand.any_instance.expects(:run).returns("not json")
+    p.fetch_brief(checkout: "/tmp/checkout")
     assert_match "parse:", p.reload.brief["error"]
   end
 

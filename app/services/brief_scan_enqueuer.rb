@@ -16,8 +16,7 @@ class BriefScanEnqueuer
     enqueued = 0
 
     projects.limit(limit).find_each(batch_size: 500) do |project|
-      FetchBriefWorker.perform_async(project.id)
-      enqueued += 1
+      enqueued += 1 if RepositoryScanWorker.perform_async(project.id)
     end
 
     enqueued

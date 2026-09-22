@@ -1,12 +1,14 @@
 require "test_helper"
+require_relative "../support/swhid_pipeline"
 
 class BriefScanEnqueuerTest < ActiveSupport::TestCase
+  include SwhidPipeline
   setup do
-    FetchBriefWorker.jobs.clear
+    RepositoryScanWorker.jobs.clear
   end
 
   teardown do
-    FetchBriefWorker.jobs.clear
+    RepositoryScanWorker.jobs.clear
   end
 
   test "enqueues only eligible JOSS projects" do
@@ -29,7 +31,7 @@ class BriefScanEnqueuerTest < ActiveSupport::TestCase
     count = BriefScanEnqueuer.new(limit: 10, cohort: "joss").enqueue
 
     assert_equal 2, count
-    assert_equal [[joss.id], [legacy.id]], FetchBriefWorker.jobs.map { |job| job["args"] }
+    assert_equal [[joss.id], [legacy.id]], RepositoryScanWorker.jobs.map { |job| job["args"] }
   end
 
   test "applies a deterministic non-JOSS shard" do
@@ -39,7 +41,7 @@ class BriefScanEnqueuerTest < ActiveSupport::TestCase
     BriefScanEnqueuer.new(limit: 10, cohort: "non_joss", shard_count: 2, shard: shard).enqueue
 
     expected_ids = projects.select { |project| project.id % 2 == shard }.map(&:id)
-    assert_equal expected_ids, FetchBriefWorker.jobs.map { |job| job["args"].first }
+    assert_equal expected_ids, RepositoryScanWorker.jobs.map { |job| job["args"].first }
   end
 
   test "includes zero-score publishers used directly by scientific projects" do
@@ -72,7 +74,7 @@ class BriefScanEnqueuerTest < ActiveSupport::TestCase
 
     assert_equal 2, count
     assert_equal [publisher.id, dependent.id].sort,
-      FetchBriefWorker.jobs.map { |job| job["args"].first }.sort
+      RepositoryScanWorker.jobs.map { |job| job["args"].first }.sort
   end
 
   test "rejects invalid options" do

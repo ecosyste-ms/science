@@ -8,8 +8,6 @@ class FetchBriefWorker
     project = Project.needing_brief_dependencies.find_by(id: project_id)
     return unless project
 
-    project.fetch_brief
-    project.reload
-    project.update_science_score if project.brief.present?
+    RepositoryScanWorker.new.perform(project.id)
   end
 end
