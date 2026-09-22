@@ -81,6 +81,70 @@ class SwhidArchivalTest < ActiveSupport::TestCase
     assert_equal({ "total" => 1, "revisions" => 0, "directories" => 1 }, SwhidArchiver.contribution_counts)
   end
 
+  test "a prior repository snapshot identifies a missing version before submission" do
+    known_request(false, false)
+    stub_request(:get, "#{SwhidOriginChecker::ENDPOINT}#{ERB::Util.url_encode(ORIGIN)}/visits/")
+      .with(query: { per_page: 100 }).to_return(body: [{ origin: ORIGIN, visit: 1, date: 1.year.ago.iso8601,
+        snapshot: "a" * 40, status: "full", type: "git" }].to_json)
+    save_request.to_return do
+      baseline = @project.reload.swhids.dig("archival", "repository_before_request")
+      assert_equal "missing_versions", baseline["classification"]
+      assert_equal "pre_submission", baseline["basis"]
+      { body: api_result.to_json }
+    end
+
+    perform_fetch(@project.id)
+
+    assert_equal "missing_versions", @project.reload.swhids.dig("archival", "repository_before_request", "classification")
+    assert_equal "not_found", @project.swhids.dig("revision", "archive", "status")
+  end
+
+  test "negative coverage observed before submission stays attached after the repository is archived" do
+    known_request(false, false)
+    save_request.to_return(body: api_result.to_json)
+    perform_fetch(@project.id)
+    baseline = @project.reload.swhids.dig("archival", "repository_before_request").deep_dup
+    assert_equal "missing_repository", baseline["classification"]
+
+    travel 6.hours
+    known_request(true, true)
+    stub_request(:get, "#{SwhidArchiver::ENDPOINT}123/").to_return(body: api_result(task: "succeeded").to_json)
+    CheckSwhidArchivalWorker.new.perform(@project.id)
+    assert_equal [[@project.id, true]], CheckSwhidOriginWorker.jobs.map { |job| job["args"] }
+    stub_request(:get, "#{SwhidOriginChecker::ENDPOINT}#{ERB::Util.url_encode(ORIGIN)}/visits/")
+      .with(query: { per_page: 100 }).to_return(body: [{ origin: ORIGIN, visit: 1, date: 1.hour.ago.iso8601,
+        snapshot: "a" * 40, status: "full", type: "git" }].to_json)
+    CheckSwhidOriginWorker.perform_one
+
+    assert_equal "archived", @project.reload.swhids.dig("origin_archive", "status")
+    assert_equal baseline, @project.swhids.dig("archival", "repository_before_request")
+  end
+
+  test "an origin lookup failure permits submission with an unknown classification" do
+    known_request(false, false)
+    stub_request(:get, "#{SwhidOriginChecker::ENDPOINT}#{ERB::Util.url_encode(ORIGIN)}/visits/")
+      .with(query: { per_page: 100 }).to_return(status: 503)
+    submission = save_request.to_return(body: api_result.to_json)
+
+    perform_fetch(@project.id)
+
+    assert_equal "unknown", @project.reload.swhids.dig("archival", "repository_before_request", "classification")
+    assert_requested submission
+  end
+
+  test "an origin lookup rate limit postpones submission" do
+    known_request(false, false)
+    stub_request(:get, "#{SwhidOriginChecker::ENDPOINT}#{ERB::Util.url_encode(ORIGIN)}/visits/")
+      .with(query: { per_page: 100 }).to_return(status: 429, headers: { "Retry-After" => "3600" })
+
+    perform_fetch(@project.id)
+
+    assert_nil @project.reload.swhids["archival"]
+    assert_equal "unknown", @project.swhids.dig("origin_archive", "status")
+    assert_operator FetchSwhidWorker.jobs.last.fetch("at"), :>, 1.hour.from_now.to_f
+    assert_not_requested :post, SwhidArchiver::ENDPOINT
+  end
+
   test "known objects and failed coverage checks never submit an archival request" do
     known_request(true, true)
     perform_fetch(@project.id)

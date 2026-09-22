@@ -87,7 +87,13 @@ class SwhidArchiver
     if project.swhids["archival"] || checker.objects.any? { |object| object.dig("archive", "checked_at").blank? || Time.iso8601(object.dig("archive", "checked_at")) <= 5.minutes.ago }
       project.check_swhid_archive(force: true)
     end
-    return true if SwhidArchiveChecker.new(project.swhids).objects.all? { |object| %w[archived not_found].include?(object.dig("archive", "status")) }
+    objects = SwhidArchiveChecker.new(project.swhids).objects
+    if objects.all? { |object| %w[archived not_found].include?(object.dig("archive", "status")) }
+      if objects.any? { |object| object.dig("archive", "status") == "not_found" }
+        SwhidOriginChecker.new(project).check(refresh_after: project.swhids["archival"] ? 0.seconds : 5.minutes)
+      end
+      return true
+    end
 
     FetchSwhidWorker.perform_in(1.hour, project.id)
     false
@@ -120,9 +126,12 @@ class SwhidArchiver
         end
 
         first_attempt = request&.dig("first_attempted_at") || request&.dig("attempted_at") || Time.current.iso8601
+        coverage = data["origin_archive"]
+        coverage = nil unless coverage && coverage["origins"] == SwhidOriginChecker.new(project).origins
         request = (request || {}).merge(
           "status" => "submitting", "origin" => data.fetch("origin"), "attempted_at" => Time.current.iso8601,
           "first_attempted_at" => first_attempt,
+          "repository_before_request" => SwhidOriginChecker.before_submission(coverage),
           "before_request" => missing.to_h { |object| [object.fetch("swhid"), { "known" => false, "checked_at" => object.dig("archive", "checked_at") }] }
         )
       end
@@ -173,6 +182,8 @@ class SwhidArchiver
     end
     if saved && %w[pending rate_limited].include?(request["status"])
       CheckSwhidArchivalWorker.perform_at(Time.iso8601(request.fetch("next_check_at")), project.id)
+    elsif saved && request["status"] == "completed"
+      CheckSwhidOriginWorker.perform_async(project.id, true)
     end
   end
 

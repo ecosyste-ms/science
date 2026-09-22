@@ -13,6 +13,26 @@
   <div class="card border-0 shadow-sm">
     <div class="card-body">
       <dl class="row mb-0">
+        <% if (coverage = data["origin_archive"]) %>
+          <dt class="col-md-3 mb-2">Repository coverage</dt>
+          <dd class="col-md-9 mb-3" data-role="swhid-origin-archive">
+            <%= { "archived" => "Archived snapshot found", "not_found" => "No archived snapshot found at the checked URLs" }.fetch(coverage["status"], "Coverage unknown") %>
+            <% if coverage["checked_at"].present? %>
+              <div class="small text-muted">Checked <%= time_tag Time.iso8601(coverage["checked_at"]).utc, format: "%B %d, %Y at %H:%M UTC" %></div>
+            <% end %>
+          </dd>
+        <% end %>
+
+        <% if (baseline = data.dig("archival", "repository_before_request")) %>
+          <dt class="col-md-3 mb-2">Archival request</dt>
+          <dd class="col-md-9 mb-3" data-role="swhid-request-classification">
+            <%= { "missing_versions" => "Missing version of an archived repository", "missing_repository" => "No repository snapshot found before submission" }.fetch(baseline["classification"], "Prior repository coverage unknown") %>
+            <% if baseline["basis"] == "visit_history" %>
+              <div class="small text-muted">Inferred from historical visit dates</div>
+            <% end %>
+          </dd>
+        <% end %>
+
         <% [["revision", "Revision"], ["directory", "Directory"]].each do |type, label| %>
           <dt class="col-md-3 mb-2"><%= label %></dt>
           <dd class="col-md-9 mb-3" data-role="swhid-<%= type %>">

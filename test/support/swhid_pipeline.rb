@@ -5,6 +5,8 @@ module SwhidPipeline
     setup do
       Sidekiq::Testing.server_middleware { |chain| chain.add SidekiqUniqueJobs::Middleware::Server }
       clear_swhid_batch
+      @origin_stub = stub_request(:get, %r{\Ahttps://archive\.softwareheritage\.org/api/1/origin/.+/visits/})
+        .to_return(status: 404)
     end
 
     teardown do
@@ -16,6 +18,8 @@ module SwhidPipeline
     CheckSwhidBatchWorker.clear
     SidekiqUniqueJobs::Digests.new.delete_by_pattern("#{CheckSwhidBatchWorker.get_sidekiq_options.fetch('lock_prefix')}:*")
     Sidekiq.redis { |redis| redis.call("DEL", CheckSwhidBatchWorker::PENDING_KEY) }
+    CheckSwhidOriginWorker.clear
+    SidekiqUniqueJobs::Digests.new.delete_by_pattern("#{CheckSwhidOriginWorker.get_sidekiq_options.fetch('lock_prefix')}:*")
   end
 
   def perform_fetch(project_id)

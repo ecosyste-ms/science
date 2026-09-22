@@ -27,6 +27,8 @@ class FetchSwhidWorkerTest < ActiveSupport::TestCase
   end
 
   test "worker stores real CLI revision and directory results without changing score" do
+    CheckSwhidOriginWorker.new.perform(@project.id)
+    origin_coverage = @project.reload.swhids.fetch("origin_archive")
     commit = git("-C", @repository, "rev-parse", "HEAD").strip
     tree = git("-C", @repository, "rev-parse", "HEAD^{tree}").strip
     request = stub_request(:post, SwhidArchiveChecker::ENDPOINT)
@@ -40,6 +42,7 @@ class FetchSwhidWorkerTest < ActiveSupport::TestCase
     drain_fetch
 
     result = @project.reload.swhids
+    assert_equal origin_coverage, result["origin_archive"]
     assert_equal "success", result["status"]
     assert_equal commit, result["commit"]
     assert_equal @repository, result["origin"]

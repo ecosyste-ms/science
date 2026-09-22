@@ -589,15 +589,20 @@ module Project::Sync
   def fetch_swhids_async
     return unless persisted?
     return unless Project.visible.scientific.with_repository.exists?(id: id)
-    return unless swhids.nil? || SwhidArchiveChecker.new(swhids).due? || SwhidArchiver.new(self).due?
+    return unless swhid_scan_due? || SwhidArchiveChecker.new(swhids).due? || SwhidArchiver.new(self).due?
 
     FetchSwhidWorker.perform_async(id)
+  end
+
+  def swhid_scan_due?
+    swhids.nil? || swhids["status"].nil?
   end
 
   def fetch_swhids
     return unless repository.present?
 
-    update!(swhids: ProjectSwhidScanner.new(self).scan)
+    result = ProjectSwhidScanner.new(self).scan
+    with_lock { update!(swhids: (swhids || {}).slice("origin_archive").merge(result)) }
     swhids
   end
 

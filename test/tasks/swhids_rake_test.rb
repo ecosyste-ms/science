@@ -7,6 +7,8 @@ class SwhidsRakeTest < ActiveSupport::TestCase
   setup do
     Rails.application.load_tasks unless Rake::Task.task_defined?("swhids:contributions")
     Rake::Task["swhids:contributions"].reenable
+    Rake::Task["swhids:coverage"].reenable
+    Rake::Task["swhids:check_origins"].reenable
   end
 
   test "contributions counts distinct identifiers from completed worker requests" do
@@ -44,5 +46,91 @@ class SwhidsRakeTest < ActiveSupport::TestCase
 
     assert_equal "SWHIDs archived after our request: 0\nRevisions: 0\nDirectories: 0\n", output
     assert_not_requested :post, SwhidArchiver::ENDPOINT
+  end
+
+  test "coverage report separates repository coverage and submission categories within eligible projects" do
+    coverage_project("versions", "archived", "missing_versions", imported: true)
+    coverage_project("repository", "not_found", "missing_repository")
+    coverage_project("unknown", "unknown", nil, imported: true)
+    coverage_project("unchecked", nil, nil, request_id: nil)
+    reused = coverage_project("reused", "archived", "missing_versions", imported: true)
+    reused.update!(swhids: reused.swhids.deep_merge("archival" => { "attribution_eligible" => false }))
+    coverage_project("limited", "not_found", "missing_repository", request_id: nil)
+    excluded = coverage_project("unscientific", "archived", "missing_versions", imported: true)
+    excluded.update!(science_score: 0)
+    no_repository = coverage_project("no-repository", "archived", "missing_versions")
+    no_repository.update!(repository: nil)
+
+    output, = capture_io { Rake::Task["swhids:coverage"].invoke }
+    result = JSON.parse(output)
+
+    assert_equal 6, result["eligible_projects"]
+    assert_equal({ "archived" => 2, "not_found" => 2, "unknown" => 1, "unchecked" => 1 }, result["repository_coverage"])
+    assert_equal({ "missing_versions" => 1, "missing_repository" => 1, "unknown" => 1 }, result["submitted_projects"])
+    assert_equal({ "missing_versions" => 1, "missing_repository" => 0, "unknown" => 1 }, result["imported_projects"])
+    assert_equal({ "pre_submission" => 2, "unknown" => 1 }, result["submission_evidence"])
+    assert_not_requested :get, /archive\.softwareheritage\.org/
+  end
+
+  test "origin backfill queues a bounded page of existing requests and can resume by ID" do
+    first = coverage_project("first", nil, nil)
+    second = coverage_project("second", nil, nil)
+    coverage_project("no-request", nil, nil, request_id: nil)
+    previous = ENV.to_h.slice("LIMIT", "AFTER_ID", "REQUESTS_ONLY")
+    ENV["LIMIT"] = "1"
+    ENV["AFTER_ID"] = "0"
+    ENV["REQUESTS_ONLY"] = "true"
+
+    output, = capture_io { Rake::Task["swhids:check_origins"].invoke }
+
+    assert_equal({ "selected" => 1, "queued" => 1, "last_project_id" => first.id }, JSON.parse(output))
+    assert_equal [[first.id]], CheckSwhidOriginWorker.jobs.map { |job| job["args"] }
+    CheckSwhidOriginWorker.perform_one
+    assert_equal "not_found", first.reload.swhids.dig("origin_archive", "status")
+    assert_nil first.swhids.dig("archival", "repository_before_request")
+    assert_not_requested :post, /archive\.softwareheritage\.org/
+
+    ENV["AFTER_ID"] = first.id.to_s
+    Rake::Task["swhids:check_origins"].reenable
+    capture_io { Rake::Task["swhids:check_origins"].invoke }
+    assert_equal [[second.id]], CheckSwhidOriginWorker.jobs.map { |job| job["args"] }
+  ensure
+    %w[LIMIT AFTER_ID REQUESTS_ONLY].each { |key| previous&.key?(key) ? ENV[key] = previous[key] : ENV.delete(key) }
+  end
+
+  test "origin backfill rejects an unbounded page" do
+    previous = ENV["LIMIT"]
+    ENV["LIMIT"] = "1001"
+    assert_raises(ArgumentError) { Rake::Task["swhids:check_origins"].invoke }
+    assert_empty CheckSwhidOriginWorker.jobs
+  ensure
+    previous ? ENV["LIMIT"] = previous : ENV.delete("LIMIT")
+  end
+
+  test "origin backfill includes projects that have not been scanned" do
+    project = Project.create!(url: "https://github.com/coverage/unscanned", science_score: 42, repository: {})
+    previous = ENV.to_h.slice("LIMIT", "AFTER_ID", "REQUESTS_ONLY")
+    ENV["LIMIT"] = "100"
+    ENV["AFTER_ID"] = "0"
+    ENV["REQUESTS_ONLY"] = "false"
+
+    capture_io { Rake::Task["swhids:check_origins"].invoke }
+
+    assert_equal [[project.id]], CheckSwhidOriginWorker.jobs.map { |job| job["args"] }
+    CheckSwhidOriginWorker.perform_one
+    assert_equal "not_found", project.reload.swhids.dig("origin_archive", "status")
+    assert project.swhid_scan_due?
+    assert_not_requested :post, /archive\.softwareheritage\.org/
+  ensure
+    %w[LIMIT AFTER_ID REQUESTS_ONLY].each { |key| previous&.key?(key) ? ENV[key] = previous[key] : ENV.delete(key) }
+  end
+
+  def coverage_project(name, status, classification, imported: false, request_id: 123)
+    data = { "status" => "success", "origin" => "https://github.com/coverage/#{name}" }
+    data["origin_archive"] = { "status" => status, "checked_at" => Time.current.iso8601 } if status
+    data["archival"] = { "id" => request_id, "attribution_eligible" => true,
+      "attempted_at" => 1.day.ago.iso8601, "save_task_status" => imported ? "succeeded" : "scheduled" }
+    data["archival"]["repository_before_request"] = { "classification" => classification, "basis" => "pre_submission" } if classification
+    Project.create!(url: data["origin"], repository: {}, science_score: 42, swhids: data)
   end
 end

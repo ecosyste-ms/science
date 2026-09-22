@@ -22,6 +22,24 @@ Rejected submissions record `rate_limited` and retry after checking coverage aga
 
 Count distinct identifiers across stored contribution records with `bundle exec rake swhids:contributions`. The task reports a total and separate revision and directory counts, using a PostgreSQL aggregate without loading projects into Ruby. It makes no archive requests. These counts mean "archived after our request"; another archive process could have handled the same objects concurrently, and historical contributions cannot be reconstructed from earlier coverage checks.
 
+Repository coverage is stored separately in `swhids.origin_archive`. `SwhidOriginChecker` reads [Software Heritage's origin visit history](https://docs.softwareheritage.org/devel/swh-web/uri-scheme-api-origin.html) to find an archived snapshot at any version. It checks the source URL, repository metadata, known aliases, previous names, and `.git` URL variants. A full or partial visit with a snapshot counts as coverage. A registered origin or failed visit without a snapshot does not establish coverage. Lookups retain the URLs checked, visit dates, snapshot identifiers, and errors.
+
+Before submitting missing objects, the archiver checks repository coverage and copies the evidence into `swhids.archival.repository_before_request`. `missing_versions` means a snapshot was found; `missing_repository` means no snapshot was found at the checked URLs. Unknown URLs outside that set may still have archived copies. Errors and incomplete checks produce `unknown`. Later imports preserve a known pre-submission classification; unknown cases can gain a classification based on visit history. Rate limits postpone submission, while other lookup errors permit submission with an unknown classification.
+
+Existing requests can gain a `missing_versions` classification when visit history contains a snapshot dated before their submission. This is an inference from visit history; the report distinguishes its `visit_history` basis from `pre_submission` observations. Existing requests without earlier evidence remain unknown, including when no snapshot is found today. An origin visit date alone does not record when its snapshot became available.
+
+Run `bundle exec rake swhids:coverage` for counts across eligible projects. The report includes repository coverage, submitted projects, imported projects, and the evidence used to classify submissions. Submitted and imported counts include only requests attributed to Science, excluding reused requests and attempts without an SWH request ID. These are project counts. `repository_coverage.not_found` means no snapshot found at the checked URLs; `unknown` means an inconclusive check, and `unchecked` means no repository lookup has been recorded. Exact revision and directory coverage remains separate.
+
+To backfill existing submissions in a bounded page:
+
+```sh
+bundle exec rake swhids:check_origins REQUESTS_ONLY=true LIMIT=100 AFTER_ID=0
+```
+
+The task prints `last_project_id`; use that value as `AFTER_ID` for the next page. Omit `REQUESTS_ONLY=true` to include all eligible projects, even those awaiting a local SWHID scan. Origin checks do not clone repositories or request archival. Later local scans preserve the recorded repository coverage. The task's default limit is 100 and maximum is 1,000. Jobs use the existing `swhid` queue and shared API cooldown.
+
+Successful repository lookups are cached for seven days, unknown results for an hour. Pre-submission observations have a five-minute freshness window, and retries refresh successful observations. A completed archival request queues a fresh repository check while preserving its pre-submission evidence. Each check is limited to eight candidate URLs, three visit pages per URL, and ten HTTP requests overall. Exhausting those limits preserves unknown coverage unless a snapshot has already been found. These origin lookups are individual API requests, separate from the bulk identifier checks.
+
 The client sends `User-Agent: science.ecosyste.ms (+https://science.ecosyste.ms)`. Anonymous access works for coverage checks; set `SWH_API_TOKEN` to send an optional Software Heritage bearer token. Rate-limit exemptions depend on the account's permissions. Tokens are not stored in project results.
 
 Inspect a saved result in the Rails console:
@@ -46,4 +64,4 @@ pp SwhidCalculator.new.calculate(type: "directory", path: "/tmp/extracted/source
 
 Directory calculation hashes the checkout or extracted filesystem using the CLI's handling of Git index modes and symlinks. Checkout filters can change file contents relative to Git's stored tree, so a successful origin save does not establish coverage of every calculated directory. Contributions require confirmation of the exact SWHID.
 
-The worker tests normally stub HTTP responses. Set `SWH_LIVE_TEST=true` when running `test/sidekiq/check_swhid_batch_worker_test.rb`, `test/sidekiq/swhid_archive_check_test.rb`, or `test/sidekiq/swhid_archival_test.rb` to include live checks of orbdot's archived objects and an existing save request. These live tests do not submit an archival request.
+The worker tests normally stub HTTP responses. Set `SWH_LIVE_TEST=true` when running `test/sidekiq/check_swhid_origin_worker_test.rb`, `test/sidekiq/check_swhid_batch_worker_test.rb`, `test/sidekiq/swhid_archive_check_test.rb`, or `test/sidekiq/swhid_archival_test.rb` to include live checks of orbdot's visit history, archived objects, and an existing save request. These live tests do not submit an archival request.

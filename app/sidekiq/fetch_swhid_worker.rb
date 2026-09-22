@@ -8,7 +8,7 @@ class FetchSwhidWorker
     project = Project.visible.scientific.with_repository.find_by(id: project_id)
     return unless project
 
-    project.fetch_swhids if project.swhids.nil?
+    project.fetch_swhids if project.swhid_scan_due?
     if SwhidArchiveChecker.new(project.swhids).due?
       CheckSwhidBatchWorker.enqueue(project.id)
     elsif SwhidArchiver.new(project).due?

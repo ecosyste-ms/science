@@ -231,6 +231,45 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#project-repository-swhids", count: 0
   end
 
+  test "show displays repository coverage before a local scan without making API requests" do
+    @project.update!(last_synced_at: Time.current, swhids: {
+      "origin_archive" => { "status" => "archived", "checked_at" => "2026-09-22T08:00:00Z" }
+    })
+
+    get project_url(@project)
+
+    assert_response :success
+    assert_select "[data-role='swhid-origin-archive']", text: /Archived snapshot found/
+    assert_select "[data-role='swhid-origin-archive'] time[datetime='2026-09-22T08:00:00Z']"
+    assert_select "[data-role='swhid-revision']", text: "Unavailable"
+    assert_not_requested :get, /archive\.softwareheritage\.org/
+  end
+
+  test "show distinguishes current coverage from repository coverage before submission" do
+    @project.update!(last_synced_at: Time.current, swhids: swhid_result.merge(
+      "origin_archive" => { "status" => "archived", "checked_at" => "2026-09-22T08:00:00Z" },
+      "archival" => { "repository_before_request" => { "classification" => "missing_repository", "basis" => "pre_submission" } }
+    ))
+
+    get project_url(@project)
+
+    assert_response :success
+    assert_select "[data-role='swhid-origin-archive']", text: /Archived snapshot found/
+    assert_select "[data-role='swhid-request-classification']", text: /No repository snapshot found before submission/
+  end
+
+  test "show labels classifications inferred from historical visits" do
+    @project.update!(last_synced_at: Time.current, swhids: swhid_result.merge(
+      "archival" => { "repository_before_request" => { "classification" => "missing_versions", "basis" => "visit_history" } }
+    ))
+
+    get project_url(@project)
+
+    assert_response :success
+    assert_select "[data-role='swhid-request-classification']", text: /Missing version of an archived repository/
+    assert_select "[data-role='swhid-request-classification'] .text-muted", text: "Inferred from historical visit dates"
+  end
+
   test "show displays cached archive coverage for each identifier" do
     result = swhid_result
     result["revision"]["archive"] = { "status" => "archived", "checked_at" => "2026-09-20T12:45:00Z" }
