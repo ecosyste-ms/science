@@ -1,4 +1,10 @@
 class Api::V1::ProjectsController < Api::V1::ApplicationController
+  def bulk_lookup
+    render json: ProjectRepositoryLookup.call(params[:repository_urls])
+  rescue ArgumentError => error
+    render json: { error: error.message }, status: :bad_request
+  end
+
   def index
     @projects = Project.visible
       .includes(project_fields: :field)

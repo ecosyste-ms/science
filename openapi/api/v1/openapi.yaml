@@ -214,6 +214,59 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Package"
+  /projects/bulk_lookup:
+    post:
+      operationId: bulkLookupProjects
+      tags: [projects]
+      description: >-
+        Read-only lookup of visible stored projects by normalized repository URL or
+        indexed repository alias. Uses the service's repository URL normalization.
+        Previous names must have been indexed by the repository alias indexer.
+        Returns one result per input, in input order, with every matching project
+        and its matching source. An empty matches array means no stored match;
+        it does not establish absence of scientific use. No projects are created
+        and no synchronization jobs are scheduled.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [repository_urls]
+              properties:
+                repository_urls:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items: {type: string, maxLength: 2000}
+      responses:
+        200:
+          description: Input URLs with normalized URLs and arrays of matches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    input_url: {type: string}
+                    normalized_url: {type: string}
+                    matches:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          source: {type: string, enum: [project.url, repository_alias]}
+                          project:
+                            type: object
+                            properties:
+                              id: {type: integer}
+                              name: {type: string, nullable: true}
+                              url: {type: string}
+                              science_score: {type: number, nullable: true}
+                              last_synced_at: {type: string, format: date-time, nullable: true}
+        400:
+          description: Invalid repository URL or request bounds
   /projects:
     get:
       description: get projects

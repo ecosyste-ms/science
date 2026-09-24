@@ -31,6 +31,7 @@ Rails.application.routes.draw do
       resources :projects, constraints: { id: /.*/ }, only: [:index, :show] do
         resources :releases, only: [:index, :show]
         collection do
+          post :bulk_lookup
           get :lookup
           get :packages
           get :search
