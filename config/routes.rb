@@ -41,6 +41,7 @@ Rails.application.routes.draw do
         member do
           get :ping
           get :search_context
+          get :swhids
         end
       end
     end

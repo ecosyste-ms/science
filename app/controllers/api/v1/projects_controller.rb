@@ -23,6 +23,11 @@ class Api::V1::ProjectsController < Api::V1::ApplicationController
     @pagy, @projects = pagy_countless(@projects)
   end
 
+  def swhids
+    project = Project.visible.select(:id, :url, :swhids).find(params[:id])
+    render json: ProjectSwhidEvidence.new(project)
+  end
+
   def show
     @project = Project.visible.includes(project_fields: :field).find(params[:id])
   end

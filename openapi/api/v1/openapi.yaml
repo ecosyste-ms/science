@@ -267,6 +267,39 @@ paths:
                               last_synced_at: {type: string, format: date-time, nullable: true}
         400:
           description: Invalid repository URL or request bounds
+  /projects/{id}/swhids:
+    get:
+      operationId: getProjectSwhids
+      tags: [projects, swhids]
+      description: >-
+        Read stored revision, directory and repository-origin coverage for a visible
+        project. Each observation retains its own timestamp. Unchecked, missing and
+        error states remain distinct. This endpoint performs no archive requests,
+        cloning or job scheduling. Object presence does not verify byte retrieval.
+        Local filesystem paths and commands are excluded.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer}
+      responses:
+        200:
+          description: Stored typed objects and origin visit evidence
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  project_id: {type: integer}
+                  repository_url: {type: string}
+                  status: {type: string}
+                  observed_commit: {type: string, nullable: true}
+                  attempted_at: {type: string, format: date-time, nullable: true}
+                  objects: {type: array, items: {type: object}}
+                  origin_archive: {type: object}
+                  bytes_verified: {type: boolean}
+        404:
+          description: Project not found or hidden
   /projects:
     get:
       description: get projects
