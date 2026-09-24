@@ -165,6 +165,35 @@ class Api::V1::PackagesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "bulk lookup includes unranked packages and has no write or job side effects" do
+    publisher = Project.create!(url: "https://github.com/test/low-score", science_score: 1)
+    unused = create_package(@pypi, "unused", dependent_repositories_count: 0, top_percentage: 1)
+    unused.update!(published_by_project: publisher)
+    before_jobs = Sidekiq::Worker.jobs.deep_dup
+    assert_no_difference ["Package.count", "Project.count"] do
+      post bulk_lookup_api_v1_packages_url, params: {
+        purls: ["pkg:pypi/NumPy@2.0#src", "pkg:pypi/numpy", "pkg:pypi/unused", "pkg:pypi/missing"]
+      }, as: :json
+    end
+    assert_response :success
+    assert_equal [@numpy.id, unused.id].sort, response.parsed_body.pluck("id")
+    assert_equal 2, response.parsed_body.first.fetch("scientific_projects_count")
+    assert_equal 0, response.parsed_body.last.fetch("scientific_projects_count")
+    assert_equal 1.0, response.parsed_body.last.fetch("repository_science_score")
+    assert_equal before_jobs, Sidekiq::Worker.jobs
+  end
+
+  test "bulk lookup validates bounds and returns explicit empty matches" do
+    [nil, [], "pkg:pypi/numpy", [nil], ["invalid"], ["x" * 2001], ["pkg:pypi/numpy"] * 101].each do |purls|
+      post bulk_lookup_api_v1_packages_url, params: { purls: purls }, as: :json
+      assert_response :bad_request
+      assert response.parsed_body.fetch("error").present?
+    end
+    post bulk_lookup_api_v1_packages_url, params: { purls: ["pkg:pypi/missing"] * 100 }, as: :json
+    assert_response :success
+    assert_empty response.parsed_body
+  end
+
   def create_registry(name, ecosystem, purl_type)
     PackageRegistry.create!(
       name: name,

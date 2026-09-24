@@ -126,6 +126,40 @@ paths:
                 $ref: "#/components/schemas/SoftwareResults"
         400:
           description: Invalid query, limit or cursor
+  /packages/bulk_lookup:
+    post:
+      operationId: bulkLookupPackages
+      tags: [packages]
+      description: >-
+        Read-only lookup of stored packages, including packages outside the ranked listing.
+        Versions and subpaths are ignored using the stored PURL normalization rules;
+        qualifiers are retained. Duplicate inputs return one record. Unknown PURLs
+        are omitted, and no matches returns an empty array. Stored packages without
+        direct scientific dependencies have scientific_projects_count zero.
+        This endpoint does not create packages or schedule synchronization.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [purls]
+              properties:
+                purls:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items: {type: string, maxLength: 2000}
+      responses:
+        200:
+          description: All matching stored packages, ordered by ID
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/Package"}
+        400:
+          description: Invalid PURL or request bounds
   /packages:
     get:
       description: List packages ranked by the number of scientific projects that directly depend on them

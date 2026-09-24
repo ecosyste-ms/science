@@ -87,9 +87,10 @@ class Package < ApplicationRecord
 
   def self.ranked_by_scientific_dependents(
     field_ids: nil,
-    sort: "scientific_projects"
+    sort: "scientific_projects", include_unranked: false, package_ids: nil
   )
     counts = direct_scientific_dependencies
+    counts = counts.where(package_id: package_ids) if package_ids
     unless field_ids.nil?
       project_ids = ProjectField.where(field_id: field_ids).select(:project_id)
       counts = counts.where(project_id: project_ids)
@@ -99,18 +100,13 @@ class Package < ApplicationRecord
       "COUNT(DISTINCT project_dependencies.project_id) AS scientific_dependents_count"
     )
 
-    joins(
-      "INNER JOIN (#{counts.to_sql}) scientific_dependency_counts " \
+    scope = joins(
+      "#{include_unranked ? "LEFT" : "INNER"} JOIN (#{counts.to_sql}) scientific_dependency_counts " \
       "ON scientific_dependency_counts.package_id = packages.id"
     )
       .joins(
         "LEFT JOIN projects package_projects " \
         "ON package_projects.id = packages.published_by_project_id"
-      )
-      .where(
-        "package_projects.science_score IS NULL OR " \
-        "package_projects.science_score >= ?",
-        MINIMUM_REPOSITORY_SCIENCE_SCORE
       )
       .select(
         "packages.*, " \
@@ -131,6 +127,28 @@ class Package < ApplicationRecord
       )
       .preload(:package_registry, :published_by_project)
       .order(*scientific_dependency_order(sort))
+    scope = scope.where(id: package_ids) if package_ids
+    return scope if include_unranked
+
+    scope.where(
+      "package_projects.science_score IS NULL OR package_projects.science_score >= ?",
+      MINIMUM_REPOSITORY_SCIENCE_SCORE
+    )
+  end
+
+  def self.bulk_lookup(purls)
+    unless purls.is_a?(Array) && purls.length.between?(1, 100) &&
+        purls.all? { |value| value.is_a?(String) && value.length.between?(1, 2000) }
+      raise ArgumentError, "purls must contain 1 to 100 PURL strings"
+    end
+
+    normalized = purls.map do |value|
+      Purl.parse(value.strip.gsub("npm/@", "npm/%40")).with(version: nil, subpath: nil).to_s
+    end.uniq
+    ids = where(purl: normalized).pluck(:id)
+    ranked_by_scientific_dependents(include_unranked: true, package_ids: ids).reorder(:id)
+  rescue Purl::Error => error
+    raise ArgumentError, error.message
   end
 
   def self.direct_scientific_dependencies
