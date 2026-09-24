@@ -111,3 +111,25 @@ Please note that this project is released with a [Contributor Code of Conduct](h
 Code is licensed under [GNU Affero License](LICENSE) © 2023 [Andrew Nesbitt](https://github.com/andrew).
 
 Data from the API is licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+
+### Reproducible science cohorts
+
+`bundle exec rake science_cohort:export OUTPUT=tmp/science-cohort.jsonl` exports
+visible scientific projects and the ranked direct-dependency package population
+from one PostgreSQL repeatable-read, read-only transaction. It streams batches
+of 250 records; `BATCH_SIZE` accepts values from 1 to 1,000. The task performs no
+network lookups or synchronization and refuses to replace an existing file.
+
+Each JSON line has `type` and `data`. A `snapshot` record gives the selection,
+snapshot identifier and start time, followed by `project` records with search
+identifiers and stored SWH evidence, then `package` records with PURLs, repository
+links and scientific-use counts. A final `complete` record gives counts and the
+completion time. Standard output includes the file's SHA-256. Publication occurs
+only after the snapshot finishes, so a failed task leaves no partial output.
+
+This retains the listing filters: absence from an export does not establish
+absence of scientific use. For stored packages outside the ranked population,
+use `POST /api/v1/packages/bulk_lookup`. The existing `search_seeds:export` SQLite
+format remains available for project search and is unchanged.
+
+See [science cohort lookup and export](docs/science-cohorts.md) for API contracts and evidence limits.
