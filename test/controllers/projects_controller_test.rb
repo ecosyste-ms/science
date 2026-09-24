@@ -71,6 +71,32 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show displays wiki readmes as plain text" do
+    %w[wiki mediawiki].each do |extension|
+      @project.update!(
+        last_synced_at: Time.current,
+        repository: {
+          "host" => { "name" => "GitHub" },
+          "owner" => "tidyverse",
+          "html_url" => @project.url,
+          "default_branch" => "main",
+          "stargazers_count" => 10,
+          "forks_count" => 2,
+          "open_issues_count" => 1,
+          "topics" => [],
+          "created_at" => 1.year.ago.iso8601,
+          "metadata" => { "files" => { "readme" => "README.#{extension}" } }
+        },
+        readme: "== ggplot2 ==\nA plotting library with [[examples]]."
+      )
+
+      get project_url(@project)
+
+      assert_response :success
+      assert_select "#project-repository-readme pre", text: @project.readme
+    end
+  end
+
   test "show organizes project data into tabs and section tabs" do
     @project.update!(
       last_synced_at: Time.current,
@@ -125,7 +151,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       assert_select "#project-repository-details", text: /Repository/
       assert_select "#project-repository-swhids-tab", text: "SWHIDs"
       assert_select "#project-repository-swhids", text: /swh:1:rev:/
-      assert_select "#project-repository-readme", text: /ggplot2/
+      assert_select "#project-repository-readme h1", text: "ggplot2"
       assert_select "#project-repository-owner", text: /Tidyverse/
     end
     assert_select "#project-activity" do

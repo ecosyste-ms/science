@@ -4,7 +4,6 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 ruby file: ".ruby-version"
 
 gem "rails", "~> 8.1.1"
-gem "json", "< 3" # rails/rails#58601
 
 gem "secure_headers"
 gem "sprockets-rails"
@@ -39,7 +38,7 @@ gem 'identifiers', '~> 0.15', require: %w[identifiers/arxiv_id identifiers/doi i
 gem 'csv'
 gem 'stemmify'
 gem 'appsignal'
-gem 'github-markup'
+gem 'github-markup', require: 'github/markup'
 gem 'ostruct'
 gem 'dalli'
 gem 'matrix'
@@ -52,8 +51,6 @@ gem "rdoc"
 gem "org-ruby"
 gem "creole"
 gem "rexml"
-gem "wikicloth", github: 'nricciar/wikicloth'
-gem "twitter-text"
 gem "asciidoctor"
 
 group :development, :test do
