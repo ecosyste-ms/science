@@ -25,6 +25,8 @@ RUN apk add --no-cache \
     npm \
     yaml-dev \
     libffi-dev \
+    openssl-dev \
+    zlib-dev \
     jemalloc \
  && gem update --system \
  && gem install bundler foreman \

@@ -30,6 +30,8 @@ gem 'sitemap_generator'
 gem 'sidekiq'
 gem 'sidekiq-unique-jobs'
 gem 'sidekiq-status'
+gem 'rdkafka', require: false
+gem 'msgpack', require: false
 gem 'groupdate'
 gem 'simple_form'
 gem 'cff'

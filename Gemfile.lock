@@ -300,6 +300,42 @@ GEM
       logger
       prism (>= 1.6.0)
       tsort
+    rdkafka (0.30.0)
+      ffi (~> 1.17.1)
+      json (> 2.0)
+      logger
+      mini_portile2 (~> 2.6)
+      rake (> 12)
+    rdkafka (0.30.0-aarch64-linux-gnu)
+      ffi (~> 1.17.1)
+      json (> 2.0)
+      logger
+      mini_portile2 (~> 2.6)
+      rake (> 12)
+    rdkafka (0.30.0-aarch64-linux-musl)
+      ffi (~> 1.17.1)
+      json (> 2.0)
+      logger
+      mini_portile2 (~> 2.6)
+      rake (> 12)
+    rdkafka (0.30.0-arm64-darwin)
+      ffi (~> 1.17.1)
+      json (> 2.0)
+      logger
+      mini_portile2 (~> 2.6)
+      rake (> 12)
+    rdkafka (0.30.0-x86_64-linux-gnu)
+      ffi (~> 1.17.1)
+      json (> 2.0)
+      logger
+      mini_portile2 (~> 2.6)
+      rake (> 12)
+    rdkafka (0.30.0-x86_64-linux-musl)
+      ffi (~> 1.17.1)
+      json (> 2.0)
+      logger
+      mini_portile2 (~> 2.6)
+      rake (> 12)
     rdoc (8.0.0)
       erb
       prism (>= 1.6.0)
@@ -431,6 +467,7 @@ DEPENDENCIES
   jquery-rails
   matrix
   mocha
+  msgpack
   org-ruby
   ostruct
   pagy (~> 9.4.0)
@@ -442,6 +479,7 @@ DEPENDENCIES
   rack-cors
   rails (~> 8.1.1)
   rails-controller-testing
+  rdkafka
   rdoc
   redcarpet
   rexml
@@ -588,6 +626,12 @@ CHECKSUMS
   railties (8.1.4) sha256=b5e7a8e8984e33114d68af62227971960aae1e6c02bd7c9d826ffad97fff583c
   rake (13.4.2) sha256=cb825b2bd5f1f8e91ca37bddb4b9aaf345551b4731da62949be002fa89283701
   rbs (4.2.0) sha256=51f7b886dcc05bc09e10b901daa6a81829f6adc03101d6ca9ea4aac6103e0674
+  rdkafka (0.30.0) sha256=f5ceb36be07eea6af0fe97e27d5c36e25512caf0c6f4c824e3b34e5e7397e75a
+  rdkafka (0.30.0-aarch64-linux-gnu) sha256=251b9872f282223e1c5a21bc689cdaaee36e7a9acc7c2d73723432e91893d695
+  rdkafka (0.30.0-aarch64-linux-musl) sha256=ce93197f49e3afe4efb7e12a931248d04d0e12e21623fd44ffa6bd62f28bd636
+  rdkafka (0.30.0-arm64-darwin) sha256=e9e9c937c77fd454b3eb5db8af2dc75ee27a75d00b102154cd82ca26434f5869
+  rdkafka (0.30.0-x86_64-linux-gnu) sha256=f65c3fd0207e8cf03f74c92d7781f102d2ccfc651c4bfcac52e98563432a80be
+  rdkafka (0.30.0-x86_64-linux-musl) sha256=4ec048cfa0e27fbcbc6be0a3a6c1945d74725161e6fe2cecaf5e1dacaa952638
   rdoc (8.0.0) sha256=03bf8c08a9639658855a0cfd77c0abca8325c227693f7f33f82957811348c469
   redcarpet (3.6.1) sha256=d444910e6aa55480c6bcdc0cdb057626e8a32c054c29e793fa642ba2f155f445
   redis-client (0.30.1) sha256=5151bc5c7bbfe48623732cdae3b900d8a22dc691cc7cdfacfb351ac55116522d
