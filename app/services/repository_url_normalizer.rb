@@ -41,6 +41,10 @@ class RepositoryUrlNormalizer
     string = value.to_s.strip
     return if string.blank?
 
+    if (match = string.match(/\Agithub:([a-z0-9-]+\/[a-z0-9_.-]+)\z/i))
+      string = "https://github.com/#{match[1]}"
+    end
+
     if (match = string.match(/\Agit@([^:]+):(.+)\z/i))
       return URI.parse("ssh://git@#{match[1]}/#{match[2]}")
     end

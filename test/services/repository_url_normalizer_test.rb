@@ -18,6 +18,31 @@ class RepositoryUrlNormalizerTest < ActiveSupport::TestCase
       )
   end
 
+  test "normalizes GitHub repository shorthand" do
+    assert_equal "https://github.com/bazel-contrib/bazel-lib",
+      RepositoryUrlNormalizer.normalize("github:bazel-contrib/bazel-lib")
+    assert_equal "https://github.com/boostorg/program_options",
+      RepositoryUrlNormalizer.normalize(" GITHUB:BoostOrg/program_options.git ")
+    assert_equal "github.com",
+      RepositoryUrlNormalizer.parse("github:google/boringssl").host
+  end
+
+  test "rejects malformed GitHub shorthand" do
+    %w[
+      github:owner
+      github:/repo
+      github:owner/
+      github://owner/repo
+      github:owner/repo/path
+      github:owner/repo?query
+      github:owner/repo#ref
+      github:owner@host/repo
+      github:../repo
+    ].each do |value|
+      assert_nil RepositoryUrlNormalizer.normalize(value), value
+    end
+  end
+
   test "rejects missing and malformed repository URLs" do
     assert_nil RepositoryUrlNormalizer.normalize(nil)
     assert_nil RepositoryUrlNormalizer.normalize("not a URL")

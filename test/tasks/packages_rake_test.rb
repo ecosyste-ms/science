@@ -437,6 +437,56 @@ class PackagesRakeTest < ActiveSupport::TestCase
     assert_includes output, "matched: 1"
   end
 
+  test "matches and discovers Bazel GitHub shorthand through the rake entrypoint" do
+    registry = PackageRegistry.create!(
+      name: "registry.bazel.build",
+      url: "https://registry.bazel.build",
+      ecosystem: "bazel",
+      purl_type: "bazel"
+    )
+    existing = Project.create!(url: "https://github.com/bazel-contrib/bazel-lib")
+    packages = {
+      "aspect_bazel_lib" => "github:bazel-contrib/bazel-lib",
+      "bazel_lib" => "github:bazel-contrib/bazel-lib",
+      "aspect_rules_js" => "github:aspect-build/rules_js",
+      "sqlite3" => "https://sqlite.org",
+      "lua" => "https://www.lua.org/ftp"
+    }.map do |name, url|
+      Package.create!(
+        package_registry: registry,
+        name: name,
+        purl: "pkg:bazel/#{name}",
+        repository_url: url,
+        repository_match_error: "invalid repository URL",
+        repository_checked_at: 31.days.ago
+      )
+    end
+    ENV["LIMIT"] = "5"
+
+    output, = capture_io { Rake::Task["packages:match_projects"].invoke }
+
+    discovered = Project.find_by!(url: "https://github.com/aspect-build/rules_js")
+    packages.first(3).zip([existing, existing, discovered]).each do |package, project|
+      assert_equal project, package.reload.published_by_project
+      assert_nil package.repository_match_error
+      assert_operator package.repository_checked_at, :>, 1.minute.ago
+      assert_match(/\Agithub:/, package.repository_url)
+    end
+    packages.last(2).each do |package|
+      assert_nil package.reload.published_by_project_id
+      assert_equal "invalid repository URL", package.repository_match_error
+    end
+    assert_equal [[discovered.id]], SyncProjectWorker.jobs.map { |job| job["args"] }
+    assert_includes output, "selected: 5"
+    assert_includes output, "matched: 2"
+    assert_includes output, "discovered: 1"
+    assert_includes output, "invalid: 2"
+
+    Rake::Task["packages:match_projects"].reenable
+    repeated, = capture_io { Rake::Task["packages:match_projects"].invoke }
+    assert_includes repeated, "selected: 0"
+  end
+
   test "discovers package projects through the rake entrypoint" do
     registry = PackageRegistry.create!(
       name: "pypi.org",
