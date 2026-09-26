@@ -1,4 +1,15 @@
 namespace :swhids do
+  desc "Consume SWH journal visit events and queue archival checks"
+  task consume: :environment do
+    consumer = SwhidJournalConsumer.new
+    handlers = %w[INT TERM].to_h { |signal| [signal, Signal.trap(signal) { consumer.stop }] }
+    begin
+      consumer.run
+    ensure
+      handlers.each { |signal, handler| Signal.trap(signal, handler) }
+    end
+  end
+
   desc "Refresh SWHID stats stored in Redis"
   task refresh: :environment do
     stats = SwhidStats.refresh
