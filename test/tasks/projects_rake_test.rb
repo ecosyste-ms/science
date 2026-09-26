@@ -499,6 +499,81 @@ class ProjectsRakeTest < ActiveSupport::TestCase
     assert_includes output, "account_author_links: 1"
   end
 
+  test "sync_author_identities reuses one account for separate owner and former login observations" do
+    host = Host.create!(name: "Existing Alias GitHub")
+    owner = Owner.create!(host: host, login: "adal", uuid: "42")
+    seed = Project.create!(
+      url: "https://github.com/test/identity-alias-seed",
+      science_score: 20,
+      host: host,
+      commits: { "committers" => [
+        { "name" => "Ada", "login" => "ada-old", "uuid" => "42", "count" => 1 },
+      ] }
+    )
+    ENV["LIMIT"] = "1"
+    capture_io do
+      Rake::Task["projects:sync_contributors"].execute
+      Rake::Task["projects:sync_author_identities"].execute
+    end
+    account = seed.project_contributors.first.developer_account
+    assert account
+    project = Project.create!(
+      url: "https://github.com/test/identity-separate-aliases",
+      science_score: 20,
+      host: host,
+      citation_file: <<~CFF,
+        cff-version: 1.2.0
+        message: Cite this software
+        title: Example Software
+        authors:
+          - given-names: Ada
+            family-names: Lovelace
+            email: ada@example.edu
+      CFF
+      commits: { "committers" => [
+        { "name" => "Ada Lovelace", "login" => "ADAL", "count" => 2 },
+        { "email" => "ada@example.edu", "login" => "ada-old", "count" => 3 },
+      ] }
+    )
+    capture_io do
+      Rake::Task["projects:sync_citation_authors"].execute
+      Rake::Task["projects:sync_contributors"].execute
+    end
+    project.update_columns(
+      author_identities_index_error: "PG::CardinalityViolation",
+      author_identities_index_version: AuthorIdentityIndexer::CURRENT_VERSION
+    )
+    ENV["RETRY_ERRORS"] = "true"
+
+    output, = capture_io do
+      Rake::Task["projects:sync_author_identities"].execute
+    end
+
+    assert_nil project.reload.author_identities_index_error
+    assert project.author_identities_indexed_at
+    assert_equal [account.id, account.id],
+      project.project_contributors.order(:id).pluck(:developer_account_id)
+    assert_equal "Ada Lovelace", account.reload.name
+    assert_equal "ada@example.edu", account.email
+    assert_equal "42", account.provider_uuid
+    assert_equal "adal", account.login
+    assert_equal owner.id, account.owner_id
+    assert_equal 1, DeveloperAccount.count
+    assert_equal 4, account.identifiers.count
+    assert_equal project.project_authors.first.author_id,
+      project.author_developer_account_links.sole.author_id
+    assert_includes output, "indexed: 1"
+    assert_includes output, "failed: 0"
+    assert_includes output, "linked_account_observations: 2"
+
+    project.update_columns(author_identities_indexed_at: nil)
+    capture_io { Rake::Task["projects:sync_author_identities"].execute }
+
+    assert_nil project.reload.author_identities_index_error
+    assert_equal 1, DeveloperAccount.count
+    assert_equal 1, project.author_developer_account_links.count
+  end
+
   test "sync_author_identities limits contributor updates through the rake entrypoint" do
     host = Host.create!(name: "Bounded Rake Identity GitHub")
     project = Project.create!(

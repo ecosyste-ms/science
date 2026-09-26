@@ -262,15 +262,18 @@ class ProjectDeveloperAccountResolver
         accounts[account.id] = account
       end
     end
-    account_rows = resolutions.filter_map do |resolution|
-      account_id = resolution[:account_id]
-      next unless account_id
-      next unless resolution.fetch(:observations).any? do |observation|
+    assigned_resolutions = resolutions.select do |resolution|
+      resolution[:account_id] && resolution.fetch(:observations).any? do |observation|
         assignments.key?(observation.fetch(:contributor).id)
       end
-
+    end
+    account_rows = assigned_resolutions.group_by do |resolution|
+      resolution.fetch(:account_id)
+    end.map do |account_id, grouped|
       account = accounts.fetch(account_id)
-      attributes = account_attributes(resolution)
+      attributes = account_attributes(
+        observations: grouped.flat_map { |resolution| resolution.fetch(:observations) }
+      )
       attributes.each_key do |column|
         attributes[column] = account.public_send(column) if attributes[column].blank?
       end

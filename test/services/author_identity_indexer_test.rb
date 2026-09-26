@@ -154,6 +154,35 @@ class AuthorIdentityIndexerTest < ActiveSupport::TestCase
       project.project_contributors.reload.pluck(:developer_account_id).uniq.length
   end
 
+  test "retains bot evidence when separate observations resolve to an existing account" do
+    host = Host.create!(name: "Existing Bot Alias GitHub")
+    seed = create_indexed_project(
+      host: host,
+      committers: [
+        { "name" => "Ada", "login" => "adal", "uuid" => "42", "count" => 1 },
+      ]
+    )
+    AuthorIdentityIndexer.new(seed).sync!
+    account = seed.project_contributors.first.developer_account
+    project = create_indexed_project(
+      host: host,
+      citation_file: cff_author(name: "Ada Lovelace", email: "ada@example.edu"),
+      committers: [
+        { "name" => "Automation", "uuid" => "42", "type" => "Bot", "count" => 2 },
+        { "name" => "Ada", "login" => "adal", "email" => "ada@example.edu", "count" => 3 },
+      ]
+    )
+
+    result = AuthorIdentityIndexer.new(project).sync!
+
+    assert_equal 2, result.fetch(:linked_account_observations)
+    assert_equal 0, result.fetch(:linked_contributors)
+    assert_equal [account.id, account.id],
+      project.project_contributors.order(:id).pluck(:developer_account_id)
+    assert_equal "bot", account.reload.account_kind
+    assert_empty project.author_developer_account_links
+  end
+
   test "leaves a shared login unresolved when provider identifiers conflict" do
     host = Host.create!(name: "Conflicting Provider GitHub")
     project = create_indexed_project(
