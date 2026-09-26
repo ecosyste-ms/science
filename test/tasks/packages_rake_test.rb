@@ -343,31 +343,74 @@ class PackagesRakeTest < ActiveSupport::TestCase
     assert_includes second_output, "selected: 0"
   end
 
-  test "skips known missing package metadata through the rake entrypoint" do
-    registry = PackageRegistry.create!(
-      name: "github actions",
-      url: "https://github.com",
-      ecosystem: "actions",
-      purl_type: "githubactions",
-      default: true
-    )
-    Package.create!(
-      package_registry: registry,
-      name: "google/clusterfuzzlite/actions/run_fuzzers",
-      ecosystems_sync_status: "transient_error",
-      ecosystems_checked_at: 1.day.ago,
-      ecosystems_retry_at: 1.minute.ago
-    )
-    request = stub_request(
-      :get,
-      "https://packages.ecosyste.ms/api/v1/packages/lookup"
-    )
-    ENV["LIMIT"] = "1"
+  %w[transient_error unavailable].each do |status|
+    test "syncs ClusterFuzzLite metadata after #{status} through the rake entrypoint" do
+      registry = PackageRegistry.create!(
+        name: "GitHub Actions",
+        url: "https://github.com",
+        ecosystem: "actions",
+        purl_type: "githubactions",
+        default: true
+      )
+      actions = { "build_fuzzers" => 14_038_376, "run_fuzzers" => 14_038_371 }
+      packages = actions.map.with_index do |(action, upstream_id), index|
+        name = "google/clusterfuzzlite/actions/#{action}"
+        purl = "pkg:githubactions/#{name}"
+        package = Package.create!(
+          package_registry: registry,
+          name: name,
+          purl: index.zero? ? nil : purl,
+          ecosystems_sync_status: status,
+          ecosystems_checked_at: 1.day.ago,
+          ecosystems_retry_at: status == "transient_error" ? 1.minute.ago : nil,
+          ecosystems_error: "upstream lookup failed",
+          ecosystems_error_count: 1
+        )
+        path, query = if package.purl
+          ["packages/lookup", { "purl" => purl }]
+        else
+          ["registries/GitHub%20Actions/lookup", { "ecosystem" => "actions", "name" => name }]
+        end
+        request = stub_request(:get, "https://packages.ecosyste.ms/api/v1/#{path}")
+          .with(query: query).to_return(
+            status: 200,
+            body: [{
+              id: upstream_id,
+              name: name,
+              purl: purl,
+              repository_url: "https://github.com/google/clusterfuzzlite",
+              registry: { name: "github actions" },
+            }].to_json
+          )
+        [package, request, upstream_id]
+      end
+      ENV["LIMIT"] = "2"
+      ENV["RETRY_STOPPED"] = "true" if status == "unavailable"
 
-    output, = capture_io { Rake::Task["packages:sync_metadata"].invoke }
+      output, = capture_io { Rake::Task["packages:sync_metadata"].invoke }
 
-    assert_not_requested request
-    assert_includes output, "selected: 0"
+      assert_includes output, "selected: 2"
+      assert_includes output, "matched: 2"
+      packages.each do |package, request, upstream_id|
+        assert_requested request, times: 1
+        package.reload
+        assert_equal upstream_id, package.ecosystems_id
+        assert_equal "pkg:githubactions/#{package.name}", package.purl
+        assert_equal "https://github.com/google/clusterfuzzlite", package.repository_url
+        assert_equal "matched", package.ecosystems_sync_status
+        assert package.ecosystems_checked_at
+        assert_nil package.ecosystems_retry_at
+        assert_nil package.ecosystems_sync_started_at
+        assert_nil package.ecosystems_error
+        assert_equal 0, package.ecosystems_error_count
+      end
+
+      Rake::Task["packages:sync_metadata"].reenable
+      repeated, = capture_io { Rake::Task["packages:sync_metadata"].invoke }
+
+      assert_includes repeated, "selected: 0"
+      packages.each { |_, request| assert_requested request, times: 1 }
+    end
   end
 
   test "matches package projects through the rake entrypoint" do

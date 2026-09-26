@@ -169,28 +169,6 @@ class PackageMetadataSyncTest < ActiveSupport::TestCase
     assert_nil package.ecosystems_retry_at
   end
 
-  test "skips known missing metadata identities" do
-    registry = PackageRegistry.create!(
-      name: "GitHub Actions",
-      url: "https://github.com",
-      ecosystem: "actions",
-      purl_type: "githubactions"
-    )
-    create_package(
-      package_registry: registry,
-      name: "Google/ClusterFuzzLite/Actions/Build_Fuzzers",
-      ecosystems_sync_status: "transient_error",
-      ecosystems_checked_at: 1.day.ago,
-      ecosystems_retry_at: 1.minute.ago
-    )
-    client = mock
-    client.expects(:package_lookup).never
-
-    result = PackageMetadataSync.sync_batch!(client: client, limit: 1)
-
-    assert_equal 0, result.fetch(:selected)
-  end
-
   test "records an ambiguous result without retrying it automatically" do
     package = create_package(name: "rails", purl: "pkg:gem/rails")
     client = mock
