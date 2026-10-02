@@ -127,6 +127,74 @@ class ImportWikidataWorkerTest < ActiveSupport::TestCase
     assert_requested successful, times: 1
   end
 
+  test "size limited entity responses fetch omitted IDs in smaller batches before advancing" do
+    ids = %w[Q197492 Q197520 Q5971368]
+    page(ids, limit: 4)
+    warning = { "result" => { "*" => "This result was truncated because it would otherwise be larger than the limit of 12,582,912 bytes." } }
+    initial = stub_request(:get, WikidataClient::API_URL)
+      .with(query: { action: "wbgetentities", ids: ids.join("|"), format: "json", maxlag: 5 })
+      .to_return(body: { entities: @entities.slice(ids.first), warnings: warning, success: 1 }.to_json)
+    omitted = ids.drop(1).map { |id| entities([id]) }
+    project = Project.create!(url: "https://github.com/sympy/sympy", science_score: 42)
+    before = project.attributes
+    import = start_sweep(page_size: 4)
+
+    perform_next
+
+    assert import.reload.completed_at
+    assert_equal ids.last, import.cursor
+    assert_equal 3, import.items_processed
+    assert_nil import.last_error
+    assert_equal ids, ExternalSoftwareRecord.order(:identifier).pluck(:identifier)
+    assert_equal ["ok"], ExternalSoftwareRecord.distinct.pluck(:status)
+    assert_equal "Q5971368", project.external_software_records.sole.identifier
+    assert_equal before, project.reload.attributes
+    assert_requested initial, times: 1
+    omitted.each { |request| assert_requested request, times: 1 }
+  end
+
+  test "repeated truncation is bounded and an omitted singleton preserves the saved page" do
+    ids = %w[Q197492 Q197520]
+    page(ids)
+    warning = { result: { "*" => "This result was truncated because it would otherwise be larger than the limit of 12,582,912 bytes." } }
+    requests = [ids, [ids.first]].map do |batch|
+      stub_request(:get, WikidataClient::API_URL)
+        .with(query: { action: "wbgetentities", ids: batch.join("|"), format: "json", maxlag: 5 })
+        .to_return(body: { entities: {}, warnings: warning, success: 1 }.to_json)
+    end
+    import = start_sweep
+
+    perform_next
+
+    assert_nil import.reload.cursor
+    assert_nil import.completed_at
+    assert_equal ids, import.pending_ids
+    assert_equal 0, import.items_processed
+    assert_match "Incomplete or invalid Wikidata entity response", import.last_error
+    requests.each { |request| assert_requested request, times: 1 }
+    assert_equal ["error"], ExternalSoftwareRecord.distinct.pluck(:status)
+  end
+
+  test "a truncation warning does not accept malformed returned entities" do
+    ids = %w[Q197492 Q197520]
+    page(ids)
+    request = stub_request(:get, WikidataClient::API_URL)
+      .with(query: { action: "wbgetentities", ids: ids.join("|"), format: "json", maxlag: 5 })
+      .to_return(body: { entities: { ids.first => { id: ids.first, type: "item" } },
+        warnings: { result: { "*" => "This result was truncated" } } }.to_json)
+    entities([ids.last])
+    import = start_sweep
+
+    perform_next
+
+    assert_nil import.reload.cursor
+    assert_equal ids, import.pending_ids
+    assert_equal 0, import.items_processed
+    assert_match "Incomplete or invalid Wikidata entity response", import.last_error
+    assert_equal ["error"], ExternalSoftwareRecord.distinct.pluck(:status)
+    assert_requested request, times: 1
+  end
+
   test "cached errors defer progress until the entity has a successful retry" do
     page(["Q5971368"])
     ExternalSoftwareRecord.create!(source: "wikidata", identifier: "Q5971368", status: "error",

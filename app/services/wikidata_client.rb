@@ -25,6 +25,10 @@ class WikidataClient
     self.class.validate_ids!(ids)
     data = request(API_URL, action: "wbgetentities", ids: ids.join("|"), format: "json", maxlag: 5)
     entities = data["entities"]
+    if entities.is_a?(Hash) && ids.size > 1 && data.dig("warnings", "result", "*").to_s.start_with?("This result was truncated")
+      omitted = ids.reject { |id| entities.key?(id) }
+      omitted.each_slice(ids.size / 2) { |batch| entities.merge!(self.entities(batch)) }
+    end
     unless entities.is_a?(Hash) && ids.all? { |id| valid_entity?(entities[id], id) }
       raise Error, "Incomplete or invalid Wikidata entity response"
     end
