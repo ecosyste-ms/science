@@ -296,7 +296,51 @@ paths:
                   observed_commit: {type: string, nullable: true}
                   attempted_at: {type: string, format: date-time, nullable: true}
                   objects: {type: array, items: {type: object}}
-                  origin_archive: {type: object}
+                  origin_archive:
+                    type: object
+                    properties:
+                      status: {type: string, enum: [unchecked, unknown, archived, not_found]}
+                      checked_at:
+                        type: string
+                        format: date-time
+                        description: Last saved batch; individual observations can be older.
+                      retry_at: {type: string, format: date-time}
+                      origins: {type: array, items: {type: string}}
+                      complete:
+                        type: boolean
+                        description: Every candidate has a completed lookup. Older records may omit this field.
+                      unchecked_origins:
+                        type: array
+                        items: {type: string}
+                        description: Candidate URLs with no saved attempt. An archived result can still have unchecked URLs.
+                      observations:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            origin: {type: string}
+                            status: {type: string, enum: [unknown, archived, not_found]}
+                            visit: {type: object}
+                            prior_visit: {type: object}
+                            checked_at:
+                              type: string
+                              format: date-time
+                              description: Last completed lookup for this URL; retained if a later attempt fails.
+                            attempted_at: {type: string, format: date-time}
+                            lookup_complete:
+                              type: boolean
+                              description: The latest attempt found sufficient coverage or exhausted visit history.
+                            history_complete:
+                              type: boolean
+                              description: The latest lookup reached the end of visit history, rather than stopping at a snapshot or a limit.
+                            next_visit:
+                              type: string
+                              description: Saved last_visit cursor for the next history page.
+                            history_cutoff:
+                              type: string
+                              format: date-time
+                              nullable: true
+                              description: Submission time used when searching for pre-submission snapshots.
                   bytes_verified: {type: boolean}
         404:
           description: Project not found or hidden

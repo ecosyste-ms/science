@@ -174,6 +174,256 @@ class CheckSwhidOriginWorkerTest < ActiveSupport::TestCase
     assert_not_requested :get, /example\.org/
   end
 
+  test "later runs reach the ninth candidate without repeating completed lookups" do
+    @project.update!(repository: { "previous_names" => (1..5).map { |n| "example/alias-#{n}" } })
+    origins = SwhidOriginChecker.new(@project).origins
+    first = visits_request(origins.first).to_return(status: 404)
+    ninth = visits_request(origins.fetch(8)).to_return(body: [visit(origin: origins.fetch(8))].to_json)
+
+    CheckSwhidOriginWorker.perform_async(@project.id)
+    CheckSwhidOriginWorker.perform_one
+    initial = @project.reload.swhids.fetch("origin_archive")
+    assert_equal "unknown", initial["status"]
+    assert_equal origins.drop(8), initial["unchecked_origins"]
+    assert_equal false, initial["complete"]
+
+    travel 2.hours do
+      CheckSwhidOriginWorker.perform_async(@project.id)
+      CheckSwhidOriginWorker.perform_one
+    end
+
+    saved = @project.reload.swhids.fetch("origin_archive")
+    assert_equal "archived", saved["status"]
+    assert_equal initial["observations"].first, saved["observations"].first
+    assert_equal origins.drop(9), saved["unchecked_origins"]
+    assert_requested first, times: 1
+    assert_requested ninth, times: 1
+  end
+
+  test "untried candidates precede repeated inconclusive results" do
+    @project.update!(repository: { "previous_names" => (1..5).map { |n| "example/alias-#{n}" } })
+    origins = SwhidOriginChecker.new(@project).origins
+    failures = origins.first(8).map { |origin| visits_request(origin).to_return(status: 503) }
+    ninth = visits_request(origins.fetch(8)).to_return(body: [visit(origin: origins.fetch(8))].to_json)
+
+    CheckSwhidOriginWorker.new.perform(@project.id)
+    travel 2.hours do
+      CheckSwhidOriginWorker.new.perform(@project.id)
+    end
+
+    assert_equal "archived", @project.reload.swhids.dig("origin_archive", "status")
+    failures.each { |request| assert_requested request, times: 1 }
+    assert_requested ninth, times: 1
+  end
+
+  test "history resumes at the saved page after reaching the page limit" do
+    first = visits_request(ORIGIN).to_return(body: [].to_json, headers: next_visit_headers(2))
+    second = visits_request(ORIGIN, last_visit: "2").to_return(body: [].to_json, headers: next_visit_headers(3))
+    third = visits_request(ORIGIN, last_visit: "3").to_return(body: [].to_json, headers: next_visit_headers(4))
+    last = visits_request(ORIGIN, last_visit: "4").to_return(body: [visit].to_json)
+
+    CheckSwhidOriginWorker.new.perform(@project.id)
+    saved = @project.reload.swhids.dig("origin_archive", "observations", 0)
+    assert_equal "4", saved["next_visit"]
+    assert_equal false, saved["lookup_complete"]
+    assert_equal false, saved["history_complete"]
+    assert_nil saved["checked_at"]
+
+    travel 2.hours do
+      CheckSwhidOriginWorker.new.perform(@project.id)
+    end
+
+    saved = @project.reload.swhids.dig("origin_archive", "observations", 0)
+    assert_equal "archived", saved["status"]
+    assert_equal true, saved["lookup_complete"]
+    assert_equal true, saved["history_complete"]
+    assert_nil saved["next_visit"]
+    [first, second, third, last].each { |request| assert_requested request, times: 1 }
+  end
+
+  test "request limit preserves the cursor and leaves later candidates unchecked" do
+    @project.update!(repository: { "previous_names" => ["example/old", "example/older"] })
+    origins = SwhidOriginChecker.new(@project).origins
+    origins.first(4).each do |origin|
+      visits_request(origin).to_return(body: [].to_json, headers: next_visit_headers(2, origin: origin))
+      visits_request(origin, last_visit: "2").to_return(body: [].to_json, headers: next_visit_headers(3, origin: origin))
+      visits_request(origin, last_visit: "3").to_return(body: [].to_json, headers: next_visit_headers(4, origin: origin))
+      visits_request(origin, last_visit: "4").to_return(body: [].to_json)
+    end
+
+    CheckSwhidOriginWorker.new.perform(@project.id)
+    saved = @project.reload.swhids.fetch("origin_archive")
+    assert_equal "2", saved["observations"].last["next_visit"]
+    assert_equal origins.drop(4), saved["unchecked_origins"]
+    assert_equal "unknown", saved["status"]
+    assert_requested :get, /archive\.softwareheritage\.org/, times: SwhidOriginChecker::MAX_REQUESTS
+
+    travel 2.hours do
+      CheckSwhidOriginWorker.new.perform(@project.id)
+    end
+    saved = @project.reload.swhids.fetch("origin_archive")
+    assert_equal "not_found", saved["status"]
+    assert_equal true, saved["complete"]
+    assert_empty saved["unchecked_origins"]
+    origins.first(4).each { |origin| assert_requested visits_request(origin), times: 1 }
+  end
+
+  test "rate limits preserve completed origins and the interrupted history cursor" do
+    first = visits_request(ORIGIN).to_return(status: 404)
+    other = "#{ORIGIN}.git"
+    page = visits_request(other).to_return(body: [].to_json, headers: next_visit_headers(2, origin: other))
+    last = visits_request(other, last_visit: "2").to_return(status: 429, headers: { "Retry-After" => "3600" })
+
+    CheckSwhidOriginWorker.perform_async(@project.id)
+    CheckSwhidOriginWorker.perform_one
+    saved = @project.reload.swhids.fetch("origin_archive")
+    original = saved["observations"].first.deep_dup
+    assert_equal "not_found", original["status"]
+    assert_equal "2", saved["observations"].last["next_visit"]
+    assert_equal false, saved["complete"]
+
+    travel 2.hours do
+      visits_request(other, last_visit: "2").to_return(body: [visit(origin: other)].to_json)
+      CheckSwhidOriginWorker.perform_one
+    end
+
+    saved = @project.reload.swhids.fetch("origin_archive")
+    assert_equal "archived", saved["status"]
+    assert_equal original, saved["observations"].first
+    assert_requested first, times: 1
+    assert_requested page, times: 1
+    assert_requested last, times: 2
+  end
+
+  test "candidate changes preserve retained URLs and discard removed URLs" do
+    old = "https://github.com/OldOwner/OldName"
+    @project.update!(repository: { "previous_names" => [old] })
+    CheckSwhidOriginWorker.new.perform(@project.id)
+    original = @project.reload.swhids.dig("origin_archive", "observations", 0).deep_dup
+    first = visits_request(ORIGIN).to_return(status: 404)
+
+    travel 2.hours do
+      @project.update!(repository: { "previous_names" => ["NewOwner/NewName"] })
+      new_origin = "https://github.com/NewOwner/NewName"
+      request = visits_request(new_origin).to_return(body: [visit(origin: new_origin)].to_json)
+      CheckSwhidOriginWorker.new.perform(@project.id)
+      assert_requested request, times: 1
+    end
+
+    saved = @project.reload.swhids.fetch("origin_archive")
+    assert_equal original, saved["observations"].first
+    assert_not_includes saved["observations"].pluck("origin"), old
+    assert_requested first, times: 1
+  end
+
+  test "stale observations refresh without losing archived evidence on failure" do
+    request = visits_request(ORIGIN).to_return(body: [visit].to_json)
+    CheckSwhidOriginWorker.new.perform(@project.id)
+    original = @project.reload.swhids.dig("origin_archive", "observations", 0).deep_dup
+
+    travel 8.days do
+      visits_request(ORIGIN).to_return(status: 503)
+      CheckSwhidOriginWorker.new.perform(@project.id)
+      saved = @project.reload.swhids.dig("origin_archive", "observations", 0)
+      assert_equal original["visit"], saved["visit"]
+      assert_equal original["checked_at"], saved["checked_at"]
+      assert_equal "archived", saved["status"]
+      assert_equal false, saved["lookup_complete"]
+      assert_equal "HTTP 503", saved["error"]
+    end
+    assert_requested request, times: 2
+  end
+
+  test "stale negative observations refresh across bounded runs" do
+    @project.update!(repository: { "previous_names" => (1..5).map { |n| "example/alias-#{n}" } })
+    origins = SwhidOriginChecker.new(@project).origins
+    CheckSwhidOriginWorker.new.perform(@project.id)
+    travel 2.hours do
+      CheckSwhidOriginWorker.new.perform(@project.id)
+    end
+    assert_equal "not_found", @project.reload.swhids.dig("origin_archive", "status")
+
+    travel 8.days do
+      CheckSwhidOriginWorker.new.perform(@project.id)
+      coverage = @project.reload.swhids.fetch("origin_archive")
+      assert_equal "unknown", SwhidOriginChecker.before_submission(coverage)["classification"]
+      ninth = visits_request(origins.fetch(8)).to_return(body: [visit(origin: origins.fetch(8))].to_json)
+      CheckSwhidOriginWorker.new.perform(@project.id)
+      assert_requested ninth, times: 2
+      coverage = @project.reload.swhids.fetch("origin_archive")
+      assert_equal "archived", coverage["status"]
+      assert_equal "missing_versions", SwhidOriginChecker.before_submission(coverage)["classification"]
+    end
+  end
+
+  test "historical snapshot searches resume while retaining current coverage" do
+    cutoff = 10.days.ago.iso8601
+    @project.update!(swhids: @project.swhids.merge("archival" => { "id" => 123, "attempted_at" => cutoff }))
+    first = visits_request(ORIGIN).to_return(body: [visit(date: 1.day.ago.iso8601)].to_json, headers: next_visit_headers(2))
+    visits_request(ORIGIN, last_visit: "2").to_return(body: [].to_json, headers: next_visit_headers(3))
+    visits_request(ORIGIN, last_visit: "3").to_return(body: [].to_json, headers: next_visit_headers(4))
+    last = visits_request(ORIGIN, last_visit: "4").to_return(body: [visit(date: 20.days.ago.iso8601)].to_json)
+
+    CheckSwhidOriginWorker.new.perform(@project.id)
+    coverage = @project.reload.swhids.fetch("origin_archive")
+    assert_equal "archived", coverage["status"]
+    assert_equal false, coverage["complete"]
+    assert_equal cutoff, coverage["observations"].first["history_cutoff"]
+    assert coverage["retry_at"]
+    assert_nil @project.swhids.dig("archival", "repository_before_request")
+
+    travel 2.hours do
+      CheckSwhidOriginWorker.new.perform(@project.id)
+    end
+
+    assert_equal "missing_versions", @project.reload.swhids.dig("archival", "repository_before_request", "classification")
+    assert_requested first, times: 1
+    assert_requested last, times: 1
+  end
+
+  test "a changed submission cutoff restarts history without reusing prior evidence" do
+    @project.update!(swhids: @project.swhids.merge("archival" => { "id" => 123, "attempted_at" => 10.days.ago.iso8601 }))
+    visits_request(ORIGIN).to_return(body: [visit(date: 1.day.ago.iso8601)].to_json, headers: next_visit_headers(2))
+    visits_request(ORIGIN, last_visit: "2").to_return(body: [].to_json, headers: next_visit_headers(3))
+    visits_request(ORIGIN, last_visit: "3").to_return(body: [].to_json, headers: next_visit_headers(4))
+    CheckSwhidOriginWorker.new.perform(@project.id)
+
+    travel 2.hours do
+      @project.reload.update!(swhids: @project.swhids.merge("archival" => { "id" => 456, "attempted_at" => 40.days.ago.iso8601 }))
+      first = visits_request(ORIGIN).to_return(body: [visit(date: 20.days.ago.iso8601)].to_json)
+      CheckSwhidOriginWorker.new.perform(@project.id)
+      assert_requested first, times: 2
+    end
+
+    saved = @project.reload.swhids
+    assert_nil saved.dig("archival", "repository_before_request")
+    assert_equal true, saved.dig("origin_archive", "observations", 0, "history_complete")
+    assert_nil saved.dig("origin_archive", "observations", 0, "next_visit")
+  end
+
+  test "concurrent coverage updates are not overwritten" do
+    newer = { "status" => "archived", "checked_at" => Time.current.iso8601, "observations" => [] }
+    visits_request(ORIGIN).to_return do
+      @project.update!(swhids: @project.swhids.merge("origin_archive" => newer))
+      { status: 404 }
+    end
+
+    CheckSwhidOriginWorker.new.perform(@project.id)
+
+    assert_equal newer, @project.reload.swhids["origin_archive"]
+  end
+
+  test "concurrent candidate changes leave saved coverage untouched" do
+    visits_request(ORIGIN).to_return do
+      @project.update!(repository: { "previous_names" => ["example/added"] })
+      { status: 404 }
+    end
+
+    CheckSwhidOriginWorker.new.perform(@project.id)
+
+    assert_nil @project.reload.swhids["origin_archive"]
+  end
+
   test "concurrent request changes prevent attaching historical evidence to a different submission" do
     @project.update!(swhids: @project.swhids.merge("archival" => { "id" => 123, "attempted_at" => 1.day.ago.iso8601 }))
     visits_request(ORIGIN).to_return do
@@ -225,6 +475,10 @@ class CheckSwhidOriginWorkerTest < ActiveSupport::TestCase
 
   def visits_request(origin, **params)
     stub_request(:get, visits_url(origin)).with(query: { "per_page" => "100" }.merge(params.transform_keys(&:to_s)))
+  end
+
+  def next_visit_headers(cursor, origin: ORIGIN)
+    { "Link" => "<#{visits_url(origin)}?last_visit=#{cursor}>; rel=\"next\"" }
   end
 
   def visit(origin: ORIGIN, date: 30.days.ago.iso8601, number: 2)

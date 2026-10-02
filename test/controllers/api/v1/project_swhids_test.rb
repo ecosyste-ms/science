@@ -1,6 +1,44 @@
 require "test_helper"
+require_relative "../../../support/swhid_pipeline"
 
 class Api::V1::ProjectSwhidsTest < ActionDispatch::IntegrationTest
+  include SwhidPipeline
+
+  test "returns saved worker progress and retains observation dates after resuming" do
+    project = Project.create!(url: "https://github.com/evidence/progress", science_score: 42,
+      repository: { "previous_names" => (1..5).map { |n| "evidence/alias-#{n}" } })
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    origins = SwhidOriginChecker.new(project).origins
+    ninth = origins.fetch(8)
+    stub_request(:get, "#{SwhidOriginChecker::ENDPOINT}#{ERB::Util.url_encode(ninth)}/visits/")
+      .with(query: { per_page: 100 }).to_return(body: [{ origin: ninth, visit: 1, date: 1.day.ago.iso8601,
+        snapshot: "a" * 40, status: "full", type: "git" }].to_json)
+
+    CheckSwhidOriginWorker.perform_async(project.id)
+    CheckSwhidOriginWorker.perform_one
+    get "/api/v1/projects/#{project.id}/swhids"
+    assert_response :success
+    initial = response.parsed_body.fetch("origin_archive")
+    assert_equal false, initial["complete"]
+    assert_equal origins.drop(8), initial["unchecked_origins"]
+    assert_equal true, initial["observations"].first["lookup_complete"]
+    assert_equal true, initial["observations"].first["history_complete"]
+    assert initial["observations"].first["attempted_at"]
+
+    travel 2.hours do
+      CheckSwhidOriginWorker.perform_async(project.id)
+      CheckSwhidOriginWorker.perform_one
+      get "/api/v1/projects/#{project.id}/swhids"
+    end
+
+    assert_response :success
+    saved = response.parsed_body.fetch("origin_archive")
+    assert_equal "archived", saved["status"]
+    assert_equal initial["observations"].first, saved["observations"].first
+    assert_equal origins.drop(9), saved["unchecked_origins"]
+    assert_nil saved["retry_at"]
+  end
+
   test "returns persisted typed observations without exposing local paths or scheduling work" do
     project = Project.create!(url: "https://github.com/evidence/test", swhids: {
       "status" => "success", "commit" => "a" * 40, "attempted_at" => "2026-09-23T12:00:00Z",
