@@ -48,9 +48,13 @@ class ExternalSoftwareImport < ApplicationRecord
     start_catalogue(source: "swmath", page_size: page_size, restart: restart)
   end
 
+  def self.start_rrid_seeds(page_size: nil, restart: false)
+    start_catalogue(source: "rrid_seeds", page_size: page_size, restart: restart)
+  end
+
   def self.start_catalogue(source:, page_size: nil, restart: false)
-    initial_cursor = { "biotools" => "1", "ascl" => nil, "swmath" => nil }.fetch(source)
-    client = { "biotools" => BiotoolsClient, "ascl" => AsclClient, "swmath" => SwmathClient }.fetch(source)
+    initial_cursor = { "biotools" => "1", "ascl" => nil, "swmath" => nil, "rrid_seeds" => nil }.fetch(source)
+    client = { "biotools" => BiotoolsClient, "ascl" => AsclClient, "swmath" => SwmathClient, "rrid_seeds" => RridClient }.fetch(source)
     max_page_size = client::PAGE_SIZE
     if page_size && (!page_size.is_a?(Integer) || !page_size.between?(1, max_page_size))
       raise ArgumentError, "page size must be between 1 and 50"
@@ -92,10 +96,16 @@ class ExternalSoftwareImport < ApplicationRecord
       .where("lease_expires_at IS NULL OR lease_expires_at <= ?", Time.current).first
   end
 
+  def self.resumable_rrid_seeds
+    where(source: "rrid_seeds", completed_at: nil).where("next_run_at <= ?", Time.current)
+      .where("lease_expires_at IS NULL OR lease_expires_at <= ?", Time.current).first
+  end
+
   def enqueue
     return if completed_at
     worker = { "biotools" => ImportBiotoolsWorker, "ascl" => ImportAsclWorker,
-      "swmath" => ImportSwmathWorker, "wikidata" => ImportWikidataWorker }.fetch(source)
+      "swmath" => ImportSwmathWorker, "wikidata" => ImportWikidataWorker,
+      "rrid_seeds" => ImportRridSeedsWorker }.fetch(source)
     worker.perform_at([next_run_at, lease_expires_at, Time.current].compact.max, id)
   end
 

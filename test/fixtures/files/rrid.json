@@ -1,0 +1,989 @@
+[
+  {
+    "item": {
+      "supercategory": [
+        {
+          "type": "supercategory",
+          "name": "Resource"
+        }
+      ],
+      "contentTypes": [
+        {
+          "name": "product",
+          "curie": "ilx:0381348"
+        }
+      ],
+      "language": "en",
+      "description": "Software package for differential gene expression analysis based on the negative binomial distribution. Used for analyzing RNA-seq data for differential analysis of count data, using shrinkage estimation for dispersions and fold changes to improve stability and interpretability of estimates.",
+      "identifier": "SCR_015687",
+      "docid": "rrid:scr_015687",
+      "uuid": "7b0bf80a-41aa-5437-8c7c-bca648a5b2d0",
+      "synonyms": [
+        {
+          "name": ""
+        }
+      ],
+      "types": [
+        {
+          "name": "data analysis software",
+          "type": "category"
+        },
+        {
+          "name": "data processing software",
+          "type": "category"
+        },
+        {
+          "name": "software application",
+          "type": "category"
+        },
+        {
+          "name": "software resource",
+          "type": "category"
+        },
+        {
+          "name": "software tool",
+          "type": "category"
+        }
+      ],
+      "keywords": [
+        {
+          "keyword": "differential"
+        },
+        {
+          "keyword": "gene"
+        },
+        {
+          "keyword": "expression"
+        },
+        {
+          "keyword": "analysis"
+        },
+        {
+          "keyword": "binominal"
+        },
+        {
+          "keyword": "distribution"
+        },
+        {
+          "keyword": "RNA-seq data"
+        },
+        {
+          "keyword": "Bioconductor"
+        },
+        {
+          "keyword": "bio.tools"
+        }
+      ],
+      "specification": [
+        {
+          "uri": ""
+        }
+      ],
+      "curie": "SCR_015687",
+      "availability": [
+        {
+          "description": "Free, Available for download, Freely available",
+          "keyword": "Free, Available for download, Freely available"
+        }
+      ],
+      "alternateIdentifiers": [
+        {
+          "identifier": "biotools:deseq2"
+        }
+      ],
+      "abbreviations": [
+        {
+          "name": ""
+        }
+      ],
+      "name": "DESeq2"
+    },
+    "authority": {
+      "name": "SciCrunch Registry",
+      "identifier": "SCR_005400",
+      "curie": "RRID:SCR_005400"
+    },
+    "distributions": {
+      "current": [
+        {
+          "type": "landing page",
+          "uri": "https://bioconductor.org/packages/release/bioc/html/DESeq2.html"
+        }
+      ],
+      "deprecated": [
+        {
+          "uri": ""
+        }
+      ],
+      "alternate": [
+        {
+          "uri": "https://github.com/mikelove/DESeq2"
+        },
+        {
+          "uri": "https://bio.tools/deseq2"
+        }
+      ]
+    },
+    "rrid": {
+      "is_unique": "true",
+      "curie": "RRID:SCR_015687",
+      "properCitation": "DESeq2 (RRID:SCR_015687)"
+    },
+    "disco": {
+      "v_uuid": "7b0bf80a-41aa-5437-8c7c-bca648a5b2d0"
+    },
+    "legal": {
+      "license": {
+        "name": "LGPL"
+      },
+      "terms": {
+        "uris": [
+          ""
+        ]
+      }
+    },
+    "graph": {
+      "related": [
+        {
+          "relationship": {
+            "identifier": "6",
+            "name": "is_related_to"
+          },
+          "resource": {
+            "name": "SARTools",
+            "identifier": "SCR_016533"
+          }
+        }
+      ],
+      "relationships": [
+        {
+          "relationship": {
+            "identifier": "2",
+            "name": "is_used_by"
+          },
+          "resource": {
+            "name": "Glimma",
+            "identifier": "SCR_017389"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "2",
+            "name": "is_used_by"
+          },
+          "resource": {
+            "name": "TEtranscripts",
+            "identifier": "SCR_023208"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "4",
+            "name": "is_listed_by"
+          },
+          "resource": {
+            "name": "Bioconductor",
+            "identifier": "SCR_006442"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "4",
+            "name": "is_listed_by"
+          },
+          "resource": {
+            "name": "bio.tools",
+            "identifier": "SCR_014695"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "4",
+            "name": "is_listed_by"
+          },
+          "resource": {
+            "name": "Debian",
+            "identifier": "SCR_006638"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "4",
+            "name": "is_listed_by"
+          },
+          "resource": {
+            "name": "SoftCite",
+            "identifier": "SCR_024411"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "6",
+            "name": "is_related_to"
+          },
+          "resource": {
+            "name": "SARTools",
+            "identifier": "SCR_016533"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "12",
+            "name": "works_with"
+          },
+          "resource": {
+            "name": "tximport",
+            "identifier": "SCR_016752"
+          }
+        }
+      ]
+    },
+    "diseases": {
+      "related": [
+        {
+          "name": "",
+          "role": "Related Disease"
+        }
+      ]
+    },
+    "supportingAwards": [
+      {
+        "agency": {
+          "name": "European Union’s 7th Framework Programme",
+          "identifier": ""
+        }
+      },
+      {
+        "agency": {
+          "name": "International Max Planck Research School for Computational Biology and Scientific Computing",
+          "identifier": ""
+        }
+      },
+      {
+        "agency": {
+          "name": "NCI",
+          "identifier": "T32 CA009337"
+        }
+      }
+    ],
+    "references": [
+      {
+        "curie": ""
+      }
+    ],
+    "organisms": {
+      "related": [
+        {
+          "role": "Related Species",
+          "species": {
+            "name": ""
+          }
+        }
+      ]
+    },
+    "organization": {
+      "hierarchy": []
+    },
+    "validation": {
+      "isValidated": false,
+      "totalValidationSites": {
+        "count": 0
+      }
+    },
+    "issues": {
+      "totalIssues": {
+        "count": 0
+      },
+      "status": [
+        "No Known Issues"
+      ]
+    },
+    "mentions": [
+      {
+        "totalRRIDMentions": {
+          "count": 1282
+        },
+        "totalResourceMentions": {
+          "count": 50257
+        },
+        "totalMentions": {
+          "count": 50789
+        },
+        "availability": {
+          "keyword": "available"
+        },
+        "timestamp": "2026-09-26 21:24:35.493"
+      }
+    ],
+    "recordValid": true
+  },
+  {
+    "item": {
+      "supercategory": [
+        {
+          "type": "supercategory",
+          "name": "Resource"
+        }
+      ],
+      "contentTypes": [
+        {
+          "name": "product",
+          "curie": "ilx:0381348"
+        }
+      ],
+      "language": "en",
+      "description": "Software tool to analyze TCR and BCR sequences using unselected RNA sequencing data, profiled from fluid and solid tissues, including tumors. Performs de novo assembly on V, J, C genes including the hypervariable complementarity-determining region 3 and reports consensus contigs of BCR/TCR sequences. TRUST4 then realigns the contigs to IMGT reference gene sequences to identify the corresponding gene and CDR3 details. TRUST4 supports both single-end and paired-end bulk or single-cell sequencing data with any read length.",
+      "identifier": "SCR_026162",
+      "docid": "rrid:scr_026162",
+      "uuid": "40e47ac1-2242-5225-9a43-9e12b0bb6df2",
+      "synonyms": [
+        {
+          "name": ""
+        }
+      ],
+      "types": [
+        {
+          "name": "data analysis software",
+          "type": "category"
+        },
+        {
+          "name": "data processing software",
+          "type": "category"
+        },
+        {
+          "name": "sequence analysis software",
+          "type": "category"
+        },
+        {
+          "name": "software application",
+          "type": "category"
+        },
+        {
+          "name": "software resource",
+          "type": "category"
+        },
+        {
+          "name": "source code",
+          "type": "category"
+        }
+      ],
+      "keywords": [
+        {
+          "keyword": "analyze TCR and BCR sequences"
+        },
+        {
+          "keyword": "de novo assembly"
+        },
+        {
+          "keyword": "unselected RNA sequencing data"
+        },
+        {
+          "keyword": "fluid and solid tissues"
+        },
+        {
+          "keyword": "tumors"
+        },
+        {
+          "keyword": ""
+        }
+      ],
+      "specification": [
+        {
+          "uri": ""
+        }
+      ],
+      "curie": "SCR_026162",
+      "availability": [
+        {
+          "description": "Free, Available for download, Freely available",
+          "keyword": "Free, Available for download, Freely available"
+        }
+      ],
+      "alternateIdentifiers": [
+        {
+          "identifier": ""
+        }
+      ],
+      "abbreviations": [
+        {
+          "name": ""
+        }
+      ],
+      "name": "TRUST4"
+    },
+    "authority": {
+      "name": "SciCrunch Registry",
+      "identifier": "SCR_005400",
+      "curie": "RRID:SCR_005400"
+    },
+    "distributions": {
+      "current": [
+        {
+          "type": "landing page",
+          "uri": "https://github.com/liulab-dfci/TRUST4"
+        }
+      ],
+      "deprecated": [
+        {
+          "uri": ""
+        }
+      ],
+      "alternate": [
+        {
+          "uri": ""
+        }
+      ]
+    },
+    "rrid": {
+      "is_unique": "true",
+      "curie": "RRID:SCR_026162",
+      "properCitation": "TRUST4 (RRID:SCR_026162)"
+    },
+    "disco": {
+      "v_uuid": "40e47ac1-2242-5225-9a43-9e12b0bb6df2"
+    },
+    "legal": {
+      "license": {
+        "name": "MIT license"
+      },
+      "terms": {
+        "uris": [
+          ""
+        ]
+      }
+    },
+    "graph": {
+      "relationships": [
+        {
+          "relationship": {
+            "identifier": "",
+            "name": ""
+          },
+          "resource": {
+            "name": "",
+            "identifier": ""
+          }
+        }
+      ]
+    },
+    "diseases": {
+      "related": [
+        {
+          "name": "",
+          "role": "Related Disease"
+        }
+      ]
+    },
+    "supportingAwards": [
+      {
+        "agency": {
+          "name": "NCI",
+          "identifier": "U01CA226196"
+        }
+      },
+      {
+        "agency": {
+          "name": "NCI",
+          "identifier": "U24CA224316"
+        }
+      }
+    ],
+    "references": [
+      {
+        "curie": "PMID:33986545"
+      }
+    ],
+    "organisms": {
+      "related": [
+        {
+          "role": "Related Species",
+          "species": {
+            "name": ""
+          }
+        }
+      ]
+    },
+    "organization": {
+      "hierarchy": []
+    },
+    "validation": {
+      "isValidated": false,
+      "totalValidationSites": {
+        "count": 0
+      }
+    },
+    "issues": {
+      "totalIssues": {
+        "count": 0
+      },
+      "status": [
+        "No Known Issues"
+      ]
+    },
+    "mentions": [
+      {
+        "totalRRIDMentions": {
+          "count": 4
+        },
+        "totalResourceMentions": {
+          "count": 10
+        },
+        "totalMentions": {
+          "count": 12
+        },
+        "availability": {
+          "keyword": "available"
+        },
+        "timestamp": "2026-09-26 21:28:16.086"
+      }
+    ],
+    "recordValid": true
+  },
+  {
+    "item": {
+      "supercategory": [
+        {
+          "type": "supercategory",
+          "name": "Resource"
+        }
+      ],
+      "contentTypes": [
+        {
+          "name": "product",
+          "curie": "ilx:0381348"
+        }
+      ],
+      "language": "en",
+      "description": "Interactive portal for finding and submitting biomedical resources. Resources within SciCrunch have assigned RRIDs which are used to cite resources in scientific manuscripts. SciCrunch Registry, formerly NIF Registry, provides resources catalog. Allows to add new resources. Allows edit existing resources after registration. Curators are tasked with identifying and registering resources, examining data, writing configuration files to index and display data and keeping contents current.",
+      "identifier": "SCR_005400",
+      "docid": "rrid:scr_005400",
+      "uuid": "04eb383e-0b4a-5fd8-9434-7adeaef548e7",
+      "synonyms": [
+        {
+          "name": "NIF Registry"
+        },
+        {
+          "name": "The SciCrunch Registry"
+        },
+        {
+          "name": "SC Registry"
+        },
+        {
+          "name": "SciCrunch Registry"
+        },
+        {
+          "name": "SciCrunch Resource Registry"
+        }
+      ],
+      "types": [
+        {
+          "name": "data or information resource",
+          "type": "category"
+        },
+        {
+          "name": "database",
+          "type": "category"
+        }
+      ],
+      "keywords": [
+        {
+          "keyword": "RIN"
+        },
+        {
+          "keyword": "Resource Information Network"
+        },
+        {
+          "keyword": "nih initiative"
+        },
+        {
+          "keyword": "interactive portal"
+        },
+        {
+          "keyword": "rrid"
+        },
+        {
+          "keyword": "RRID Community Authority"
+        }
+      ],
+      "specification": [
+        {
+          "uri": ""
+        }
+      ],
+      "curie": "SCR_005400",
+      "availability": [
+        {
+          "description": "Free, Freely available",
+          "keyword": "Free, Freely available"
+        }
+      ],
+      "alternateIdentifiers": [
+        {
+          "identifier": "nlx_144509"
+        }
+      ],
+      "abbreviations": [
+        {
+          "name": ""
+        }
+      ],
+      "name": "SciCrunch Registry"
+    },
+    "authority": {
+      "name": "SciCrunch Registry",
+      "identifier": "SCR_005400",
+      "curie": "RRID:SCR_005400"
+    },
+    "distributions": {
+      "current": [
+        {
+          "type": "landing page",
+          "uri": "https://rrid.site/rin/sources/SCR_005400"
+        }
+      ],
+      "deprecated": [
+        {
+          "uri": "https://scicrunch.org/scicrunch/about/sources/nlx_144509-1"
+        },
+        {
+          "uri": "http://neuinfo.org/nif/nifgwt.html?tab=registry"
+        },
+        {
+          "uri": "https://neuinfo.org/mynif/search.php?q=*&t=indexable&nif=nlx_144509-1"
+        },
+        {
+          "uri": "https://neuinfo.org/mynif/search.php?q=*&t=registry"
+        }
+      ],
+      "alternate": [
+        {
+          "uri": "https://scicrunch.org/scicrunch/data/source/nlx_144509-1/search"
+        },
+        {
+          "uri": "https://scicrunch.org/browse/dashboard"
+        },
+        {
+          "uri": "https://scicrunch.org/scicrunch/Resources/search?q=*"
+        }
+      ]
+    },
+    "rrid": {
+      "is_unique": "true",
+      "curie": "RRID:SCR_005400",
+      "properCitation": "SciCrunch Registry (RRID:SCR_005400)"
+    },
+    "disco": {
+      "v_uuid": "04eb383e-0b4a-5fd8-9434-7adeaef548e7"
+    },
+    "graph": {
+      "parent": [
+        {
+          "relationship": {
+            "identifier": "7",
+            "name": "has_parent_organization"
+          },
+          "resource": {
+            "name": "Neuroscience Information Framework",
+            "identifier": "SCR_002894"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "7",
+            "name": "has_parent_organization"
+          },
+          "resource": {
+            "name": "NeuroLex",
+            "identifier": "SCR_005402"
+          }
+        }
+      ],
+      "related": [
+        {
+          "relationship": {
+            "identifier": "6",
+            "name": "is_related_to"
+          },
+          "resource": {
+            "name": "NIF Web Services",
+            "identifier": "SCR_001631"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "6",
+            "name": "is_related_to"
+          },
+          "resource": {
+            "name": "bioDBcore",
+            "identifier": "SCR_002781"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "6",
+            "name": "is_related_to"
+          },
+          "resource": {
+            "name": "NeuroLex",
+            "identifier": "SCR_005402"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "6",
+            "name": "is_related_to"
+          },
+          "resource": {
+            "name": "Integrated Manually Extracted Annotation",
+            "identifier": "SCR_008876"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "6",
+            "name": "is_related_to"
+          },
+          "resource": {
+            "name": "FAIR Data Informatics Laboratory",
+            "identifier": "SCR_019235"
+          }
+        }
+      ],
+      "relationships": [
+        {
+          "relationship": {
+            "identifier": "2",
+            "name": "is_used_by"
+          },
+          "resource": {
+            "name": "NIF Data Federation",
+            "identifier": "SCR_004834"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "2",
+            "name": "is_used_by"
+          },
+          "resource": {
+            "name": "Aging Portal",
+            "identifier": "SCR_000496"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "2",
+            "name": "is_used_by"
+          },
+          "resource": {
+            "name": "Resource Identification Portal",
+            "identifier": "SCR_004098"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "2",
+            "name": "is_used_by"
+          },
+          "resource": {
+            "name": "Integrated Datasets",
+            "identifier": "SCR_010503"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "3",
+            "name": "recommends"
+          },
+          "resource": {
+            "name": "Resource Identification Portal",
+            "identifier": "SCR_004098"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "3",
+            "name": "is_recommended_by"
+          },
+          "resource": {
+            "name": "Resource Identification Portal",
+            "identifier": "SCR_004098"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "4",
+            "name": "is_listed_by"
+          },
+          "resource": {
+            "name": "FORCE11",
+            "identifier": "SCR_005334"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "4",
+            "name": "is_listed_by"
+          },
+          "resource": {
+            "name": "Resource Information Network",
+            "identifier": "SCR_023186"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "6",
+            "name": "is_related_to"
+          },
+          "resource": {
+            "name": "NIF Web Services",
+            "identifier": "SCR_001631"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "6",
+            "name": "is_related_to"
+          },
+          "resource": {
+            "name": "bioDBcore",
+            "identifier": "SCR_002781"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "6",
+            "name": "is_related_to"
+          },
+          "resource": {
+            "name": "NeuroLex",
+            "identifier": "SCR_005402"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "6",
+            "name": "is_related_to"
+          },
+          "resource": {
+            "name": "Integrated Manually Extracted Annotation",
+            "identifier": "SCR_008876"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "6",
+            "name": "is_related_to"
+          },
+          "resource": {
+            "name": "FAIR Data Informatics Laboratory",
+            "identifier": "SCR_019235"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "7",
+            "name": "has_parent_organization"
+          },
+          "resource": {
+            "name": "Neuroscience Information Framework",
+            "identifier": "SCR_002894"
+          }
+        },
+        {
+          "relationship": {
+            "identifier": "7",
+            "name": "has_parent_organization"
+          },
+          "resource": {
+            "name": "NeuroLex",
+            "identifier": "SCR_005402"
+          }
+        }
+      ]
+    },
+    "legal": {
+      "license": {
+        "name": "Creative Commons Attribution License"
+      },
+      "terms": {
+        "uris": [
+          ""
+        ]
+      }
+    },
+    "diseases": {
+      "related": [
+        {
+          "name": "",
+          "role": "Related Disease"
+        }
+      ]
+    },
+    "supportingAwards": [
+      {
+        "agency": {
+          "name": "Department of Health and Human Services",
+          "identifier": "HHSN271200577531C"
+        }
+      },
+      {
+        "agency": {
+          "name": "NIDA",
+          "identifier": ""
+        }
+      }
+    ],
+    "references": [
+      {
+        "curie": "PMID:22434839"
+      }
+    ],
+    "organisms": {
+      "related": [
+        {
+          "role": "Related Species",
+          "species": {
+            "name": ""
+          }
+        }
+      ]
+    },
+    "organization": {
+      "hierarchy": []
+    },
+    "validation": {
+      "isValidated": false,
+      "totalValidationSites": {
+        "count": 0
+      }
+    },
+    "issues": {
+      "totalIssues": {
+        "count": 0
+      },
+      "status": [
+        "No Known Issues"
+      ]
+    },
+    "mentions": [
+      {
+        "totalRRIDMentions": {
+          "count": 8
+        },
+        "totalResourceMentions": {
+          "count": 6
+        },
+        "totalMentions": {
+          "count": 8
+        },
+        "availability": {
+          "keyword": "available"
+        },
+        "timestamp": "2026-09-26 21:25:53.393"
+      }
+    ],
+    "recordValid": true
+  }
+]

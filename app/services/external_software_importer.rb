@@ -1,4 +1,23 @@
 class ExternalSoftwareImporter
+  def repository_url?(url)
+    uri = URI.parse(url)
+    segments = uri.path.split("/").reject(&:blank?)
+    return false if segments.any? { |segment| !segment.match?(/\A[a-z0-9_.-]+\z/i) || %w[. ..].include?(segment) }
+    case uri.host
+    when "github.com"
+      segments.size == 2 && MetadataRepositoryImporter.valid_github_owner?(segments.first) &&
+        !MetadataRepositoryImporter::GITHUB_RESERVED_OWNERS.include?(segments.first)
+    when "bitbucket.org"
+      segments.size == 2 && !%w[account product support].include?(segments.first)
+    else
+      gitlab_hosts.include?(uri.host) && segments.size >= 2 && !MetadataRepositoryImporter::GITLAB_RESERVED_ROOTS.include?(segments.first)
+    end
+  end
+
+  def gitlab_hosts
+    @gitlab_hosts ||= ExternalRepositoryDiscovery.new.gitlab_hosts
+  end
+
   def repository_matches(entities)
     urls = entities.flat_map { |entity| repository_statements(entity).pluck(:repository_url) }.uniq
     urls.each_slice(100).flat_map { |batch| ProjectRepositoryLookup.call(batch) }.index_by { |entry| entry[:input_url] }

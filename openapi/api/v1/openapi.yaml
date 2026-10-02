@@ -274,7 +274,7 @@ paths:
       description: >-
         Read cached external software identifiers and source-code repository relationships
         for a visible project. Ambiguous candidates are retained. Metadata contains the
-        original source record, including Wikidata claims, bio.tools annotations, ASCL or swMATH metadata. Missing or
+        original source record, including Wikidata claims, bio.tools annotations, ASCL, swMATH or RRID metadata. Missing or
         failed source refreshes retain the last successful evidence and retrieval date.
         An empty list does not establish absence from external sources. No source requests,
         project writes or job scheduling occur during this request.
@@ -324,6 +324,7 @@ paths:
                           source_url: {type: string, format: uri, description: Original URL before a documented transformation}
                           url_transformation: {type: string, example: github_pages}
                           collection_url: {type: string, format: uri, example: 'https://ascl.net/code/json'}
+                          source_record_url: {type: string, format: uri, example: 'https://scicrunch.org/resolver/SCR_015687'}
                           source_license: {type: string, example: CC-BY-SA-4.0}
                           match_method: {type: string, enum: [project.url, repository_alias]}
                           ambiguous: {type: boolean}

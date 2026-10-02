@@ -155,7 +155,7 @@ RESTART=true bundle exec rake biotools:sweep
 
 `LIMIT` on `biotools:sweep` sets a page size between 1 and 50; omit it when resuming. A completed sweep requires `RESTART=true` to begin another catalogue pass. Page-number pagination can shift when upstream records are removed, so later passes are needed to revisit the catalogue. `biotools:resume biotools:refresh` runs every ten minutes, recovering due unfinished sweeps and queuing up to 100 due source records. Recovery does not start a sweep or restart a completed one. Individual records have the same 30-day success, seven-day missing and one-hour failure intervals as Wikidata; rate limits share a separate bio.tools cooldown and honor `Retry-After`.
 
-Project pages display an **Elsewhere** section linking confirmed Wikidata, bio.tools, ASCL and swMATH identifiers, including projects whose repository sync has not finished. Ambiguous and missing records are omitted; an unsuccessful refresh retains the last confirmed reference. The paginated external-identifiers API exposes the full cached source record, match evidence and canonical `record_url`. Neither display path fetches source data or changes scores. The cached homepage source breakdown labels this source `bio.tools` and counts each scientific project once for it.
+Project pages display an **Elsewhere** section linking confirmed Wikidata, bio.tools, ASCL, swMATH and RRID identifiers, including projects whose repository sync has not finished. Ambiguous and missing records are omitted; an unsuccessful refresh retains the last confirmed reference. The paginated external-identifiers API exposes the full cached source record, match evidence and canonical `record_url`. Neither display path fetches source data or changes scores. The cached homepage source breakdown labels this source `bio.tools` and counts each scientific project once for it.
 
 ## ASCL enrichment
 
@@ -196,6 +196,29 @@ RESTART=true bundle exec rake swmath:sweep
 Sweeps request up to 50 full records, validate ascending IDs and the returned cursor, and save each page before matching. Continuations wait 15 seconds. Retries reuse saved records; incomplete pages and unexpected missing responses leave progress unchanged. The scheduled `swmath:resume swmath:refresh` runs every ten minutes, recovering unfinished sweeps and queuing up to 100 due records. Completed sweeps require an explicit restart. Refresh intervals are 30 days after success, seven days for a confirmed missing record, and an hour after failure, with a shared cooldown for rate limits.
 
 Project pages link to the record on zbMATH Open, and the API retains source metadata, repository evidence, the collection URL and `CC-BY-SA-4.0` attribution. The API withholds some descriptions and publication text because of conflicting licences; its placeholder text remains in the raw record. swMATH uses the existing source-record indexes and cached homepage counts, with no source requests during page rendering.
+
+## RRID / SciCrunch enrichment
+
+The October 2026 audit checked DESeq2, fMRIPrep, TRUST4, FieldTrip, IDR, redbiom, SomaDataIO and CNVrd2, plus SciCrunch Registry as a non-software control. All nine returned JSON through the [public RRID resolver](https://docs.scicrunch.io/elasticsearch-metadata-services/resource-information-network-rin-services/the-rrid-resolver) without a key. An unknown identifier returned HTTP 404 with zero hits. The `SCR_` prefix alone does not identify software: the control record describes a database, while the eight software records have software-specific resource types.
+
+Six software records supplied explicit GitHub URLs in current or alternate distributions. Four matched existing Science projects, including DESeq2 through its former `mikelove/DESeq2` URL; TRUST4 and IDR had no match. fMRIPrep and FieldTrip supplied homepages without repository URLs. Among the five corresponding bio.tools records retrieved, only DESeq2 included an RRID. The current RSEc copies of DESeq2, fMRIPrep and TRUST4 preserved those identifier fields but did not contain SciCrunch's grant identifiers. The DESeq2 Wikidata record checked did not contain an RRID. These are sample comparisons, not estimates of catalogue coverage.
+
+Direct records add proper RRID citations, funding identifiers and typed resource relationships. For example, [TRUST4](https://scicrunch.org/resolver/SCR_026162.json) includes NCI grants U01CA226196 and U24CA224316, absent from its compared bio.tools record. [DESeq2](https://scicrunch.org/resolver/SCR_015687.json) includes grant T32 CA009337 and relationships such as `works_with` and `is_used_by`. These relationships describe resources rather than equivalent identities. Institution hierarchies were empty in the eight software samples, so institutional coverage remains unverified. A raw record's software licence also differs from the licence governing registry metadata.
+
+Known software RRIDs are resolved and cached in the existing source tables. Matching accepts current and alternate repository URLs for valid, unique software resources, using the shared normalizer and aliases. It retains the RRID, raw source metadata and resolver collection URL. Confirmed references appear on project pages and in the external-identifiers API, with distinct scientific-project counts included in the cached homepage breakdown. Generic homepages and names do not establish identity. The importer links existing projects without changing Science Score or creating projects.
+
+```sh
+IDS=SCR_015687,SCR_026162 bundle exec rake rrid:import
+bundle exec rake rrid:seed
+bundle exec rake rrid:status
+LIMIT=100 bundle exec rake rrid:refresh
+```
+
+`rrid:seed` scans cached bio.tools records in pages of at most 50, extracting explicit RRID `otherID` values. Each saved page inserts only missing source records and advances its cursor in the same transaction. Repeated identifiers share one record, and existing refresh dates remain unchanged. The scan uses the source-and-identifier index and does not read the project table. `rrid:resume rrid:refresh` runs every ten minutes; a daily `rrid:rescan` repeats an already enabled seed pass to pick up new or changed bio.tools records. Neither schedule starts the first seed pass.
+
+Resolver batches contain at most 50 IDs. Successful records refresh after 30 days, confirmed missing records after seven days, and failures after an hour. Rate limits share a cooldown and respect `Retry-After`. Transient failures retain prior metadata and visible references; confirmed missing records hide references while retaining their evidence. A response with a different primary RRID is treated as an error until alias handling is verified. No API key is required for these resolver requests.
+
+Broad discovery uses the authenticated [RIN search API](https://docs.scicrunch.io/elasticsearch-metadata-services/resource-information-network-rin-services/searching-rin-indices). An October 2026 probe using `SCICRUNCH_API_KEY` returned 10,242 records for the `software resource` type in `RIN_Tool_pr`; two five-record scroll pages returned ten distinct identifiers. The [bulk-download procedure](https://docs.scicrunch.io/elasticsearch-metadata-services/resource-information-network-rin-services/download-larger-datasets) supports reading beyond the 10,000-result paging limit. A full sweep and recovery from expired scrolls remain unimplemented. The published gateway limit is ten requests per second per user; it does not establish the public resolver's limit.
 
 ## Repository discovery from cached sources
 
