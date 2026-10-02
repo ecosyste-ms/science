@@ -155,7 +155,7 @@ RESTART=true bundle exec rake biotools:sweep
 
 `LIMIT` on `biotools:sweep` sets a page size between 1 and 50; omit it when resuming. A completed sweep requires `RESTART=true` to begin another catalogue pass. Page-number pagination can shift when upstream records are removed, so later passes are needed to revisit the catalogue. `biotools:resume biotools:refresh` runs every ten minutes, recovering due unfinished sweeps and queuing up to 100 due source records. Recovery does not start a sweep or restart a completed one. Individual records have the same 30-day success, seven-day missing and one-hour failure intervals as Wikidata; rate limits share a separate bio.tools cooldown and honor `Retry-After`.
 
-Project pages display an **Elsewhere** section linking confirmed Wikidata, bio.tools, ASCL, swMATH and RRID identifiers, including projects whose repository sync has not finished. Ambiguous and missing records are omitted; an unsuccessful refresh retains the last confirmed reference. The paginated external-identifiers API exposes the full cached source record, match evidence and canonical `record_url`. Neither display path fetches source data or changes scores. The cached homepage source breakdown labels this source `bio.tools` and counts each scientific project once for it.
+Project pages display an **Elsewhere** section linking confirmed Wikidata, bio.tools, ASCL, swMATH, RRID and software DOI identifiers, including projects whose repository sync has not finished. Ambiguous and missing records are omitted; an unsuccessful refresh retains the last confirmed reference. The paginated external-identifiers API exposes the full cached source record, match evidence and canonical `record_url`. Neither display path fetches source data or changes scores. The cached homepage source breakdown labels this source `bio.tools` and counts each scientific project once for it.
 
 ## ASCL enrichment
 
@@ -229,6 +229,27 @@ RESTART=true bundle exec rake rrid:sweep
 Each request sorts by `item.identifier.aggregate` and filters for IDs greater than the saved cursor, with at most 50 records per page. This avoids offset pagination's 10,000-result limit and does not retain an upstream scroll session. Pages must have complete shard results, ascending unique IDs, matching sort values and the expected number of records. A page is saved before matching; retries reuse it and preserve any newer resolver result. Continuations wait 15 seconds. A completed sweep requires an explicit restart, which also revisits records added or changed behind the cursor.
 
 Catalogue and resolver imports share one source record per RRID. The latest successful collection endpoint is stored separately from the raw metadata and included in matching evidence and the API response. Transient failures retain both. Cached RRID repository candidates participate in the existing discovery task; changing mention counts alone does not request another project sync. The published gateway limit is ten requests per second per user; it does not establish the public resolver's limit.
+
+## Software DOI enrichment through DataCite and Zenodo
+
+The October 2026 audit compared exact records for Photutils, Astropy, EKO and a Figshare software deposit through the [DataCite REST API](https://support.datacite.org/docs/api) and [Zenodo API](https://developers.zenodo.org/). DataCite supplied typed relationships, contributors and funding identifiers. EKO's Zenodo record supplied a code repository absent from its DataCite relationships, plus grant programme and acronym fields. The Photutils concept endpoint redirected to a release record; both identifiers must be retained. A repository for an Astropy paper was also classified as software and pointed to the paper's own repository, so classification and name similarity cannot establish identity with Astropy itself.
+
+The importer starts with software DOIs already present in indexed scientific projects. It reads root CFF identifiers, CodeMeta identifiers and `.zenodo.json` DOIs, excluding preferred citations, reference publications and CFF datasets. Each pass reads at most 25 projects per page through a partial DOI index, selecting only the identifier and citation metadata columns. Existing source records keep their refresh dates. Saved seed insertion and cursor advancement share a transaction; daily rescans run only after the first manual seed pass.
+
+```sh
+bundle exec rake software_dois:seed
+bundle exec rake software_dois:status
+IDS=10.5281/zenodo.596036 bundle exec rake software_dois:import
+LIMIT=100 bundle exec rake software_dois:refresh
+```
+
+Each normalized DOI has one `doi` source record. Requests retain the raw DataCite resource and, for software DOIs under `10.5281/zenodo.`, the raw Zenodo record. DataCite requests include affiliation and publisher identifiers. Matching uses explicit code repositories, repository aliases and exact software DOI seeds; the existing DOI GIN index narrows candidates before their citation metadata is checked again. More than 100 candidate projects produces an error instead of loading further candidates. Multiple software seed matches remain ambiguous. Citation and dependency relationships do not establish identity, and this importer does not create projects or change Science Score.
+
+Project pages group confirmed version families under one concept DOI, labeled Zenodo for Zenodo identifiers and DOI otherwise. The external-identifiers API keeps each release, its relationship and both collection routes. The cached homepage counts distinct scientific projects under Software DOIs. Page rendering reads compact identifier columns and makes no source requests.
+
+`software_dois:resume software_dois:refresh` runs every ten minutes. Jobs process at most 25 DOIs, refresh successful records after 30 days and records missing from DataCite after seven days. Errors retry after an hour; service-specific cooldowns respect `Retry-After`. Failed DataCite or Zenodo retrieval retains previous metadata and references. A record confirmed missing from DataCite hides its reference while retaining the prior evidence; this does not establish that the DOI is absent from other registration agencies. Neither API requires a key for these public reads.
+
+The wider DataCite software catalogue is outside this seed pass. [The sampling follow-up](https://github.com/ecosyste-ms/science/issues/256) will examine resource types, release duplication, repository coverage and import costs before wider discovery is enabled. Documented harvesting by other registries does not establish equivalent record or field coverage.
 
 ## Repository discovery from cached sources
 

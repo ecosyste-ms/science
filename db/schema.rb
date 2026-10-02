@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_02_163000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_02_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -172,6 +172,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_163000) do
     t.jsonb "discovery_result", default: {}, null: false
     t.text "discovery_error"
     t.string "collection_url"
+    t.string "concept_identifier"
     t.index ["next_discovery_at", "id"], name: "index_external_records_pending_discovery", where: "(((status)::text = 'ok'::text) AND (next_discovery_at IS NOT NULL))"
     t.index ["source", "identifier"], name: "index_external_software_records_on_source_and_identifier", unique: true
     t.index ["source", "next_refresh_at", "id"], name: "index_external_software_records_on_refresh"
@@ -649,6 +650,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_163000) do
     t.index ["id"], name: "index_projects_pending_dependency_index", where: "(((dependencies IS NOT NULL) OR (brief ? 'dependencies'::text)) AND (dependencies_indexed_at IS NULL) AND (dependencies_index_error IS NULL))"
     t.index ["id"], name: "index_projects_pending_joss_publications", where: "((joss_publication_indexed_at IS NULL) AND (joss_publication_index_error IS NULL) AND ((joss_metadata IS NOT NULL) OR (joss_publication_source_digest IS NOT NULL)))"
     t.index ["id"], name: "index_projects_pending_repository_aliases", where: "((repository IS NOT NULL) AND (repository_aliases_indexed_at IS NULL))"
+    t.index ["id"], name: "index_projects_with_doi_seeds", where: "(search_identifiers ? 'doi'::text)"
     t.index ["joss_publication_index_version", "id"], name: "index_projects_on_joss_publication_version", where: "((joss_metadata IS NOT NULL) OR (joss_publication_source_digest IS NOT NULL))"
     t.index ["owner_id"], name: "index_projects_on_owner_id"
     t.index ["reviewed"], name: "index_projects_on_reviewed"

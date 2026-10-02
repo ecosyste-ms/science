@@ -274,7 +274,10 @@ paths:
       description: >-
         Read cached external software identifiers and source-code repository relationships
         for a visible project. Ambiguous candidates are retained. Metadata contains the
-        original source record, including Wikidata claims, bio.tools annotations, ASCL, swMATH or RRID metadata. Missing or
+        original source record, including Wikidata claims, bio.tools annotations, ASCL, swMATH or RRID metadata.
+        For the doi scheme, metadata contains the normalized doi, the DataCite resource under datacite
+        and, when available, a Zenodo record under zenodo. Individual release DOIs remain separate;
+        concept_identifier records their version family. Missing or
         failed source refreshes retain the last successful evidence and retrieval date.
         An empty list does not establish absence from external sources. No source requests,
         project writes or job scheduling occur during this request.
@@ -302,8 +305,9 @@ paths:
                     id: {type: integer}
                     scheme: {type: string, example: wikidata}
                     identifier: {type: string, example: Q5971368}
+                    concept_identifier: {type: string, nullable: true, description: Concept or parent DOI used to group a confirmed version family}
                     record_url: {type: string, format: uri, nullable: true, example: 'https://www.wikidata.org/wiki/Q5971368'}
-                    relationship: {type: string, example: source_code_repository}
+                    relationship: {type: string, example: source_code_repository, description: 'Source-code repository relationship, or software, software_version or software_concept for DOI records'}
                     match_status: {type: string, enum: [matched, ambiguous]}
                     source_status: {type: string, enum: [pending, ok, missing, error]}
                     retrieved_at: {type: string, format: date-time, nullable: true}
@@ -319,6 +323,8 @@ paths:
                           statement_id: {type: string}
                           repository_url: {type: string}
                           normalized_url: {type: string}
+                          normalized_doi: {type: string}
+                          source_relation: {type: string, description: Relationship stated by the original source}
                           rank: {type: string, enum: [normal, preferred]}
                           source_field: {type: string, example: link}
                           source_type: {type: string, example: Repository}
@@ -327,7 +333,7 @@ paths:
                           collection_url: {type: string, format: uri, example: 'https://ascl.net/code/json'}
                           source_record_url: {type: string, format: uri, example: 'https://scicrunch.org/resolver/SCR_015687'}
                           source_license: {type: string, example: CC-BY-SA-4.0}
-                          match_method: {type: string, enum: [project.url, repository_alias]}
+                          match_method: {type: string, enum: [project.url, repository_alias, software_doi]}
                           ambiguous: {type: boolean}
                     metadata: {type: object, additionalProperties: true}
         404:

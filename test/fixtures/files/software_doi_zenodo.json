@@ -1,0 +1,554 @@
+[
+  {
+    "created": "2026-04-17T22:25:06.157161+00:00",
+    "modified": "2026-04-17T22:25:06.312933+00:00",
+    "id": 19636730,
+    "conceptrecid": "596036",
+    "doi": "10.5281/zenodo.19636730",
+    "conceptdoi": "10.5281/zenodo.596036",
+    "doi_url": "https://doi.org/10.5281/zenodo.19636730",
+    "metadata": {
+      "title": "Photutils",
+      "doi": "10.5281/zenodo.19636730",
+      "publication_date": "2026-04-18",
+      "description": "Astropy package for source detection and photometry",
+      "access_right": "open",
+      "creators": [
+        {
+          "name": "Bradley, Larry",
+          "affiliation": "Space Telescope Science Institute, 3700 San Martin Drive, Baltimore, MD 21218, USA",
+          "orcid": "0000-0002-7908-9284"
+        },
+        {
+          "name": "Sipőcz, Brigitta M.",
+          "affiliation": "IPAC, MC 100-22, Caltech, 1200E. California Blvd. Pasadena, CA 91125",
+          "orcid": "0000-0002-3713-6337"
+        },
+        {
+          "name": "Robitaille, T. P.",
+          "affiliation": "Aperio Software Ltd., Headingley Enterprise and Arts Centre, Bennett Road, Leeds, LS6 3HN, United Kingdom",
+          "orcid": "0000-0002-8642-1329"
+        },
+        {
+          "name": "Tollerud, E. J.",
+          "affiliation": "Space Telescope Science Institute, 3700 San Martin Dr., Baltimore, MD 21218, USA",
+          "orcid": "0000-0002-9599-310X"
+        },
+        {
+          "name": "Vinícius, Zé",
+          "affiliation": null
+        },
+        {
+          "name": "Deil, Christoph",
+          "affiliation": null,
+          "orcid": "0000-0002-4198-4005"
+        },
+        {
+          "name": "Barbary, Kyle",
+          "affiliation": null,
+          "orcid": "0000-0002-2532-3696"
+        },
+        {
+          "name": "Wilson, Tom J.",
+          "affiliation": null,
+          "orcid": "0000-0001-6352-9735"
+        },
+        {
+          "name": "Busko, Ivo",
+          "affiliation": null
+        },
+        {
+          "name": "Donath, Axel",
+          "affiliation": "Harvard-Smithsonian Center for Astrophysics, 60 Garden St., Cambridge, MA, 02138, USA",
+          "orcid": "0000-0003-4568-7005"
+        },
+        {
+          "name": "Günther, Hans Moritz",
+          "affiliation": "MIT Kavli Institute for Astrophysics and Space Research, 77 Massachusetts Avenue, Cambridge, MA 02139, USA",
+          "orcid": "0000-0003-4243-2840"
+        },
+        {
+          "name": "Cara, Mihai",
+          "affiliation": "Space Telescope Science Institute, 3700 San Martin Drive, Baltimore, MD 21218, USA",
+          "orcid": "0000-0002-9294-6551"
+        },
+        {
+          "name": "Lim, P. L.",
+          "affiliation": "Space Telescope Science Institute, 3700 San Martin Dr., Baltimore, MD 21218, USA",
+          "orcid": "0000-0003-0079-4114"
+        },
+        {
+          "name": "Meßlinger, Sebastian",
+          "affiliation": null
+        },
+        {
+          "name": "Conseil, Simon",
+          "affiliation": null,
+          "orcid": "0000-0002-3657-4191"
+        },
+        {
+          "name": "Droettboom, Michael",
+          "affiliation": null
+        },
+        {
+          "name": "Bostroem, K. Azalee",
+          "affiliation": null,
+          "orcid": "0000-0002-4924-444X"
+        },
+        {
+          "name": "Bray, E. M.",
+          "affiliation": null
+        },
+        {
+          "name": "Bratholm, Lars Andersen",
+          "affiliation": null,
+          "orcid": "0000-0002-3565-5926"
+        },
+        {
+          "name": "Burnett, Zach",
+          "affiliation": "Space Telescope Science Institute, 3700 San Martin Drive, Baltimore, MD 21218, USA"
+        },
+        {
+          "name": "Jamieson, William",
+          "affiliation": "Space Telescope Science Institute, 3700 San Martin Drive, Baltimore, MD 21218, USA",
+          "orcid": "0000-0001-5976-4492"
+        },
+        {
+          "name": "Ginsburg, Adam",
+          "affiliation": null,
+          "orcid": "0000-0001-6431-9633"
+        },
+        {
+          "name": "Taranu, Dan",
+          "affiliation": null,
+          "orcid": "0000-0001-6268-1882"
+        },
+        {
+          "name": "Barentsen, Geert",
+          "affiliation": null,
+          "orcid": "0000-0002-3306-3484"
+        },
+        {
+          "name": "Craig, Matthew W.",
+          "affiliation": null,
+          "orcid": "0000-0001-7988-8919"
+        },
+        {
+          "name": "Morris, Brett M.",
+          "affiliation": "Space Telescope Science Institute, 3700 San Martin Drive, Baltimore, MD 21218, USA",
+          "orcid": "0000-0003-2528-3409"
+        },
+        {
+          "name": "Perrin, Marshall",
+          "affiliation": "Space Telescope Science Institute, 3700 San Martin Drive, Baltimore, MD 21218, USA",
+          "orcid": "0000-0002-3191-8151"
+        },
+        {
+          "name": "Rathi, Shivangee",
+          "affiliation": null,
+          "orcid": "0000-0002-4859-8203"
+        }
+      ],
+      "keywords": [
+        "Astronomy software",
+        "Astronomy data analysis",
+        "Photometry",
+        "Image Data Analysis",
+        "Open source software"
+      ],
+      "related_identifiers": [
+        {
+          "identifier": "https://github.com/astropy/photutils/tree/3.0.0",
+          "relation": "isSupplementTo",
+          "resource_type": "software",
+          "scheme": "url"
+        }
+      ],
+      "version": "3.0.0",
+      "custom": {
+        "code:codeRepository": "https://github.com/astropy/photutils"
+      },
+      "resource_type": {
+        "title": "Software",
+        "type": "software"
+      },
+      "license": {
+        "id": "bsd-3-clause"
+      },
+      "relations": {
+        "version": [
+          {
+            "index": 29,
+            "is_last": true,
+            "parent": {
+              "pid_type": "recid",
+              "pid_value": "596036"
+            }
+          }
+        ]
+      },
+      "notes": "If you use this software, please cite it as below."
+    },
+    "title": "Photutils",
+    "links": {
+      "self": "https://zenodo.org/api/records/19636730",
+      "self_html": "https://zenodo.org/records/19636730",
+      "preview_html": "https://zenodo.org/records/19636730?preview=1",
+      "doi": "https://doi.org/10.5281/zenodo.19636730",
+      "self_doi": "https://doi.org/10.5281/zenodo.19636730",
+      "self_doi_html": "https://zenodo.org/doi/10.5281/zenodo.19636730",
+      "reserve_doi": "https://zenodo.org/api/records/19636730/draft/pids/doi",
+      "parent": "https://zenodo.org/api/records/596036",
+      "parent_html": "https://zenodo.org/records/596036",
+      "parent_doi": "https://doi.org/10.5281/zenodo.596036",
+      "parent_doi_html": "https://zenodo.org/doi/10.5281/zenodo.596036",
+      "self_iiif_manifest": "https://zenodo.org/api/iiif/record:19636730/manifest",
+      "self_iiif_sequence": "https://zenodo.org/api/iiif/record:19636730/sequence/default",
+      "files": "https://zenodo.org/api/records/19636730/files",
+      "media_files": "https://zenodo.org/api/records/19636730/media-files",
+      "archive": "https://zenodo.org/api/records/19636730/files-archive",
+      "archive_media": "https://zenodo.org/api/records/19636730/media-files-archive",
+      "latest": "https://zenodo.org/api/records/19636730/versions/latest",
+      "latest_html": "https://zenodo.org/records/19636730/latest",
+      "versions": "https://zenodo.org/api/records/19636730/versions",
+      "draft": "https://zenodo.org/api/records/19636730/draft",
+      "access_links": "https://zenodo.org/api/records/19636730/access/links",
+      "access_grants": "https://zenodo.org/api/records/19636730/access/grants",
+      "access_users": "https://zenodo.org/api/records/19636730/access/users",
+      "access_request": "https://zenodo.org/api/records/19636730/access/request",
+      "access": "https://zenodo.org/api/records/19636730/access",
+      "communities": "https://zenodo.org/api/records/19636730/communities",
+      "communities-suggestions": "https://zenodo.org/api/records/19636730/communities-suggestions",
+      "request_deletion": "https://zenodo.org/api/records/19636730/request-deletion",
+      "file_modification": "https://zenodo.org/api/records/19636730/file-modification",
+      "quota_increase": "https://zenodo.org/api/records/19636730/quota-increase",
+      "requests": "https://zenodo.org/api/records/19636730/requests"
+    },
+    "updated": "2026-04-17T22:25:06.312933+00:00",
+    "recid": "19636730",
+    "revision": 4,
+    "files": [
+      {
+        "id": "98638753-3f4e-414f-88fb-c0c25f97d1fe",
+        "key": "astropy/photutils-3.0.0.zip",
+        "size": 1155898,
+        "checksum": "md5:4be2d1c1b4f213fc3b0f4ef72d192afc",
+        "links": {
+          "self": "https://zenodo.org/api/records/19636730/files/astropy/photutils-3.0.0.zip/content"
+        }
+      }
+    ],
+    "swh": {
+      "swhid": "swh:1:dir:5ea90432cd987336a26af201c1b50343b12e2daa;origin=https://doi.org/10.5281/zenodo.596036;visit=swh:1:snp:25dd84d95353ec3813baa8785c248017da719233;anchor=swh:1:rel:253cbde27398f9aea9d7368f3866618c00fe16f9;path=astropy-photutils-3322558"
+    },
+    "owners": [
+      {
+        "id": "24684"
+      }
+    ],
+    "status": "published",
+    "stats": {
+      "downloads": 3350,
+      "unique_downloads": 3266,
+      "views": 37670,
+      "unique_views": 34444,
+      "version_downloads": 161,
+      "version_unique_downloads": 161,
+      "version_unique_views": 1371,
+      "version_views": 1575
+    },
+    "state": "done",
+    "submitted": true
+  },
+  {
+    "created": "2026-07-08T13:01:33.629040+00:00",
+    "modified": "2026-07-08T13:01:33.796141+00:00",
+    "id": 21262390,
+    "conceptrecid": "4670728",
+    "doi": "10.5281/zenodo.21262390",
+    "conceptdoi": "10.5281/zenodo.4670728",
+    "doi_url": "https://doi.org/10.5281/zenodo.21262390",
+    "metadata": {
+      "title": "Astropy",
+      "doi": "10.5281/zenodo.21262390",
+      "publication_date": "2026-07-08",
+      "description": "<p>https://docs.astropy.org/en/v7.2.2/changelog.html</p>",
+      "access_right": "open",
+      "creators": [
+        {
+          "name": "Astropy Collaboration",
+          "affiliation": null
+        }
+      ],
+      "related_identifiers": [
+        {
+          "identifier": "https://github.com/astropy/astropy/tree/v7.2.2",
+          "relation": "isSupplementTo",
+          "resource_type": "software",
+          "scheme": "url"
+        }
+      ],
+      "version": "v7.2.2",
+      "custom": {
+        "code:codeRepository": "https://github.com/astropy/astropy"
+      },
+      "resource_type": {
+        "title": "Software",
+        "type": "software"
+      },
+      "license": {
+        "id": "bsd-3-clause"
+      },
+      "relations": {
+        "version": [
+          {
+            "index": 40,
+            "is_last": false,
+            "parent": {
+              "pid_type": "recid",
+              "pid_value": "4670728"
+            }
+          }
+        ]
+      },
+      "notes": "If you use this software, please cite it using the metadata from this file."
+    },
+    "title": "Astropy",
+    "links": {
+      "self": "https://zenodo.org/api/records/21262390",
+      "self_html": "https://zenodo.org/records/21262390",
+      "preview_html": "https://zenodo.org/records/21262390?preview=1",
+      "doi": "https://doi.org/10.5281/zenodo.21262390",
+      "self_doi": "https://doi.org/10.5281/zenodo.21262390",
+      "self_doi_html": "https://zenodo.org/doi/10.5281/zenodo.21262390",
+      "reserve_doi": "https://zenodo.org/api/records/21262390/draft/pids/doi",
+      "parent": "https://zenodo.org/api/records/4670728",
+      "parent_html": "https://zenodo.org/records/4670728",
+      "parent_doi": "https://doi.org/10.5281/zenodo.4670728",
+      "parent_doi_html": "https://zenodo.org/doi/10.5281/zenodo.4670728",
+      "self_iiif_manifest": "https://zenodo.org/api/iiif/record:21262390/manifest",
+      "self_iiif_sequence": "https://zenodo.org/api/iiif/record:21262390/sequence/default",
+      "files": "https://zenodo.org/api/records/21262390/files",
+      "media_files": "https://zenodo.org/api/records/21262390/media-files",
+      "archive": "https://zenodo.org/api/records/21262390/files-archive",
+      "archive_media": "https://zenodo.org/api/records/21262390/media-files-archive",
+      "latest": "https://zenodo.org/api/records/21262390/versions/latest",
+      "latest_html": "https://zenodo.org/records/21262390/latest",
+      "versions": "https://zenodo.org/api/records/21262390/versions",
+      "draft": "https://zenodo.org/api/records/21262390/draft",
+      "access_links": "https://zenodo.org/api/records/21262390/access/links",
+      "access_grants": "https://zenodo.org/api/records/21262390/access/grants",
+      "access_users": "https://zenodo.org/api/records/21262390/access/users",
+      "access_request": "https://zenodo.org/api/records/21262390/access/request",
+      "access": "https://zenodo.org/api/records/21262390/access",
+      "communities": "https://zenodo.org/api/records/21262390/communities",
+      "communities-suggestions": "https://zenodo.org/api/records/21262390/communities-suggestions",
+      "request_deletion": "https://zenodo.org/api/records/21262390/request-deletion",
+      "file_modification": "https://zenodo.org/api/records/21262390/file-modification",
+      "quota_increase": "https://zenodo.org/api/records/21262390/quota-increase",
+      "requests": "https://zenodo.org/api/records/21262390/requests"
+    },
+    "updated": "2026-07-08T13:01:33.796141+00:00",
+    "recid": "21262390",
+    "revision": 4,
+    "files": [
+      {
+        "id": "09eb65cf-ae5e-4345-bc6a-07e76e260e49",
+        "key": "astropy/astropy-v7.2.2.zip",
+        "size": 7926908,
+        "checksum": "md5:392c3bf2c5a5fa74a5ed5f61f2a4e98e",
+        "links": {
+          "self": "https://zenodo.org/api/records/21262390/files/astropy/astropy-v7.2.2.zip/content"
+        }
+      }
+    ],
+    "swh": {},
+    "owners": [
+      {
+        "id": "21107"
+      }
+    ],
+    "status": "published",
+    "stats": {
+      "downloads": 989,
+      "unique_downloads": 978,
+      "views": 5614,
+      "unique_views": 5442,
+      "version_downloads": 11,
+      "version_unique_downloads": 11,
+      "version_unique_views": 24,
+      "version_views": 24
+    },
+    "state": "done",
+    "submitted": true
+  },
+  {
+    "created": "2025-07-14T10:32:33.969533+00:00",
+    "modified": "2025-07-14T10:32:34.094444+00:00",
+    "id": 15878535,
+    "conceptrecid": "3874237",
+    "doi": "10.5281/zenodo.15878535",
+    "conceptdoi": "10.5281/zenodo.3874237",
+    "doi_url": "https://doi.org/10.5281/zenodo.15878535",
+    "metadata": {
+      "title": "NNPDF/eko: Numpy 3.13 & Numpy 2",
+      "doi": "10.5281/zenodo.15878535",
+      "publication_date": "2025-07-14",
+      "description": "<h2>What's Changed</h2>\n<ul>\n<li>Remove <code>ev_op_iterations</code> from truncated by @felixhekhorn in https://github.com/NNPDF/eko/pull/459</li>\n<li>Use <code>dynamic_versioning</code> as backend by @scarlehoff in https://github.com/NNPDF/eko/pull/448</li>\n<li>X space conversion of the N3LO matching  by @giacomomagni in https://github.com/NNPDF/eko/pull/444</li>\n<li>Dynamic versioning for postrelease versions by @evagroenendijk in https://github.com/NNPDF/eko/pull/465</li>\n<li>Use user paths in genpdf if possible by @felixhekhorn in https://github.com/NNPDF/eko/pull/469</li>\n<li>Python 3.13 &amp; numpy 2.0 support by @scarlehoff in https://github.com/NNPDF/eko/pull/470</li>\n</ul>\n<p><strong>Full Changelog</strong>: https://github.com/NNPDF/eko/compare/v0.15.1...v0.15.2</p>",
+      "access_right": "open",
+      "creators": [
+        {
+          "name": "Barontini, Andrea",
+          "affiliation": null
+        },
+        {
+          "name": "Candido, Alessandro",
+          "affiliation": null,
+          "orcid": "0000-0002-1405-3205"
+        },
+        {
+          "name": "Cruz-Martinez, Juan",
+          "affiliation": null
+        },
+        {
+          "name": "Giani, Tommaso",
+          "affiliation": null
+        },
+        {
+          "name": "Hekhorn, Felix",
+          "affiliation": null,
+          "orcid": "0000-0001-8752-8008"
+        },
+        {
+          "name": "Magni, Giacomo",
+          "affiliation": null,
+          "orcid": "0000-0003-1699-4815"
+        },
+        {
+          "name": "Laurenti, Niccolò",
+          "affiliation": null
+        },
+        {
+          "name": "Sharma, Tanishq",
+          "affiliation": null
+        }
+      ],
+      "version": "v0.15.2",
+      "custom": {
+        "code:codeRepository": "https://github.com/NNPDF/eko"
+      },
+      "resource_type": {
+        "title": "Software",
+        "type": "software"
+      },
+      "license": {
+        "id": "gpl-3.0"
+      },
+      "grants": [
+        {
+          "code": "740006",
+          "internal_id": "10.13039/501100000780::740006",
+          "funder": {
+            "name": "European Commission",
+            "doi": "10.13039/501100000780",
+            "acronym": "EC"
+          },
+          "title": "Proton strucure for discovery at the Large Hadron Collider",
+          "acronym": "NNNPDF",
+          "program": "H2020-EU.1.1.",
+          "url": "https://cordis.europa.eu/projects/740006"
+        }
+      ],
+      "communities": [
+        {
+          "id": "nnpdf"
+        },
+        {
+          "id": "eu"
+        }
+      ],
+      "relations": {
+        "version": [
+          {
+            "index": 13,
+            "is_last": false,
+            "parent": {
+              "pid_type": "recid",
+              "pid_value": "3874237"
+            }
+          }
+        ]
+      }
+    },
+    "title": "NNPDF/eko: Numpy 3.13 & Numpy 2",
+    "links": {
+      "self": "https://zenodo.org/api/records/15878535",
+      "self_html": "https://zenodo.org/records/15878535",
+      "preview_html": "https://zenodo.org/records/15878535?preview=1",
+      "doi": "https://doi.org/10.5281/zenodo.15878535",
+      "self_doi": "https://doi.org/10.5281/zenodo.15878535",
+      "self_doi_html": "https://zenodo.org/doi/10.5281/zenodo.15878535",
+      "reserve_doi": "https://zenodo.org/api/records/15878535/draft/pids/doi",
+      "parent": "https://zenodo.org/api/records/3874237",
+      "parent_html": "https://zenodo.org/records/3874237",
+      "parent_doi": "https://doi.org/10.5281/zenodo.3874237",
+      "parent_doi_html": "https://zenodo.org/doi/10.5281/zenodo.3874237",
+      "self_iiif_manifest": "https://zenodo.org/api/iiif/record:15878535/manifest",
+      "self_iiif_sequence": "https://zenodo.org/api/iiif/record:15878535/sequence/default",
+      "files": "https://zenodo.org/api/records/15878535/files",
+      "media_files": "https://zenodo.org/api/records/15878535/media-files",
+      "archive": "https://zenodo.org/api/records/15878535/files-archive",
+      "archive_media": "https://zenodo.org/api/records/15878535/media-files-archive",
+      "latest": "https://zenodo.org/api/records/15878535/versions/latest",
+      "latest_html": "https://zenodo.org/records/15878535/latest",
+      "versions": "https://zenodo.org/api/records/15878535/versions",
+      "draft": "https://zenodo.org/api/records/15878535/draft",
+      "access_links": "https://zenodo.org/api/records/15878535/access/links",
+      "access_grants": "https://zenodo.org/api/records/15878535/access/grants",
+      "access_users": "https://zenodo.org/api/records/15878535/access/users",
+      "access_request": "https://zenodo.org/api/records/15878535/access/request",
+      "access": "https://zenodo.org/api/records/15878535/access",
+      "communities": "https://zenodo.org/api/records/15878535/communities",
+      "communities-suggestions": "https://zenodo.org/api/records/15878535/communities-suggestions",
+      "request_deletion": "https://zenodo.org/api/records/15878535/request-deletion",
+      "file_modification": "https://zenodo.org/api/records/15878535/file-modification",
+      "quota_increase": "https://zenodo.org/api/records/15878535/quota-increase",
+      "requests": "https://zenodo.org/api/records/15878535/requests"
+    },
+    "updated": "2025-07-14T10:32:34.094444+00:00",
+    "recid": "15878535",
+    "revision": 4,
+    "files": [
+      {
+        "id": "a7e548be-b204-40df-a501-b78c34ba85d2",
+        "key": "NNPDF/eko-v0.15.2.zip",
+        "size": 85186055,
+        "checksum": "md5:3c89ef9d439ab9826dbbbbfa399a27c9",
+        "links": {
+          "self": "https://zenodo.org/api/records/15878535/files/NNPDF/eko-v0.15.2.zip/content"
+        }
+      }
+    ],
+    "swh": {
+      "swhid": "swh:1:dir:ef8772e21ef83d2bccbfc0f9d76fc02b88269f82;origin=https://doi.org/10.5281/zenodo.3874237;visit=swh:1:snp:af968c499f745863855652e3992e5f9d013fafca;anchor=swh:1:rel:a863ee1d3daf8ce21e3f313bb8babd5883d60043;path=NNPDF-eko-de7d166"
+    },
+    "owners": [
+      {
+        "id": "104308"
+      }
+    ],
+    "status": "published",
+    "stats": {
+      "downloads": 480,
+      "unique_downloads": 472,
+      "views": 1830,
+      "unique_views": 1771,
+      "version_downloads": 64,
+      "version_unique_downloads": 64,
+      "version_unique_views": 203,
+      "version_views": 206
+    },
+    "state": "done",
+    "submitted": true
+  }
+]

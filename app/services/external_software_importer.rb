@@ -49,7 +49,7 @@ class ExternalSoftwareImporter
     end
   end
 
-  def persist(id, entity, matches, started_at, collection_url: nil)
+  def persist(id, entity, matches, started_at, collection_url: nil, concept_identifier: nil)
     record = record_for(id, started_at)
     record.with_lock do
       next if record.attempted_at && record.attempted_at > started_at
@@ -61,7 +61,7 @@ class ExternalSoftwareImporter
       record.next_discovery_at = Time.current if record.metadata != entity || record.status != "ok"
       persist_links(record, entity, matches)
       record.update!(metadata: entity, status: "ok", retrieved_at: started_at, attempted_at: started_at,
-        last_error: nil, next_refresh_at: 30.days.from_now, collection_url: collection_url)
+        last_error: nil, next_refresh_at: 30.days.from_now, collection_url: collection_url, concept_identifier: concept_identifier)
     end
   end
 
@@ -71,7 +71,7 @@ class ExternalSoftwareImporter
     rows = []
     links.each do |project_id, evidence|
       link = existing.delete(project_id) || ProjectExternalSoftwareRecord.new(project_id: project_id, external_software_record_id: record.id)
-      link.assign_attributes(relationship: "source_code_repository",
+      link.assign_attributes(relationship: relationship_for(entity),
         match_status: evidence.any? { |item| item[:ambiguous] } ? "ambiguous" : "matched", evidence: evidence)
       next unless link.changed?
       rows << link.attributes.slice("project_id", "external_software_record_id", "relationship", "match_status", "evidence")
@@ -92,5 +92,9 @@ class ExternalSoftwareImporter
       next if record.attempted_at && record.attempted_at > started_at
       record.update!(status: "error", attempted_at: started_at, last_error: error.message, next_refresh_at: retry_at)
     end
+  end
+
+  def relationship_for(entity)
+    "source_code_repository"
   end
 end

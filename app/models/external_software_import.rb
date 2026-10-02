@@ -56,13 +56,17 @@ class ExternalSoftwareImport < ApplicationRecord
     start_catalogue(source: "rrid", page_size: page_size, restart: restart)
   end
 
+  def self.start_software_doi_seeds(page_size: nil, restart: false)
+    start_catalogue(source: "doi_seeds", page_size: page_size, restart: restart)
+  end
+
   def self.start_catalogue(source:, page_size: nil, restart: false)
-    initial_cursor = { "biotools" => "1", "ascl" => nil, "swmath" => nil, "rrid_seeds" => nil, "rrid" => nil }.fetch(source)
+    initial_cursor = { "biotools" => "1", "ascl" => nil, "swmath" => nil, "rrid_seeds" => nil, "rrid" => nil, "doi_seeds" => nil }.fetch(source)
     client = { "biotools" => BiotoolsClient, "ascl" => AsclClient, "swmath" => SwmathClient,
-      "rrid_seeds" => RridClient, "rrid" => RridCatalogueClient }.fetch(source)
+      "rrid_seeds" => RridClient, "rrid" => RridCatalogueClient, "doi_seeds" => SoftwareDoiClient }.fetch(source)
     max_page_size = client::PAGE_SIZE
     if page_size && (!page_size.is_a?(Integer) || !page_size.between?(1, max_page_size))
-      raise ArgumentError, "page size must be between 1 and 50"
+      raise ArgumentError, "page size must be between 1 and #{max_page_size}"
     end
     record = find_by(source: source)
     raise ArgumentError, "no completed import to restart" if restart && record.nil?
@@ -111,11 +115,17 @@ class ExternalSoftwareImport < ApplicationRecord
       .where("lease_expires_at IS NULL OR lease_expires_at <= ?", Time.current).first
   end
 
+  def self.resumable_software_doi_seeds
+    where(source: "doi_seeds", completed_at: nil).where("next_run_at <= ?", Time.current)
+      .where("lease_expires_at IS NULL OR lease_expires_at <= ?", Time.current).first
+  end
+
   def enqueue
     return if completed_at
     worker = { "biotools" => ImportBiotoolsWorker, "ascl" => ImportAsclWorker,
       "swmath" => ImportSwmathWorker, "wikidata" => ImportWikidataWorker,
-      "rrid_seeds" => ImportRridSeedsWorker, "rrid" => ImportRridWorker }.fetch(source)
+      "rrid_seeds" => ImportRridSeedsWorker, "rrid" => ImportRridWorker,
+      "doi_seeds" => ImportSoftwareDoiSeedsWorker }.fetch(source)
     worker.perform_at([next_run_at, lease_expires_at, Time.current].compact.max, id)
   end
 
@@ -154,6 +164,7 @@ class ExternalSoftwareImport < ApplicationRecord
         when "ascl" then AsclClient.identifier(record["ascl_id"])
         when "swmath" then SwmathClient.identifier(record["id"].to_s)
         when "rrid" then RridClient.identifier(record.dig("item", "identifier"))
+        when "doi_seeds" then record.fetch("project_id").to_s
         else BiotoolsClient.identifier(record["biotoolsID"])
         end
       end

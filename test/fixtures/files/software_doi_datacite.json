@@ -1,0 +1,2212 @@
+[
+  {
+    "id": "10.5281/zenodo.596036",
+    "type": "dois",
+    "attributes": {
+      "doi": "10.5281/zenodo.596036",
+      "prefix": "10.5281",
+      "suffix": "zenodo.596036",
+      "identifiers": [],
+      "alternateIdentifiers": [],
+      "creators": [
+        {
+          "name": "Bradley, Larry",
+          "nameType": "Personal",
+          "givenName": "Larry",
+          "familyName": "Bradley",
+          "affiliation": [
+            {
+              "name": "Space Telescope Science Institute, 3700 San Martin Drive, Baltimore, MD 21218, USA"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-7908-9284",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Sipőcz, Brigitta M.",
+          "nameType": "Personal",
+          "givenName": "Brigitta M.",
+          "familyName": "Sipőcz",
+          "affiliation": [
+            {
+              "name": "IPAC, MC 100-22, Caltech, 1200E. California Blvd. Pasadena, CA 91125"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-3713-6337",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Robitaille, T. P.",
+          "nameType": "Personal",
+          "givenName": "T. P.",
+          "familyName": "Robitaille",
+          "affiliation": [
+            {
+              "name": "Aperio Software Ltd., Headingley Enterprise and Arts Centre, Bennett Road, Leeds, LS6 3HN, United Kingdom"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-8642-1329",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Tollerud, E. J.",
+          "nameType": "Personal",
+          "givenName": "E. J.",
+          "familyName": "Tollerud",
+          "affiliation": [
+            {
+              "name": "Space Telescope Science Institute, 3700 San Martin Dr., Baltimore, MD 21218, USA"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-9599-310X",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Vinícius, Zé",
+          "nameType": "Personal",
+          "givenName": "Zé",
+          "familyName": "Vinícius",
+          "nameIdentifiers": [],
+          "affiliation": []
+        },
+        {
+          "name": "Deil, Christoph",
+          "nameType": "Personal",
+          "givenName": "Christoph",
+          "familyName": "Deil",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-4198-4005",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Barbary, Kyle",
+          "nameType": "Personal",
+          "givenName": "Kyle",
+          "familyName": "Barbary",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-2532-3696",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Wilson, Tom J.",
+          "nameType": "Personal",
+          "givenName": "Tom J.",
+          "familyName": "Wilson",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0001-6352-9735",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Busko, Ivo",
+          "nameType": "Personal",
+          "givenName": "Ivo",
+          "familyName": "Busko",
+          "nameIdentifiers": [],
+          "affiliation": []
+        },
+        {
+          "name": "Donath, Axel",
+          "nameType": "Personal",
+          "givenName": "Axel",
+          "familyName": "Donath",
+          "affiliation": [
+            {
+              "name": "Harvard-Smithsonian Center for Astrophysics, 60 Garden St., Cambridge, MA, 02138, USA"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0003-4568-7005",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Günther, Hans Moritz",
+          "nameType": "Personal",
+          "givenName": "Hans Moritz",
+          "familyName": "Günther",
+          "affiliation": [
+            {
+              "name": "MIT Kavli Institute for Astrophysics and Space Research, 77 Massachusetts Avenue, Cambridge, MA 02139, USA"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0003-4243-2840",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Cara, Mihai",
+          "nameType": "Personal",
+          "givenName": "Mihai",
+          "familyName": "Cara",
+          "affiliation": [
+            {
+              "name": "Space Telescope Science Institute, 3700 San Martin Drive, Baltimore, MD 21218, USA"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-9294-6551",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Lim, P. L.",
+          "nameType": "Personal",
+          "givenName": "P. L.",
+          "familyName": "Lim",
+          "affiliation": [
+            {
+              "name": "Space Telescope Science Institute, 3700 San Martin Dr., Baltimore, MD 21218, USA"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0003-0079-4114",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Meßlinger, Sebastian",
+          "nameType": "Personal",
+          "givenName": "Sebastian",
+          "familyName": "Meßlinger",
+          "nameIdentifiers": [],
+          "affiliation": []
+        },
+        {
+          "name": "Conseil, Simon",
+          "nameType": "Personal",
+          "givenName": "Simon",
+          "familyName": "Conseil",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-3657-4191",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Droettboom, Michael",
+          "nameType": "Personal",
+          "givenName": "Michael",
+          "familyName": "Droettboom",
+          "nameIdentifiers": [],
+          "affiliation": []
+        },
+        {
+          "name": "Bostroem, K. Azalee",
+          "nameType": "Personal",
+          "givenName": "K. Azalee",
+          "familyName": "Bostroem",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-4924-444X",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Bray, E. M.",
+          "nameType": "Personal",
+          "givenName": "E. M.",
+          "familyName": "Bray",
+          "nameIdentifiers": [],
+          "affiliation": []
+        },
+        {
+          "name": "Bratholm, Lars Andersen",
+          "nameType": "Personal",
+          "givenName": "Lars Andersen",
+          "familyName": "Bratholm",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-3565-5926",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Burnett, Zach",
+          "nameType": "Personal",
+          "givenName": "Zach",
+          "familyName": "Burnett",
+          "affiliation": [
+            {
+              "name": "Space Telescope Science Institute, 3700 San Martin Drive, Baltimore, MD 21218, USA"
+            }
+          ],
+          "nameIdentifiers": []
+        },
+        {
+          "name": "Jamieson, William",
+          "nameType": "Personal",
+          "givenName": "William",
+          "familyName": "Jamieson",
+          "affiliation": [
+            {
+              "name": "Space Telescope Science Institute, 3700 San Martin Drive, Baltimore, MD 21218, USA"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0001-5976-4492",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Ginsburg, Adam",
+          "nameType": "Personal",
+          "givenName": "Adam",
+          "familyName": "Ginsburg",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0001-6431-9633",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Taranu, Dan",
+          "nameType": "Personal",
+          "givenName": "Dan",
+          "familyName": "Taranu",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0001-6268-1882",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Barentsen, Geert",
+          "nameType": "Personal",
+          "givenName": "Geert",
+          "familyName": "Barentsen",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-3306-3484",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Craig, Matthew W.",
+          "nameType": "Personal",
+          "givenName": "Matthew W.",
+          "familyName": "Craig",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0001-7988-8919",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Morris, Brett M.",
+          "nameType": "Personal",
+          "givenName": "Brett M.",
+          "familyName": "Morris",
+          "affiliation": [
+            {
+              "name": "Space Telescope Science Institute, 3700 San Martin Drive, Baltimore, MD 21218, USA"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0003-2528-3409",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Perrin, Marshall",
+          "nameType": "Personal",
+          "givenName": "Marshall",
+          "familyName": "Perrin",
+          "affiliation": [
+            {
+              "name": "Space Telescope Science Institute, 3700 San Martin Drive, Baltimore, MD 21218, USA"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-3191-8151",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Rathi, Shivangee",
+          "nameType": "Personal",
+          "givenName": "Shivangee",
+          "familyName": "Rathi",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-4859-8203",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        }
+      ],
+      "titles": [
+        {
+          "title": "Photutils"
+        }
+      ],
+      "publisher": {
+        "name": "Zenodo"
+      },
+      "container": {},
+      "publicationYear": 2026,
+      "subjects": [
+        {
+          "subject": "Astronomy software"
+        },
+        {
+          "subject": "Astronomy data analysis"
+        },
+        {
+          "subject": "Photometry"
+        },
+        {
+          "subject": "Image Data Analysis"
+        },
+        {
+          "subject": "Open source software"
+        }
+      ],
+      "contributors": [],
+      "dates": [
+        {
+          "date": "2026-04-18",
+          "dateType": "Issued"
+        }
+      ],
+      "language": null,
+      "types": {
+        "ris": "COMP",
+        "bibtex": "misc",
+        "citeproc": "article",
+        "schemaOrg": "SoftwareSourceCode",
+        "resourceType": "",
+        "resourceTypeGeneral": "Software"
+      },
+      "relatedIdentifiers": [
+        {
+          "relationType": "IsSupplementTo",
+          "relatedIdentifier": "https://github.com/astropy/photutils/tree/3.0.0",
+          "resourceTypeGeneral": "Software",
+          "relatedIdentifierType": "URL"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.6825092",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.155353",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.12585239",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.3568287",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.1039309",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.1340699",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.1035865",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.4049061",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.5796924",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.7804137",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.4044744",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.13942182",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.164986",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.4453725",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.7946442",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.13989456",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.5525286",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.2533376",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.3368647",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.17129028",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.19636730",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.4624996",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.10671725",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.14606896",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.6385735",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.14889440",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.3478575",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.7419741",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.8248020",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.10967176",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "HasVersion",
+          "relatedIdentifier": "10.5281/zenodo.13931795",
+          "relatedIdentifierType": "DOI"
+        }
+      ],
+      "relatedItems": [],
+      "sizes": [],
+      "formats": [],
+      "version": "3.0.0",
+      "rightsList": [
+        {
+          "rights": "BSD 3-Clause \"New\" or \"Revised\" License",
+          "rightsUri": "https://opensource.org/licenses/BSD-3-Clause",
+          "schemeUri": "https://spdx.org/licenses/",
+          "rightsIdentifier": "bsd-3-clause",
+          "rightsIdentifierScheme": "SPDX"
+        }
+      ],
+      "descriptions": [
+        {
+          "description": "Astropy package for source detection and photometry",
+          "descriptionType": "Abstract"
+        },
+        {
+          "description": "If you use this software, please cite it as below.",
+          "descriptionType": "Other"
+        }
+      ],
+      "geoLocations": [],
+      "fundingReferences": [],
+      "xml": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHJlc291cmNlIHhtbG5zOnhzaT0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEtaW5zdGFuY2UiIHhtbG5zPSJodHRwOi8vZGF0YWNpdGUub3JnL3NjaGVtYS9rZXJuZWwtNCIgeHNpOnNjaGVtYUxvY2F0aW9uPSJodHRwOi8vZGF0YWNpdGUub3JnL3NjaGVtYS9rZXJuZWwtNCBodHRwOi8vc2NoZW1hLmRhdGFjaXRlLm9yZy9tZXRhL2tlcm5lbC00L21ldGFkYXRhLnhzZCI+CiAgPGlkZW50aWZpZXIgaWRlbnRpZmllclR5cGU9IkRPSSI+MTAuNTI4MS9aRU5PRE8uNTk2MDM2PC9pZGVudGlmaWVyPgogIDxjcmVhdG9ycz4KICAgIDxjcmVhdG9yPgogICAgICA8Y3JlYXRvck5hbWUgbmFtZVR5cGU9IlBlcnNvbmFsIj5CcmFkbGV5LCBMYXJyeTwvY3JlYXRvck5hbWU+CiAgICAgIDxnaXZlbk5hbWU+TGFycnk8L2dpdmVuTmFtZT4KICAgICAgPGZhbWlseU5hbWU+QnJhZGxleTwvZmFtaWx5TmFtZT4KICAgICAgPG5hbWVJZGVudGlmaWVyIG5hbWVJZGVudGlmaWVyU2NoZW1lPSJPUkNJRCIgc2NoZW1lVVJJPSIiPjAwMDAtMDAwMi03OTA4LTkyODQ8L25hbWVJZGVudGlmaWVyPgogICAgICA8YWZmaWxpYXRpb24+U3BhY2UgVGVsZXNjb3BlIFNjaWVuY2UgSW5zdGl0dXRlLCAzNzAwIFNhbiBNYXJ0aW4gRHJpdmUsIEJhbHRpbW9yZSwgTUQgMjEyMTgsIFVTQTwvYWZmaWxpYXRpb24+CiAgICA8L2NyZWF0b3I+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lIG5hbWVUeXBlPSJQZXJzb25hbCI+U2lwxZFjeiwgQnJpZ2l0dGEgTS48L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPkJyaWdpdHRhIE0uPC9naXZlbk5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPlNpcMWRY3o8L2ZhbWlseU5hbWU+CiAgICAgIDxuYW1lSWRlbnRpZmllciBuYW1lSWRlbnRpZmllclNjaGVtZT0iT1JDSUQiIHNjaGVtZVVSST0iIj4wMDAwLTAwMDItMzcxMy02MzM3PC9uYW1lSWRlbnRpZmllcj4KICAgICAgPGFmZmlsaWF0aW9uPklQQUMsIE1DIDEwMC0yMiwgQ2FsdGVjaCwgMTIwMEUuIENhbGlmb3JuaWEgQmx2ZC4gUGFzYWRlbmEsIENBIDkxMTI1PC9hZmZpbGlhdGlvbj4KICAgIDwvY3JlYXRvcj4KICAgIDxjcmVhdG9yPgogICAgICA8Y3JlYXRvck5hbWUgbmFtZVR5cGU9IlBlcnNvbmFsIj5Sb2JpdGFpbGxlLCBULiBQLjwvY3JlYXRvck5hbWU+CiAgICAgIDxnaXZlbk5hbWU+VC4gUC48L2dpdmVuTmFtZT4KICAgICAgPGZhbWlseU5hbWU+Um9iaXRhaWxsZTwvZmFtaWx5TmFtZT4KICAgICAgPG5hbWVJZGVudGlmaWVyIG5hbWVJZGVudGlmaWVyU2NoZW1lPSJPUkNJRCIgc2NoZW1lVVJJPSIiPjAwMDAtMDAwMi04NjQyLTEzMjk8L25hbWVJZGVudGlmaWVyPgogICAgICA8YWZmaWxpYXRpb24+QXBlcmlvIFNvZnR3YXJlIEx0ZC4sIEhlYWRpbmdsZXkgRW50ZXJwcmlzZSBhbmQgQXJ0cyBDZW50cmUsIEJlbm5ldHQgUm9hZCwgTGVlZHMsIExTNiAzSE4sIFVuaXRlZCBLaW5nZG9tPC9hZmZpbGlhdGlvbj4KICAgIDwvY3JlYXRvcj4KICAgIDxjcmVhdG9yPgogICAgICA8Y3JlYXRvck5hbWUgbmFtZVR5cGU9IlBlcnNvbmFsIj5Ub2xsZXJ1ZCwgRS4gSi48L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPkUuIEouPC9naXZlbk5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPlRvbGxlcnVkPC9mYW1pbHlOYW1lPgogICAgICA8bmFtZUlkZW50aWZpZXIgbmFtZUlkZW50aWZpZXJTY2hlbWU9Ik9SQ0lEIiBzY2hlbWVVUkk9IiI+MDAwMC0wMDAyLTk1OTktMzEwWDwvbmFtZUlkZW50aWZpZXI+CiAgICAgIDxhZmZpbGlhdGlvbj5TcGFjZSBUZWxlc2NvcGUgU2NpZW5jZSBJbnN0aXR1dGUsIDM3MDAgU2FuIE1hcnRpbiBEci4sIEJhbHRpbW9yZSwgTUQgMjEyMTgsIFVTQTwvYWZmaWxpYXRpb24+CiAgICA8L2NyZWF0b3I+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lIG5hbWVUeXBlPSJQZXJzb25hbCI+Vmluw61jaXVzLCBaw6k8L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPlrDqTwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5WaW7DrWNpdXM8L2ZhbWlseU5hbWU+CiAgICA8L2NyZWF0b3I+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lIG5hbWVUeXBlPSJQZXJzb25hbCI+RGVpbCwgQ2hyaXN0b3BoPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5DaHJpc3RvcGg8L2dpdmVuTmFtZT4KICAgICAgPGZhbWlseU5hbWU+RGVpbDwvZmFtaWx5TmFtZT4KICAgICAgPG5hbWVJZGVudGlmaWVyIG5hbWVJZGVudGlmaWVyU2NoZW1lPSJPUkNJRCIgc2NoZW1lVVJJPSIiPjAwMDAtMDAwMi00MTk4LTQwMDU8L25hbWVJZGVudGlmaWVyPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPkJhcmJhcnksIEt5bGU8L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPkt5bGU8L2dpdmVuTmFtZT4KICAgICAgPGZhbWlseU5hbWU+QmFyYmFyeTwvZmFtaWx5TmFtZT4KICAgICAgPG5hbWVJZGVudGlmaWVyIG5hbWVJZGVudGlmaWVyU2NoZW1lPSJPUkNJRCIgc2NoZW1lVVJJPSIiPjAwMDAtMDAwMi0yNTMyLTM2OTY8L25hbWVJZGVudGlmaWVyPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPldpbHNvbiwgVG9tIEouPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5Ub20gSi48L2dpdmVuTmFtZT4KICAgICAgPGZhbWlseU5hbWU+V2lsc29uPC9mYW1pbHlOYW1lPgogICAgICA8bmFtZUlkZW50aWZpZXIgbmFtZUlkZW50aWZpZXJTY2hlbWU9Ik9SQ0lEIiBzY2hlbWVVUkk9IiI+MDAwMC0wMDAxLTYzNTItOTczNTwvbmFtZUlkZW50aWZpZXI+CiAgICA8L2NyZWF0b3I+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lIG5hbWVUeXBlPSJQZXJzb25hbCI+QnVza28sIEl2bzwvY3JlYXRvck5hbWU+CiAgICAgIDxnaXZlbk5hbWU+SXZvPC9naXZlbk5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPkJ1c2tvPC9mYW1pbHlOYW1lPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPkRvbmF0aCwgQXhlbDwvY3JlYXRvck5hbWU+CiAgICAgIDxnaXZlbk5hbWU+QXhlbDwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5Eb25hdGg8L2ZhbWlseU5hbWU+CiAgICAgIDxuYW1lSWRlbnRpZmllciBuYW1lSWRlbnRpZmllclNjaGVtZT0iT1JDSUQiIHNjaGVtZVVSST0iIj4wMDAwLTAwMDMtNDU2OC03MDA1PC9uYW1lSWRlbnRpZmllcj4KICAgICAgPGFmZmlsaWF0aW9uPkhhcnZhcmQtU21pdGhzb25pYW4gQ2VudGVyIGZvciBBc3Ryb3BoeXNpY3MsIDYwIEdhcmRlbiBTdC4sIENhbWJyaWRnZSwgTUEsIDAyMTM4LCBVU0E8L2FmZmlsaWF0aW9uPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPkfDvG50aGVyLCBIYW5zIE1vcml0ejwvY3JlYXRvck5hbWU+CiAgICAgIDxnaXZlbk5hbWU+SGFucyBNb3JpdHo8L2dpdmVuTmFtZT4KICAgICAgPGZhbWlseU5hbWU+R8O8bnRoZXI8L2ZhbWlseU5hbWU+CiAgICAgIDxuYW1lSWRlbnRpZmllciBuYW1lSWRlbnRpZmllclNjaGVtZT0iT1JDSUQiIHNjaGVtZVVSST0iIj4wMDAwLTAwMDMtNDI0My0yODQwPC9uYW1lSWRlbnRpZmllcj4KICAgICAgPGFmZmlsaWF0aW9uPk1JVCBLYXZsaSBJbnN0aXR1dGUgZm9yIEFzdHJvcGh5c2ljcyBhbmQgU3BhY2UgUmVzZWFyY2gsIDc3IE1hc3NhY2h1c2V0dHMgQXZlbnVlLCBDYW1icmlkZ2UsIE1BIDAyMTM5LCBVU0E8L2FmZmlsaWF0aW9uPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPkNhcmEsIE1paGFpPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5NaWhhaTwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5DYXJhPC9mYW1pbHlOYW1lPgogICAgICA8bmFtZUlkZW50aWZpZXIgbmFtZUlkZW50aWZpZXJTY2hlbWU9Ik9SQ0lEIiBzY2hlbWVVUkk9IiI+MDAwMC0wMDAyLTkyOTQtNjU1MTwvbmFtZUlkZW50aWZpZXI+CiAgICAgIDxhZmZpbGlhdGlvbj5TcGFjZSBUZWxlc2NvcGUgU2NpZW5jZSBJbnN0aXR1dGUsIDM3MDAgU2FuIE1hcnRpbiBEcml2ZSwgQmFsdGltb3JlLCBNRCAyMTIxOCwgVVNBPC9hZmZpbGlhdGlvbj4KICAgIDwvY3JlYXRvcj4KICAgIDxjcmVhdG9yPgogICAgICA8Y3JlYXRvck5hbWUgbmFtZVR5cGU9IlBlcnNvbmFsIj5MaW0sIFAuIEwuPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5QLiBMLjwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5MaW08L2ZhbWlseU5hbWU+CiAgICAgIDxuYW1lSWRlbnRpZmllciBuYW1lSWRlbnRpZmllclNjaGVtZT0iT1JDSUQiIHNjaGVtZVVSST0iIj4wMDAwLTAwMDMtMDA3OS00MTE0PC9uYW1lSWRlbnRpZmllcj4KICAgICAgPGFmZmlsaWF0aW9uPlNwYWNlIFRlbGVzY29wZSBTY2llbmNlIEluc3RpdHV0ZSwgMzcwMCBTYW4gTWFydGluIERyLiwgQmFsdGltb3JlLCBNRCAyMTIxOCwgVVNBPC9hZmZpbGlhdGlvbj4KICAgIDwvY3JlYXRvcj4KICAgIDxjcmVhdG9yPgogICAgICA8Y3JlYXRvck5hbWUgbmFtZVR5cGU9IlBlcnNvbmFsIj5NZcOfbGluZ2VyLCBTZWJhc3RpYW48L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPlNlYmFzdGlhbjwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5NZcOfbGluZ2VyPC9mYW1pbHlOYW1lPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPkNvbnNlaWwsIFNpbW9uPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5TaW1vbjwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5Db25zZWlsPC9mYW1pbHlOYW1lPgogICAgICA8bmFtZUlkZW50aWZpZXIgbmFtZUlkZW50aWZpZXJTY2hlbWU9Ik9SQ0lEIiBzY2hlbWVVUkk9IiI+MDAwMC0wMDAyLTM2NTctNDE5MTwvbmFtZUlkZW50aWZpZXI+CiAgICA8L2NyZWF0b3I+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lIG5hbWVUeXBlPSJQZXJzb25hbCI+RHJvZXR0Ym9vbSwgTWljaGFlbDwvY3JlYXRvck5hbWU+CiAgICAgIDxnaXZlbk5hbWU+TWljaGFlbDwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5Ecm9ldHRib29tPC9mYW1pbHlOYW1lPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPkJvc3Ryb2VtLCBLLiBBemFsZWU8L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPksuIEF6YWxlZTwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5Cb3N0cm9lbTwvZmFtaWx5TmFtZT4KICAgICAgPG5hbWVJZGVudGlmaWVyIG5hbWVJZGVudGlmaWVyU2NoZW1lPSJPUkNJRCIgc2NoZW1lVVJJPSIiPjAwMDAtMDAwMi00OTI0LTQ0NFg8L25hbWVJZGVudGlmaWVyPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPkJyYXksIEUuIE0uPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5FLiBNLjwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5CcmF5PC9mYW1pbHlOYW1lPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPkJyYXRob2xtLCBMYXJzIEFuZGVyc2VuPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5MYXJzIEFuZGVyc2VuPC9naXZlbk5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPkJyYXRob2xtPC9mYW1pbHlOYW1lPgogICAgICA8bmFtZUlkZW50aWZpZXIgbmFtZUlkZW50aWZpZXJTY2hlbWU9Ik9SQ0lEIiBzY2hlbWVVUkk9IiI+MDAwMC0wMDAyLTM1NjUtNTkyNjwvbmFtZUlkZW50aWZpZXI+CiAgICA8L2NyZWF0b3I+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lIG5hbWVUeXBlPSJQZXJzb25hbCI+QnVybmV0dCwgWmFjaDwvY3JlYXRvck5hbWU+CiAgICAgIDxnaXZlbk5hbWU+WmFjaDwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5CdXJuZXR0PC9mYW1pbHlOYW1lPgogICAgICA8YWZmaWxpYXRpb24+U3BhY2UgVGVsZXNjb3BlIFNjaWVuY2UgSW5zdGl0dXRlLCAzNzAwIFNhbiBNYXJ0aW4gRHJpdmUsIEJhbHRpbW9yZSwgTUQgMjEyMTgsIFVTQTwvYWZmaWxpYXRpb24+CiAgICA8L2NyZWF0b3I+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lIG5hbWVUeXBlPSJQZXJzb25hbCI+SmFtaWVzb24sIFdpbGxpYW08L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPldpbGxpYW08L2dpdmVuTmFtZT4KICAgICAgPGZhbWlseU5hbWU+SmFtaWVzb248L2ZhbWlseU5hbWU+CiAgICAgIDxuYW1lSWRlbnRpZmllciBuYW1lSWRlbnRpZmllclNjaGVtZT0iT1JDSUQiIHNjaGVtZVVSST0iIj4wMDAwLTAwMDEtNTk3Ni00NDkyPC9uYW1lSWRlbnRpZmllcj4KICAgICAgPGFmZmlsaWF0aW9uPlNwYWNlIFRlbGVzY29wZSBTY2llbmNlIEluc3RpdHV0ZSwgMzcwMCBTYW4gTWFydGluIERyaXZlLCBCYWx0aW1vcmUsIE1EIDIxMjE4LCBVU0E8L2FmZmlsaWF0aW9uPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPkdpbnNidXJnLCBBZGFtPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5BZGFtPC9naXZlbk5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPkdpbnNidXJnPC9mYW1pbHlOYW1lPgogICAgICA8bmFtZUlkZW50aWZpZXIgbmFtZUlkZW50aWZpZXJTY2hlbWU9Ik9SQ0lEIiBzY2hlbWVVUkk9IiI+MDAwMC0wMDAxLTY0MzEtOTYzMzwvbmFtZUlkZW50aWZpZXI+CiAgICA8L2NyZWF0b3I+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lIG5hbWVUeXBlPSJQZXJzb25hbCI+VGFyYW51LCBEYW48L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPkRhbjwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5UYXJhbnU8L2ZhbWlseU5hbWU+CiAgICAgIDxuYW1lSWRlbnRpZmllciBuYW1lSWRlbnRpZmllclNjaGVtZT0iT1JDSUQiIHNjaGVtZVVSST0iIj4wMDAwLTAwMDEtNjI2OC0xODgyPC9uYW1lSWRlbnRpZmllcj4KICAgIDwvY3JlYXRvcj4KICAgIDxjcmVhdG9yPgogICAgICA8Y3JlYXRvck5hbWUgbmFtZVR5cGU9IlBlcnNvbmFsIj5CYXJlbnRzZW4sIEdlZXJ0PC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5HZWVydDwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5CYXJlbnRzZW48L2ZhbWlseU5hbWU+CiAgICAgIDxuYW1lSWRlbnRpZmllciBuYW1lSWRlbnRpZmllclNjaGVtZT0iT1JDSUQiIHNjaGVtZVVSST0iIj4wMDAwLTAwMDItMzMwNi0zNDg0PC9uYW1lSWRlbnRpZmllcj4KICAgIDwvY3JlYXRvcj4KICAgIDxjcmVhdG9yPgogICAgICA8Y3JlYXRvck5hbWUgbmFtZVR5cGU9IlBlcnNvbmFsIj5DcmFpZywgTWF0dGhldyBXLjwvY3JlYXRvck5hbWU+CiAgICAgIDxnaXZlbk5hbWU+TWF0dGhldyBXLjwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5DcmFpZzwvZmFtaWx5TmFtZT4KICAgICAgPG5hbWVJZGVudGlmaWVyIG5hbWVJZGVudGlmaWVyU2NoZW1lPSJPUkNJRCIgc2NoZW1lVVJJPSIiPjAwMDAtMDAwMS03OTg4LTg5MTk8L25hbWVJZGVudGlmaWVyPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPk1vcnJpcywgQnJldHQgTS48L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPkJyZXR0IE0uPC9naXZlbk5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPk1vcnJpczwvZmFtaWx5TmFtZT4KICAgICAgPG5hbWVJZGVudGlmaWVyIG5hbWVJZGVudGlmaWVyU2NoZW1lPSJPUkNJRCIgc2NoZW1lVVJJPSIiPjAwMDAtMDAwMy0yNTI4LTM0MDk8L25hbWVJZGVudGlmaWVyPgogICAgICA8YWZmaWxpYXRpb24+U3BhY2UgVGVsZXNjb3BlIFNjaWVuY2UgSW5zdGl0dXRlLCAzNzAwIFNhbiBNYXJ0aW4gRHJpdmUsIEJhbHRpbW9yZSwgTUQgMjEyMTgsIFVTQTwvYWZmaWxpYXRpb24+CiAgICA8L2NyZWF0b3I+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lIG5hbWVUeXBlPSJQZXJzb25hbCI+UGVycmluLCBNYXJzaGFsbDwvY3JlYXRvck5hbWU+CiAgICAgIDxnaXZlbk5hbWU+TWFyc2hhbGw8L2dpdmVuTmFtZT4KICAgICAgPGZhbWlseU5hbWU+UGVycmluPC9mYW1pbHlOYW1lPgogICAgICA8bmFtZUlkZW50aWZpZXIgbmFtZUlkZW50aWZpZXJTY2hlbWU9Ik9SQ0lEIiBzY2hlbWVVUkk9IiI+MDAwMC0wMDAyLTMxOTEtODE1MTwvbmFtZUlkZW50aWZpZXI+CiAgICAgIDxhZmZpbGlhdGlvbj5TcGFjZSBUZWxlc2NvcGUgU2NpZW5jZSBJbnN0aXR1dGUsIDM3MDAgU2FuIE1hcnRpbiBEcml2ZSwgQmFsdGltb3JlLCBNRCAyMTIxOCwgVVNBPC9hZmZpbGlhdGlvbj4KICAgIDwvY3JlYXRvcj4KICAgIDxjcmVhdG9yPgogICAgICA8Y3JlYXRvck5hbWUgbmFtZVR5cGU9IlBlcnNvbmFsIj5SYXRoaSwgU2hpdmFuZ2VlPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5TaGl2YW5nZWU8L2dpdmVuTmFtZT4KICAgICAgPGZhbWlseU5hbWU+UmF0aGk8L2ZhbWlseU5hbWU+CiAgICAgIDxuYW1lSWRlbnRpZmllciBuYW1lSWRlbnRpZmllclNjaGVtZT0iT1JDSUQiIHNjaGVtZVVSST0iIj4wMDAwLTAwMDItNDg1OS04MjAzPC9uYW1lSWRlbnRpZmllcj4KICAgIDwvY3JlYXRvcj4KICA8L2NyZWF0b3JzPgogIDx0aXRsZXM+CiAgICA8dGl0bGU+UGhvdHV0aWxzPC90aXRsZT4KICA8L3RpdGxlcz4KICA8cHVibGlzaGVyPlplbm9kbzwvcHVibGlzaGVyPgogIDxwdWJsaWNhdGlvblllYXI+MjAyNjwvcHVibGljYXRpb25ZZWFyPgogIDxyZXNvdXJjZVR5cGUgcmVzb3VyY2VUeXBlR2VuZXJhbD0iU29mdHdhcmUiLz4KICA8c3ViamVjdHM+CiAgICA8c3ViamVjdD5Bc3Ryb25vbXkgc29mdHdhcmU8L3N1YmplY3Q+CiAgICA8c3ViamVjdD5Bc3Ryb25vbXkgZGF0YSBhbmFseXNpczwvc3ViamVjdD4KICAgIDxzdWJqZWN0PlBob3RvbWV0cnk8L3N1YmplY3Q+CiAgICA8c3ViamVjdD5JbWFnZSBEYXRhIEFuYWx5c2lzPC9zdWJqZWN0PgogICAgPHN1YmplY3Q+T3BlbiBzb3VyY2Ugc29mdHdhcmU8L3N1YmplY3Q+CiAgPC9zdWJqZWN0cz4KICA8ZGF0ZXM+CiAgICA8ZGF0ZSBkYXRlVHlwZT0iSXNzdWVkIj4yMDI2LTA0LTE4PC9kYXRlPgogIDwvZGF0ZXM+CiAgPHJlbGF0ZWRJZGVudGlmaWVycz4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IlVSTCIgcmVsYXRpb25UeXBlPSJJc1N1cHBsZW1lbnRUbyIgcmVzb3VyY2VUeXBlR2VuZXJhbD0iU29mdHdhcmUiPmh0dHBzOi8vZ2l0aHViLmNvbS9hc3Ryb3B5L3Bob3R1dGlscy90cmVlLzMuMC4wPC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJIYXNWZXJzaW9uIj4xMC41MjgxL3plbm9kby42ODI1MDkyPC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJIYXNWZXJzaW9uIj4xMC41MjgxL3plbm9kby4xNTUzNTM8L3JlbGF0ZWRJZGVudGlmaWVyPgogICAgPHJlbGF0ZWRJZGVudGlmaWVyIHJlbGF0ZWRJZGVudGlmaWVyVHlwZT0iRE9JIiByZWxhdGlvblR5cGU9Ikhhc1ZlcnNpb24iPjEwLjUyODEvemVub2RvLjEyNTg1MjM5PC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJIYXNWZXJzaW9uIj4xMC41MjgxL3plbm9kby4zNTY4Mjg3PC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJIYXNWZXJzaW9uIj4xMC41MjgxL3plbm9kby4xMDM5MzA5PC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJIYXNWZXJzaW9uIj4xMC41MjgxL3plbm9kby4xMzQwNjk5PC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJIYXNWZXJzaW9uIj4xMC41MjgxL3plbm9kby4xMDM1ODY1PC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJIYXNWZXJzaW9uIj4xMC41MjgxL3plbm9kby40MDQ5MDYxPC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJIYXNWZXJzaW9uIj4xMC41MjgxL3plbm9kby41Nzk2OTI0PC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJIYXNWZXJzaW9uIj4xMC41MjgxL3plbm9kby43ODA0MTM3PC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJIYXNWZXJzaW9uIj4xMC41MjgxL3plbm9kby40MDQ0NzQ0PC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJIYXNWZXJzaW9uIj4xMC41MjgxL3plbm9kby4xMzk0MjE4MjwvcmVsYXRlZElkZW50aWZpZXI+CiAgICA8cmVsYXRlZElkZW50aWZpZXIgcmVsYXRlZElkZW50aWZpZXJUeXBlPSJET0kiIHJlbGF0aW9uVHlwZT0iSGFzVmVyc2lvbiI+MTAuNTI4MS96ZW5vZG8uMTY0OTg2PC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJIYXNWZXJzaW9uIj4xMC41MjgxL3plbm9kby40NDUzNzI1PC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJIYXNWZXJzaW9uIj4xMC41MjgxL3plbm9kby43OTQ2NDQyPC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJIYXNWZXJzaW9uIj4xMC41MjgxL3plbm9kby4xMzk4OTQ1NjwvcmVsYXRlZElkZW50aWZpZXI+CiAgICA8cmVsYXRlZElkZW50aWZpZXIgcmVsYXRlZElkZW50aWZpZXJUeXBlPSJET0kiIHJlbGF0aW9uVHlwZT0iSGFzVmVyc2lvbiI+MTAuNTI4MS96ZW5vZG8uNTUyNTI4NjwvcmVsYXRlZElkZW50aWZpZXI+CiAgICA8cmVsYXRlZElkZW50aWZpZXIgcmVsYXRlZElkZW50aWZpZXJUeXBlPSJET0kiIHJlbGF0aW9uVHlwZT0iSGFzVmVyc2lvbiI+MTAuNTI4MS96ZW5vZG8uMjUzMzM3NjwvcmVsYXRlZElkZW50aWZpZXI+CiAgICA8cmVsYXRlZElkZW50aWZpZXIgcmVsYXRlZElkZW50aWZpZXJUeXBlPSJET0kiIHJlbGF0aW9uVHlwZT0iSGFzVmVyc2lvbiI+MTAuNTI4MS96ZW5vZG8uMzM2ODY0NzwvcmVsYXRlZElkZW50aWZpZXI+CiAgICA8cmVsYXRlZElkZW50aWZpZXIgcmVsYXRlZElkZW50aWZpZXJUeXBlPSJET0kiIHJlbGF0aW9uVHlwZT0iSGFzVmVyc2lvbiI+MTAuNTI4MS96ZW5vZG8uMTcxMjkwMjg8L3JlbGF0ZWRJZGVudGlmaWVyPgogICAgPHJlbGF0ZWRJZGVudGlmaWVyIHJlbGF0ZWRJZGVudGlmaWVyVHlwZT0iRE9JIiByZWxhdGlvblR5cGU9Ikhhc1ZlcnNpb24iPjEwLjUyODEvemVub2RvLjE5NjM2NzMwPC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJIYXNWZXJzaW9uIj4xMC41MjgxL3plbm9kby40NjI0OTk2PC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJIYXNWZXJzaW9uIj4xMC41MjgxL3plbm9kby4xMDY3MTcyNTwvcmVsYXRlZElkZW50aWZpZXI+CiAgICA8cmVsYXRlZElkZW50aWZpZXIgcmVsYXRlZElkZW50aWZpZXJUeXBlPSJET0kiIHJlbGF0aW9uVHlwZT0iSGFzVmVyc2lvbiI+MTAuNTI4MS96ZW5vZG8uMTQ2MDY4OTY8L3JlbGF0ZWRJZGVudGlmaWVyPgogICAgPHJlbGF0ZWRJZGVudGlmaWVyIHJlbGF0ZWRJZGVudGlmaWVyVHlwZT0iRE9JIiByZWxhdGlvblR5cGU9Ikhhc1ZlcnNpb24iPjEwLjUyODEvemVub2RvLjYzODU3MzU8L3JlbGF0ZWRJZGVudGlmaWVyPgogICAgPHJlbGF0ZWRJZGVudGlmaWVyIHJlbGF0ZWRJZGVudGlmaWVyVHlwZT0iRE9JIiByZWxhdGlvblR5cGU9Ikhhc1ZlcnNpb24iPjEwLjUyODEvemVub2RvLjE0ODg5NDQwPC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJIYXNWZXJzaW9uIj4xMC41MjgxL3plbm9kby4zNDc4NTc1PC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJIYXNWZXJzaW9uIj4xMC41MjgxL3plbm9kby43NDE5NzQxPC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJIYXNWZXJzaW9uIj4xMC41MjgxL3plbm9kby44MjQ4MDIwPC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJIYXNWZXJzaW9uIj4xMC41MjgxL3plbm9kby4xMDk2NzE3NjwvcmVsYXRlZElkZW50aWZpZXI+CiAgICA8cmVsYXRlZElkZW50aWZpZXIgcmVsYXRlZElkZW50aWZpZXJUeXBlPSJET0kiIHJlbGF0aW9uVHlwZT0iSGFzVmVyc2lvbiI+MTAuNTI4MS96ZW5vZG8uMTM5MzE3OTU8L3JlbGF0ZWRJZGVudGlmaWVyPgogIDwvcmVsYXRlZElkZW50aWZpZXJzPgogIDxzaXplcy8+CiAgPGZvcm1hdHMvPgogIDx2ZXJzaW9uPjMuMC4wPC92ZXJzaW9uPgogIDxyaWdodHNMaXN0PgogICAgPHJpZ2h0cyByaWdodHNVUkk9Imh0dHBzOi8vb3BlbnNvdXJjZS5vcmcvbGljZW5zZXMvQlNELTMtQ2xhdXNlIiByaWdodHNJZGVudGlmaWVyPSJic2QtMy1jbGF1c2UiIHJpZ2h0c0lkZW50aWZpZXJTY2hlbWU9InNwZHgiPkJTRCAzLUNsYXVzZSAiTmV3IiBvciAiUmV2aXNlZCIgTGljZW5zZTwvcmlnaHRzPgogIDwvcmlnaHRzTGlzdD4KICA8ZGVzY3JpcHRpb25zPgogICAgPGRlc2NyaXB0aW9uIGRlc2NyaXB0aW9uVHlwZT0iQWJzdHJhY3QiPkFzdHJvcHkgcGFja2FnZSBmb3Igc291cmNlIGRldGVjdGlvbiBhbmQgcGhvdG9tZXRyeTwvZGVzY3JpcHRpb24+CiAgICA8ZGVzY3JpcHRpb24gZGVzY3JpcHRpb25UeXBlPSJPdGhlciI+SWYgeW91IHVzZSB0aGlzIHNvZnR3YXJlLCBwbGVhc2UgY2l0ZSBpdCBhcyBiZWxvdy48L2Rlc2NyaXB0aW9uPgogIDwvZGVzY3JpcHRpb25zPgo8L3Jlc291cmNlPgo=",
+      "url": "https://zenodo.org/doi/10.5281/zenodo.596036",
+      "contentUrl": null,
+      "metadataVersion": 32,
+      "schemaVersion": "http://datacite.org/schema/kernel-4",
+      "source": "mds",
+      "isActive": true,
+      "state": "findable",
+      "reason": null,
+      "viewCount": 0,
+      "viewsOverTime": [],
+      "downloadCount": 0,
+      "downloadsOverTime": [],
+      "referenceCount": 0,
+      "citationCount": 0,
+      "citationsOverTime": [
+        {
+          "year": "2022",
+          "total": 1
+        }
+      ],
+      "partCount": 0,
+      "partOfCount": 0,
+      "versionCount": 32,
+      "versionOfCount": 1,
+      "created": "2017-05-30T02:49:32.000Z",
+      "registered": "2017-05-30T02:49:33.000Z",
+      "published": "2026",
+      "updated": "2026-08-27T08:08:11.000Z"
+    },
+    "relationships": {
+      "client": {
+        "data": {
+          "id": "cern.zenodo",
+          "type": "clients"
+        }
+      },
+      "provider": {
+        "data": {
+          "id": "cern",
+          "type": "providers"
+        }
+      },
+      "media": {
+        "data": {
+          "id": "10.5281/zenodo.596036",
+          "type": "media"
+        }
+      },
+      "references": {
+        "data": []
+      },
+      "citations": {
+        "data": []
+      },
+      "parts": {
+        "data": []
+      },
+      "partOf": {
+        "data": []
+      },
+      "versions": {
+        "data": [
+          {
+            "id": "10.5281/zenodo.8248020",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.6385735",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.1340699",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.7804137",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.13931795",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.10967176",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.4044744",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.3478575",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.4624996",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.3368647",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.13989456",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.164986",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.19636730",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.7419741",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.2533376",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.5525286",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.7946442",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.14889440",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.6825092",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.13942182",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.17129028",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.1039309",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.1035865",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.14606896",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.10671725",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.4453725",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.5796924",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.4049061",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.3568287",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.12585239",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.155353",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.596036",
+            "type": "dois"
+          }
+        ]
+      },
+      "versionOf": {
+        "data": [
+          {
+            "id": "10.5281/zenodo.596036",
+            "type": "dois"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "10.5281/zenodo.21262390",
+    "type": "dois",
+    "attributes": {
+      "doi": "10.5281/zenodo.21262390",
+      "prefix": "10.5281",
+      "suffix": "zenodo.21262390",
+      "identifiers": [
+        {
+          "identifier": "oai:zenodo.org:21262390",
+          "identifierType": "oai"
+        }
+      ],
+      "alternateIdentifiers": [
+        {
+          "alternateIdentifierType": "oai",
+          "alternateIdentifier": "oai:zenodo.org:21262390"
+        }
+      ],
+      "creators": [
+        {
+          "name": "Astropy Collaboration",
+          "nameType": "Personal",
+          "familyName": "Astropy Collaboration",
+          "nameIdentifiers": [],
+          "affiliation": []
+        }
+      ],
+      "titles": [
+        {
+          "title": "Astropy"
+        }
+      ],
+      "publisher": {
+        "name": "Zenodo"
+      },
+      "container": {},
+      "publicationYear": 2026,
+      "subjects": [],
+      "contributors": [],
+      "dates": [
+        {
+          "date": "2026-07-08",
+          "dateType": "Issued"
+        }
+      ],
+      "language": null,
+      "types": {
+        "ris": "COMP",
+        "bibtex": "misc",
+        "citeproc": "article",
+        "schemaOrg": "SoftwareSourceCode",
+        "resourceType": "",
+        "resourceTypeGeneral": "Software"
+      },
+      "relatedIdentifiers": [
+        {
+          "relationType": "IsSupplementTo",
+          "relatedIdentifier": "https://github.com/astropy/astropy/tree/v7.2.2",
+          "resourceTypeGeneral": "Software",
+          "relatedIdentifierType": "URL"
+        },
+        {
+          "relationType": "IsVersionOf",
+          "relatedIdentifier": "10.5281/zenodo.4670728",
+          "relatedIdentifierType": "DOI"
+        }
+      ],
+      "relatedItems": [],
+      "sizes": [],
+      "formats": [],
+      "version": "v7.2.2",
+      "rightsList": [
+        {
+          "rights": "BSD 3-Clause \"New\" or \"Revised\" License",
+          "rightsUri": "https://opensource.org/licenses/BSD-3-Clause",
+          "schemeUri": "https://spdx.org/licenses/",
+          "rightsIdentifier": "bsd-3-clause",
+          "rightsIdentifierScheme": "SPDX"
+        }
+      ],
+      "descriptions": [
+        {
+          "description": "https://docs.astropy.org/en/v7.2.2/changelog.html",
+          "descriptionType": "Abstract"
+        },
+        {
+          "description": "If you use this software, please cite it using the metadata from this file.",
+          "descriptionType": "Other"
+        }
+      ],
+      "geoLocations": [],
+      "fundingReferences": [],
+      "xml": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHJlc291cmNlIHhtbG5zOnhzaT0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEtaW5zdGFuY2UiIHhtbG5zPSJodHRwOi8vZGF0YWNpdGUub3JnL3NjaGVtYS9rZXJuZWwtNCIgeHNpOnNjaGVtYUxvY2F0aW9uPSJodHRwOi8vZGF0YWNpdGUub3JnL3NjaGVtYS9rZXJuZWwtNCBodHRwOi8vc2NoZW1hLmRhdGFjaXRlLm9yZy9tZXRhL2tlcm5lbC00L21ldGFkYXRhLnhzZCI+CiAgPGlkZW50aWZpZXIgaWRlbnRpZmllclR5cGU9IkRPSSI+MTAuNTI4MS9aRU5PRE8uMjEyNjIzOTA8L2lkZW50aWZpZXI+CiAgPGNyZWF0b3JzPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPkFzdHJvcHkgQ29sbGFib3JhdGlvbjwvY3JlYXRvck5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPkFzdHJvcHkgQ29sbGFib3JhdGlvbjwvZmFtaWx5TmFtZT4KICAgIDwvY3JlYXRvcj4KICA8L2NyZWF0b3JzPgogIDx0aXRsZXM+CiAgICA8dGl0bGU+QXN0cm9weTwvdGl0bGU+CiAgPC90aXRsZXM+CiAgPHB1Ymxpc2hlcj5aZW5vZG88L3B1Ymxpc2hlcj4KICA8cHVibGljYXRpb25ZZWFyPjIwMjY8L3B1YmxpY2F0aW9uWWVhcj4KICA8cmVzb3VyY2VUeXBlIHJlc291cmNlVHlwZUdlbmVyYWw9IlNvZnR3YXJlIi8+CiAgPGRhdGVzPgogICAgPGRhdGUgZGF0ZVR5cGU9Iklzc3VlZCI+MjAyNi0wNy0wODwvZGF0ZT4KICA8L2RhdGVzPgogIDxhbHRlcm5hdGVJZGVudGlmaWVycz4KICAgIDxhbHRlcm5hdGVJZGVudGlmaWVyIGFsdGVybmF0ZUlkZW50aWZpZXJUeXBlPSJvYWkiPm9haTp6ZW5vZG8ub3JnOjIxMjYyMzkwPC9hbHRlcm5hdGVJZGVudGlmaWVyPgogIDwvYWx0ZXJuYXRlSWRlbnRpZmllcnM+CiAgPHJlbGF0ZWRJZGVudGlmaWVycz4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IlVSTCIgcmVsYXRpb25UeXBlPSJJc1N1cHBsZW1lbnRUbyIgcmVzb3VyY2VUeXBlR2VuZXJhbD0iU29mdHdhcmUiPmh0dHBzOi8vZ2l0aHViLmNvbS9hc3Ryb3B5L2FzdHJvcHkvdHJlZS92Ny4yLjI8L3JlbGF0ZWRJZGVudGlmaWVyPgogICAgPHJlbGF0ZWRJZGVudGlmaWVyIHJlbGF0ZWRJZGVudGlmaWVyVHlwZT0iRE9JIiByZWxhdGlvblR5cGU9IklzVmVyc2lvbk9mIj4xMC41MjgxL3plbm9kby40NjcwNzI4PC9yZWxhdGVkSWRlbnRpZmllcj4KICA8L3JlbGF0ZWRJZGVudGlmaWVycz4KICA8c2l6ZXMvPgogIDxmb3JtYXRzLz4KICA8dmVyc2lvbj52Ny4yLjI8L3ZlcnNpb24+CiAgPHJpZ2h0c0xpc3Q+CiAgICA8cmlnaHRzIHJpZ2h0c1VSST0iaHR0cHM6Ly9vcGVuc291cmNlLm9yZy9saWNlbnNlcy9CU0QtMy1DbGF1c2UiIHJpZ2h0c0lkZW50aWZpZXI9ImJzZC0zLWNsYXVzZSIgcmlnaHRzSWRlbnRpZmllclNjaGVtZT0iU1BEWCIgc2NoZW1lVVJJPSJodHRwczovL3NwZHgub3JnL2xpY2Vuc2VzLyI+QlNEIDMtQ2xhdXNlICJOZXciIG9yICJSZXZpc2VkIiBMaWNlbnNlPC9yaWdodHM+CiAgPC9yaWdodHNMaXN0PgogIDxkZXNjcmlwdGlvbnM+CiAgICA8ZGVzY3JpcHRpb24gZGVzY3JpcHRpb25UeXBlPSJBYnN0cmFjdCI+aHR0cHM6Ly9kb2NzLmFzdHJvcHkub3JnL2VuL3Y3LjIuMi9jaGFuZ2Vsb2cuaHRtbDwvZGVzY3JpcHRpb24+CiAgICA8ZGVzY3JpcHRpb24gZGVzY3JpcHRpb25UeXBlPSJPdGhlciI+SWYgeW91IHVzZSB0aGlzIHNvZnR3YXJlLCBwbGVhc2UgY2l0ZSBpdCB1c2luZyB0aGUgbWV0YWRhdGEgZnJvbSB0aGlzIGZpbGUuPC9kZXNjcmlwdGlvbj4KICA8L2Rlc2NyaXB0aW9ucz4KPC9yZXNvdXJjZT4K",
+      "url": "https://zenodo.org/doi/10.5281/zenodo.21262390",
+      "contentUrl": null,
+      "metadataVersion": 1,
+      "schemaVersion": "http://datacite.org/schema/kernel-4",
+      "source": "api",
+      "isActive": true,
+      "state": "findable",
+      "reason": null,
+      "viewCount": 0,
+      "viewsOverTime": [],
+      "downloadCount": 0,
+      "downloadsOverTime": [],
+      "referenceCount": 0,
+      "citationCount": 0,
+      "citationsOverTime": [
+        {
+          "year": "2026",
+          "total": 1
+        }
+      ],
+      "partCount": 0,
+      "partOfCount": 0,
+      "versionCount": 0,
+      "versionOfCount": 1,
+      "created": "2026-07-08T13:01:34.000Z",
+      "registered": "2026-07-08T13:01:34.000Z",
+      "published": "2026",
+      "updated": "2026-09-15T14:32:39.000Z"
+    },
+    "relationships": {
+      "client": {
+        "data": {
+          "id": "cern.zenodo",
+          "type": "clients"
+        }
+      },
+      "provider": {
+        "data": {
+          "id": "cern",
+          "type": "providers"
+        }
+      },
+      "media": {
+        "data": {
+          "id": "10.5281/zenodo.21262390",
+          "type": "media"
+        }
+      },
+      "references": {
+        "data": []
+      },
+      "citations": {
+        "data": []
+      },
+      "parts": {
+        "data": []
+      },
+      "partOf": {
+        "data": []
+      },
+      "versions": {
+        "data": []
+      },
+      "versionOf": {
+        "data": [
+          {
+            "id": "10.5281/zenodo.4670728",
+            "type": "dois"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "10.5281/zenodo.15878535",
+    "type": "dois",
+    "attributes": {
+      "doi": "10.5281/zenodo.15878535",
+      "prefix": "10.5281",
+      "suffix": "zenodo.15878535",
+      "identifiers": [
+        {
+          "identifier": "oai:zenodo.org:15878535",
+          "identifierType": "oai"
+        }
+      ],
+      "alternateIdentifiers": [
+        {
+          "alternateIdentifierType": "oai",
+          "alternateIdentifier": "oai:zenodo.org:15878535"
+        }
+      ],
+      "creators": [
+        {
+          "name": "Barontini, Andrea",
+          "nameType": "Personal",
+          "givenName": "Andrea",
+          "familyName": "Barontini",
+          "nameIdentifiers": [],
+          "affiliation": []
+        },
+        {
+          "name": "Candido, Alessandro",
+          "nameType": "Personal",
+          "givenName": "Alessandro",
+          "familyName": "Candido",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-1405-3205",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Cruz-Martinez, Juan",
+          "nameType": "Personal",
+          "givenName": "Juan",
+          "familyName": "Cruz-Martinez",
+          "nameIdentifiers": [],
+          "affiliation": []
+        },
+        {
+          "name": "Giani, Tommaso",
+          "nameType": "Personal",
+          "givenName": "Tommaso",
+          "familyName": "Giani",
+          "nameIdentifiers": [],
+          "affiliation": []
+        },
+        {
+          "name": "Hekhorn, Felix",
+          "nameType": "Personal",
+          "givenName": "Felix",
+          "familyName": "Hekhorn",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0001-8752-8008",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Magni, Giacomo",
+          "nameType": "Personal",
+          "givenName": "Giacomo",
+          "familyName": "Magni",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0003-1699-4815",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Laurenti, Niccolò",
+          "nameType": "Personal",
+          "givenName": "Niccolò",
+          "familyName": "Laurenti",
+          "nameIdentifiers": [],
+          "affiliation": []
+        },
+        {
+          "name": "Sharma, Tanishq",
+          "nameType": "Personal",
+          "givenName": "Tanishq",
+          "familyName": "Sharma",
+          "nameIdentifiers": [],
+          "affiliation": []
+        }
+      ],
+      "titles": [
+        {
+          "title": "NNPDF/eko: Numpy 3.13 & Numpy 2"
+        }
+      ],
+      "publisher": {
+        "name": "Zenodo"
+      },
+      "container": {},
+      "publicationYear": 2025,
+      "subjects": [],
+      "contributors": [],
+      "dates": [
+        {
+          "date": "2025-07-14",
+          "dateType": "Issued"
+        }
+      ],
+      "language": null,
+      "types": {
+        "ris": "COMP",
+        "bibtex": "misc",
+        "citeproc": "article",
+        "schemaOrg": "SoftwareSourceCode",
+        "resourceType": "",
+        "resourceTypeGeneral": "Software"
+      },
+      "relatedIdentifiers": [
+        {
+          "relationType": "IsVersionOf",
+          "relatedIdentifier": "10.5281/zenodo.3874237",
+          "relatedIdentifierType": "DOI"
+        }
+      ],
+      "relatedItems": [],
+      "sizes": [],
+      "formats": [],
+      "version": "v0.15.2",
+      "rightsList": [
+        {
+          "rights": "GNU General Public License v3.0 only",
+          "rightsUri": "https://www.gnu.org/licenses/gpl-3.0-standalone.html",
+          "schemeUri": "https://spdx.org/licenses/",
+          "rightsIdentifier": "gpl-3.0",
+          "rightsIdentifierScheme": "SPDX"
+        }
+      ],
+      "descriptions": [
+        {
+          "description": "What's Changed\n\n\n\nRemove ev_op_iterations from truncated by @felixhekhorn in https://github.com/NNPDF/eko/pull/459\n\nUse dynamic_versioning as backend by @scarlehoff in https://github.com/NNPDF/eko/pull/448\n\nX space conversion of the N3LO matching  by @giacomomagni in https://github.com/NNPDF/eko/pull/444\n\nDynamic versioning for postrelease versions by @evagroenendijk in https://github.com/NNPDF/eko/pull/465\n\nUse user paths in genpdf if possible by @felixhekhorn in https://github.com/NNPDF/eko/pull/469\n\nPython 3.13 & numpy 2.0 support by @scarlehoff in https://github.com/NNPDF/eko/pull/470\n\n\nFull Changelog: https://github.com/NNPDF/eko/compare/v0.15.1...v0.15.2",
+          "descriptionType": "Abstract"
+        }
+      ],
+      "geoLocations": [],
+      "fundingReferences": [
+        {
+          "awardTitle": "Proton strucure for discovery at the Large Hadron Collider",
+          "funderName": "European Commission",
+          "awardNumber": "740006",
+          "funderIdentifier": "10.13039/501100000780",
+          "funderIdentifierType": "Crossref Funder ID"
+        }
+      ],
+      "xml": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHJlc291cmNlIHhtbG5zOnhzaT0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEtaW5zdGFuY2UiIHhtbG5zPSJodHRwOi8vZGF0YWNpdGUub3JnL3NjaGVtYS9rZXJuZWwtNCIgeHNpOnNjaGVtYUxvY2F0aW9uPSJodHRwOi8vZGF0YWNpdGUub3JnL3NjaGVtYS9rZXJuZWwtNCBodHRwOi8vc2NoZW1hLmRhdGFjaXRlLm9yZy9tZXRhL2tlcm5lbC00L21ldGFkYXRhLnhzZCI+CiAgPGlkZW50aWZpZXIgaWRlbnRpZmllclR5cGU9IkRPSSI+MTAuNTI4MS9aRU5PRE8uMTU4Nzg1MzU8L2lkZW50aWZpZXI+CiAgPGNyZWF0b3JzPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPkJhcm9udGluaSwgQW5kcmVhPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5BbmRyZWE8L2dpdmVuTmFtZT4KICAgICAgPGZhbWlseU5hbWU+QmFyb250aW5pPC9mYW1pbHlOYW1lPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPkNhbmRpZG8sIEFsZXNzYW5kcm88L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPkFsZXNzYW5kcm88L2dpdmVuTmFtZT4KICAgICAgPGZhbWlseU5hbWU+Q2FuZGlkbzwvZmFtaWx5TmFtZT4KICAgICAgPG5hbWVJZGVudGlmaWVyIG5hbWVJZGVudGlmaWVyU2NoZW1lPSJPUkNJRCIgc2NoZW1lVVJJPSIiPjAwMDAtMDAwMi0xNDA1LTMyMDU8L25hbWVJZGVudGlmaWVyPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPkNydXotTWFydGluZXosIEp1YW48L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPkp1YW48L2dpdmVuTmFtZT4KICAgICAgPGZhbWlseU5hbWU+Q3J1ei1NYXJ0aW5lejwvZmFtaWx5TmFtZT4KICAgIDwvY3JlYXRvcj4KICAgIDxjcmVhdG9yPgogICAgICA8Y3JlYXRvck5hbWUgbmFtZVR5cGU9IlBlcnNvbmFsIj5HaWFuaSwgVG9tbWFzbzwvY3JlYXRvck5hbWU+CiAgICAgIDxnaXZlbk5hbWU+VG9tbWFzbzwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5HaWFuaTwvZmFtaWx5TmFtZT4KICAgIDwvY3JlYXRvcj4KICAgIDxjcmVhdG9yPgogICAgICA8Y3JlYXRvck5hbWUgbmFtZVR5cGU9IlBlcnNvbmFsIj5IZWtob3JuLCBGZWxpeDwvY3JlYXRvck5hbWU+CiAgICAgIDxnaXZlbk5hbWU+RmVsaXg8L2dpdmVuTmFtZT4KICAgICAgPGZhbWlseU5hbWU+SGVraG9ybjwvZmFtaWx5TmFtZT4KICAgICAgPG5hbWVJZGVudGlmaWVyIG5hbWVJZGVudGlmaWVyU2NoZW1lPSJPUkNJRCIgc2NoZW1lVVJJPSIiPjAwMDAtMDAwMS04NzUyLTgwMDg8L25hbWVJZGVudGlmaWVyPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPk1hZ25pLCBHaWFjb21vPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5HaWFjb21vPC9naXZlbk5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPk1hZ25pPC9mYW1pbHlOYW1lPgogICAgICA8bmFtZUlkZW50aWZpZXIgbmFtZUlkZW50aWZpZXJTY2hlbWU9Ik9SQ0lEIiBzY2hlbWVVUkk9IiI+MDAwMC0wMDAzLTE2OTktNDgxNTwvbmFtZUlkZW50aWZpZXI+CiAgICA8L2NyZWF0b3I+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lIG5hbWVUeXBlPSJQZXJzb25hbCI+TGF1cmVudGksIE5pY2NvbMOyPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5OaWNjb2zDsjwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5MYXVyZW50aTwvZmFtaWx5TmFtZT4KICAgIDwvY3JlYXRvcj4KICAgIDxjcmVhdG9yPgogICAgICA8Y3JlYXRvck5hbWUgbmFtZVR5cGU9IlBlcnNvbmFsIj5TaGFybWEsIFRhbmlzaHE8L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPlRhbmlzaHE8L2dpdmVuTmFtZT4KICAgICAgPGZhbWlseU5hbWU+U2hhcm1hPC9mYW1pbHlOYW1lPgogICAgPC9jcmVhdG9yPgogIDwvY3JlYXRvcnM+CiAgPHRpdGxlcz4KICAgIDx0aXRsZT5OTlBERi9la286IE51bXB5IDMuMTMgJmFtcDsgTnVtcHkgMjwvdGl0bGU+CiAgPC90aXRsZXM+CiAgPHB1Ymxpc2hlcj5aZW5vZG88L3B1Ymxpc2hlcj4KICA8cHVibGljYXRpb25ZZWFyPjIwMjU8L3B1YmxpY2F0aW9uWWVhcj4KICA8cmVzb3VyY2VUeXBlIHJlc291cmNlVHlwZUdlbmVyYWw9IlNvZnR3YXJlIi8+CiAgPGRhdGVzPgogICAgPGRhdGUgZGF0ZVR5cGU9Iklzc3VlZCI+MjAyNS0wNy0xNDwvZGF0ZT4KICA8L2RhdGVzPgogIDxhbHRlcm5hdGVJZGVudGlmaWVycz4KICAgIDxhbHRlcm5hdGVJZGVudGlmaWVyIGFsdGVybmF0ZUlkZW50aWZpZXJUeXBlPSJvYWkiPm9haTp6ZW5vZG8ub3JnOjE1ODc4NTM1PC9hbHRlcm5hdGVJZGVudGlmaWVyPgogIDwvYWx0ZXJuYXRlSWRlbnRpZmllcnM+CiAgPHJlbGF0ZWRJZGVudGlmaWVycz4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJJc1ZlcnNpb25PZiI+MTAuNTI4MS96ZW5vZG8uMzg3NDIzNzwvcmVsYXRlZElkZW50aWZpZXI+CiAgPC9yZWxhdGVkSWRlbnRpZmllcnM+CiAgPHNpemVzLz4KICA8Zm9ybWF0cy8+CiAgPHZlcnNpb24+djAuMTUuMjwvdmVyc2lvbj4KICA8cmlnaHRzTGlzdD4KICAgIDxyaWdodHMgcmlnaHRzVVJJPSJodHRwczovL3d3dy5nbnUub3JnL2xpY2Vuc2VzL2dwbC0zLjAtc3RhbmRhbG9uZS5odG1sIiByaWdodHNJZGVudGlmaWVyPSJncGwtMy4wLW9ubHkiIHJpZ2h0c0lkZW50aWZpZXJTY2hlbWU9InNwZHgiPkdOVSBHZW5lcmFsIFB1YmxpYyBMaWNlbnNlIHYzLjAgb25seTwvcmlnaHRzPgogIDwvcmlnaHRzTGlzdD4KICA8ZGVzY3JpcHRpb25zPgogICAgPGRlc2NyaXB0aW9uIGRlc2NyaXB0aW9uVHlwZT0iQWJzdHJhY3QiPldoYXQncyBDaGFuZ2VkCgoKClJlbW92ZSBldl9vcF9pdGVyYXRpb25zIGZyb20gdHJ1bmNhdGVkIGJ5IEBmZWxpeGhla2hvcm4gaW4gaHR0cHM6Ly9naXRodWIuY29tL05OUERGL2Vrby9wdWxsLzQ1OQoKVXNlIGR5bmFtaWNfdmVyc2lvbmluZyBhcyBiYWNrZW5kIGJ5IEBzY2FybGVob2ZmIGluIGh0dHBzOi8vZ2l0aHViLmNvbS9OTlBERi9la28vcHVsbC80NDgKClggc3BhY2UgY29udmVyc2lvbiBvZiB0aGUgTjNMTyBtYXRjaGluZyAgYnkgQGdpYWNvbW9tYWduaSBpbiBodHRwczovL2dpdGh1Yi5jb20vTk5QREYvZWtvL3B1bGwvNDQ0CgpEeW5hbWljIHZlcnNpb25pbmcgZm9yIHBvc3RyZWxlYXNlIHZlcnNpb25zIGJ5IEBldmFncm9lbmVuZGlqayBpbiBodHRwczovL2dpdGh1Yi5jb20vTk5QREYvZWtvL3B1bGwvNDY1CgpVc2UgdXNlciBwYXRocyBpbiBnZW5wZGYgaWYgcG9zc2libGUgYnkgQGZlbGl4aGVraG9ybiBpbiBodHRwczovL2dpdGh1Yi5jb20vTk5QREYvZWtvL3B1bGwvNDY5CgpQeXRob24gMy4xMyAmYW1wOyBudW1weSAyLjAgc3VwcG9ydCBieSBAc2NhcmxlaG9mZiBpbiBodHRwczovL2dpdGh1Yi5jb20vTk5QREYvZWtvL3B1bGwvNDcwCgoKRnVsbCBDaGFuZ2Vsb2c6IGh0dHBzOi8vZ2l0aHViLmNvbS9OTlBERi9la28vY29tcGFyZS92MC4xNS4xLi4udjAuMTUuMjwvZGVzY3JpcHRpb24+CiAgPC9kZXNjcmlwdGlvbnM+CiAgPGZ1bmRpbmdSZWZlcmVuY2VzPgogICAgPGZ1bmRpbmdSZWZlcmVuY2U+CiAgICAgIDxmdW5kZXJOYW1lPkV1cm9wZWFuIENvbW1pc3Npb248L2Z1bmRlck5hbWU+CiAgICAgIDxmdW5kZXJJZGVudGlmaWVyIGZ1bmRlcklkZW50aWZpZXJUeXBlPSJDcm9zc3JlZiBGdW5kZXIgSUQiPjEwLjEzMDM5LzUwMTEwMDAwMDc4MDwvZnVuZGVySWRlbnRpZmllcj4KICAgICAgPGF3YXJkTnVtYmVyPjc0MDAwNjwvYXdhcmROdW1iZXI+CiAgICAgIDxhd2FyZFRpdGxlPlByb3RvbiBzdHJ1Y3VyZSBmb3IgZGlzY292ZXJ5IGF0IHRoZSBMYXJnZSBIYWRyb24gQ29sbGlkZXI8L2F3YXJkVGl0bGU+CiAgICA8L2Z1bmRpbmdSZWZlcmVuY2U+CiAgPC9mdW5kaW5nUmVmZXJlbmNlcz4KPC9yZXNvdXJjZT4K",
+      "url": "https://zenodo.org/doi/10.5281/zenodo.15878535",
+      "contentUrl": null,
+      "metadataVersion": 0,
+      "schemaVersion": "http://datacite.org/schema/kernel-4",
+      "source": "api",
+      "isActive": true,
+      "state": "findable",
+      "reason": null,
+      "viewCount": 0,
+      "viewsOverTime": [],
+      "downloadCount": 0,
+      "downloadsOverTime": [],
+      "referenceCount": 0,
+      "citationCount": 0,
+      "citationsOverTime": [],
+      "partCount": 0,
+      "partOfCount": 0,
+      "versionCount": 0,
+      "versionOfCount": 1,
+      "created": "2025-07-14T10:32:34.000Z",
+      "registered": "2025-07-14T10:32:35.000Z",
+      "published": "2025",
+      "updated": "2025-07-14T10:32:35.000Z"
+    },
+    "relationships": {
+      "client": {
+        "data": {
+          "id": "cern.zenodo",
+          "type": "clients"
+        }
+      },
+      "provider": {
+        "data": {
+          "id": "cern",
+          "type": "providers"
+        }
+      },
+      "media": {
+        "data": {
+          "id": "10.5281/zenodo.15878535",
+          "type": "media"
+        }
+      },
+      "references": {
+        "data": []
+      },
+      "citations": {
+        "data": []
+      },
+      "parts": {
+        "data": []
+      },
+      "partOf": {
+        "data": []
+      },
+      "versions": {
+        "data": []
+      },
+      "versionOf": {
+        "data": [
+          {
+            "id": "10.5281/zenodo.3874237",
+            "type": "dois"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "10.6084/m9.figshare.9577868",
+    "type": "dois",
+    "attributes": {
+      "doi": "10.6084/m9.figshare.9577868",
+      "prefix": "10.6084",
+      "suffix": "m9.figshare.9577868",
+      "identifiers": [],
+      "alternateIdentifiers": [],
+      "creators": [
+        {
+          "name": "Dharmawardena, Thavisha",
+          "givenName": "Thavisha",
+          "familyName": "Dharmawardena",
+          "affiliation": [],
+          "nameIdentifiers": []
+        }
+      ],
+      "titles": [
+        {
+          "title": "EMCEE SED fitting"
+        }
+      ],
+      "publisher": {
+        "name": "figshare"
+      },
+      "container": {},
+      "publicationYear": 2019,
+      "subjects": [
+        {
+          "subject": "Stellar astronomy and planetary systems",
+          "schemeUri": "http://www.abs.gov.au/ausstats/abs@.nsf/0/6BB427AB9696C225CA2574180004463E",
+          "subjectScheme": "ANZSRC Fields of Research",
+          "classificationCode": "510109"
+        }
+      ],
+      "contributors": [],
+      "dates": [
+        {
+          "date": "2019-08-13",
+          "dateType": "Created"
+        },
+        {
+          "date": "2019-08-13",
+          "dateType": "Updated"
+        },
+        {
+          "date": "2019",
+          "dateType": "Issued"
+        }
+      ],
+      "language": null,
+      "types": {
+        "ris": "COMP",
+        "bibtex": "misc",
+        "citeproc": "article",
+        "schemaOrg": "SoftwareSourceCode",
+        "resourceType": "Software",
+        "resourceTypeGeneral": "Software"
+      },
+      "relatedIdentifiers": [],
+      "relatedItems": [],
+      "sizes": [
+        "557404 Bytes"
+      ],
+      "formats": [],
+      "version": null,
+      "rightsList": [
+        {
+          "rights": "GPL 3.0+",
+          "rightsUri": "https://www.gnu.org/licenses/gpl-3.0.html"
+        }
+      ],
+      "descriptions": [
+        {
+          "description": "Scripts required to reproduce the MCMC emcee analysis described in the paper. The resulting output from these scripts is also given here.",
+          "descriptionType": "Abstract"
+        }
+      ],
+      "geoLocations": [],
+      "fundingReferences": [],
+      "xml": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHJlc291cmNlIHhtbG5zPSJodHRwOi8vZGF0YWNpdGUub3JnL3NjaGVtYS9rZXJuZWwtNCIgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSIgeHNpOnNjaGVtYUxvY2F0aW9uPSJodHRwOi8vZGF0YWNpdGUub3JnL3NjaGVtYS9rZXJuZWwtNCBodHRwOi8vc2NoZW1hLmRhdGFjaXRlLm9yZy9tZXRhL2tlcm5lbC00LjQvbWV0YWRhdGEueHNkIj4KICA8aWRlbnRpZmllciBpZGVudGlmaWVyVHlwZT0iRE9JIj4xMC42MDg0L005LkZJR1NIQVJFLjk1Nzc4Njg8L2lkZW50aWZpZXI+CiAgPGNyZWF0b3JzPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZT5UaGF2aXNoYSBEaGFybWF3YXJkZW5hPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5UaGF2aXNoYTwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5EaGFybWF3YXJkZW5hPC9mYW1pbHlOYW1lPgogICAgPC9jcmVhdG9yPgogIDwvY3JlYXRvcnM+CiAgPHRpdGxlcz4KICAgIDx0aXRsZT5FTUNFRSBTRUQgZml0dGluZzwvdGl0bGU+CiAgPC90aXRsZXM+CiAgPGRlc2NyaXB0aW9ucz4KICAgIDxkZXNjcmlwdGlvbiBkZXNjcmlwdGlvblR5cGU9IkFic3RyYWN0Ij5TY3JpcHRzIHJlcXVpcmVkIHRvIHJlcHJvZHVjZSB0aGUgTUNNQyBlbWNlZSBhbmFseXNpcyBkZXNjcmliZWQgaW4gdGhlIHBhcGVyLiBUaGUgcmVzdWx0aW5nIG91dHB1dCBmcm9tIHRoZXNlIHNjcmlwdHMgaXMgYWxzbyBnaXZlbiBoZXJlLjwvZGVzY3JpcHRpb24+CiAgPC9kZXNjcmlwdGlvbnM+CiAgPHN1YmplY3RzPgogICAgPHN1YmplY3Qgc2NoZW1lVVJJPSJodHRwOi8vd3d3LmFicy5nb3YuYXUvYXVzc3RhdHMvYWJzQC5uc2YvMC82QkI0MjdBQjk2OTZDMjI1Q0EyNTc0MTgwMDA0NDYzRSIgc3ViamVjdFNjaGVtZT0iQU5aU1JDIEZpZWxkcyBvZiBSZXNlYXJjaCIgY2xhc3NpZmljYXRpb25Db2RlPSI1MTAxMDkiPlN0ZWxsYXIgYXN0cm9ub215IGFuZCBwbGFuZXRhcnkgc3lzdGVtczwvc3ViamVjdD4KICA8L3N1YmplY3RzPgogIDxwdWJsaXNoZXI+Zmlnc2hhcmU8L3B1Ymxpc2hlcj4KICA8cHVibGljYXRpb25ZZWFyPjIwMTk8L3B1YmxpY2F0aW9uWWVhcj4KICA8ZGF0ZXM+CiAgICA8ZGF0ZSBkYXRlVHlwZT0iQ3JlYXRlZCI+MjAxOS0wOC0xMzwvZGF0ZT4KICAgIDxkYXRlIGRhdGVUeXBlPSJVcGRhdGVkIj4yMDE5LTA4LTEzPC9kYXRlPgogIDwvZGF0ZXM+CiAgPHJlc291cmNlVHlwZSByZXNvdXJjZVR5cGVHZW5lcmFsPSJTb2Z0d2FyZSI+U29mdHdhcmU8L3Jlc291cmNlVHlwZT4KICA8c2l6ZXM+CiAgICA8c2l6ZT41NTc0MDQgQnl0ZXM8L3NpemU+CiAgPC9zaXplcz4KICA8cmlnaHRzTGlzdD4KICAgIDxyaWdodHMgcmlnaHRzVVJJPSJodHRwczovL3d3dy5nbnUub3JnL2xpY2Vuc2VzL2dwbC0zLjAuaHRtbCI+R1BMIDMuMCs8L3JpZ2h0cz4KICA8L3JpZ2h0c0xpc3Q+CjwvcmVzb3VyY2U+",
+      "url": "https://figshare.com/articles/software/EMCEE_SED_fitting/9577868",
+      "contentUrl": null,
+      "metadataVersion": 1,
+      "schemaVersion": "http://datacite.org/schema/kernel-4",
+      "source": "mds",
+      "isActive": true,
+      "state": "findable",
+      "reason": null,
+      "viewCount": 0,
+      "viewsOverTime": [],
+      "downloadCount": 0,
+      "downloadsOverTime": [],
+      "referenceCount": 0,
+      "citationCount": 0,
+      "citationsOverTime": [],
+      "partCount": 0,
+      "partOfCount": 0,
+      "versionCount": 0,
+      "versionOfCount": 0,
+      "created": "2019-08-13T09:36:36.000Z",
+      "registered": "2019-08-13T09:36:36.000Z",
+      "published": "2019",
+      "updated": "2026-03-26T16:01:00.000Z"
+    },
+    "relationships": {
+      "client": {
+        "data": {
+          "id": "figshare.ars",
+          "type": "clients"
+        }
+      },
+      "provider": {
+        "data": {
+          "id": "otjm",
+          "type": "providers"
+        }
+      },
+      "media": {
+        "data": {
+          "id": "10.6084/m9.figshare.9577868",
+          "type": "media"
+        }
+      },
+      "references": {
+        "data": []
+      },
+      "citations": {
+        "data": []
+      },
+      "parts": {
+        "data": []
+      },
+      "partOf": {
+        "data": []
+      },
+      "versions": {
+        "data": []
+      },
+      "versionOf": {
+        "data": []
+      }
+    }
+  },
+  {
+    "id": "10.5281/zenodo.19636730",
+    "type": "dois",
+    "attributes": {
+      "doi": "10.5281/zenodo.19636730",
+      "prefix": "10.5281",
+      "suffix": "zenodo.19636730",
+      "identifiers": [
+        {
+          "identifier": "oai:zenodo.org:19636730",
+          "identifierType": "oai"
+        }
+      ],
+      "alternateIdentifiers": [
+        {
+          "alternateIdentifierType": "oai",
+          "alternateIdentifier": "oai:zenodo.org:19636730"
+        }
+      ],
+      "creators": [
+        {
+          "name": "Bradley, Larry",
+          "nameType": "Personal",
+          "givenName": "Larry",
+          "familyName": "Bradley",
+          "affiliation": [
+            {
+              "name": "Space Telescope Science Institute, 3700 San Martin Drive, Baltimore, MD 21218, USA"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-7908-9284",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Sipőcz, Brigitta M.",
+          "nameType": "Personal",
+          "givenName": "Brigitta M.",
+          "familyName": "Sipőcz",
+          "affiliation": [
+            {
+              "name": "IPAC, MC 100-22, Caltech, 1200E. California Blvd. Pasadena, CA 91125"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-3713-6337",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Robitaille, T. P.",
+          "nameType": "Personal",
+          "givenName": "T. P.",
+          "familyName": "Robitaille",
+          "affiliation": [
+            {
+              "name": "Aperio Software Ltd., Headingley Enterprise and Arts Centre, Bennett Road, Leeds, LS6 3HN, United Kingdom"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-8642-1329",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Tollerud, E. J.",
+          "nameType": "Personal",
+          "givenName": "E. J.",
+          "familyName": "Tollerud",
+          "affiliation": [
+            {
+              "name": "Space Telescope Science Institute, 3700 San Martin Dr., Baltimore, MD 21218, USA"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-9599-310X",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Vinícius, Zé",
+          "nameType": "Personal",
+          "givenName": "Zé",
+          "familyName": "Vinícius",
+          "nameIdentifiers": [],
+          "affiliation": []
+        },
+        {
+          "name": "Deil, Christoph",
+          "nameType": "Personal",
+          "givenName": "Christoph",
+          "familyName": "Deil",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-4198-4005",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Barbary, Kyle",
+          "nameType": "Personal",
+          "givenName": "Kyle",
+          "familyName": "Barbary",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-2532-3696",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Wilson, Tom J.",
+          "nameType": "Personal",
+          "givenName": "Tom J.",
+          "familyName": "Wilson",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0001-6352-9735",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Busko, Ivo",
+          "nameType": "Personal",
+          "givenName": "Ivo",
+          "familyName": "Busko",
+          "nameIdentifiers": [],
+          "affiliation": []
+        },
+        {
+          "name": "Donath, Axel",
+          "nameType": "Personal",
+          "givenName": "Axel",
+          "familyName": "Donath",
+          "affiliation": [
+            {
+              "name": "Harvard-Smithsonian Center for Astrophysics, 60 Garden St., Cambridge, MA, 02138, USA"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0003-4568-7005",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Günther, Hans Moritz",
+          "nameType": "Personal",
+          "givenName": "Hans Moritz",
+          "familyName": "Günther",
+          "affiliation": [
+            {
+              "name": "MIT Kavli Institute for Astrophysics and Space Research, 77 Massachusetts Avenue, Cambridge, MA 02139, USA"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0003-4243-2840",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Cara, Mihai",
+          "nameType": "Personal",
+          "givenName": "Mihai",
+          "familyName": "Cara",
+          "affiliation": [
+            {
+              "name": "Space Telescope Science Institute, 3700 San Martin Drive, Baltimore, MD 21218, USA"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-9294-6551",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Lim, P. L.",
+          "nameType": "Personal",
+          "givenName": "P. L.",
+          "familyName": "Lim",
+          "affiliation": [
+            {
+              "name": "Space Telescope Science Institute, 3700 San Martin Dr., Baltimore, MD 21218, USA"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0003-0079-4114",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Meßlinger, Sebastian",
+          "nameType": "Personal",
+          "givenName": "Sebastian",
+          "familyName": "Meßlinger",
+          "nameIdentifiers": [],
+          "affiliation": []
+        },
+        {
+          "name": "Conseil, Simon",
+          "nameType": "Personal",
+          "givenName": "Simon",
+          "familyName": "Conseil",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-3657-4191",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Droettboom, Michael",
+          "nameType": "Personal",
+          "givenName": "Michael",
+          "familyName": "Droettboom",
+          "nameIdentifiers": [],
+          "affiliation": []
+        },
+        {
+          "name": "Bostroem, K. Azalee",
+          "nameType": "Personal",
+          "givenName": "K. Azalee",
+          "familyName": "Bostroem",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-4924-444X",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Bray, E. M.",
+          "nameType": "Personal",
+          "givenName": "E. M.",
+          "familyName": "Bray",
+          "nameIdentifiers": [],
+          "affiliation": []
+        },
+        {
+          "name": "Bratholm, Lars Andersen",
+          "nameType": "Personal",
+          "givenName": "Lars Andersen",
+          "familyName": "Bratholm",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-3565-5926",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Burnett, Zach",
+          "nameType": "Personal",
+          "givenName": "Zach",
+          "familyName": "Burnett",
+          "affiliation": [
+            {
+              "name": "Space Telescope Science Institute, 3700 San Martin Drive, Baltimore, MD 21218, USA"
+            }
+          ],
+          "nameIdentifiers": []
+        },
+        {
+          "name": "Jamieson, William",
+          "nameType": "Personal",
+          "givenName": "William",
+          "familyName": "Jamieson",
+          "affiliation": [
+            {
+              "name": "Space Telescope Science Institute, 3700 San Martin Drive, Baltimore, MD 21218, USA"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0001-5976-4492",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Ginsburg, Adam",
+          "nameType": "Personal",
+          "givenName": "Adam",
+          "familyName": "Ginsburg",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0001-6431-9633",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Taranu, Dan",
+          "nameType": "Personal",
+          "givenName": "Dan",
+          "familyName": "Taranu",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0001-6268-1882",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Barentsen, Geert",
+          "nameType": "Personal",
+          "givenName": "Geert",
+          "familyName": "Barentsen",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-3306-3484",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Craig, Matthew W.",
+          "nameType": "Personal",
+          "givenName": "Matthew W.",
+          "familyName": "Craig",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0001-7988-8919",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        },
+        {
+          "name": "Morris, Brett M.",
+          "nameType": "Personal",
+          "givenName": "Brett M.",
+          "familyName": "Morris",
+          "affiliation": [
+            {
+              "name": "Space Telescope Science Institute, 3700 San Martin Drive, Baltimore, MD 21218, USA"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0003-2528-3409",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Perrin, Marshall",
+          "nameType": "Personal",
+          "givenName": "Marshall",
+          "familyName": "Perrin",
+          "affiliation": [
+            {
+              "name": "Space Telescope Science Institute, 3700 San Martin Drive, Baltimore, MD 21218, USA"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-3191-8151",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Rathi, Shivangee",
+          "nameType": "Personal",
+          "givenName": "Shivangee",
+          "familyName": "Rathi",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-4859-8203",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ],
+          "affiliation": []
+        }
+      ],
+      "titles": [
+        {
+          "title": "Photutils"
+        }
+      ],
+      "publisher": {
+        "name": "Zenodo"
+      },
+      "container": {},
+      "publicationYear": 2026,
+      "subjects": [
+        {
+          "subject": "Astronomy software"
+        },
+        {
+          "subject": "Astronomy data analysis"
+        },
+        {
+          "subject": "Photometry"
+        },
+        {
+          "subject": "Image Data Analysis"
+        },
+        {
+          "subject": "Open source software"
+        }
+      ],
+      "contributors": [],
+      "dates": [
+        {
+          "date": "2026-04-18",
+          "dateType": "Issued"
+        }
+      ],
+      "language": null,
+      "types": {
+        "ris": "COMP",
+        "bibtex": "misc",
+        "citeproc": "article",
+        "schemaOrg": "SoftwareSourceCode",
+        "resourceType": "",
+        "resourceTypeGeneral": "Software"
+      },
+      "relatedIdentifiers": [
+        {
+          "relationType": "IsSupplementTo",
+          "relatedIdentifier": "https://github.com/astropy/photutils/tree/3.0.0",
+          "resourceTypeGeneral": "Software",
+          "relatedIdentifierType": "URL"
+        },
+        {
+          "relationType": "IsVersionOf",
+          "relatedIdentifier": "10.5281/zenodo.596036",
+          "relatedIdentifierType": "DOI"
+        }
+      ],
+      "relatedItems": [],
+      "sizes": [],
+      "formats": [],
+      "version": "3.0.0",
+      "rightsList": [
+        {
+          "rights": "BSD 3-Clause \"New\" or \"Revised\" License",
+          "rightsUri": "https://opensource.org/licenses/BSD-3-Clause",
+          "schemeUri": "https://spdx.org/licenses/",
+          "rightsIdentifier": "bsd-3-clause",
+          "rightsIdentifierScheme": "SPDX"
+        }
+      ],
+      "descriptions": [
+        {
+          "description": "Astropy package for source detection and photometry",
+          "descriptionType": "Abstract"
+        },
+        {
+          "description": "If you use this software, please cite it as below.",
+          "descriptionType": "Other"
+        }
+      ],
+      "geoLocations": [],
+      "fundingReferences": [],
+      "xml": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHJlc291cmNlIHhtbG5zOnhzaT0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEtaW5zdGFuY2UiIHhtbG5zPSJodHRwOi8vZGF0YWNpdGUub3JnL3NjaGVtYS9rZXJuZWwtNCIgeHNpOnNjaGVtYUxvY2F0aW9uPSJodHRwOi8vZGF0YWNpdGUub3JnL3NjaGVtYS9rZXJuZWwtNCBodHRwOi8vc2NoZW1hLmRhdGFjaXRlLm9yZy9tZXRhL2tlcm5lbC00L21ldGFkYXRhLnhzZCI+CiAgPGlkZW50aWZpZXIgaWRlbnRpZmllclR5cGU9IkRPSSI+MTAuNTI4MS9aRU5PRE8uMTk2MzY3MzA8L2lkZW50aWZpZXI+CiAgPGNyZWF0b3JzPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPkJyYWRsZXksIExhcnJ5PC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5MYXJyeTwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5CcmFkbGV5PC9mYW1pbHlOYW1lPgogICAgICA8bmFtZUlkZW50aWZpZXIgbmFtZUlkZW50aWZpZXJTY2hlbWU9Ik9SQ0lEIiBzY2hlbWVVUkk9IiI+MDAwMC0wMDAyLTc5MDgtOTI4NDwvbmFtZUlkZW50aWZpZXI+CiAgICAgIDxhZmZpbGlhdGlvbj5TcGFjZSBUZWxlc2NvcGUgU2NpZW5jZSBJbnN0aXR1dGUsIDM3MDAgU2FuIE1hcnRpbiBEcml2ZSwgQmFsdGltb3JlLCBNRCAyMTIxOCwgVVNBPC9hZmZpbGlhdGlvbj4KICAgIDwvY3JlYXRvcj4KICAgIDxjcmVhdG9yPgogICAgICA8Y3JlYXRvck5hbWUgbmFtZVR5cGU9IlBlcnNvbmFsIj5TaXDFkWN6LCBCcmlnaXR0YSBNLjwvY3JlYXRvck5hbWU+CiAgICAgIDxnaXZlbk5hbWU+QnJpZ2l0dGEgTS48L2dpdmVuTmFtZT4KICAgICAgPGZhbWlseU5hbWU+U2lwxZFjejwvZmFtaWx5TmFtZT4KICAgICAgPG5hbWVJZGVudGlmaWVyIG5hbWVJZGVudGlmaWVyU2NoZW1lPSJPUkNJRCIgc2NoZW1lVVJJPSIiPjAwMDAtMDAwMi0zNzEzLTYzMzc8L25hbWVJZGVudGlmaWVyPgogICAgICA8YWZmaWxpYXRpb24+SVBBQywgTUMgMTAwLTIyLCBDYWx0ZWNoLCAxMjAwRS4gQ2FsaWZvcm5pYSBCbHZkLiBQYXNhZGVuYSwgQ0EgOTExMjU8L2FmZmlsaWF0aW9uPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPlJvYml0YWlsbGUsIFQuIFAuPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5ULiBQLjwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5Sb2JpdGFpbGxlPC9mYW1pbHlOYW1lPgogICAgICA8bmFtZUlkZW50aWZpZXIgbmFtZUlkZW50aWZpZXJTY2hlbWU9Ik9SQ0lEIiBzY2hlbWVVUkk9IiI+MDAwMC0wMDAyLTg2NDItMTMyOTwvbmFtZUlkZW50aWZpZXI+CiAgICAgIDxhZmZpbGlhdGlvbj5BcGVyaW8gU29mdHdhcmUgTHRkLiwgSGVhZGluZ2xleSBFbnRlcnByaXNlIGFuZCBBcnRzIENlbnRyZSwgQmVubmV0dCBSb2FkLCBMZWVkcywgTFM2IDNITiwgVW5pdGVkIEtpbmdkb208L2FmZmlsaWF0aW9uPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPlRvbGxlcnVkLCBFLiBKLjwvY3JlYXRvck5hbWU+CiAgICAgIDxnaXZlbk5hbWU+RS4gSi48L2dpdmVuTmFtZT4KICAgICAgPGZhbWlseU5hbWU+VG9sbGVydWQ8L2ZhbWlseU5hbWU+CiAgICAgIDxuYW1lSWRlbnRpZmllciBuYW1lSWRlbnRpZmllclNjaGVtZT0iT1JDSUQiIHNjaGVtZVVSST0iIj4wMDAwLTAwMDItOTU5OS0zMTBYPC9uYW1lSWRlbnRpZmllcj4KICAgICAgPGFmZmlsaWF0aW9uPlNwYWNlIFRlbGVzY29wZSBTY2llbmNlIEluc3RpdHV0ZSwgMzcwMCBTYW4gTWFydGluIERyLiwgQmFsdGltb3JlLCBNRCAyMTIxOCwgVVNBPC9hZmZpbGlhdGlvbj4KICAgIDwvY3JlYXRvcj4KICAgIDxjcmVhdG9yPgogICAgICA8Y3JlYXRvck5hbWUgbmFtZVR5cGU9IlBlcnNvbmFsIj5WaW7DrWNpdXMsIFrDqTwvY3JlYXRvck5hbWU+CiAgICAgIDxnaXZlbk5hbWU+WsOpPC9naXZlbk5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPlZpbsOtY2l1czwvZmFtaWx5TmFtZT4KICAgIDwvY3JlYXRvcj4KICAgIDxjcmVhdG9yPgogICAgICA8Y3JlYXRvck5hbWUgbmFtZVR5cGU9IlBlcnNvbmFsIj5EZWlsLCBDaHJpc3RvcGg8L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPkNocmlzdG9waDwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5EZWlsPC9mYW1pbHlOYW1lPgogICAgICA8bmFtZUlkZW50aWZpZXIgbmFtZUlkZW50aWZpZXJTY2hlbWU9Ik9SQ0lEIiBzY2hlbWVVUkk9IiI+MDAwMC0wMDAyLTQxOTgtNDAwNTwvbmFtZUlkZW50aWZpZXI+CiAgICA8L2NyZWF0b3I+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lIG5hbWVUeXBlPSJQZXJzb25hbCI+QmFyYmFyeSwgS3lsZTwvY3JlYXRvck5hbWU+CiAgICAgIDxnaXZlbk5hbWU+S3lsZTwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5CYXJiYXJ5PC9mYW1pbHlOYW1lPgogICAgICA8bmFtZUlkZW50aWZpZXIgbmFtZUlkZW50aWZpZXJTY2hlbWU9Ik9SQ0lEIiBzY2hlbWVVUkk9IiI+MDAwMC0wMDAyLTI1MzItMzY5NjwvbmFtZUlkZW50aWZpZXI+CiAgICA8L2NyZWF0b3I+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lIG5hbWVUeXBlPSJQZXJzb25hbCI+V2lsc29uLCBUb20gSi48L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPlRvbSBKLjwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5XaWxzb248L2ZhbWlseU5hbWU+CiAgICAgIDxuYW1lSWRlbnRpZmllciBuYW1lSWRlbnRpZmllclNjaGVtZT0iT1JDSUQiIHNjaGVtZVVSST0iIj4wMDAwLTAwMDEtNjM1Mi05NzM1PC9uYW1lSWRlbnRpZmllcj4KICAgIDwvY3JlYXRvcj4KICAgIDxjcmVhdG9yPgogICAgICA8Y3JlYXRvck5hbWUgbmFtZVR5cGU9IlBlcnNvbmFsIj5CdXNrbywgSXZvPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5Jdm88L2dpdmVuTmFtZT4KICAgICAgPGZhbWlseU5hbWU+QnVza288L2ZhbWlseU5hbWU+CiAgICA8L2NyZWF0b3I+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lIG5hbWVUeXBlPSJQZXJzb25hbCI+RG9uYXRoLCBBeGVsPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5BeGVsPC9naXZlbk5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPkRvbmF0aDwvZmFtaWx5TmFtZT4KICAgICAgPG5hbWVJZGVudGlmaWVyIG5hbWVJZGVudGlmaWVyU2NoZW1lPSJPUkNJRCIgc2NoZW1lVVJJPSIiPjAwMDAtMDAwMy00NTY4LTcwMDU8L25hbWVJZGVudGlmaWVyPgogICAgICA8YWZmaWxpYXRpb24+SGFydmFyZC1TbWl0aHNvbmlhbiBDZW50ZXIgZm9yIEFzdHJvcGh5c2ljcywgNjAgR2FyZGVuIFN0LiwgQ2FtYnJpZGdlLCBNQSwgMDIxMzgsIFVTQTwvYWZmaWxpYXRpb24+CiAgICA8L2NyZWF0b3I+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lIG5hbWVUeXBlPSJQZXJzb25hbCI+R8O8bnRoZXIsIEhhbnMgTW9yaXR6PC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5IYW5zIE1vcml0ejwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5Hw7xudGhlcjwvZmFtaWx5TmFtZT4KICAgICAgPG5hbWVJZGVudGlmaWVyIG5hbWVJZGVudGlmaWVyU2NoZW1lPSJPUkNJRCIgc2NoZW1lVVJJPSIiPjAwMDAtMDAwMy00MjQzLTI4NDA8L25hbWVJZGVudGlmaWVyPgogICAgICA8YWZmaWxpYXRpb24+TUlUIEthdmxpIEluc3RpdHV0ZSBmb3IgQXN0cm9waHlzaWNzIGFuZCBTcGFjZSBSZXNlYXJjaCwgNzcgTWFzc2FjaHVzZXR0cyBBdmVudWUsIENhbWJyaWRnZSwgTUEgMDIxMzksIFVTQTwvYWZmaWxpYXRpb24+CiAgICA8L2NyZWF0b3I+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lIG5hbWVUeXBlPSJQZXJzb25hbCI+Q2FyYSwgTWloYWk8L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPk1paGFpPC9naXZlbk5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPkNhcmE8L2ZhbWlseU5hbWU+CiAgICAgIDxuYW1lSWRlbnRpZmllciBuYW1lSWRlbnRpZmllclNjaGVtZT0iT1JDSUQiIHNjaGVtZVVSST0iIj4wMDAwLTAwMDItOTI5NC02NTUxPC9uYW1lSWRlbnRpZmllcj4KICAgICAgPGFmZmlsaWF0aW9uPlNwYWNlIFRlbGVzY29wZSBTY2llbmNlIEluc3RpdHV0ZSwgMzcwMCBTYW4gTWFydGluIERyaXZlLCBCYWx0aW1vcmUsIE1EIDIxMjE4LCBVU0E8L2FmZmlsaWF0aW9uPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPkxpbSwgUC4gTC48L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPlAuIEwuPC9naXZlbk5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPkxpbTwvZmFtaWx5TmFtZT4KICAgICAgPG5hbWVJZGVudGlmaWVyIG5hbWVJZGVudGlmaWVyU2NoZW1lPSJPUkNJRCIgc2NoZW1lVVJJPSIiPjAwMDAtMDAwMy0wMDc5LTQxMTQ8L25hbWVJZGVudGlmaWVyPgogICAgICA8YWZmaWxpYXRpb24+U3BhY2UgVGVsZXNjb3BlIFNjaWVuY2UgSW5zdGl0dXRlLCAzNzAwIFNhbiBNYXJ0aW4gRHIuLCBCYWx0aW1vcmUsIE1EIDIxMjE4LCBVU0E8L2FmZmlsaWF0aW9uPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPk1lw59saW5nZXIsIFNlYmFzdGlhbjwvY3JlYXRvck5hbWU+CiAgICAgIDxnaXZlbk5hbWU+U2ViYXN0aWFuPC9naXZlbk5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPk1lw59saW5nZXI8L2ZhbWlseU5hbWU+CiAgICA8L2NyZWF0b3I+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lIG5hbWVUeXBlPSJQZXJzb25hbCI+Q29uc2VpbCwgU2ltb248L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPlNpbW9uPC9naXZlbk5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPkNvbnNlaWw8L2ZhbWlseU5hbWU+CiAgICAgIDxuYW1lSWRlbnRpZmllciBuYW1lSWRlbnRpZmllclNjaGVtZT0iT1JDSUQiIHNjaGVtZVVSST0iIj4wMDAwLTAwMDItMzY1Ny00MTkxPC9uYW1lSWRlbnRpZmllcj4KICAgIDwvY3JlYXRvcj4KICAgIDxjcmVhdG9yPgogICAgICA8Y3JlYXRvck5hbWUgbmFtZVR5cGU9IlBlcnNvbmFsIj5Ecm9ldHRib29tLCBNaWNoYWVsPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5NaWNoYWVsPC9naXZlbk5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPkRyb2V0dGJvb208L2ZhbWlseU5hbWU+CiAgICA8L2NyZWF0b3I+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lIG5hbWVUeXBlPSJQZXJzb25hbCI+Qm9zdHJvZW0sIEsuIEF6YWxlZTwvY3JlYXRvck5hbWU+CiAgICAgIDxnaXZlbk5hbWU+Sy4gQXphbGVlPC9naXZlbk5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPkJvc3Ryb2VtPC9mYW1pbHlOYW1lPgogICAgICA8bmFtZUlkZW50aWZpZXIgbmFtZUlkZW50aWZpZXJTY2hlbWU9Ik9SQ0lEIiBzY2hlbWVVUkk9IiI+MDAwMC0wMDAyLTQ5MjQtNDQ0WDwvbmFtZUlkZW50aWZpZXI+CiAgICA8L2NyZWF0b3I+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lIG5hbWVUeXBlPSJQZXJzb25hbCI+QnJheSwgRS4gTS48L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPkUuIE0uPC9naXZlbk5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPkJyYXk8L2ZhbWlseU5hbWU+CiAgICA8L2NyZWF0b3I+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lIG5hbWVUeXBlPSJQZXJzb25hbCI+QnJhdGhvbG0sIExhcnMgQW5kZXJzZW48L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPkxhcnMgQW5kZXJzZW48L2dpdmVuTmFtZT4KICAgICAgPGZhbWlseU5hbWU+QnJhdGhvbG08L2ZhbWlseU5hbWU+CiAgICAgIDxuYW1lSWRlbnRpZmllciBuYW1lSWRlbnRpZmllclNjaGVtZT0iT1JDSUQiIHNjaGVtZVVSST0iIj4wMDAwLTAwMDItMzU2NS01OTI2PC9uYW1lSWRlbnRpZmllcj4KICAgIDwvY3JlYXRvcj4KICAgIDxjcmVhdG9yPgogICAgICA8Y3JlYXRvck5hbWUgbmFtZVR5cGU9IlBlcnNvbmFsIj5CdXJuZXR0LCBaYWNoPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5aYWNoPC9naXZlbk5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPkJ1cm5ldHQ8L2ZhbWlseU5hbWU+CiAgICAgIDxhZmZpbGlhdGlvbj5TcGFjZSBUZWxlc2NvcGUgU2NpZW5jZSBJbnN0aXR1dGUsIDM3MDAgU2FuIE1hcnRpbiBEcml2ZSwgQmFsdGltb3JlLCBNRCAyMTIxOCwgVVNBPC9hZmZpbGlhdGlvbj4KICAgIDwvY3JlYXRvcj4KICAgIDxjcmVhdG9yPgogICAgICA8Y3JlYXRvck5hbWUgbmFtZVR5cGU9IlBlcnNvbmFsIj5KYW1pZXNvbiwgV2lsbGlhbTwvY3JlYXRvck5hbWU+CiAgICAgIDxnaXZlbk5hbWU+V2lsbGlhbTwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5KYW1pZXNvbjwvZmFtaWx5TmFtZT4KICAgICAgPG5hbWVJZGVudGlmaWVyIG5hbWVJZGVudGlmaWVyU2NoZW1lPSJPUkNJRCIgc2NoZW1lVVJJPSIiPjAwMDAtMDAwMS01OTc2LTQ0OTI8L25hbWVJZGVudGlmaWVyPgogICAgICA8YWZmaWxpYXRpb24+U3BhY2UgVGVsZXNjb3BlIFNjaWVuY2UgSW5zdGl0dXRlLCAzNzAwIFNhbiBNYXJ0aW4gRHJpdmUsIEJhbHRpbW9yZSwgTUQgMjEyMTgsIFVTQTwvYWZmaWxpYXRpb24+CiAgICA8L2NyZWF0b3I+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lIG5hbWVUeXBlPSJQZXJzb25hbCI+R2luc2J1cmcsIEFkYW08L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPkFkYW08L2dpdmVuTmFtZT4KICAgICAgPGZhbWlseU5hbWU+R2luc2J1cmc8L2ZhbWlseU5hbWU+CiAgICAgIDxuYW1lSWRlbnRpZmllciBuYW1lSWRlbnRpZmllclNjaGVtZT0iT1JDSUQiIHNjaGVtZVVSST0iIj4wMDAwLTAwMDEtNjQzMS05NjMzPC9uYW1lSWRlbnRpZmllcj4KICAgIDwvY3JlYXRvcj4KICAgIDxjcmVhdG9yPgogICAgICA8Y3JlYXRvck5hbWUgbmFtZVR5cGU9IlBlcnNvbmFsIj5UYXJhbnUsIERhbjwvY3JlYXRvck5hbWU+CiAgICAgIDxnaXZlbk5hbWU+RGFuPC9naXZlbk5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPlRhcmFudTwvZmFtaWx5TmFtZT4KICAgICAgPG5hbWVJZGVudGlmaWVyIG5hbWVJZGVudGlmaWVyU2NoZW1lPSJPUkNJRCIgc2NoZW1lVVJJPSIiPjAwMDAtMDAwMS02MjY4LTE4ODI8L25hbWVJZGVudGlmaWVyPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPkJhcmVudHNlbiwgR2VlcnQ8L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPkdlZXJ0PC9naXZlbk5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPkJhcmVudHNlbjwvZmFtaWx5TmFtZT4KICAgICAgPG5hbWVJZGVudGlmaWVyIG5hbWVJZGVudGlmaWVyU2NoZW1lPSJPUkNJRCIgc2NoZW1lVVJJPSIiPjAwMDAtMDAwMi0zMzA2LTM0ODQ8L25hbWVJZGVudGlmaWVyPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPkNyYWlnLCBNYXR0aGV3IFcuPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5NYXR0aGV3IFcuPC9naXZlbk5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPkNyYWlnPC9mYW1pbHlOYW1lPgogICAgICA8bmFtZUlkZW50aWZpZXIgbmFtZUlkZW50aWZpZXJTY2hlbWU9Ik9SQ0lEIiBzY2hlbWVVUkk9IiI+MDAwMC0wMDAxLTc5ODgtODkxOTwvbmFtZUlkZW50aWZpZXI+CiAgICA8L2NyZWF0b3I+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lIG5hbWVUeXBlPSJQZXJzb25hbCI+TW9ycmlzLCBCcmV0dCBNLjwvY3JlYXRvck5hbWU+CiAgICAgIDxnaXZlbk5hbWU+QnJldHQgTS48L2dpdmVuTmFtZT4KICAgICAgPGZhbWlseU5hbWU+TW9ycmlzPC9mYW1pbHlOYW1lPgogICAgICA8bmFtZUlkZW50aWZpZXIgbmFtZUlkZW50aWZpZXJTY2hlbWU9Ik9SQ0lEIiBzY2hlbWVVUkk9IiI+MDAwMC0wMDAzLTI1MjgtMzQwOTwvbmFtZUlkZW50aWZpZXI+CiAgICAgIDxhZmZpbGlhdGlvbj5TcGFjZSBUZWxlc2NvcGUgU2NpZW5jZSBJbnN0aXR1dGUsIDM3MDAgU2FuIE1hcnRpbiBEcml2ZSwgQmFsdGltb3JlLCBNRCAyMTIxOCwgVVNBPC9hZmZpbGlhdGlvbj4KICAgIDwvY3JlYXRvcj4KICAgIDxjcmVhdG9yPgogICAgICA8Y3JlYXRvck5hbWUgbmFtZVR5cGU9IlBlcnNvbmFsIj5QZXJyaW4sIE1hcnNoYWxsPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5NYXJzaGFsbDwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5QZXJyaW48L2ZhbWlseU5hbWU+CiAgICAgIDxuYW1lSWRlbnRpZmllciBuYW1lSWRlbnRpZmllclNjaGVtZT0iT1JDSUQiIHNjaGVtZVVSST0iIj4wMDAwLTAwMDItMzE5MS04MTUxPC9uYW1lSWRlbnRpZmllcj4KICAgICAgPGFmZmlsaWF0aW9uPlNwYWNlIFRlbGVzY29wZSBTY2llbmNlIEluc3RpdHV0ZSwgMzcwMCBTYW4gTWFydGluIERyaXZlLCBCYWx0aW1vcmUsIE1EIDIxMjE4LCBVU0E8L2FmZmlsaWF0aW9uPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPlJhdGhpLCBTaGl2YW5nZWU8L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPlNoaXZhbmdlZTwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5SYXRoaTwvZmFtaWx5TmFtZT4KICAgICAgPG5hbWVJZGVudGlmaWVyIG5hbWVJZGVudGlmaWVyU2NoZW1lPSJPUkNJRCIgc2NoZW1lVVJJPSIiPjAwMDAtMDAwMi00ODU5LTgyMDM8L25hbWVJZGVudGlmaWVyPgogICAgPC9jcmVhdG9yPgogIDwvY3JlYXRvcnM+CiAgPHRpdGxlcz4KICAgIDx0aXRsZT5QaG90dXRpbHM8L3RpdGxlPgogIDwvdGl0bGVzPgogIDxwdWJsaXNoZXI+WmVub2RvPC9wdWJsaXNoZXI+CiAgPHB1YmxpY2F0aW9uWWVhcj4yMDI2PC9wdWJsaWNhdGlvblllYXI+CiAgPHJlc291cmNlVHlwZSByZXNvdXJjZVR5cGVHZW5lcmFsPSJTb2Z0d2FyZSIvPgogIDxzdWJqZWN0cz4KICAgIDxzdWJqZWN0PkFzdHJvbm9teSBzb2Z0d2FyZTwvc3ViamVjdD4KICAgIDxzdWJqZWN0PkFzdHJvbm9teSBkYXRhIGFuYWx5c2lzPC9zdWJqZWN0PgogICAgPHN1YmplY3Q+UGhvdG9tZXRyeTwvc3ViamVjdD4KICAgIDxzdWJqZWN0PkltYWdlIERhdGEgQW5hbHlzaXM8L3N1YmplY3Q+CiAgICA8c3ViamVjdD5PcGVuIHNvdXJjZSBzb2Z0d2FyZTwvc3ViamVjdD4KICA8L3N1YmplY3RzPgogIDxkYXRlcz4KICAgIDxkYXRlIGRhdGVUeXBlPSJJc3N1ZWQiPjIwMjYtMDQtMTg8L2RhdGU+CiAgPC9kYXRlcz4KICA8YWx0ZXJuYXRlSWRlbnRpZmllcnM+CiAgICA8YWx0ZXJuYXRlSWRlbnRpZmllciBhbHRlcm5hdGVJZGVudGlmaWVyVHlwZT0ib2FpIj5vYWk6emVub2RvLm9yZzoxOTYzNjczMDwvYWx0ZXJuYXRlSWRlbnRpZmllcj4KICA8L2FsdGVybmF0ZUlkZW50aWZpZXJzPgogIDxyZWxhdGVkSWRlbnRpZmllcnM+CiAgICA8cmVsYXRlZElkZW50aWZpZXIgcmVsYXRlZElkZW50aWZpZXJUeXBlPSJVUkwiIHJlbGF0aW9uVHlwZT0iSXNTdXBwbGVtZW50VG8iIHJlc291cmNlVHlwZUdlbmVyYWw9IlNvZnR3YXJlIj5odHRwczovL2dpdGh1Yi5jb20vYXN0cm9weS9waG90dXRpbHMvdHJlZS8zLjAuMDwvcmVsYXRlZElkZW50aWZpZXI+CiAgICA8cmVsYXRlZElkZW50aWZpZXIgcmVsYXRlZElkZW50aWZpZXJUeXBlPSJET0kiIHJlbGF0aW9uVHlwZT0iSXNWZXJzaW9uT2YiPjEwLjUyODEvemVub2RvLjU5NjAzNjwvcmVsYXRlZElkZW50aWZpZXI+CiAgPC9yZWxhdGVkSWRlbnRpZmllcnM+CiAgPHNpemVzLz4KICA8Zm9ybWF0cy8+CiAgPHZlcnNpb24+My4wLjA8L3ZlcnNpb24+CiAgPHJpZ2h0c0xpc3Q+CiAgICA8cmlnaHRzIHJpZ2h0c1VSST0iaHR0cHM6Ly9vcGVuc291cmNlLm9yZy9saWNlbnNlcy9CU0QtMy1DbGF1c2UiIHJpZ2h0c0lkZW50aWZpZXI9ImJzZC0zLWNsYXVzZSIgcmlnaHRzSWRlbnRpZmllclNjaGVtZT0ic3BkeCI+QlNEIDMtQ2xhdXNlICJOZXciIG9yICJSZXZpc2VkIiBMaWNlbnNlPC9yaWdodHM+CiAgPC9yaWdodHNMaXN0PgogIDxkZXNjcmlwdGlvbnM+CiAgICA8ZGVzY3JpcHRpb24gZGVzY3JpcHRpb25UeXBlPSJBYnN0cmFjdCI+QXN0cm9weSBwYWNrYWdlIGZvciBzb3VyY2UgZGV0ZWN0aW9uIGFuZCBwaG90b21ldHJ5PC9kZXNjcmlwdGlvbj4KICAgIDxkZXNjcmlwdGlvbiBkZXNjcmlwdGlvblR5cGU9Ik90aGVyIj5JZiB5b3UgdXNlIHRoaXMgc29mdHdhcmUsIHBsZWFzZSBjaXRlIGl0IGFzIGJlbG93LjwvZGVzY3JpcHRpb24+CiAgPC9kZXNjcmlwdGlvbnM+CjwvcmVzb3VyY2U+Cg==",
+      "url": "https://zenodo.org/doi/10.5281/zenodo.19636730",
+      "contentUrl": null,
+      "metadataVersion": 0,
+      "schemaVersion": "http://datacite.org/schema/kernel-4",
+      "source": "api",
+      "isActive": true,
+      "state": "findable",
+      "reason": null,
+      "viewCount": 0,
+      "viewsOverTime": [],
+      "downloadCount": 0,
+      "downloadsOverTime": [],
+      "referenceCount": 0,
+      "citationCount": 0,
+      "citationsOverTime": [
+        {
+          "year": "2026",
+          "total": 1
+        }
+      ],
+      "partCount": 0,
+      "partOfCount": 0,
+      "versionCount": 0,
+      "versionOfCount": 1,
+      "created": "2026-04-17T22:25:06.000Z",
+      "registered": "2026-04-17T22:25:07.000Z",
+      "published": "2026",
+      "updated": "2026-08-27T08:08:10.000Z"
+    },
+    "relationships": {
+      "client": {
+        "data": {
+          "id": "cern.zenodo",
+          "type": "clients"
+        }
+      },
+      "provider": {
+        "data": {
+          "id": "cern",
+          "type": "providers"
+        }
+      },
+      "media": {
+        "data": {
+          "id": "10.5281/zenodo.19636730",
+          "type": "media"
+        }
+      },
+      "references": {
+        "data": []
+      },
+      "citations": {
+        "data": []
+      },
+      "parts": {
+        "data": []
+      },
+      "partOf": {
+        "data": []
+      },
+      "versions": {
+        "data": []
+      },
+      "versionOf": {
+        "data": [
+          {
+            "id": "10.5281/zenodo.596036",
+            "type": "dois"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "10.5281/zenodo.18366850",
+    "type": "dois",
+    "attributes": {
+      "doi": "10.5281/zenodo.18366850",
+      "prefix": "10.5281",
+      "suffix": "zenodo.18366850",
+      "identifiers": [
+        {
+          "identifier": "oai:zenodo.org:18366850",
+          "identifierType": "oai"
+        }
+      ],
+      "alternateIdentifiers": [
+        {
+          "alternateIdentifierType": "oai",
+          "alternateIdentifier": "oai:zenodo.org:18366850"
+        }
+      ],
+      "creators": [
+        {
+          "name": "Lyu, Cheqiu",
+          "nameType": "Personal",
+          "givenName": "Cheqiu",
+          "familyName": "Lyu",
+          "affiliation": [
+            {
+              "name": "University of Science and Technology of China",
+              "affiliationIdentifier": "https://ror.org/04c4dkn09",
+              "affiliationIdentifierScheme": "ROR"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0009-0000-7307-6362",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Yu, Haoran",
+          "nameType": "Personal",
+          "givenName": "Haoran",
+          "familyName": "Yu",
+          "affiliation": [
+            {
+              "name": "University of Science and Technology of China",
+              "affiliationIdentifier": "https://ror.org/04c4dkn09",
+              "affiliationIdentifierScheme": "ROR"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0009-0008-1319-498X",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        },
+        {
+          "name": "Wang, Enci",
+          "nameType": "Personal",
+          "givenName": "Enci",
+          "familyName": "Wang",
+          "affiliation": [
+            {
+              "name": "University of Science and Technology of China",
+              "affiliationIdentifier": "https://ror.org/04c4dkn09",
+              "affiliationIdentifierScheme": "ROR"
+            }
+          ],
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0003-1588-9394",
+              "nameIdentifierScheme": "ORCID"
+            }
+          ]
+        }
+      ],
+      "titles": [
+        {
+          "title": "Data tables for 'First Statistical Detection of Mg II-traced Cool Gas Outflows with JWST Towards Cosmic Dawn'"
+        }
+      ],
+      "publisher": {
+        "name": "Zenodo"
+      },
+      "container": {},
+      "publicationYear": 2026,
+      "subjects": [],
+      "contributors": [],
+      "dates": [
+        {
+          "date": "2026-01-25",
+          "dateType": "Issued"
+        }
+      ],
+      "language": null,
+      "types": {
+        "ris": "DATA",
+        "bibtex": "misc",
+        "citeproc": "dataset",
+        "schemaOrg": "Dataset",
+        "resourceType": "",
+        "resourceTypeGeneral": "Dataset"
+      },
+      "relatedIdentifiers": [
+        {
+          "relationType": "IsSupplementTo",
+          "relatedIdentifier": "10.48550/arXiv.2512.05622",
+          "resourceTypeGeneral": "Preprint",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "Cites",
+          "relatedIdentifier": "10.1051/0004-6361/202553908",
+          "resourceTypeGeneral": "JournalArticle",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "Cites",
+          "relatedIdentifier": "10.1051/0004-6361/202450243",
+          "resourceTypeGeneral": "JournalArticle",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "IsDerivedFrom",
+          "relatedIdentifier": "10.5281/zenodo.15472354",
+          "resourceTypeGeneral": "Dataset",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "Cites",
+          "relatedIdentifier": "10.1051/0004-6361/201322068",
+          "resourceTypeGeneral": "JournalArticle",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "Cites",
+          "relatedIdentifier": "10.3847/1538-3881/aabc4f",
+          "resourceTypeGeneral": "JournalArticle",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "Cites",
+          "relatedIdentifier": "10.3847/1538-4357/ac7c74",
+          "resourceTypeGeneral": "JournalArticle",
+          "relatedIdentifierType": "DOI"
+        },
+        {
+          "relationType": "Cites",
+          "relatedIdentifier": "2005ASPC..347...29T",
+          "resourceTypeGeneral": "ConferencePaper",
+          "relatedIdentifierType": "bibcode"
+        },
+        {
+          "relationType": "IsVersionOf",
+          "relatedIdentifier": "10.5281/zenodo.18366849",
+          "relatedIdentifierType": "DOI"
+        }
+      ],
+      "relatedItems": [],
+      "sizes": [],
+      "formats": [],
+      "version": null,
+      "rightsList": [
+        {
+          "rights": "Creative Commons Attribution 4.0 International",
+          "rightsUri": "https://creativecommons.org/licenses/by/4.0/legalcode",
+          "schemeUri": "https://spdx.org/licenses/",
+          "rightsIdentifier": "cc-by-4.0",
+          "rightsIdentifierScheme": "SPDX"
+        }
+      ],
+      "descriptions": [
+        {
+          "description": "This repository is associated with the paper entitled “First Statistical Detection of Mg II-traced Cool Gas Outflows with JWST Towards Cosmic Dawn”, authored by Cheqiu Lyu et al. <arXiv:2512.05622>, accepted to The Astrophyical Journal Letters.",
+          "descriptionType": "Abstract"
+        }
+      ],
+      "geoLocations": [],
+      "fundingReferences": [],
+      "xml": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHJlc291cmNlIHhtbG5zOnhzaT0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEtaW5zdGFuY2UiIHhtbG5zPSJodHRwOi8vZGF0YWNpdGUub3JnL3NjaGVtYS9rZXJuZWwtNCIgeHNpOnNjaGVtYUxvY2F0aW9uPSJodHRwOi8vZGF0YWNpdGUub3JnL3NjaGVtYS9rZXJuZWwtNCBodHRwOi8vc2NoZW1hLmRhdGFjaXRlLm9yZy9tZXRhL2tlcm5lbC00L21ldGFkYXRhLnhzZCI+CiAgPGlkZW50aWZpZXIgaWRlbnRpZmllclR5cGU9IkRPSSI+MTAuNTI4MS9aRU5PRE8uMTgzNjY4NTA8L2lkZW50aWZpZXI+CiAgPGNyZWF0b3JzPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPkx5dSwgQ2hlcWl1PC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5DaGVxaXU8L2dpdmVuTmFtZT4KICAgICAgPGZhbWlseU5hbWU+THl1PC9mYW1pbHlOYW1lPgogICAgICA8bmFtZUlkZW50aWZpZXIgbmFtZUlkZW50aWZpZXJTY2hlbWU9Ik9SQ0lEIiBzY2hlbWVVUkk9IiI+MDAwOS0wMDAwLTczMDctNjM2MjwvbmFtZUlkZW50aWZpZXI+CiAgICAgIDxhZmZpbGlhdGlvbiBhZmZpbGlhdGlvbklkZW50aWZpZXI9Imh0dHBzOi8vcm9yLm9yZy8wNGM0ZGtuMDkiIGFmZmlsaWF0aW9uSWRlbnRpZmllclNjaGVtZT0iUk9SIj5Vbml2ZXJzaXR5IG9mIFNjaWVuY2UgYW5kIFRlY2hub2xvZ3kgb2YgQ2hpbmE8L2FmZmlsaWF0aW9uPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPll1LCBIYW9yYW48L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPkhhb3JhbjwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5ZdTwvZmFtaWx5TmFtZT4KICAgICAgPG5hbWVJZGVudGlmaWVyIG5hbWVJZGVudGlmaWVyU2NoZW1lPSJPUkNJRCIgc2NoZW1lVVJJPSIiPjAwMDktMDAwOC0xMzE5LTQ5OFg8L25hbWVJZGVudGlmaWVyPgogICAgICA8YWZmaWxpYXRpb24gYWZmaWxpYXRpb25JZGVudGlmaWVyPSJodHRwczovL3Jvci5vcmcvMDRjNGRrbjA5IiBhZmZpbGlhdGlvbklkZW50aWZpZXJTY2hlbWU9IlJPUiI+VW5pdmVyc2l0eSBvZiBTY2llbmNlIGFuZCBUZWNobm9sb2d5IG9mIENoaW5hPC9hZmZpbGlhdGlvbj4KICAgIDwvY3JlYXRvcj4KICAgIDxjcmVhdG9yPgogICAgICA8Y3JlYXRvck5hbWUgbmFtZVR5cGU9IlBlcnNvbmFsIj5XYW5nLCBFbmNpPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5FbmNpPC9naXZlbk5hbWU+CiAgICAgIDxmYW1pbHlOYW1lPldhbmc8L2ZhbWlseU5hbWU+CiAgICAgIDxuYW1lSWRlbnRpZmllciBuYW1lSWRlbnRpZmllclNjaGVtZT0iT1JDSUQiIHNjaGVtZVVSST0iIj4wMDAwLTAwMDMtMTU4OC05Mzk0PC9uYW1lSWRlbnRpZmllcj4KICAgICAgPGFmZmlsaWF0aW9uIGFmZmlsaWF0aW9uSWRlbnRpZmllcj0iaHR0cHM6Ly9yb3Iub3JnLzA0YzRka24wOSIgYWZmaWxpYXRpb25JZGVudGlmaWVyU2NoZW1lPSJST1IiPlVuaXZlcnNpdHkgb2YgU2NpZW5jZSBhbmQgVGVjaG5vbG9neSBvZiBDaGluYTwvYWZmaWxpYXRpb24+CiAgICA8L2NyZWF0b3I+CiAgPC9jcmVhdG9ycz4KICA8dGl0bGVzPgogICAgPHRpdGxlPkRhdGEgdGFibGVzIGZvciAnRmlyc3QgU3RhdGlzdGljYWwgRGV0ZWN0aW9uIG9mIE1nIElJLXRyYWNlZCBDb29sIEdhcyBPdXRmbG93cyB3aXRoIEpXU1QgVG93YXJkcyBDb3NtaWMgRGF3bic8L3RpdGxlPgogIDwvdGl0bGVzPgogIDxwdWJsaXNoZXI+WmVub2RvPC9wdWJsaXNoZXI+CiAgPHB1YmxpY2F0aW9uWWVhcj4yMDI2PC9wdWJsaWNhdGlvblllYXI+CiAgPHJlc291cmNlVHlwZSByZXNvdXJjZVR5cGVHZW5lcmFsPSJEYXRhc2V0Ii8+CiAgPGRhdGVzPgogICAgPGRhdGUgZGF0ZVR5cGU9Iklzc3VlZCI+MjAyNi0wMS0yNTwvZGF0ZT4KICA8L2RhdGVzPgogIDxhbHRlcm5hdGVJZGVudGlmaWVycz4KICAgIDxhbHRlcm5hdGVJZGVudGlmaWVyIGFsdGVybmF0ZUlkZW50aWZpZXJUeXBlPSJvYWkiPm9haTp6ZW5vZG8ub3JnOjE4MzY2ODUwPC9hbHRlcm5hdGVJZGVudGlmaWVyPgogIDwvYWx0ZXJuYXRlSWRlbnRpZmllcnM+CiAgPHJlbGF0ZWRJZGVudGlmaWVycz4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJJc1N1cHBsZW1lbnRUbyIgcmVzb3VyY2VUeXBlR2VuZXJhbD0iUHJlcHJpbnQiPjEwLjQ4NTUwL2FyWGl2LjI1MTIuMDU2MjI8L3JlbGF0ZWRJZGVudGlmaWVyPgogICAgPHJlbGF0ZWRJZGVudGlmaWVyIHJlbGF0ZWRJZGVudGlmaWVyVHlwZT0iRE9JIiByZWxhdGlvblR5cGU9IkNpdGVzIiByZXNvdXJjZVR5cGVHZW5lcmFsPSJKb3VybmFsQXJ0aWNsZSI+MTAuMTA1MS8wMDA0LTYzNjEvMjAyNTUzOTA4PC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJDaXRlcyIgcmVzb3VyY2VUeXBlR2VuZXJhbD0iSm91cm5hbEFydGljbGUiPjEwLjEwNTEvMDAwNC02MzYxLzIwMjQ1MDI0MzwvcmVsYXRlZElkZW50aWZpZXI+CiAgICA8cmVsYXRlZElkZW50aWZpZXIgcmVsYXRlZElkZW50aWZpZXJUeXBlPSJET0kiIHJlbGF0aW9uVHlwZT0iSXNEZXJpdmVkRnJvbSIgcmVzb3VyY2VUeXBlR2VuZXJhbD0iRGF0YXNldCI+MTAuNTI4MS96ZW5vZG8uMTU0NzIzNTQ8L3JlbGF0ZWRJZGVudGlmaWVyPgogICAgPHJlbGF0ZWRJZGVudGlmaWVyIHJlbGF0ZWRJZGVudGlmaWVyVHlwZT0iRE9JIiByZWxhdGlvblR5cGU9IkNpdGVzIiByZXNvdXJjZVR5cGVHZW5lcmFsPSJKb3VybmFsQXJ0aWNsZSI+MTAuMTA1MS8wMDA0LTYzNjEvMjAxMzIyMDY4PC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJDaXRlcyIgcmVzb3VyY2VUeXBlR2VuZXJhbD0iSm91cm5hbEFydGljbGUiPjEwLjM4NDcvMTUzOC0zODgxL2FhYmM0ZjwvcmVsYXRlZElkZW50aWZpZXI+CiAgICA8cmVsYXRlZElkZW50aWZpZXIgcmVsYXRlZElkZW50aWZpZXJUeXBlPSJET0kiIHJlbGF0aW9uVHlwZT0iQ2l0ZXMiIHJlc291cmNlVHlwZUdlbmVyYWw9IkpvdXJuYWxBcnRpY2xlIj4xMC4zODQ3LzE1MzgtNDM1Ny9hYzdjNzQ8L3JlbGF0ZWRJZGVudGlmaWVyPgogICAgPHJlbGF0ZWRJZGVudGlmaWVyIHJlbGF0ZWRJZGVudGlmaWVyVHlwZT0iYmliY29kZSIgcmVsYXRpb25UeXBlPSJDaXRlcyIgcmVzb3VyY2VUeXBlR2VuZXJhbD0iQ29uZmVyZW5jZVBhcGVyIj4yMDA1QVNQQy4uMzQ3Li4uMjlUPC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJJc1ZlcnNpb25PZiI+MTAuNTI4MS96ZW5vZG8uMTgzNjY4NDk8L3JlbGF0ZWRJZGVudGlmaWVyPgogIDwvcmVsYXRlZElkZW50aWZpZXJzPgogIDxzaXplcy8+CiAgPGZvcm1hdHMvPgogIDx2ZXJzaW9uLz4KICA8cmlnaHRzTGlzdD4KICAgIDxyaWdodHMgcmlnaHRzVVJJPSJodHRwczovL2NyZWF0aXZlY29tbW9ucy5vcmcvbGljZW5zZXMvYnkvNC4wL2xlZ2FsY29kZSIgcmlnaHRzSWRlbnRpZmllcj0iY2MtYnktNC4wIiByaWdodHNJZGVudGlmaWVyU2NoZW1lPSJzcGR4Ij5DcmVhdGl2ZSBDb21tb25zIEF0dHJpYnV0aW9uIDQuMCBJbnRlcm5hdGlvbmFsPC9yaWdodHM+CiAgPC9yaWdodHNMaXN0PgogIDxkZXNjcmlwdGlvbnM+CiAgICA8ZGVzY3JpcHRpb24gZGVzY3JpcHRpb25UeXBlPSJBYnN0cmFjdCI+VGhpcyByZXBvc2l0b3J5IGlzIGFzc29jaWF0ZWQgd2l0aCB0aGUgcGFwZXIgZW50aXRsZWQg4oCcRmlyc3QgU3RhdGlzdGljYWwgRGV0ZWN0aW9uIG9mIE1nIElJLXRyYWNlZCBDb29sIEdhcyBPdXRmbG93cyB3aXRoIEpXU1QgVG93YXJkcyBDb3NtaWMgRGF3buKAnSwgYXV0aG9yZWQgYnkgQ2hlcWl1IEx5dSBldCBhbC4gJmx0O2FyWGl2OjI1MTIuMDU2MjImZ3Q7LCBhY2NlcHRlZCB0byBUaGUgQXN0cm9waHlpY2FsIEpvdXJuYWwgTGV0dGVycy48L2Rlc2NyaXB0aW9uPgogIDwvZGVzY3JpcHRpb25zPgo8L3Jlc291cmNlPgo=",
+      "url": "https://zenodo.org/doi/10.5281/zenodo.18366850",
+      "contentUrl": null,
+      "metadataVersion": 0,
+      "schemaVersion": "http://datacite.org/schema/kernel-4",
+      "source": "api",
+      "isActive": true,
+      "state": "findable",
+      "reason": null,
+      "viewCount": 0,
+      "viewsOverTime": [],
+      "downloadCount": 0,
+      "downloadsOverTime": [],
+      "referenceCount": 5,
+      "citationCount": 1,
+      "citationsOverTime": [
+        {
+          "year": "2026",
+          "total": 1
+        }
+      ],
+      "partCount": 0,
+      "partOfCount": 0,
+      "versionCount": 0,
+      "versionOfCount": 1,
+      "created": "2026-02-20T20:36:29.000Z",
+      "registered": "2026-02-20T20:36:29.000Z",
+      "published": "2026",
+      "updated": "2026-02-20T20:36:29.000Z"
+    },
+    "relationships": {
+      "client": {
+        "data": {
+          "id": "cern.zenodo",
+          "type": "clients"
+        }
+      },
+      "provider": {
+        "data": {
+          "id": "cern",
+          "type": "providers"
+        }
+      },
+      "media": {
+        "data": {
+          "id": "10.5281/zenodo.18366850",
+          "type": "media"
+        }
+      },
+      "references": {
+        "data": [
+          {
+            "id": "10.3847/1538-3881/aabc4f",
+            "type": "dois"
+          },
+          {
+            "id": "10.3847/1538-4357/ac7c74",
+            "type": "dois"
+          },
+          {
+            "id": "10.1051/0004-6361/202553908",
+            "type": "dois"
+          },
+          {
+            "id": "10.1051/0004-6361/202450243",
+            "type": "dois"
+          },
+          {
+            "id": "10.1051/0004-6361/201322068",
+            "type": "dois"
+          }
+        ]
+      },
+      "citations": {
+        "data": [
+          {
+            "id": "10.48550/arxiv.2512.05622",
+            "type": "dois"
+          }
+        ]
+      },
+      "parts": {
+        "data": []
+      },
+      "partOf": {
+        "data": []
+      },
+      "versions": {
+        "data": []
+      },
+      "versionOf": {
+        "data": [
+          {
+            "id": "10.5281/zenodo.18366849",
+            "type": "dois"
+          }
+        ]
+      }
+    }
+  }
+]
