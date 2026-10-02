@@ -1,6 +1,14 @@
 class RridImporter < ExternalSoftwareImporter
   SOURCE = "rrid"
 
+  def initialize(collection_url: nil)
+    @collection_url = collection_url
+  end
+
+  def collection_url(entity)
+    @collection_url || "#{RridClient::RESOLVER_URL}/#{RridClient.identifier(entity.dig('item', 'identifier'))}.json"
+  end
+
   def sync(ids)
     ids = RridClient.validate_ids!(ids)
     started_at = Time.current
@@ -28,13 +36,15 @@ class RridImporter < ExternalSoftwareImporter
       .pluck(:identifier, :retrieved_at).to_h
     records = records.reject { |record| cached[RridClient.identifier(record.dig("item", "identifier"))]&.>= started_at }
     matches = repository_matches(records)
-    records.each { |record| persist(RridClient.identifier(record.dig("item", "identifier")), record, matches, started_at) }
+    records.each do |record|
+      persist(RridClient.identifier(record.dig("item", "identifier")), record, matches, started_at, collection_url: collection_url(record))
+    end
   end
 
   def repository_statements(entity)
     return [] unless entity["recordValid"] == true && [true, "true"].include?(entity.dig("rrid", "is_unique"))
     types = Array(entity.dig("item", "types")).map { |type| type["name"].to_s.downcase }
-    return [] if (types & ["software resource", "software application", "software toolkit", "software tool", "source code"]).empty?
+    return [] if (types & RridClient::SOFTWARE_TYPES).empty?
     %w[current alternate].flat_map do |kind|
       Array(entity.dig("distributions", kind)).filter_map do |entry|
         url = entry["uri"]
@@ -45,7 +55,7 @@ class RridImporter < ExternalSoftwareImporter
         next unless normalized && repository_url?(normalized)
         { repository_url: url, source_field: "distributions.#{kind}",
           source_record_url: "#{RridClient::RESOLVER_URL}/#{RridClient.identifier(entity.dig('item', 'identifier'))}",
-          collection_url: "#{RridClient::RESOLVER_URL}/#{RridClient.identifier(entity.dig('item', 'identifier'))}.json" }
+          collection_url: collection_url(entity) }
       end
     end.uniq
   end

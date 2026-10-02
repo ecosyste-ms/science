@@ -310,6 +310,7 @@ paths:
                     attempted_at: {type: string, format: date-time, nullable: true}
                     next_refresh_at: {type: string, format: date-time}
                     last_error: {type: string, nullable: true}
+                    collection_url: {type: string, format: uri, nullable: true, description: Retrieval endpoint for the cached source record}
                     evidence:
                       type: array
                       items:

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_02_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_02_163000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -171,6 +171,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_150000) do
     t.datetime "discovered_at"
     t.jsonb "discovery_result", default: {}, null: false
     t.text "discovery_error"
+    t.string "collection_url"
     t.index ["next_discovery_at", "id"], name: "index_external_records_pending_discovery", where: "(((status)::text = 'ok'::text) AND (next_discovery_at IS NOT NULL))"
     t.index ["source", "identifier"], name: "index_external_software_records_on_source_and_identifier", unique: true
     t.index ["source", "next_refresh_at", "id"], name: "index_external_software_records_on_refresh"

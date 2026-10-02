@@ -2,7 +2,7 @@ require "digest"
 
 class ExternalRepositoryDiscovery
   IMPORTERS = { "wikidata" => WikidataImporter, "biotools" => BiotoolsImporter,
-    "ascl" => AsclImporter, "swmath" => SwmathImporter }.freeze
+    "ascl" => AsclImporter, "swmath" => SwmathImporter, "rrid" => RridImporter }.freeze
 
   def self.due
     ExternalSoftwareRecord.where(source: IMPORTERS.keys, status: "ok")
@@ -36,6 +36,7 @@ class ExternalRepositoryDiscovery
 
   def discover(record)
     importer = IMPORTERS.fetch(record.source).new
+    importer = RridImporter.new(collection_url: record.collection_url) if record.source == "rrid"
     statements = importer.repository_statements(record.metadata)
     raise ArgumentError, "source record exceeds 1000 repository links" if statements.size > 1000
     matches = importer.repository_matches([record.metadata])
@@ -130,6 +131,8 @@ class ExternalRepositoryDiscovery
       record.metadata.except("views", "time_updated")
     when "swmath"
       record.metadata.except("articles_count")
+    when "rrid"
+      record.metadata.slice("item", "rrid", "recordValid", "distributions", "graph", "supportingAwards", "organization", "legal")
     else
       record.metadata.except("additionDate", "lastUpdate")
     end

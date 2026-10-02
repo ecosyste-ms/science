@@ -29,7 +29,7 @@ class ProjectExternalSoftwareRecord < ApplicationRecord
       relationship: relationship, match_status: match_status, evidence: evidence,
       source_status: record.status, retrieved_at: record.retrieved_at,
       attempted_at: record.attempted_at, next_refresh_at: record.next_refresh_at,
-      last_error: record.last_error, metadata: record.metadata,
+      last_error: record.last_error, collection_url: record.collection_url, metadata: record.metadata,
     }
   end
 end

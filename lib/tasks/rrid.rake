@@ -1,4 +1,18 @@
 namespace :rrid do
+  desc "Start or resume the SciCrunch software catalogue (LIMIT=50, RESTART=true)"
+  task sweep: :environment do
+    record = ExternalSoftwareImport.start_rrid(
+      page_size: ENV["LIMIT"].present? ? Integer(ENV["LIMIT"], 10) : nil, restart: ENV["RESTART"] == "true")
+    record.enqueue
+    puts JSON.generate(record.progress)
+  end
+
+  desc "Show SciCrunch catalogue progress"
+  task sweep_status: :environment do
+    record = ExternalSoftwareImport.find_by(source: "rrid")
+    puts JSON.generate(record ? record.progress : { status: "not_started" })
+  end
+
   desc "Start or resume seeding RRIDs from cached bio.tools records (LIMIT=50, RESTART=true)"
   task seed: :environment do
     record = ExternalSoftwareImport.start_rrid_seeds(
@@ -7,11 +21,13 @@ namespace :rrid do
     puts JSON.generate(record.progress)
   end
 
-  desc "Recover a due unfinished RRID seed pass"
+  desc "Recover due unfinished RRID seed and catalogue imports"
   task resume: :environment do
     record = ExternalSoftwareImport.resumable_rrid_seeds
     record&.enqueue
-    puts JSON.generate(queued: record.present?)
+    catalogue = ExternalSoftwareImport.resumable_rrid
+    catalogue&.enqueue
+    puts JSON.generate(queued: record.present? || catalogue.present?)
   end
 
   desc "Repeat a previously enabled RRID seed pass"

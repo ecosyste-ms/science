@@ -2,6 +2,7 @@ class RridClient
   RESOLVER_URL = "https://scicrunch.org/resolver"
   COOLDOWN_KEY = "rrid-retry-at"
   PAGE_SIZE = 50
+  SOFTWARE_TYPES = ["software resource", "software application", "software toolkit", "software tool", "source code"].freeze
 
   class Error < StandardError; end
 

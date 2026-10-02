@@ -49,7 +49,7 @@ class ExternalSoftwareImporter
     end
   end
 
-  def persist(id, entity, matches, started_at)
+  def persist(id, entity, matches, started_at, collection_url: nil)
     record = record_for(id, started_at)
     record.with_lock do
       next if record.attempted_at && record.attempted_at > started_at
@@ -61,7 +61,7 @@ class ExternalSoftwareImporter
       record.next_discovery_at = Time.current if record.metadata != entity || record.status != "ok"
       persist_links(record, entity, matches)
       record.update!(metadata: entity, status: "ok", retrieved_at: started_at, attempted_at: started_at,
-        last_error: nil, next_refresh_at: 30.days.from_now)
+        last_error: nil, next_refresh_at: 30.days.from_now, collection_url: collection_url)
     end
   end
 
