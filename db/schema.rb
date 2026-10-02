@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_02_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_02_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -123,6 +123,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_140000) do
     t.index ["owner_id"], name: "index_developer_accounts_on_owner_id", unique: true, where: "(owner_id IS NOT NULL)"
   end
 
+  create_table "external_project_syncs", force: :cascade do |t|
+    t.bigint "project_id", null: false
+    t.datetime "requested_at", null: false
+    t.datetime "completed_at"
+    t.datetime "next_attempt_at", null: false
+    t.string "lease_token"
+    t.datetime "lease_expires_at"
+    t.text "last_error"
+    t.index ["next_attempt_at", "id"], name: "index_external_project_syncs_pending", where: "((completed_at IS NULL) OR (requested_at > completed_at))"
+    t.index ["project_id"], name: "index_external_project_syncs_on_project_id", unique: true
+  end
+
   create_table "external_software_imports", force: :cascade do |t|
     t.string "source", null: false
     t.string "cursor"
@@ -155,6 +167,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_140000) do
     t.text "last_error"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "next_discovery_at", default: -> { "CURRENT_TIMESTAMP" }
+    t.datetime "discovered_at"
+    t.jsonb "discovery_result", default: {}, null: false
+    t.text "discovery_error"
+    t.index ["next_discovery_at", "id"], name: "index_external_records_pending_discovery", where: "(((status)::text = 'ok'::text) AND (next_discovery_at IS NOT NULL))"
     t.index ["source", "identifier"], name: "index_external_software_records_on_source_and_identifier", unique: true
     t.index ["source", "next_refresh_at", "id"], name: "index_external_software_records_on_refresh"
   end
@@ -709,6 +726,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_140000) do
   add_foreign_key "developer_account_identifiers", "hosts", on_delete: :cascade
   add_foreign_key "developer_accounts", "hosts", on_delete: :cascade
   add_foreign_key "developer_accounts", "owners", on_delete: :nullify
+  add_foreign_key "external_project_syncs", "projects", on_delete: :cascade
   add_foreign_key "mention_sources", "mentions", on_delete: :cascade
   add_foreign_key "package_versions", "packages", on_delete: :cascade
   add_foreign_key "package_versions", "releases", on_delete: :nullify

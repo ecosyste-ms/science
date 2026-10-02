@@ -157,6 +157,16 @@ RESTART=true bundle exec rake biotools:sweep
 
 Project pages display an **Elsewhere** section linking confirmed Wikidata and bio.tools identifiers, including projects whose repository sync has not finished. Ambiguous and missing records are omitted; an unsuccessful refresh retains the last confirmed reference. The paginated external-identifiers API exposes the full cached source record, match evidence and canonical `record_url`. Neither display path fetches source data or changes scores. The cached homepage source breakdown labels this source `bio.tools` and counts each scientific project once for it.
 
+## Repository discovery from cached sources
+
+`external_software:discover` queues a separate worker that reads up to 100 due Wikidata or bio.tools records. It uses the stored repository statements, normalized URLs and indexed aliases to attach evidence to existing projects or create minimal projects. GitHub and GitLab hosts already recorded in `hosts` are supported for creation, with `gitlab.com` included by default. Nested GitLab namespaces are preserved. Other hosts remain in the discovery results as unsupported candidates. Hidden owners are excluded, and ambiguous matches retain all candidate projects without requesting enrichment.
+
+Run `bundle exec rake external_software:discover` to start a batch, or set `LIMIT=10` for a smaller batch. The task runs every ten minutes and also recovers pending project sync requests. `bundle exec rake external_software:discovery_status` reports due records by source, failed records and pending syncs. Each source record stores its latest candidate outcomes and the IDs it created in `discovery_result`; worker logs count created, existing, ambiguous, hidden and unsupported repository URLs by source. These are per-source counts, so overlapping sources can report the same project.
+
+New projects enter the normal `SyncProjectWorker` path through a durable request keyed by project ID. New source evidence also requests enrichment for unsynced and zero-score projects. Unchanged metadata, reordered fields and source update timestamps do not request another sync. A sync request remains pending until the worker completes, with a one-hour lease and retry delay after failure. Requests arriving during a sync remain pending for a later run. Queue failures leave the database requests available for recovery.
+
+Discovery performs no source HTTP requests and awards no Science Score points. Normal enrichment calculates the score from repository and publication evidence. Changed source records become due again; unresolved candidates are revisited after 30 days. Discovery selects through a partial due-record index and uses bounded URL and alias queries, without scanning project metadata. Each source record and its project links commit together; a failed record retries after an hour while later records can proceed.
+
 ## Partial results and hidden owners
 
 The complete sync is not wrapped in one database transaction. Most fetch stages handle an upstream failure locally and allow later stages to continue, so a project can hold fresh package data and older issue or commit data after the same run. Slow stages of at least five seconds are included in a structured timing log; a total sync of at least 30 seconds records every stage duration.
