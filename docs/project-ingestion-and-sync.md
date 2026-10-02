@@ -106,7 +106,21 @@ The October 2026 sample compared [SymPy](https://www.wikidata.org/wiki/Q5971368)
 
 The NumPy record includes claims sourced from Wikipedia, the Free Software Directory and Open Hub, alongside claims without references. [Wikidata's data access documentation](https://www.wikidata.org/wiki/Wikidata:Data_access) describes the API and query routes. The importer uses the main query graph for repository discovery and the entity API for full records. It retains original statement IDs, ranks, qualifiers and references so later evidence evaluation can distinguish copied claims. Current repository, package and DOI projections do not replace that claim structure; a swMATH identifier alone also does not establish equivalent coverage of the swMATH record. Direct Wikidata enrichment is useful for these additions. Other registries need their own overlap checks before adding refresh jobs.
 
-`wikidata:import` reads one page of at most 100 repository-linked items, then queues entity requests of at most 50 IDs on `external_metadata`. The queue capsule runs one job per worker process. Each process keeps ten threads: eight for the default queues, one for Software Heritage API work and one for external metadata. The returned `after` cursor follows lexicographic QID order; pass it as `AFTER` until `complete` is true. Start a later sweep without `AFTER` to pick up newly linked older items. The query uses all `P1324` statement ranks; matching accepts normal and preferred statements, while deprecated statements remain only in the stored source record. Publication queries are outside this import and would need to account for Wikidata's separate scholarly graph.
+`wikidata:sweep` starts a background import or resumes its saved progress. Each job reads at most 100 repository-linked items, retrieves entities in batches of at most 50, and queues the next page after 15 seconds. The import stores its unfinished page and advances its cursor only after all those records have an `ok` or `missing` source status. Successful batches within a failed page use cached records on retry. Query failures retry after an hour; rate limits and replication lag use the shared cooldown. The cursor follows lexicographic QID order.
+
+Only one sweep per source can run at a time. A ten-minute database lease prevents overlapping jobs, and an expired worker cannot update the replacement worker's progress. `wikidata:resume` runs every ten minutes to recover unfinished imports after interruptions, including failure to enqueue the next page. It does nothing before a sweep is started or after completion. Network requests happen outside the short transactions used to claim work and save progress.
+
+Use `AFTER` to start from a cursor returned by a manual import, and `LIMIT` to choose a page size between 1 and 100. Omit both when resuming an existing sweep. `wikidata:status` reports the cursor, completed page and item counts, unfinished items, retry time and last error. A completed sweep stays complete until `RESTART=true` explicitly starts another pass. Start that pass without `AFTER` to pick up newly linked older items.
+
+```bash
+bundle exec rake wikidata:sweep
+bundle exec rake wikidata:status
+RESTART=true bundle exec rake wikidata:sweep
+```
+
+With the local Dokku client, use `dokku run bundle exec rake wikidata:sweep` and `dokku run bundle exec rake wikidata:status`. The client supplies the app name from the repository's Dokku remote. A first sweep that continues a manual import can use `dokku run env AFTER=Q102310494 bundle exec rake wikidata:sweep`.
+
+`wikidata:import` remains available for one manual page or explicit IDs. Both import paths use `external_metadata`. The queue capsule runs one job per worker process; each process keeps ten threads: eight for the default queues, one for Software Heritage API work and one for external metadata. The query uses all `P1324` statement ranks; matching accepts normal and preferred statements, while deprecated statements remain only in the stored source record. Publication queries are outside this import and would need to account for Wikidata's separate scholarly graph.
 
 ```bash
 LIMIT=100 bundle exec rake wikidata:import

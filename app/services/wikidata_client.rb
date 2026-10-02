@@ -46,12 +46,16 @@ class WikidataClient
     rows = data.dig("results", "bindings")
     raise Error, "Invalid Wikidata query response" unless rows.is_a?(Array) && rows.size <= limit
 
-    rows.map do |row|
+    ids = rows.map do |row|
       uri = row.dig("item", "value")
       match = uri.is_a?(String) && uri.match(%r{\Ahttp://www.wikidata.org/entity/(Q[1-9][0-9]*)\z})
       raise Error, "Invalid Wikidata item" unless match
       match[1]
     end
+    unless ids == ids.sort.uniq && ids.all? { |id| after.nil? || id > after }
+      raise Error, "Wikidata page did not advance in cursor order"
+    end
+    ids
   end
 
   def request(url, params)

@@ -11,6 +11,7 @@ module WikidataPipeline
   end
 
   def clear_wikidata_jobs
+    ImportWikidataWorker.clear
     SyncWikidataWorker.clear
     SidekiqUniqueJobs::Digests.new.delete_by_pattern("#{SyncWikidataWorker.get_sidekiq_options.fetch('lock_prefix')}:*")
   end

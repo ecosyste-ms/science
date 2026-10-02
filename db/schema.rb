@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_02_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_02_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -121,6 +121,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_120000) do
     t.index ["canonical_key"], name: "index_developer_accounts_on_canonical_key", unique: true
     t.index ["host_id", "login"], name: "index_developer_accounts_on_host_id_and_login", where: "(login IS NOT NULL)"
     t.index ["owner_id"], name: "index_developer_accounts_on_owner_id", unique: true, where: "(owner_id IS NOT NULL)"
+  end
+
+  create_table "external_software_imports", force: :cascade do |t|
+    t.string "source", null: false
+    t.string "cursor"
+    t.integer "page_size", default: 100, null: false
+    t.jsonb "pending_ids", default: [], null: false
+    t.integer "pages_processed", default: 0, null: false
+    t.integer "items_processed", default: 0, null: false
+    t.datetime "started_at", null: false
+    t.datetime "completed_at"
+    t.datetime "next_run_at", null: false
+    t.string "lease_token"
+    t.datetime "lease_expires_at"
+    t.text "last_error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["source"], name: "index_external_software_imports_on_source", unique: true
   end
 
   create_table "external_software_records", force: :cascade do |t|

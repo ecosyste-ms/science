@@ -1,4 +1,25 @@
 namespace :wikidata do
+  desc "Start or resume a background Wikidata sweep (optional: AFTER=QID LIMIT=100 RESTART=true)"
+  task sweep: :environment do
+    record = ExternalSoftwareImport.start_wikidata(after: ENV["AFTER"].presence,
+      page_size: ENV["LIMIT"].present? ? Integer(ENV["LIMIT"], 10) : nil, restart: ENV["RESTART"] == "true")
+    record.enqueue
+    puts JSON.generate(record.progress)
+  end
+
+  desc "Resume an unfinished Wikidata sweep if its next page is due"
+  task resume: :environment do
+    record = ExternalSoftwareImport.resumable_wikidata
+    record&.enqueue
+    puts JSON.generate(queued: record.present?)
+  end
+
+  desc "Show saved Wikidata sweep progress"
+  task status: :environment do
+    record = ExternalSoftwareImport.find_by(source: "wikidata")
+    puts JSON.generate(record ? record.progress : { status: "not_started" })
+  end
+
   desc "Queue one page of repository-linked Wikidata items (LIMIT=100 AFTER=QID), or IDS=QID,QID"
   task import: :environment do
     if ENV["IDS"].present?
