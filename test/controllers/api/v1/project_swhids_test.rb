@@ -4,6 +4,46 @@ require_relative "../../../support/swhid_pipeline"
 class Api::V1::ProjectSwhidsTest < ActionDispatch::IntegrationTest
   include SwhidPipeline
 
+  test "API separates former and current origin attempts without treating unchecked URLs as fresh" do
+    current = "https://github.com/evidence/current"
+    former = "https://github.com/evidence/former"
+    project = Project.create!(url: current, science_score: 42, repository: {}, swhids: { "origin" => former })
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    snapshot = { origin: former, visit: 1, date: 1.day.ago.iso8601, snapshot: "a" * 40, status: "full", type: "git" }
+    stub_request(:get, "#{SwhidOriginChecker::ENDPOINT}#{ERB::Util.url_encode(former)}/visits/")
+      .with(query: { per_page: 100 }).to_return(body: [snapshot].to_json)
+    failed = snapshot.merge(origin: current, visit: 2, date: 1.hour.ago.iso8601, snapshot: nil, status: "failed")
+    older = snapshot.merge(origin: current, date: 1.year.ago.iso8601)
+    stub_request(:get, "#{SwhidOriginChecker::ENDPOINT}#{ERB::Util.url_encode(current)}/visits/")
+      .with(query: { per_page: 100 }).to_return(body: [failed, older].to_json)
+
+    CheckSwhidOriginWorker.perform_async(project.id)
+    CheckSwhidOriginWorker.perform_one
+    get "/api/v1/projects/#{project.id}/swhids"
+    assert_response :success
+    initial = response.parsed_body.fetch("origin_archive")
+    assert_equal current, initial["repository_url"]
+    assert_equal [current, "#{current}.git"], initial["current_origins"]
+    assert_equal "other", initial.dig("observations", 0, "origin_role")
+    assert_equal former, initial.dig("observations", 0, "latest_attempt", "origin")
+    assert_equal false, initial["freshness_complete"]
+    assert_includes initial["unchecked_origins"], current
+
+    CheckSwhidOriginWorker.perform_async(project.id, false, true)
+    CheckSwhidOriginWorker.perform_one
+    get "/api/v1/projects/#{project.id}/swhids"
+    assert_response :success
+    coverage = response.parsed_body.fetch("origin_archive")
+    observation = coverage["observations"].find { |entry| entry["origin"] == current }
+    assert_equal true, coverage["freshness_complete"]
+    assert_equal "current", observation["origin_role"]
+    assert_equal failed.stringify_keys, observation["latest_attempt"]
+    assert_equal older.stringify_keys, observation["visit"]
+    assert observation["latest_attempt_checked_at"]
+    assert_equal initial["observations"].first, coverage["observations"].first
+    assert_not_requested :post, /archive\.softwareheritage\.org/
+  end
+
   test "returns saved worker progress and retains observation dates after resuming" do
     project = Project.create!(url: "https://github.com/evidence/progress", science_score: 42,
       repository: { "previous_names" => (1..5).map { |n| "evidence/alias-#{n}" } })

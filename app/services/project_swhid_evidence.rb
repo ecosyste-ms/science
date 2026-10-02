@@ -27,10 +27,12 @@ class ProjectSwhidEvidence
   def origin_evidence(coverage)
     return { status: "unchecked", observations: [] } unless coverage
 
-    coverage.slice("status", "checked_at", "retry_at", "origins", "complete", "unchecked_origins").merge(
+    coverage.slice("status", "checked_at", "retry_at", "origins", "complete", "unchecked_origins",
+      "repository_url", "current_origins", "freshness_complete", "freshness_retry_at").merge(
       "observations" => Array(coverage["observations"]).map do |observation|
         observation.slice("origin", "status", "visit", "prior_visit", "latest_attempt", "checked_at",
-          "attempted_at", "lookup_complete", "history_complete", "next_visit", "history_cutoff")
+          "attempted_at", "lookup_complete", "history_complete", "next_visit", "history_cutoff",
+          "origin_role", "freshness_complete", "latest_attempt_checked_at")
       end
     )
   end

@@ -167,6 +167,41 @@ class SwhidsRakeTest < ActiveSupport::TestCase
     previous ? ENV["LIMIT"] = previous : ENV.delete("LIMIT")
   end
 
+  test "freshness task checks remaining origins after a snapshot establishes coverage" do
+    origin = "https://github.com/coverage/freshness"
+    project = Project.create!(url: origin, science_score: 42, repository: {})
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    stub_request(:get, "#{SwhidOriginChecker::ENDPOINT}#{ERB::Util.url_encode(origin)}/visits/")
+      .with(query: { per_page: 100 }).to_return(body: [{ origin: origin, visit: 1, date: 1.day.ago.iso8601,
+        snapshot: "a" * 40, status: "full", type: "git" }].to_json)
+    CheckSwhidOriginWorker.new.perform(project.id)
+    assert_equal false, project.reload.swhids.dig("origin_archive", "freshness_complete")
+    previous = ENV.to_h.slice("LIMIT", "AFTER_ID", "REQUESTS_ONLY", "FRESHNESS")
+    ENV.update("LIMIT" => "1", "AFTER_ID" => "0", "REQUESTS_ONLY" => "false", "FRESHNESS" => "true")
+
+    output, = capture_io { Rake::Task["swhids:check_origins"].invoke }
+
+    assert_equal 1, JSON.parse(output)["queued"]
+    assert_equal [[project.id, false, true]], CheckSwhidOriginWorker.jobs.pluck("args")
+    CheckSwhidOriginWorker.perform_one
+    coverage = project.reload.swhids.fetch("origin_archive")
+    assert_equal true, coverage["freshness_complete"]
+    assert_equal "full", coverage.dig("observations", 0, "latest_attempt", "status")
+    assert_empty coverage["unchecked_origins"]
+    assert_not_requested :post, /archive\.softwareheritage\.org/
+  ensure
+    %w[LIMIT AFTER_ID REQUESTS_ONLY FRESHNESS].each { |key| previous&.key?(key) ? ENV[key] = previous[key] : ENV.delete(key) }
+  end
+
+  test "origin task rejects an invalid freshness option" do
+    previous = ENV["FRESHNESS"]
+    ENV["FRESHNESS"] = "yes"
+    assert_raises(ArgumentError) { Rake::Task["swhids:check_origins"].invoke }
+    assert_empty CheckSwhidOriginWorker.jobs
+  ensure
+    previous ? ENV["FRESHNESS"] = previous : ENV.delete("FRESHNESS")
+  end
+
   test "origin backfill includes projects that have not been scanned" do
     project = Project.create!(url: "https://github.com/coverage/unscanned", science_score: 42, repository: {})
     previous = ENV.to_h.slice("LIMIT", "AFTER_ID", "REQUESTS_ONLY")

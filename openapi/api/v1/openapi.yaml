@@ -306,6 +306,17 @@ paths:
                         description: Last saved batch; individual observations can be older.
                       retry_at: {type: string, format: date-time}
                       origins: {type: array, items: {type: string}}
+                      repository_url:
+                        type: string
+                        description: Stored repository URL when these origin roles were assigned.
+                      current_origins:
+                        type: array
+                        items: {type: string}
+                        description: Candidates matching repository_url, including candidates not yet checked.
+                      freshness_complete:
+                        type: boolean
+                        description: Every candidate has a checked latest attempt and latest snapshot-bearing visit, or a completed negative lookup. Observation dates can differ.
+                      freshness_retry_at: {type: string, format: date-time}
                       complete:
                         type: boolean
                         description: Every candidate has a completed lookup. Older records may omit this field.
@@ -319,8 +330,38 @@ paths:
                           type: object
                           properties:
                             origin: {type: string}
+                            origin_role:
+                              type: string
+                              enum: [current, other]
+                              description: Whether this origin matches the repository URL recorded for this batch; other includes former URLs and candidates.
                             status: {type: string, enum: [unknown, archived, not_found]}
-                            visit: {type: object}
+                            visit:
+                              type: object
+                              description: Latest observed full or partial visit with a snapshot. Its date is an archive visit date, not a source commit or ingestion date.
+                              properties:
+                                origin: {type: string}
+                                date: {type: string, format: date-time}
+                                visit: {type: integer}
+                                snapshot: {type: string}
+                                status: {type: string, enum: [full, partial]}
+                                type: {type: string}
+                            latest_attempt:
+                              type: object
+                              description: Latest observed archive visit, including failed, ongoing and snapshotless attempts. It is specific to this origin.
+                              properties:
+                                origin: {type: string}
+                                date: {type: string, format: date-time}
+                                visit: {type: integer}
+                                snapshot: {type: string, nullable: true}
+                                status: {type: string, enum: [created, ongoing, full, partial, not_found, failed]}
+                                type: {type: string}
+                            latest_attempt_checked_at:
+                              type: string
+                              format: date-time
+                              description: When the first visit-history page was last read successfully. Retained during pagination and failed refreshes.
+                            freshness_complete:
+                              type: boolean
+                              description: History was checked from its first page through the newest snapshot, or to its end if none was found. Older pages can remain unread.
                             prior_visit: {type: object}
                             checked_at:
                               type: string

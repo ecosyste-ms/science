@@ -32,9 +32,28 @@ class SwhidOriginChecker
     end.compact.uniq
   end
 
-  def due?(refresh_after: REFRESH_AFTER)
+  def origin_key(url)
+    uri = RepositoryUrlNormalizer.parse(url)
+    return unless uri && uri.userinfo.nil? && uri.query.nil? && uri.fragment.nil?
+
+    path = uri.path.delete_suffix("/").delete_suffix(".git")
+    path = path.downcase if uri.host.downcase == "github.com"
+    port = uri.port unless [80, 443].include?(uri.port)
+    [uri.host.downcase, port, path]
+  end
+
+  def due?(refresh_after: REFRESH_AFTER, freshness: false)
     previous = project.swhids&.dig("origin_archive")
     return true unless previous && previous["origins"] == origins
+    return true if previous["repository_url"] && previous["repository_url"] != project.url
+    if freshness
+      return Time.iso8601(previous["freshness_retry_at"]) <= Time.current if previous["freshness_retry_at"]
+      return true unless previous["freshness_complete"]
+
+      return previous["observations"].any? do |entry|
+        Time.iso8601(entry.fetch("latest_attempt_checked_at")) <= Time.current - refresh_after
+      end
+    end
     return Time.iso8601(previous["retry_at"]) <= Time.current if previous["retry_at"]
 
     interval = previous["status"] == "unknown" ? RETRY_AFTER : refresh_after
@@ -48,11 +67,13 @@ class SwhidOriginChecker
     Time.iso8601(checked_at || previous.fetch("checked_at")) <= Time.current - interval
   end
 
-  def check(refresh_after: REFRESH_AFTER, force: false)
-    return project.swhids&.dig("origin_archive") unless force || due?(refresh_after: refresh_after)
+  def check(refresh_after: REFRESH_AFTER, force: false, freshness: false)
+    return project.swhids&.dig("origin_archive") unless force || due?(refresh_after: refresh_after, freshness: freshness)
 
     SwhidApi.check_rate_limit!
+    @freshness = freshness
     @remaining_requests = MAX_REQUESTS
+    @repository_url = project.url
     @origins = origins
     @previous = project.swhids&.dig("origin_archive")&.deep_dup
     @request = project.swhids&.dig("archival")&.deep_dup
@@ -68,7 +89,7 @@ class SwhidOriginChecker
         observations << observation
       end
       lookup(observation, cutoff)
-      break if observation["lookup_complete"] && observation["status"] == "archived" && (!cutoff || observation["prior_visit"])
+      break if !freshness && observation["lookup_complete"] && observation["status"] == "archived" && (!cutoff || observation["prior_visit"])
     end
     persist(observations, cutoff)
   rescue SwhidApi::RateLimited => error
@@ -100,12 +121,14 @@ class SwhidOriginChecker
 
   def pending_origins(observations, refresh_after:, force:)
     indexed = observations.index_by { |entry| entry["origin"] }
+    completion = @freshness ? "freshness_complete" : "lookup_complete"
+    timestamp = @freshness ? "latest_attempt_checked_at" : "checked_at"
     @origins.select do |origin|
       entry = indexed[origin]
-      !entry || !entry["lookup_complete"] || force || Time.iso8601(entry["checked_at"]) <= Time.current - refresh_after
+      !entry || !entry[completion] || force || Time.iso8601(entry[timestamp]) <= Time.current - refresh_after
     end.sort_by do |origin|
       entry = indexed[origin]
-      [entry ? (entry["lookup_complete"] ? 2 : 1) : 0,
+      [entry ? (entry[completion] ? 2 : 1) : 0,
         entry&.dig("attempted_at") || entry&.dig("checked_at") || "", @origins.index(origin)]
     end
   end
@@ -113,6 +136,8 @@ class SwhidOriginChecker
   def lookup(observation, cutoff)
     origin = observation.fetch("origin")
     observation.delete("next_visit") if observation["lookup_complete"]
+    observation.delete("next_visit") if @freshness && !observation["latest_attempt_checked_at"]
+    observation["freshness_complete"] = false unless observation["next_visit"]
     observation.delete("error")
     observation["attempted_at"] = Time.current.iso8601
     observation["lookup_complete"] = false
@@ -127,6 +152,7 @@ class SwhidOriginChecker
       @remaining_requests -= 1
       response = SwhidApi.request(:get, url, params: params)
       if response.status == 404
+        observation["latest_attempt_checked_at"] = Time.current.iso8601 unless params["last_visit"]
         return finish_lookup(observation, history_complete: true)
       end
       raise ResponseError, "HTTP #{response.status}" unless response.success?
@@ -135,11 +161,16 @@ class SwhidOriginChecker
       raise ResponseError, "Invalid origin visits response" unless visits.is_a?(Array)
 
       visits.each { |visit| validate_visit(visit, origin) }
+      observation["latest_attempt_checked_at"] = Time.current.iso8601 unless params["last_visit"]
       visits.each do |visit|
+        evidence = visit.slice("origin", "date", "visit", "snapshot", "status", "type")
+        if newer_visit?(evidence, observation["latest_attempt"])
+          observation["latest_attempt"] = evidence
+        end
         next unless visit["snapshot"].present? && %w[full partial].include?(visit["status"])
 
-        evidence = visit.slice("date", "visit", "snapshot", "status", "type")
-        if !observation["visit"] || Time.iso8601(evidence["date"]) > Time.iso8601(observation["visit"]["date"])
+        observation["freshness_complete"] = observation["latest_attempt_checked_at"].present?
+        if newer_visit?(evidence, observation["visit"])
           observation["visit"] = evidence
         end
         observation["status"] = "archived"
@@ -149,7 +180,7 @@ class SwhidOriginChecker
       return finish_lookup(observation, history_complete: true) unless params
 
       observation["next_visit"] = params["last_visit"]
-      if observation["visit"] && (!cutoff || observation["prior_visit"])
+      if observation["freshness_complete"] && observation["visit"] && (!cutoff || observation["prior_visit"])
         return finish_lookup(observation, history_complete: false)
       end
     end
@@ -168,8 +199,16 @@ class SwhidOriginChecker
     observation["checked_at"] = Time.current.iso8601
     observation["lookup_complete"] = true
     observation["history_complete"] = history_complete
+    observation["freshness_complete"] = observation["latest_attempt_checked_at"].present? if history_complete
     observation.delete("next_visit")
     observation
+  end
+
+  def newer_visit?(candidate, previous)
+    return true unless previous
+
+    ([Time.iso8601(candidate["date"]), candidate["visit"]] <=>
+      [Time.iso8601(previous["date"]), previous["visit"]]) >= 0
   end
 
   def validate_visit(visit, origin)
@@ -202,21 +241,36 @@ class SwhidOriginChecker
 
   def persist(observations, cutoff, retry_at: nil)
     observations.sort_by! { |entry| @origins.index(entry["origin"]) }
+    current_key = origin_key(@repository_url)
+    current_origins = @origins.select { |origin| current_key && origin_key(origin) == current_key }
+    observations.each do |entry|
+      entry["origin_role"] = current_origins.include?(entry["origin"]) ? "current" : "other"
+    end
     archived = observations.find { |entry| entry["status"] == "archived" }
     unchecked = @origins - observations.pluck("origin")
     complete = unchecked.empty? && observations.all? { |entry| entry["lookup_complete"] }
+    freshness_complete = unchecked.empty? && observations.all? { |entry| entry["freshness_complete"] }
     absent = @origins.any? && complete && observations.all? { |entry| entry["status"] == "not_found" }
     result = {
       "status" => archived ? "archived" : (absent ? "not_found" : "unknown"),
       "checked_at" => Time.current.iso8601, "origins" => @origins, "observations" => observations,
-      "complete" => complete, "unchecked_origins" => unchecked
+      "complete" => complete, "unchecked_origins" => unchecked,
+      "repository_url" => @repository_url, "current_origins" => current_origins,
+      "freshness_complete" => freshness_complete
     }
+    unless freshness_complete
+      if @freshness
+        result["freshness_retry_at"] = (retry_at || Time.current + RETRY_AFTER).iso8601
+      elsif @previous&.dig("freshness_retry_at")
+        result["freshness_retry_at"] = @previous["freshness_retry_at"]
+      end
+    end
     covered = observations.any? { |entry| entry["lookup_complete"] && entry["visit"] && (!cutoff || entry["prior_visit"]) }
     retry_at ||= Time.current + RETRY_AFTER unless covered || complete
     result["retry_at"] = retry_at.iso8601 if retry_at
     project.with_lock do
       data = (project.swhids || {}).deep_dup
-      next unless data["origin_archive"] == @previous && origins == @origins
+      next unless data["origin_archive"] == @previous && origins == @origins && project.url == @repository_url
 
       data["origin_archive"] = result
       request = data["archival"]
