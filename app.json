@@ -89,6 +89,10 @@
       "schedule": "*/10 * * * *"
     },
     {
+      "command": "bundle exec rake swmath:resume swmath:refresh",
+      "schedule": "*/10 * * * *"
+    },
+    {
       "command": "bundle exec rake swhids:refresh",
       "schedule": "10 */6 * * *"
     },

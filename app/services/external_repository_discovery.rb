@@ -1,7 +1,8 @@
 require "digest"
 
 class ExternalRepositoryDiscovery
-  IMPORTERS = { "wikidata" => WikidataImporter, "biotools" => BiotoolsImporter, "ascl" => AsclImporter }.freeze
+  IMPORTERS = { "wikidata" => WikidataImporter, "biotools" => BiotoolsImporter,
+    "ascl" => AsclImporter, "swmath" => SwmathImporter }.freeze
 
   def self.due
     ExternalSoftwareRecord.where(source: IMPORTERS.keys, status: "ok")
@@ -127,6 +128,8 @@ class ExternalRepositoryDiscovery
       record.metadata.slice("labels", "descriptions", "claims")
     when "ascl"
       record.metadata.except("views", "time_updated")
+    when "swmath"
+      record.metadata.except("articles_count")
     else
       record.metadata.except("additionDate", "lastUpdate")
     end

@@ -1,0 +1,1083 @@
+[
+  {
+    "articles_count": 338,
+    "authors": [
+      "Meurer, Aaron",
+      "Smith, Christopher P.",
+      "Paprocki, Mateusz",
+      "Čertík, Ondřej",
+      "Kirpichev, Sergey B.",
+      "Rocklin, Matthew",
+      "Kumar, Amit",
+      "Ivanov, Sergiu",
+      "Moore, Jason K.",
+      "Singh, Sartaj",
+      "Rathnayake, Thilina",
+      "Vig, Sean",
+      "Granger, Brian E.",
+      "Muller, Richard P.",
+      "Bonazzi, Francesco",
+      "Gupta, Harsh",
+      "Vats, Shivam",
+      "Johansson, Fredrik",
+      "Pedregosa, Fabian",
+      "Curry, Matthew J.",
+      "Terrel, Andy R.",
+      "Roučka, Štěpán",
+      "Saboo, Ashutosh",
+      "Fernando, Isuru",
+      "Kulal, Sumith",
+      "Cimrman, Robert",
+      "Scopatz, Anthony"
+    ],
+    "classification": [
+      "65",
+      "68",
+      "76",
+      "81",
+      "90",
+      "00",
+      "03",
+      "05",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "20",
+      "22",
+      "26",
+      "28",
+      "30",
+      "32",
+      "33",
+      "34",
+      "35",
+      "37",
+      "39",
+      "40",
+      "41",
+      "42",
+      "44",
+      "46",
+      "47",
+      "49",
+      "51",
+      "52",
+      "53",
+      "57",
+      "58",
+      "60",
+      "62",
+      "70",
+      "74",
+      "78",
+      "80",
+      "82",
+      "83",
+      "85",
+      "86",
+      "91",
+      "92",
+      "93",
+      "94",
+      "97"
+    ],
+    "dependencies": null,
+    "description": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+    "homepage": "https://www.sympy.org",
+    "id": 940,
+    "keywords": [
+      "orms"
+    ],
+    "license_terms": "BSD",
+    "name": "SymPy",
+    "operating_systems": null,
+    "orms_id": "309",
+    "programming_languages": null,
+    "related_software": [
+      {
+        "id": 14460,
+        "name": "Python"
+      },
+      {
+        "id": 6294,
+        "name": "NumPy"
+      },
+      {
+        "id": 6293,
+        "name": "SciPy"
+      },
+      {
+        "id": 6590,
+        "name": "Matplotlib"
+      },
+      {
+        "id": 554,
+        "name": "Mathematica"
+      },
+      {
+        "id": 23170,
+        "name": "GitHub"
+      },
+      {
+        "id": 825,
+        "name": "SageMath"
+      },
+      {
+        "id": 545,
+        "name": "Maple"
+      },
+      {
+        "id": 5802,
+        "name": "mpmath"
+      },
+      {
+        "id": 558,
+        "name": "Matlab"
+      },
+      {
+        "id": 4314,
+        "name": "FEniCS"
+      },
+      {
+        "id": 15655,
+        "name": "IPython"
+      },
+      {
+        "id": 866,
+        "name": "SINGULAR"
+      },
+      {
+        "id": 13752,
+        "name": "Cython"
+      },
+      {
+        "id": 13986,
+        "name": "Julia"
+      },
+      {
+        "id": 20939,
+        "name": "PyTorch"
+      },
+      {
+        "id": 15170,
+        "name": "TensorFlow"
+      },
+      {
+        "id": 4105,
+        "name": "Gurobi"
+      },
+      {
+        "id": 4887,
+        "name": "z3"
+      },
+      {
+        "id": 771,
+        "name": "R"
+      }
+    ],
+    "source_code": "https://github.com/sympy/sympy.github.com",
+    "standard_articles": [
+      {
+        "authors": [],
+        "id": 8059753,
+        "source": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "title": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "year": "2023"
+      },
+      {
+        "authors": [],
+        "id": 6406719,
+        "source": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "title": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "year": "2011"
+      }
+    ],
+    "zbmath_url": "https://zbmath.org/software/940"
+  },
+  {
+    "articles_count": 1151,
+    "authors": [
+      "Oliphant, Travis E.",
+      "other contributors"
+    ],
+    "classification": [
+      "35",
+      "62",
+      "65",
+      "68",
+      "90",
+      "00",
+      "03",
+      "05",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "18",
+      "20",
+      "22",
+      "26",
+      "28",
+      "30",
+      "31",
+      "33",
+      "34",
+      "37",
+      "39",
+      "41",
+      "42",
+      "45",
+      "46",
+      "47",
+      "49",
+      "51",
+      "52",
+      "53",
+      "55",
+      "57",
+      "58",
+      "60",
+      "70",
+      "74",
+      "76",
+      "78",
+      "80",
+      "81",
+      "82",
+      "83",
+      "85",
+      "86",
+      "91",
+      "92",
+      "93",
+      "94",
+      "97"
+    ],
+    "dependencies": null,
+    "description": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+    "homepage": "https://numpy.org",
+    "id": 6294,
+    "keywords": [],
+    "license_terms": "BSD Modified",
+    "name": "NumPy",
+    "operating_systems": null,
+    "orms_id": null,
+    "programming_languages": null,
+    "related_software": [
+      {
+        "id": 14460,
+        "name": "Python"
+      },
+      {
+        "id": 6293,
+        "name": "SciPy"
+      },
+      {
+        "id": 6590,
+        "name": "Matplotlib"
+      },
+      {
+        "id": 8058,
+        "name": "Scikit"
+      },
+      {
+        "id": 20939,
+        "name": "PyTorch"
+      },
+      {
+        "id": 23170,
+        "name": "GitHub"
+      },
+      {
+        "id": 15170,
+        "name": "TensorFlow"
+      },
+      {
+        "id": 16121,
+        "name": "pandas"
+      },
+      {
+        "id": 21554,
+        "name": "Numba"
+      },
+      {
+        "id": 940,
+        "name": "SymPy"
+      },
+      {
+        "id": 558,
+        "name": "Matlab"
+      },
+      {
+        "id": 22205,
+        "name": "Adam"
+      },
+      {
+        "id": 32996,
+        "name": "JAX"
+      },
+      {
+        "id": 13752,
+        "name": "Cython"
+      },
+      {
+        "id": 21266,
+        "name": "Jupyter Notebook"
+      },
+      {
+        "id": 4314,
+        "name": "FEniCS"
+      },
+      {
+        "id": 15655,
+        "name": "IPython"
+      },
+      {
+        "id": 616,
+        "name": "NetworkX"
+      },
+      {
+        "id": 15603,
+        "name": "Astropy"
+      },
+      {
+        "id": 771,
+        "name": "R"
+      }
+    ],
+    "source_code": "https://github.com/numpy/numpy",
+    "standard_articles": [
+      {
+        "authors": [],
+        "id": null,
+        "source": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "title": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "year": "1996"
+      }
+    ],
+    "zbmath_url": "https://zbmath.org/software/6294"
+  },
+  {
+    "articles_count": 1771,
+    "authors": [
+      "Virtanen, Pauli",
+      "Gommers, Ralf",
+      "Oliphant, Travis E.",
+      "Haberland, Matt",
+      "Reddy, Tyler",
+      "Cournapeau, David",
+      "Burovski, Evgeni",
+      "Peterson, Pearu",
+      "Weckesser, Warren",
+      "Bright, Jonathan",
+      "van der Walt, Stéfan J.",
+      "Brett, Matthew",
+      "Wilson, Joshua",
+      "Millman, K. Jarrod",
+      "Mayorov, Nikolay",
+      "Nelson, Andrew R. J.",
+      "Jones, Eric",
+      "Kern, Robert",
+      "Larson, Eric",
+      "Carey, CJ",
+      "Polat, İlhan",
+      "Feng, Yu",
+      "Moore, Eric W.",
+      "VanderPlas, Jake",
+      "Laxalde, Denis",
+      "Perktold, Josef",
+      "Cimrman, Robert",
+      "Henriksen, Ian",
+      "Quintero, E. A.",
+      "Harris, Charles R.",
+      "Archibald, Anne M.",
+      "Ribeiro, Antônio H.",
+      "Pedregosa, Fabian",
+      "van Mulbregt, Paul",
+      "other contributors"
+    ],
+    "classification": [
+      "62",
+      "65",
+      "68",
+      "74",
+      "76",
+      "00",
+      "01",
+      "03",
+      "05",
+      "06",
+      "11",
+      "13",
+      "14",
+      "15",
+      "18",
+      "20",
+      "22",
+      "26",
+      "28",
+      "30",
+      "31",
+      "32",
+      "33",
+      "34",
+      "35",
+      "37",
+      "39",
+      "41",
+      "42",
+      "44",
+      "45",
+      "46",
+      "47",
+      "49",
+      "51",
+      "52",
+      "53",
+      "54",
+      "55",
+      "57",
+      "58",
+      "60",
+      "70",
+      "78",
+      "80",
+      "81",
+      "82",
+      "83",
+      "85",
+      "86",
+      "90",
+      "91",
+      "92",
+      "93",
+      "94"
+    ],
+    "dependencies": "Python; NumPy",
+    "description": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+    "homepage": "https://scipy.org",
+    "id": 6293,
+    "keywords": [],
+    "license_terms": "BSD-3-Clause",
+    "name": "SciPy",
+    "operating_systems": null,
+    "orms_id": null,
+    "programming_languages": null,
+    "related_software": [
+      {
+        "id": 14460,
+        "name": "Python"
+      },
+      {
+        "id": 6294,
+        "name": "NumPy"
+      },
+      {
+        "id": 6590,
+        "name": "Matplotlib"
+      },
+      {
+        "id": 8058,
+        "name": "Scikit"
+      },
+      {
+        "id": 23170,
+        "name": "GitHub"
+      },
+      {
+        "id": 20939,
+        "name": "PyTorch"
+      },
+      {
+        "id": 15170,
+        "name": "TensorFlow"
+      },
+      {
+        "id": 22205,
+        "name": "Adam"
+      },
+      {
+        "id": 558,
+        "name": "Matlab"
+      },
+      {
+        "id": 4314,
+        "name": "FEniCS"
+      },
+      {
+        "id": 616,
+        "name": "NetworkX"
+      },
+      {
+        "id": 21554,
+        "name": "Numba"
+      },
+      {
+        "id": 940,
+        "name": "SymPy"
+      },
+      {
+        "id": 16121,
+        "name": "pandas"
+      },
+      {
+        "id": 5142,
+        "name": "LBFGS-B"
+      },
+      {
+        "id": 32996,
+        "name": "JAX"
+      },
+      {
+        "id": 15655,
+        "name": "IPython"
+      },
+      {
+        "id": 771,
+        "name": "R"
+      },
+      {
+        "id": 366,
+        "name": "Gmsh"
+      },
+      {
+        "id": 13752,
+        "name": "Cython"
+      }
+    ],
+    "source_code": null,
+    "standard_articles": [
+      {
+        "authors": [],
+        "id": null,
+        "source": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "title": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "year": "2020"
+      }
+    ],
+    "zbmath_url": "https://zbmath.org/software/6293"
+  },
+  {
+    "articles_count": 3671,
+    "authors": [
+      "The Sage Developers",
+      "Stein, William",
+      "Joyner, David",
+      "Kohel, David",
+      "Cremona, John",
+      "Eröcal, Burçin"
+    ],
+    "classification": [
+      "05",
+      "11",
+      "14",
+      "20",
+      "68",
+      "00",
+      "01",
+      "03",
+      "06",
+      "08",
+      "12",
+      "13",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "22",
+      "26",
+      "28",
+      "30",
+      "31",
+      "32",
+      "33",
+      "34",
+      "35",
+      "37",
+      "39",
+      "40",
+      "41",
+      "42",
+      "43",
+      "44",
+      "46",
+      "47",
+      "49",
+      "51",
+      "52",
+      "53",
+      "54",
+      "55",
+      "57",
+      "58",
+      "60",
+      "62",
+      "65",
+      "70",
+      "74",
+      "76",
+      "78",
+      "80",
+      "81",
+      "82",
+      "83",
+      "85",
+      "86",
+      "90",
+      "91",
+      "92",
+      "93",
+      "94",
+      "97"
+    ],
+    "dependencies": null,
+    "description": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+    "homepage": "https://www.sagemath.org/",
+    "id": 825,
+    "keywords": [
+      "orms",
+      "Python",
+      "Cython",
+      "Sage",
+      "Open Source",
+      "Interfaces"
+    ],
+    "license_terms": "GPL 3 or higher",
+    "name": "SageMath",
+    "operating_systems": null,
+    "orms_id": "255",
+    "programming_languages": null,
+    "related_software": [
+      {
+        "id": 540,
+        "name": "Magma"
+      },
+      {
+        "id": 23170,
+        "name": "GitHub"
+      },
+      {
+        "id": 7248,
+        "name": "OEIS"
+      },
+      {
+        "id": 320,
+        "name": "GAP"
+      },
+      {
+        "id": 680,
+        "name": "PARI/GP"
+      },
+      {
+        "id": 537,
+        "name": "Macaulay2"
+      },
+      {
+        "id": 866,
+        "name": "SINGULAR"
+      },
+      {
+        "id": 7249,
+        "name": "LMFDB"
+      },
+      {
+        "id": 554,
+        "name": "Mathematica"
+      },
+      {
+        "id": 16448,
+        "name": "Sage-Combinat"
+      },
+      {
+        "id": 545,
+        "name": "Maple"
+      },
+      {
+        "id": 14460,
+        "name": "Python"
+      },
+      {
+        "id": 611,
+        "name": "nauty"
+      },
+      {
+        "id": 27596,
+        "name": "ecdata"
+      },
+      {
+        "id": 7823,
+        "name": "Traces"
+      },
+      {
+        "id": 6874,
+        "name": "SnapPy"
+      },
+      {
+        "id": 724,
+        "name": "polymake"
+      },
+      {
+        "id": 4968,
+        "name": "DLMF"
+      },
+      {
+        "id": 23728,
+        "name": "MathOverflow"
+      },
+      {
+        "id": 560,
+        "name": "Maxima"
+      }
+    ],
+    "source_code": "https://github.com/sagemath/sage",
+    "standard_articles": [
+      {
+        "authors": [],
+        "id": 7045592,
+        "source": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "title": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "year": "2019"
+      },
+      {
+        "authors": [],
+        "id": 6418360,
+        "source": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "title": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "year": "2015"
+      },
+      {
+        "authors": [],
+        "id": 6532438,
+        "source": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "title": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "year": "2013"
+      },
+      {
+        "authors": [],
+        "id": 6462232,
+        "source": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "title": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "year": "2013"
+      },
+      {
+        "authors": [],
+        "id": 6114556,
+        "source": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "title": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "year": "2012"
+      },
+      {
+        "authors": [],
+        "id": 5785538,
+        "source": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "title": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "year": "2010"
+      },
+      {
+        "authors": [],
+        "id": 5380273,
+        "source": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "title": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "year": "2008"
+      }
+    ],
+    "zbmath_url": "https://zbmath.org/software/825"
+  },
+  {
+    "articles_count": 24,
+    "authors": [
+      "Soetaert, Karline",
+      "Petzoldt, Thomas"
+    ],
+    "classification": [
+      "34",
+      "60",
+      "62",
+      "65",
+      "92",
+      "74",
+      "86"
+    ],
+    "dependencies": "R",
+    "description": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+    "homepage": "https://cran.r-project.org/web/packages/FME/index.html",
+    "id": 14241,
+    "keywords": [],
+    "license_terms": null,
+    "name": "FME",
+    "operating_systems": null,
+    "orms_id": null,
+    "programming_languages": null,
+    "related_software": [
+      {
+        "id": 771,
+        "name": "R"
+      },
+      {
+        "id": 4499,
+        "name": "deSolve"
+      },
+      {
+        "id": 8339,
+        "name": "RootSolve"
+      },
+      {
+        "id": 11101,
+        "name": "diffEq"
+      },
+      {
+        "id": 8341,
+        "name": "ODEPACK"
+      },
+      {
+        "id": 13723,
+        "name": "ReacTran"
+      },
+      {
+        "id": 4498,
+        "name": "simecol"
+      },
+      {
+        "id": 11616,
+        "name": "minpack.lm"
+      },
+      {
+        "id": 11008,
+        "name": "BayesDA"
+      },
+      {
+        "id": 14377,
+        "name": "CollocInfer"
+      },
+      {
+        "id": 8340,
+        "name": "BvpSolve"
+      },
+      {
+        "id": 1005,
+        "name": "VODE"
+      },
+      {
+        "id": 4511,
+        "name": "fda (R)"
+      },
+      {
+        "id": 4290,
+        "name": "CODA"
+      },
+      {
+        "id": 21016,
+        "name": "GillespieSSA"
+      },
+      {
+        "id": 11721,
+        "name": "logspline"
+      },
+      {
+        "id": 42125,
+        "name": "PRMLT"
+      },
+      {
+        "id": 7009,
+        "name": "Chemotaxis"
+      },
+      {
+        "id": 32068,
+        "name": "dMod"
+      },
+      {
+        "id": 4557,
+        "name": "ggplot2"
+      }
+    ],
+    "source_code": "https://github.com/cran/FME",
+    "standard_articles": [
+      {
+        "authors": [],
+        "id": null,
+        "source": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "title": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "year": "2010"
+      }
+    ],
+    "zbmath_url": "https://zbmath.org/software/14241"
+  },
+  {
+    "articles_count": 1740,
+    "authors": [
+      "Blechta, Jan",
+      "Ballarin, Francesco",
+      "Wells, Garth N.",
+      "Baratta, Igor",
+      "Hale, Jack S.",
+      "Schartum Dokken, Jørgen",
+      "Dean, Joe",
+      "Scroggs, Matthew"
+    ],
+    "classification": [
+      "35",
+      "49",
+      "65",
+      "74",
+      "76",
+      "00",
+      "05",
+      "11",
+      "14",
+      "15",
+      "17",
+      "26",
+      "30",
+      "31",
+      "33",
+      "34",
+      "37",
+      "39",
+      "40",
+      "41",
+      "42",
+      "44",
+      "45",
+      "46",
+      "47",
+      "53",
+      "57",
+      "58",
+      "60",
+      "62",
+      "68",
+      "70",
+      "78",
+      "80",
+      "81",
+      "82",
+      "83",
+      "86",
+      "90",
+      "91",
+      "92",
+      "93",
+      "94",
+      "97"
+    ],
+    "dependencies": null,
+    "description": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+    "homepage": "https://fenicsproject.org/",
+    "id": 4314,
+    "keywords": [
+      "automated",
+      "efficient solution of differential equations"
+    ],
+    "license_terms": "LGPL",
+    "name": "FEniCS",
+    "operating_systems": "Linux, Unix, Mac OS X, Windows",
+    "orms_id": null,
+    "programming_languages": "C++, Python",
+    "related_software": [
+      {
+        "id": 5701,
+        "name": "SyFi"
+      },
+      {
+        "id": 4012,
+        "name": "PETSc"
+      },
+      {
+        "id": 366,
+        "name": "Gmsh"
+      },
+      {
+        "id": 4313,
+        "name": "DOLFIN"
+      },
+      {
+        "id": 14460,
+        "name": "Python"
+      },
+      {
+        "id": 11183,
+        "name": "UFL"
+      },
+      {
+        "id": 23170,
+        "name": "GitHub"
+      },
+      {
+        "id": 4013,
+        "name": "MUMPS"
+      },
+      {
+        "id": 6293,
+        "name": "SciPy"
+      },
+      {
+        "id": 3516,
+        "name": "deal.II"
+      },
+      {
+        "id": 14923,
+        "name": "Firedrake"
+      },
+      {
+        "id": 6128,
+        "name": "ParaView"
+      },
+      {
+        "id": 1436,
+        "name": "FreeFem++"
+      },
+      {
+        "id": 22205,
+        "name": "Adam"
+      },
+      {
+        "id": 426,
+        "name": "hypre"
+      },
+      {
+        "id": 20939,
+        "name": "PyTorch"
+      },
+      {
+        "id": 6294,
+        "name": "NumPy"
+      },
+      {
+        "id": 42093,
+        "name": "DeepONet"
+      },
+      {
+        "id": 558,
+        "name": "Matlab"
+      },
+      {
+        "id": 12977,
+        "name": "redbKIT"
+      }
+    ],
+    "source_code": "https://github.com/FEniCS",
+    "standard_articles": [
+      {
+        "authors": [],
+        "id": 6684670,
+        "source": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "title": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "year": "2016"
+      },
+      {
+        "authors": [],
+        "id": 5954823,
+        "source": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "title": "zbMATH Open Web Interface contents unavailable due to conflicting licenses.",
+        "year": "2012"
+      }
+    ],
+    "zbmath_url": "https://zbmath.org/software/4314"
+  }
+]

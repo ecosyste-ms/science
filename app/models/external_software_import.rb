@@ -44,9 +44,14 @@ class ExternalSoftwareImport < ApplicationRecord
     start_catalogue(source: "ascl", page_size: page_size, restart: restart)
   end
 
+  def self.start_swmath(page_size: nil, restart: false)
+    start_catalogue(source: "swmath", page_size: page_size, restart: restart)
+  end
+
   def self.start_catalogue(source:, page_size: nil, restart: false)
-    initial_cursor = { "biotools" => "1", "ascl" => nil }.fetch(source)
-    max_page_size = source == "ascl" ? AsclClient::PAGE_SIZE : BiotoolsClient::PAGE_SIZE
+    initial_cursor = { "biotools" => "1", "ascl" => nil, "swmath" => nil }.fetch(source)
+    client = { "biotools" => BiotoolsClient, "ascl" => AsclClient, "swmath" => SwmathClient }.fetch(source)
+    max_page_size = client::PAGE_SIZE
     if page_size && (!page_size.is_a?(Integer) || !page_size.between?(1, max_page_size))
       raise ArgumentError, "page size must be between 1 and 50"
     end
@@ -82,9 +87,15 @@ class ExternalSoftwareImport < ApplicationRecord
       .where("lease_expires_at IS NULL OR lease_expires_at <= ?", Time.current).first
   end
 
+  def self.resumable_swmath
+    where(source: "swmath", completed_at: nil).where("next_run_at <= ?", Time.current)
+      .where("lease_expires_at IS NULL OR lease_expires_at <= ?", Time.current).first
+  end
+
   def enqueue
     return if completed_at
-    worker = { "biotools" => ImportBiotoolsWorker, "ascl" => ImportAsclWorker, "wikidata" => ImportWikidataWorker }.fetch(source)
+    worker = { "biotools" => ImportBiotoolsWorker, "ascl" => ImportAsclWorker,
+      "swmath" => ImportSwmathWorker, "wikidata" => ImportWikidataWorker }.fetch(source)
     worker.perform_at([next_run_at, lease_expires_at, Time.current].compact.max, id)
   end
 
@@ -119,7 +130,11 @@ class ExternalSoftwareImport < ApplicationRecord
     with_lock do
       return false unless lease_token == token
       ids = records.map do |record|
-        source == "ascl" ? AsclClient.identifier(record["ascl_id"]) : BiotoolsClient.identifier(record["biotoolsID"])
+        case source
+        when "ascl" then AsclClient.identifier(record["ascl_id"])
+        when "swmath" then SwmathClient.identifier(record["id"].to_s)
+        else BiotoolsClient.identifier(record["biotoolsID"])
+        end
       end
       update!(pending_ids: ids, pending_records: records, pending_next_cursor: next_cursor&.to_s, page_retrieved_at: retrieved_at)
     end
@@ -129,7 +144,7 @@ class ExternalSoftwareImport < ApplicationRecord
     with_lock do
       return unless lease_token == token
       finished = pending_next_cursor.nil?
-      final_cursor = source == "ascl" ? (pending_ids.last || cursor) : cursor
+      final_cursor = source == "biotools" ? cursor : (pending_ids.last || cursor)
       update!(cursor: pending_next_cursor || final_cursor, pages_processed: pages_processed + 1,
         items_processed: items_processed + pending_ids.size, pending_ids: [], pending_records: [],
         pending_next_cursor: nil, page_retrieved_at: nil, completed_at: finished ? Time.current : nil,
