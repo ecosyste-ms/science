@@ -274,7 +274,7 @@ paths:
       description: >-
         Read cached external software identifiers and source-code repository relationships
         for a visible project. Ambiguous candidates are retained. Metadata contains the
-        source entity with statement IDs, ranks, qualifiers and references. Missing or
+        original source record, including Wikidata claims or bio.tools annotations. Missing or
         failed source refreshes retain the last successful evidence and retrieval date.
         An empty list does not establish absence from external sources. No source requests,
         project writes or job scheduling occur during this request.
@@ -302,6 +302,7 @@ paths:
                     id: {type: integer}
                     scheme: {type: string, example: wikidata}
                     identifier: {type: string, example: Q5971368}
+                    record_url: {type: string, format: uri, nullable: true, example: 'https://www.wikidata.org/wiki/Q5971368'}
                     relationship: {type: string, example: source_code_repository}
                     match_status: {type: string, enum: [matched, ambiguous]}
                     source_status: {type: string, enum: [pending, ok, missing, error]}
@@ -318,6 +319,8 @@ paths:
                           repository_url: {type: string}
                           normalized_url: {type: string}
                           rank: {type: string, enum: [normal, preferred]}
+                          source_field: {type: string, example: link}
+                          source_type: {type: string, example: Repository}
                           match_method: {type: string, enum: [project.url, repository_alias]}
                           ambiguous: {type: boolean}
                     metadata: {type: object, additionalProperties: true}

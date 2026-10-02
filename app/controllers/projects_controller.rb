@@ -3,6 +3,7 @@ class ProjectsController < ApplicationController
     @project = Project.visible
       .includes(:host, :owner_record, { project_fields: :field }, papers: :mentions)
       .find(params[:id])
+    @registry_references = @project.project_external_software_records.registry_references
     @joss_publication_credits = if @project.joss_metadata.present?
       @project.joss_publication_credits
     else

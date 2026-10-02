@@ -137,6 +137,26 @@ Matching checks existing case-insensitive URL and alias indexes in batches of at
 
 `homepage:refresh` also caches the external-source breakdown with the existing homepage statistics. Each source counts distinct visible scientific projects with unambiguous matches. Several identifiers from the same source count once; a project can count under several sources. Missing records are excluded, while previously retrieved evidence survives a failed refresh. Homepage requests only read the cache, including when the cache is empty. Run `bundle exec rake homepage:refresh` after an import to update the displayed counts.
 
+## bio.tools enrichment and registry references
+
+bio.tools imports use the same source-record and repository-link tables as Wikidata. IDs are stored in lowercase because bio.tools IDs are case-insensitive. Repeated imports update one `(source, identifier)` record, and several links to the same project share one relationship. Matching uses explicit `link` entries typed `Repository`, including known repository aliases. Homepages, documentation, downloads and related-tool names do not establish identity. Missing repository links remain unmatched; the importer does not create projects.
+
+The October 2026 audit checked eight bio.tools records, their available Wikidata counterparts, and Science's public project metadata. Scanpy and MultiQC add EDAM operations and topics; several publication DOIs and Nextflow contributor ORCIDs were already present in Science. [RSEc](https://research-software-ecosystem.org/docs) preserved the compared repository links, annotations, credits and publication identifiers in all eight sample copies. Two of the 50 newest bio.tools records were absent from the checked RSEc snapshot. Direct bio.tools retrieval therefore supplies current metadata and familiar registry references, while further feeds can supply additional coverage. A mirrored bio.tools record should retain its original source identity; another collection route is not independent scientific evidence. This importer reads the bio.tools API. Scoring is unchanged.
+
+`biotools:sweep` starts or resumes a persisted catalogue import. It reads up to 50 full records per request, ordered by addition date, and stores the unfinished page before matching. Continuations wait 15 seconds. A retry reuses the saved page and skips records already retrieved at that time or later. The worker uses the existing ten-minute lease and checks its token before changing progress. Page requests happen outside database transactions; matching uses batches of at most 100 indexed repository URLs. A project-page request selects registry names and identifiers without loading the source metadata.
+
+```bash
+bundle exec rake biotools:sweep
+bundle exec rake biotools:status
+IDS=scanpy,multiqc,nextflow bundle exec rake biotools:import
+LIMIT=100 bundle exec rake biotools:refresh
+RESTART=true bundle exec rake biotools:sweep
+```
+
+`LIMIT` on `biotools:sweep` sets a page size between 1 and 50; omit it when resuming. A completed sweep requires `RESTART=true` to begin another catalogue pass. Page-number pagination can shift when upstream records are removed, so later passes are needed to revisit the catalogue. `biotools:resume biotools:refresh` runs every ten minutes, recovering due unfinished sweeps and queuing up to 100 due source records. Recovery does not start a sweep or restart a completed one. Individual records have the same 30-day success, seven-day missing and one-hour failure intervals as Wikidata; rate limits share a separate bio.tools cooldown and honor `Retry-After`.
+
+Project pages display an **Elsewhere** section linking confirmed Wikidata and bio.tools identifiers, including projects whose repository sync has not finished. Ambiguous and missing records are omitted; an unsuccessful refresh retains the last confirmed reference. The paginated external-identifiers API exposes the full cached source record, match evidence and canonical `record_url`. Neither display path fetches source data or changes scores. The cached homepage source breakdown labels this source `bio.tools` and counts each scientific project once for it.
+
 ## Partial results and hidden owners
 
 The complete sync is not wrapped in one database transaction. Most fetch stages handle an upstream failure locally and allow later stages to continue, so a project can hold fresh package data and older issue or commit data after the same run. Slow stages of at least five seconds are included in a structured timing log; a total sync of at least 30 seconds records every stage duration.

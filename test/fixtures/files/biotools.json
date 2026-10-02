@@ -1,0 +1,704 @@
+[
+  {
+    "name": "SCANPY",
+    "description": "Scalable toolkit for analyzing single-cell gene expression data. It includes preprocessing, visualization, clustering, pseudotime and trajectory inference and differential expression testing. The Python-based implementation efficiently deals with datasets of more than one million cells.",
+    "homepage": "https://github.com/theislab/Scanpy",
+    "biotoolsID": "scanpy",
+    "biotoolsCURIE": "biotools:scanpy",
+    "version": [],
+    "otherID": [],
+    "relation": [
+      {
+        "biotoolsID": "anndata",
+        "type": "uses"
+      },
+      {
+        "biotoolsID": "muon",
+        "type": "usedBy"
+      }
+    ],
+    "function": [
+      {
+        "operation": [
+          {
+            "uri": "http://edamontology.org/operation_3223",
+            "term": "Differential gene expression analysis"
+          },
+          {
+            "uri": "http://edamontology.org/operation_2939",
+            "term": "Principal component visualisation"
+          },
+          {
+            "uri": "http://edamontology.org/operation_0313",
+            "term": "Expression profile clustering"
+          }
+        ],
+        "input": [
+          {
+            "data": {
+              "uri": "http://edamontology.org/data_3112",
+              "term": "Gene expression matrix"
+            },
+            "format": [
+              {
+                "uri": "http://edamontology.org/format_3590",
+                "term": "HDF5"
+              }
+            ]
+          }
+        ],
+        "output": [
+          {
+            "data": {
+              "uri": "http://edamontology.org/data_3768",
+              "term": "Clustered expression profiles"
+            },
+            "format": [
+              {
+                "uri": "http://edamontology.org/format_3590",
+                "term": "HDF5"
+              }
+            ]
+          }
+        ],
+        "note": null,
+        "cmd": null
+      }
+    ],
+    "toolType": [
+      "Library"
+    ],
+    "topic": [
+      {
+        "uri": "http://edamontology.org/topic_0203",
+        "term": "Gene expression"
+      },
+      {
+        "uri": "http://edamontology.org/topic_2229",
+        "term": "Cell biology"
+      },
+      {
+        "uri": "http://edamontology.org/topic_3053",
+        "term": "Genetics"
+      },
+      {
+        "uri": "http://edamontology.org/topic_4028",
+        "term": "Single-cell sequencing"
+      }
+    ],
+    "operatingSystem": [
+      "Linux",
+      "Mac"
+    ],
+    "language": [
+      "Python"
+    ],
+    "license": "BSD-3-Clause",
+    "collectionID": [],
+    "maturity": null,
+    "cost": null,
+    "accessibility": null,
+    "elixirPlatform": [],
+    "elixirNode": [],
+    "elixirCommunity": [],
+    "link": [
+      {
+        "url": "https://github.com/theislab/scanpy",
+        "type": [
+          "Repository"
+        ],
+        "note": null
+      }
+    ],
+    "download": [],
+    "documentation": [
+      {
+        "url": "https://scanpy.readthedocs.io/en/latest/",
+        "type": [
+          "General"
+        ],
+        "note": null
+      }
+    ],
+    "publication": [
+      {
+        "doi": "10.1186/s13059-017-1382-0",
+        "pmid": "29409532",
+        "pmcid": "PMC5802054",
+        "type": [],
+        "version": null,
+        "note": null
+      }
+    ],
+    "credit": [
+      {
+        "name": "F. Alexander Wolf",
+        "url": null,
+        "orcidid": null,
+        "gridid": null,
+        "rorid": null,
+        "fundrefid": null,
+        "typeEntity": "Person",
+        "typeRole": [
+          "Primary contact"
+        ],
+        "note": null
+      }
+    ],
+    "owner": "d.gabrielaitis",
+    "additionDate": "2018-08-13T12:41:27Z",
+    "lastUpdate": "2025-07-15T11:28:09.368913Z",
+    "editPermission": {
+      "type": "group",
+      "authors": [
+        "pavanvidem"
+      ]
+    },
+    "validated": 1,
+    "homepage_status": 0,
+    "elixir_badge": 0,
+    "confidence_flag": null
+  },
+  {
+    "name": "MultiQC",
+    "description": "MultiQC aggregates results from multiple bioinformatics analyses across many samples into a single report. It searches a given directory for analysis logs and compiles a HTML report. It's a general use tool, perfect for summarising the output from numerous bioinformatics tools.",
+    "homepage": "http://multiqc.info/",
+    "biotoolsID": "multiqc",
+    "biotoolsCURIE": "biotools:multiqc",
+    "version": [],
+    "otherID": [],
+    "relation": [],
+    "function": [
+      {
+        "operation": [
+          {
+            "uri": "http://edamontology.org/operation_2428",
+            "term": "Validation"
+          },
+          {
+            "uri": "http://edamontology.org/operation_3218",
+            "term": "Sequencing quality control"
+          }
+        ],
+        "input": [],
+        "output": [
+          {
+            "data": {
+              "uri": "http://edamontology.org/data_3914",
+              "term": "Quality control report"
+            },
+            "format": [
+              {
+                "uri": "http://edamontology.org/format_3752",
+                "term": "CSV"
+              },
+              {
+                "uri": "http://edamontology.org/format_3464",
+                "term": "JSON"
+              },
+              {
+                "uri": "http://edamontology.org/format_2331",
+                "term": "HTML"
+              },
+              {
+                "uri": "http://edamontology.org/format_3750",
+                "term": "YAML"
+              },
+              {
+                "uri": "http://edamontology.org/format_3475",
+                "term": "TSV"
+              }
+            ]
+          },
+          {
+            "data": {
+              "uri": "http://edamontology.org/data_0867",
+              "term": "Sequence alignment report"
+            },
+            "format": [
+              {
+                "uri": "http://edamontology.org/format_2331",
+                "term": "HTML"
+              }
+            ]
+          }
+        ],
+        "note": "Run MultiQC on a completed analysis. It will recursively search through files and folders and parse log files and summary outputs from other bioinformatics tools.",
+        "cmd": "multiqc <analysis folder>"
+      }
+    ],
+    "toolType": [
+      "Command-line tool",
+      "Library"
+    ],
+    "topic": [
+      {
+        "uri": "http://edamontology.org/topic_3168",
+        "term": "Sequencing"
+      },
+      {
+        "uri": "http://edamontology.org/topic_0091",
+        "term": "Bioinformatics"
+      },
+      {
+        "uri": "http://edamontology.org/topic_0080",
+        "term": "Sequence analysis"
+      },
+      {
+        "uri": "http://edamontology.org/topic_0622",
+        "term": "Genomics"
+      }
+    ],
+    "operatingSystem": [
+      "Linux",
+      "Windows",
+      "Mac"
+    ],
+    "language": [
+      "Python"
+    ],
+    "license": "GPL-3.0",
+    "collectionID": [],
+    "maturity": "Mature",
+    "cost": "Free of charge",
+    "accessibility": "Open access",
+    "elixirPlatform": [],
+    "elixirNode": [],
+    "elixirCommunity": [],
+    "link": [
+      {
+        "url": "http://multiqc.info/",
+        "type": [
+          "Other"
+        ],
+        "note": "MultiQC homepage and documentation."
+      },
+      {
+        "url": "https://github.com/MultiQC/MultiQC/issues",
+        "type": [
+          "Issue tracker"
+        ],
+        "note": null
+      },
+      {
+        "url": "https://github.com/MultiQC/MultiQC",
+        "type": [
+          "Repository"
+        ],
+        "note": null
+      },
+      {
+        "url": "https://community.seqera.io/c/multiqc/6",
+        "type": [
+          "Discussion forum",
+          "Helpdesk"
+        ],
+        "note": null
+      },
+      {
+        "url": "https://twitter.com/MultiQC",
+        "type": [
+          "Social media"
+        ],
+        "note": null
+      },
+      {
+        "url": "https://mstdn.science/@multiqc",
+        "type": [
+          "Social media"
+        ],
+        "note": null
+      }
+    ],
+    "download": [
+      {
+        "url": "https://github.com/MultiQC/MultiQC/releases",
+        "type": "Source code",
+        "note": null,
+        "version": null
+      },
+      {
+        "url": "https://pypi.org/project/multiqc/",
+        "type": "Binaries",
+        "note": "Python Package Index",
+        "version": null
+      },
+      {
+        "url": "https://bioconda.github.io/recipes/multiqc/README.html",
+        "type": "Software package",
+        "note": "Bioconda package",
+        "version": null
+      },
+      {
+        "url": "https://hub.docker.com/r/multiqc/multiqc",
+        "type": "Container file",
+        "note": null,
+        "version": null
+      },
+      {
+        "url": "https://github.com/MultiQC/MultiQC/pkgs/container/multiqc",
+        "type": "Container file",
+        "note": null,
+        "version": null
+      },
+      {
+        "url": "https://nf-co.re/modules/multiqc",
+        "type": "Tool wrapper (Other)",
+        "note": null,
+        "version": null
+      }
+    ],
+    "documentation": [
+      {
+        "url": "http://multiqc.info/docs/",
+        "type": [
+          "General"
+        ],
+        "note": null
+      }
+    ],
+    "publication": [
+      {
+        "doi": "10.1093/bioinformatics/btw354",
+        "pmid": "27312411",
+        "pmcid": "PMC5039924",
+        "type": [
+          "Primary"
+        ],
+        "version": null,
+        "note": null
+      }
+    ],
+    "credit": [
+      {
+        "name": "Phil Ewels",
+        "url": "https://github.com/ewels",
+        "orcidid": "http://orcid.org/0000-0003-4101-2502",
+        "gridid": null,
+        "rorid": null,
+        "fundrefid": null,
+        "typeEntity": "Person",
+        "typeRole": [
+          "Primary contact"
+        ],
+        "note": null
+      }
+    ],
+    "owner": "ewels",
+    "additionDate": "2017-01-13T13:15:35Z",
+    "lastUpdate": "2024-11-24T14:01:15.368669Z",
+    "editPermission": {
+      "type": "group",
+      "authors": [
+        "ELIXIR-CZ",
+        "rioualen"
+      ]
+    },
+    "validated": 1,
+    "homepage_status": 0,
+    "elixir_badge": 0,
+    "confidence_flag": null
+  },
+  {
+    "name": "Nextflow",
+    "description": "Nextflow enables scalable and reproducible scientific workflows using software containers. It allows the adaptation of pipelines written in the most common scripting languages.",
+    "homepage": "https://www.nextflow.io/",
+    "biotoolsID": "nextflow",
+    "biotoolsCURIE": "biotools:nextflow",
+    "version": [
+      "v20.10.0",
+      "v20.07.1",
+      "v20.04.1",
+      "v20.01.0",
+      "v19.10.0",
+      "v19.07.0",
+      "v19.04.1",
+      "v19.04.0",
+      "v19.01.0",
+      "v18.10.1"
+    ],
+    "otherID": [],
+    "relation": [],
+    "function": [
+      {
+        "operation": [
+          {
+            "uri": "http://edamontology.org/operation_3762",
+            "term": "Service composition"
+          },
+          {
+            "uri": "http://edamontology.org/operation_3763",
+            "term": "Service invocation"
+          }
+        ],
+        "input": [],
+        "output": [],
+        "note": null,
+        "cmd": null
+      }
+    ],
+    "toolType": [],
+    "topic": [
+      {
+        "uri": "http://edamontology.org/topic_3372",
+        "term": "Software engineering"
+      },
+      {
+        "uri": "http://edamontology.org/topic_0769",
+        "term": "Workflows"
+      },
+      {
+        "uri": "http://edamontology.org/topic_0091",
+        "term": "Bioinformatics"
+      },
+      {
+        "uri": "http://edamontology.org/topic_0622",
+        "term": "Genomics"
+      }
+    ],
+    "operatingSystem": [
+      "Linux",
+      "Mac"
+    ],
+    "language": [
+      "Groovy"
+    ],
+    "license": "Apache-2.0",
+    "collectionID": [
+      "RIS3CAT VEIS"
+    ],
+    "maturity": "Mature",
+    "cost": null,
+    "accessibility": null,
+    "elixirPlatform": [],
+    "elixirNode": [],
+    "elixirCommunity": [],
+    "link": [
+      {
+        "url": "https://github.com/nextflow-io/nextflow",
+        "type": [
+          "Repository"
+        ],
+        "note": null
+      },
+      {
+        "url": "https://github.com/nextflow-io/nextflow/issues/",
+        "type": [
+          "Issue tracker"
+        ],
+        "note": "Documentation"
+      }
+    ],
+    "download": [
+      {
+        "url": "https://github.com/nextflow-io/nextflow/releases",
+        "type": "Source code",
+        "note": null,
+        "version": "Latest"
+      },
+      {
+        "url": "https://www.nextflow.io/docs/latest/getstarted.html#installation",
+        "type": "Command-line specification",
+        "note": null,
+        "version": "Latest"
+      }
+    ],
+    "documentation": [
+      {
+        "url": "https://www.nextflow.io/docs/latest/index.html",
+        "type": [
+          "General"
+        ],
+        "note": null
+      }
+    ],
+    "publication": [
+      {
+        "doi": "10.1038/nbt.3820",
+        "pmid": "28398311",
+        "pmcid": null,
+        "type": [
+          "Primary"
+        ],
+        "version": null,
+        "note": "Nextflow enables reproducible computational workflows"
+      }
+    ],
+    "credit": [
+      {
+        "name": "Paolo Di Tommaso",
+        "url": null,
+        "orcidid": "https://orcid.org/0000-0003-3220-0253",
+        "gridid": null,
+        "rorid": null,
+        "fundrefid": null,
+        "typeEntity": "Person",
+        "typeRole": [
+          "Developer",
+          "Maintainer",
+          "Primary contact"
+        ],
+        "note": null
+      },
+      {
+        "name": "Cedric Notredame",
+        "url": null,
+        "orcidid": "https://orcid.org/0000-0003-1461-0988",
+        "gridid": null,
+        "rorid": null,
+        "fundrefid": null,
+        "typeEntity": "Person",
+        "typeRole": [
+          "Primary contact"
+        ],
+        "note": null
+      },
+      {
+        "name": "Centre for Genomic Regulation (CRG)",
+        "url": "https://www.crg.eu/",
+        "orcidid": null,
+        "gridid": null,
+        "rorid": null,
+        "fundrefid": null,
+        "typeEntity": null,
+        "typeRole": [],
+        "note": null
+      }
+    ],
+    "owner": "JoseEspinosa",
+    "additionDate": "2021-01-22T11:09:25Z",
+    "lastUpdate": "2021-04-06T14:48:15Z",
+    "editPermission": {
+      "type": "private",
+      "authors": []
+    },
+    "validated": 1,
+    "homepage_status": 0,
+    "elixir_badge": 0,
+    "confidence_flag": null
+  },
+  {
+    "name": "Biopython",
+    "description": "Biopython is a set of freely available tools for biological computation written in Python by an international team of developers.",
+    "homepage": "http://biopython.org/",
+    "biotoolsID": "biopython",
+    "biotoolsCURIE": "biotools:biopython",
+    "version": [
+      "1.70"
+    ],
+    "otherID": [],
+    "relation": [],
+    "function": [
+      {
+        "operation": [
+          {
+            "uri": "http://edamontology.org/operation_3431",
+            "term": "Deposition"
+          },
+          {
+            "uri": "http://edamontology.org/operation_3763",
+            "term": "Service invocation"
+          },
+          {
+            "uri": "http://edamontology.org/operation_0224",
+            "term": "Query and retrieval"
+          },
+          {
+            "uri": "http://edamontology.org/operation_3436",
+            "term": "Aggregation"
+          }
+        ],
+        "input": [],
+        "output": [],
+        "note": null,
+        "cmd": null
+      }
+    ],
+    "toolType": [
+      "Library"
+    ],
+    "topic": [
+      {
+        "uri": "http://edamontology.org/topic_0091",
+        "term": "Bioinformatics"
+      },
+      {
+        "uri": "http://edamontology.org/topic_3071",
+        "term": "Data management"
+      },
+      {
+        "uri": "http://edamontology.org/topic_3372",
+        "term": "Software engineering"
+      },
+      {
+        "uri": "http://edamontology.org/topic_3307",
+        "term": "Computational biology"
+      }
+    ],
+    "operatingSystem": [
+      "Linux",
+      "Windows",
+      "Mac"
+    ],
+    "language": [
+      "Python"
+    ],
+    "license": "MIT",
+    "collectionID": [],
+    "maturity": "Mature",
+    "cost": null,
+    "accessibility": null,
+    "elixirPlatform": [],
+    "elixirNode": [],
+    "elixirCommunity": [],
+    "link": [],
+    "download": [],
+    "documentation": [
+      {
+        "url": "http://biopython.org/wiki/Documentation",
+        "type": [
+          "General"
+        ],
+        "note": null
+      }
+    ],
+    "publication": [
+      {
+        "doi": null,
+        "pmid": "19304878",
+        "pmcid": null,
+        "type": [],
+        "version": null,
+        "note": null
+      }
+    ],
+    "credit": [
+      {
+        "name": "Biopython mailing list",
+        "url": "http://biopython.org/wiki/Mailing_lists",
+        "orcidid": null,
+        "gridid": null,
+        "rorid": null,
+        "fundrefid": null,
+        "typeEntity": "Person",
+        "typeRole": [
+          "Primary contact"
+        ],
+        "note": null
+      }
+    ],
+    "owner": "seqwiki_import",
+    "additionDate": "2017-01-13T13:13:47Z",
+    "lastUpdate": "2018-12-10T12:58:56Z",
+    "editPermission": {
+      "type": "group",
+      "authors": [
+        "ELIXIR-EE"
+      ]
+    },
+    "validated": 1,
+    "homepage_status": 0,
+    "elixir_badge": 0,
+    "confidence_flag": null
+  }
+]

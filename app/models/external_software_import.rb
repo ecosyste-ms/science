@@ -36,9 +36,41 @@ class ExternalSoftwareImport < ApplicationRecord
       .where("lease_expires_at IS NULL OR lease_expires_at <= ?", Time.current).first
   end
 
+  def self.start_biotools(page_size: nil, restart: false)
+    if page_size && (!page_size.is_a?(Integer) || !page_size.between?(1, BiotoolsClient::PAGE_SIZE))
+      raise ArgumentError, "page size must be between 1 and 50"
+    end
+    record = find_by(source: "biotools")
+    raise ArgumentError, "no completed import to restart" if restart && record.nil?
+    record ||= create_or_find_by!(source: "biotools") do |import|
+      import.cursor = "1"
+      import.page_size = page_size || BiotoolsClient::PAGE_SIZE
+      import.started_at = Time.current
+      import.next_run_at = Time.current
+    end
+    record.with_lock do
+      if restart
+        raise ArgumentError, "cannot restart an unfinished import; omit RESTART to resume" unless record.completed_at
+        record.update!(cursor: "1", page_size: page_size || BiotoolsClient::PAGE_SIZE, started_at: Time.current,
+          completed_at: nil, pending_ids: [], pending_records: [], pending_next_cursor: nil, page_retrieved_at: nil,
+          pages_processed: 0, items_processed: 0, lease_token: nil, lease_expires_at: nil,
+          next_run_at: Time.current, last_error: nil)
+      elsif page_size && page_size != record.page_size
+        raise ArgumentError, "import progress is already saved; omit LIMIT to resume"
+      end
+    end
+    record
+  end
+
+  def self.resumable_biotools
+    where(source: "biotools", completed_at: nil).where("next_run_at <= ?", Time.current)
+      .where("lease_expires_at IS NULL OR lease_expires_at <= ?", Time.current).first
+  end
+
   def enqueue
     return if completed_at
-    ImportWikidataWorker.perform_at([next_run_at, lease_expires_at, Time.current].compact.max, id)
+    worker = source == "biotools" ? ImportBiotoolsWorker : ImportWikidataWorker
+    worker.perform_at([next_run_at, lease_expires_at, Time.current].compact.max, id)
   end
 
   def claim
@@ -68,6 +100,26 @@ class ExternalSoftwareImport < ApplicationRecord
     end
   end
 
+  def save_biotools_page(token, records, next_page, retrieved_at)
+    with_lock do
+      return false unless lease_token == token
+      update!(pending_ids: records.map { |record| BiotoolsClient.identifier(record["biotoolsID"]) },
+        pending_records: records, pending_next_cursor: next_page&.to_s, page_retrieved_at: retrieved_at)
+    end
+  end
+
+  def advance_biotools(token)
+    with_lock do
+      return unless lease_token == token
+      finished = pending_next_cursor.nil?
+      update!(cursor: pending_next_cursor || cursor, pages_processed: pages_processed + 1,
+        items_processed: items_processed + pending_ids.size, pending_ids: [], pending_records: [],
+        pending_next_cursor: nil, page_retrieved_at: nil, completed_at: finished ? Time.current : nil,
+        next_run_at: Time.current + PAGE_DELAY, lease_token: nil, lease_expires_at: nil, last_error: nil)
+      next_run_at unless finished
+    end
+  end
+
   def defer(token, retry_at, error)
     with_lock do
       return unless lease_token == token
@@ -78,11 +130,13 @@ class ExternalSoftwareImport < ApplicationRecord
   end
 
   def progress
-    {
+    result = {
       source: source, after: cursor, page_size: page_size, pages_processed: pages_processed,
       items_processed: items_processed, pending_items: pending_ids.size, complete: completed_at.present?,
       started_at: started_at, completed_at: completed_at, next_run_at: completed_at ? nil : next_run_at,
       lease_expires_at: lease_expires_at, last_error: last_error,
     }
+    result[:page] = result.delete(:after).to_i if source == "biotools"
+    result
   end
 end

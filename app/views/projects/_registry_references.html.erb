@@ -1,0 +1,12 @@
+<% if @registry_references.present? %>
+  <section class="mb-4" data-role="registry-references">
+    <h2 class="h4 mb-3">Elsewhere</h2>
+    <ul class="list-unstyled mb-0">
+      <% @registry_references.each do |reference| %>
+        <li class="mb-2">
+          <%= link_to "#{reference[:source]}: #{reference[:identifier]}", reference[:url], class: "text-decoration-none" %>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+<% end %>
