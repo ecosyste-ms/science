@@ -20,7 +20,7 @@ class ExternalSoftwareRecord < ApplicationRecord
   end
 
   def self.source_name(source)
-    { "wikidata" => "Wikidata", "biotools" => "bio.tools" }.fetch(source, source.humanize)
+    { "wikidata" => "Wikidata", "biotools" => "bio.tools", "ascl" => "ASCL" }.fetch(source, source.humanize)
   end
 
   def record_url
@@ -29,8 +29,16 @@ class ExternalSoftwareRecord < ApplicationRecord
       "https://www.wikidata.org/wiki/#{identifier}" if identifier.match?(/\AQ[1-9][0-9]*\z/)
     when "biotools"
       "https://bio.tools/#{BiotoolsClient.identifier(identifier)}"
+    when "ascl"
+      "https://ascl.net/#{AsclClient.identifier(identifier)}"
     end
   rescue ArgumentError
     nil
+  end
+
+  def self.ascl_refresh_ids(limit: 100)
+    raise ArgumentError, "limit must be between 1 and 1000" unless limit.is_a?(Integer) && limit.between?(1, 1000)
+    where(source: "ascl").where("next_refresh_at <= ?", Time.current)
+      .order(:next_refresh_at, :id).limit(limit).pluck(:identifier)
   end
 end

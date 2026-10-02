@@ -34,6 +34,20 @@ class Api::V1::ProjectBulkLookupTest < ActionDispatch::IntegrationTest
     assert response.parsed_body.all? { |row| row.fetch("matches").empty? }
   end
 
+  test "GitHub Pages and direct repository URLs resolve to the same indexed project" do
+    project = Project.create!(url: "https://github.com/astro/photometry")
+    project.repository_aliases.create!(url: "https://github.com/astro/former")
+    post "/api/v1/projects/bulk_lookup", params: { repository_urls: [
+      "https://Astro.github.io/photometry/docs/index.html", project.url,
+      "https://astro.github.io/former/latest/"
+    ] }, as: :json
+    assert_response :success
+    rows = response.parsed_body
+    assert_equal [project.id], rows.flat_map { |row| row["matches"].map { |match| match.dig("project", "id") } }.uniq
+    assert_equal project.url, rows.first["normalized_url"]
+    assert_equal "repository_alias", rows.last["matches"].sole["source"]
+  end
+
   test "bulk lookup rejects invalid and unbounded requests" do
     [nil, [], "https://github.com/bulk/repo", [nil], ["bad"], ["https://user:secret@github.com/bulk/repo"],
       ["x" * 2001], ["https://github.com/bulk/repo"] * 101].each do |urls|

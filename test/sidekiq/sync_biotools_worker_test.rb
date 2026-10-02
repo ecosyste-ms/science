@@ -63,6 +63,21 @@ class SyncBiotoolsWorkerTest < ActiveSupport::TestCase
     assert_equal "ok", ExternalSoftwareRecord.sole.status
   end
 
+  test "GitHub Pages repository links use the shared normalizer and preserve source URLs" do
+    pages_url = "https://TheisLab.github.io/scanpy/docs/index.html"
+    @biotools["scanpy"]["link"] = [{ "url" => pages_url, "type" => ["Repository"] },
+      { "url" => @project.url, "type" => ["Repository"] }]
+    biotools_record("scanpy")
+    run_worker
+    assert_equal 1, ProjectExternalSoftwareRecord.count
+    link = @project.project_external_software_records.sole
+    evidence = link.evidence.find { |entry| entry["url_transformation"] == "github_pages" }
+    assert_equal pages_url, evidence["repository_url"]
+    assert_equal pages_url, evidence["source_url"]
+    assert_equal "https://github.com/theislab/scanpy", evidence["normalized_url"]
+    assert_equal "repository_alias", evidence["match_method"]
+  end
+
   test "refresh removes withdrawn links and never creates projects" do
     biotools_record("scanpy")
     run_worker

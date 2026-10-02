@@ -76,6 +76,21 @@ class SyncWikidataWorkerTest < ActiveSupport::TestCase
     assert_equal statement, link.external_software_record.metadata.dig("claims", "P1324").first
   end
 
+  test "Wikidata repository statements convert GitHub Pages and retain original statement evidence" do
+    pages_url = "https://SymPy.github.io/sympy/latest/index.html"
+    statement = @payload["entities"]["Q5971368"]["claims"]["P1324"].first
+    statement["mainsnak"]["datavalue"]["value"] = pages_url
+    stub_entities
+    run_worker
+    evidence = @sympy.project_external_software_records.sole.evidence.sole
+    assert_equal statement["id"], evidence["statement_id"]
+    assert_equal pages_url, evidence["repository_url"]
+    assert_equal pages_url, evidence["source_url"]
+    assert_equal "github_pages", evidence["url_transformation"]
+    assert_equal @sympy.url, evidence["normalized_url"]
+    assert_equal 1, @sympy.external_software_records.count
+  end
+
   test "distinct repositories in a software suite are matched without a false ambiguity" do
     other = Project.create!(url: "https://github.com/suite/second")
     entity = @payload["entities"]["Q5971368"]

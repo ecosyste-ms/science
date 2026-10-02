@@ -10,8 +10,12 @@ class ExternalSoftwareImporter
       lookup = matches.fetch(statement[:repository_url])
       ambiguous = lookup[:matches].map { |match| match[:project].fetch("id") }.uniq.size > 1
       lookup[:matches].each do |match|
-        links[match[:project].fetch("id")] << statement.merge(
+        evidence = statement.merge(
           normalized_url: lookup[:normalized_url], match_method: match[:source], ambiguous: ambiguous)
+        if RepositoryUrlNormalizer.github_pages_repository(statement[:repository_url])
+          evidence.merge!(source_url: statement[:repository_url], url_transformation: "github_pages")
+        end
+        links[match[:project].fetch("id")] << evidence
       end
     end
     links.transform_values(&:uniq)

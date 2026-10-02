@@ -4,7 +4,7 @@ class ProjectExternalSoftwareRecord < ApplicationRecord
 
   def self.registry_references
     joins(:external_software_record).where(match_status: "matched")
-      .where(external_software_records: { status: %w[ok error], source: %w[wikidata biotools] })
+      .where(external_software_records: { status: %w[ok error], source: %w[wikidata biotools ascl] })
       .where.not(external_software_records: { retrieved_at: nil })
       .order("external_software_records.source", "external_software_records.identifier")
       .pluck("external_software_records.source", "external_software_records.identifier").uniq.filter_map do |source, identifier|

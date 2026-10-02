@@ -20,7 +20,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       institutional_owners: 6,
       joss_projects: 7,
       top_languages: [],
-      external_sources: [["wikidata", 1234], ["biotools", 56]]
+      external_sources: [["wikidata", 1234], ["biotools", 56], ["ascl", 12]]
     }
     cache = ActiveSupport::Cache::MemoryStore.new
     cache.write("homepage_stats", stats)
@@ -36,5 +36,6 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_select ".card-title", text: "External Sources"
     assert_select ".list-group-item", text: /Wikidata\s+1,234/
     assert_select ".list-group-item", text: /bio.tools\s+56/
+    assert_select ".list-group-item", text: /ASCL\s+12/
   end
 end

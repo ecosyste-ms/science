@@ -103,7 +103,7 @@ class ImportBiotoolsWorkerTest < ActiveSupport::TestCase
       ImportBiotoolsWorker.perform_one
     end
     assert import.reload.completed_at
-    assert_nil import.advance_biotools(token)
+    assert_nil import.advance_catalogue(token)
     assert_equal 1, import.pages_processed
   end
 

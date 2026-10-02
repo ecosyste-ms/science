@@ -1,7 +1,7 @@
 require "digest"
 
 class ExternalRepositoryDiscovery
-  IMPORTERS = { "wikidata" => WikidataImporter, "biotools" => BiotoolsImporter }.freeze
+  IMPORTERS = { "wikidata" => WikidataImporter, "biotools" => BiotoolsImporter, "ascl" => AsclImporter }.freeze
 
   def self.due
     ExternalSoftwareRecord.where(source: IMPORTERS.keys, status: "ok")
@@ -122,8 +122,11 @@ class ExternalRepositoryDiscovery
   end
 
   def evidence_fingerprint(record)
-    metadata = if record.source == "wikidata"
+    metadata = case record.source
+    when "wikidata"
       record.metadata.slice("labels", "descriptions", "claims")
+    when "ascl"
+      record.metadata.except("views", "time_updated")
     else
       record.metadata.except("additionDate", "lastUpdate")
     end

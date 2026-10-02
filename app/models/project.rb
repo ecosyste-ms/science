@@ -355,14 +355,7 @@ class Project < ApplicationRecord
   end
 
   def github_pages_to_repo_url(github_pages_url)
-    return if github_pages_url.blank?
-    match = github_pages_url.chomp('/').match(/https?:\/\/(.+)\.github\.io\/(.+)/)
-    return nil unless match
-  
-    username = match[1]
-    repo_name = match[2]
-  
-    "https://github.com/#{username}/#{repo_name}"
+    RepositoryUrlNormalizer.github_pages_repository(github_pages_url)
   end
 
   def first_created

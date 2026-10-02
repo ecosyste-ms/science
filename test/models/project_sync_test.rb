@@ -53,6 +53,19 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_nil p.timeline_url
   end
 
+  test "repository lookup uses only the repository segment of a GitHub Pages project URL" do
+    project = Project.create!(url: "https://NumPy.github.io/NumPy/docs/index.html?version=stable")
+    stub_request(:get, "https://repos.ecosyste.ms/api/v1/repositories/lookup")
+      .with(query: { url: "https://github.com/numpy/numpy" }).to_return(body: repo_hash.to_json)
+    project.fetch_repository
+    assert_equal "numpy/numpy", project.reload.repository["full_name"]
+    assert_equal "https://github.com/numpy/numpy", project.repository_url
+    %w[https://numpy.github.io.evil.example/numpy https://evil.example/numpy.github.io/numpy
+      https://numpy.github.io/ https://numpy.github.io/numpy.html].each do |url|
+      assert_nil project.github_pages_to_repo_url(url)
+    end
+  end
+
   test "file urls" do
     p = build_project
     assert_equal "https://github.com/numpy/numpy/archive/main.tar.gz", p.download_url

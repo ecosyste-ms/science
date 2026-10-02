@@ -17,6 +17,8 @@ class RepositoryUrlNormalizer
   def self.normalize(value)
     uri = parse(value)
     return unless uri
+    pages_repository = github_pages_repository(value)
+    return pages_repository if pages_repository
 
     host = uri.host.to_s.downcase.delete_prefix("www.")
     segments = uri.path.split("/").reject(&:blank?)
@@ -57,5 +59,16 @@ class RepositoryUrlNormalizer
     uri
   rescue URI::InvalidURIError
     nil
+  end
+
+  def self.github_pages_repository(value)
+    uri = parse(value)
+    return unless uri && %w[http https].include?(uri.scheme) && uri.userinfo.nil? && [80, 443].include?(uri.port)
+    match = uri.host.downcase.match(/\A([a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?)\.github\.io\z/)
+    return unless match
+    repository = uri.path.split("/").reject(&:blank?).first
+    return unless repository&.match?(/\A[a-z0-9_.-]+\z/i)
+    return if %w[. ..].include?(repository) || repository.match?(/\.(?:html?|pdf)\z/i)
+    "https://github.com/#{match[1]}/#{repository}".downcase
   end
 end

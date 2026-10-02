@@ -1,0 +1,117 @@
+[
+  {
+    "ascl_id": "1010.083",
+    "title": "MESA: Modules for Experiments in Stellar Astrophysics",
+    "credit": "Paxton, Bill; Bildsten, Lars; Dotter, Aaron; Herwig, Falk; Lesaffre, Pierre; Timmes, Frank",
+    "abstract": "Stellar physics and evolution calculations enable a broad range of research in astrophysics. Modules for Experiments in Stellar Astrophysics (MESA) is a suite of open source libraries for a wide range of applications in computational stellar astrophysics. A newly designed 1-D stellar evolution module, MESA star, combines many of the numerical and physics modules for simulations of a wide range of stellar evolution scenarios ranging from very-low mass to massive stars, including advanced evolutionary phases. MESA star solves the fully coupled structure and composition equations simultaneously. It uses adaptive mesh refinement and sophisticated timestep controls, and supports shared memory parallelism based on OpenMP. Independently usable modules provide equation of state, opacity, nuclear reaction rates, and atmosphere boundary conditions. Each module is constructed as a separate Fortran 95 library with its own public interface. Examples include comparisons to other codes and show evolutionary tracks of very low mass stars, brown dwarfs, and gas giant planets; the complete evolution of a 1 Msun star from the pre-main sequence to a cooling white dwarf; the Solar sound speed profile; the evolution of intermediate mass stars through the thermal pulses on the He-shell burning AGB phase; the interior structure of slowly pulsating B Stars and Beta Cepheids; evolutionary tracks of massive stars from the pre-main sequence to the onset of core collapse; stars undergoing Roche lobe overflow; and accretion onto a neutron star.",
+    "topic_id": "21831",
+    "bibcode": "2010ascl.soft10083P",
+    "views": "10903",
+    "preferred_citation": "Please see citation information here: https://github.com/MESAHub/mesa#citing",
+    "site_list": [
+      "https://github.com/MESAHub/mesa",
+      "https://docs.mesastar.org"
+    ],
+    "used_in": false,
+    "described_in": [
+      "https://ui.adsabs.harvard.edu/abs/2011ApJS..192....3P"
+    ],
+    "keywords": []
+  },
+  {
+    "ascl_id": "1110.016",
+    "title": "REBOUND: Multi-purpose N-body code for collisional dynamics",
+    "credit": "Rein, Hanno; Liu, Shang-Fei",
+    "abstract": "REBOUND is a multi-purpose N-body code which is freely available under an open-source license. It was designed for collisional dynamics such as planetary rings but can also solve the classical N-body problem. It is highly modular and can be customized easily to work on a wide variety of different problems in astrophysics and beyond.\n\nREBOUND comes with symplectic integrators WHFast, WHFastHelio, SEI, and LEAPFROG. It supports open, periodic and shearing-sheet boundary conditions. REBOUND can use a Barnes-Hut tree to calculate both self-gravity and collisions. These modules are fully parallelized with MPI as well as OpenMP. The former makes use of a static domain decomposition and a distributed essential tree. Two new collision detection modules based on a plane-sweep algorithm are also implemented. The performance of the plane-sweep algorithm is superior to a tree code for simulations in which one dimension is much longer than the other two and in simulations which are quasi-two dimensional with less than one million particles.",
+    "topic_id": "25664",
+    "bibcode": "2011ascl.soft10016R",
+    "views": "8154",
+    "preferred_citation": "Please see citation information here: https://github.com/hannorein/rebound#acknowledgments",
+    "site_list": [
+      "https://github.com/hannorein/rebound"
+    ],
+    "used_in": false,
+    "described_in": [
+      "https://ui.adsabs.harvard.edu/abs/2012A%26A...537A.128R"
+    ],
+    "keywords": []
+  },
+  {
+    "ascl_id": "1304.002",
+    "title": "Astropy: Community Python library for astronomy",
+    "credit": "Greenfield, Perry; Robitaille, Thomas; Tollerud, Erik; Aldcroft, Tom; Barbary, Kyle; Barrett, Paul; Bray, Erik; Crighton, Neil; Conley, Alex; Conseil, Simon; Davis, Matt; Deil, Christoph; Dencheva, Nadia; Droettboom, Michael; Ferguson, Henry; Ginsburg, Adam; Grollier, Frédéric; Moritz Günther, Hans; Hanley, Chris; Hsu, J. C.; Kerzendorf, Wolfgang; Kramer, Roban; Lian Lim, Pey; Muna, Demitri; Nair, Prasanth; Price-Whelan, Adrian; Shiga, David; Singer, Leo; Taylor, James; Turner, James; Woillez, Julien; Zabalza, Victor",
+    "abstract": "Astropy provides a common framework, core package of code, and affiliated packages for astronomy in Python. Development is actively ongoing, with major packages such as <a href=\"http://ascl.net/1207.009\">PyFITS</a>, PyWCS, vo, and asciitable already merged in. Astropy is intended to contain much of the core functionality and some common tools needed for performing astronomy and astrophysics with Python.",
+    "topic_id": "31097",
+    "bibcode": "2013ascl.soft04002G",
+    "views": "19693",
+    "preferred_citation": "Please see citation information here: https://www.astropy.org/acknowledging.html",
+    "site_list": [
+      "https://www.astropy.org/"
+    ],
+    "used_in": false,
+    "described_in": [
+      "https://ui.adsabs.harvard.edu/abs/2013A%26A...558A..33A",
+      "https://ui.adsabs.harvard.edu/abs/2018AJ....156..123A"
+    ],
+    "keywords": []
+  },
+  {
+    "ascl_id": "1609.011",
+    "title": "Photutils: Photometry tools",
+    "credit": "Bradley, Larry; Sipocz, Brigitta; Robitaille, Thomas; Tollerud, Erik; Deil, Christoph; Vinícius, Zè; Barbary, Kyle; Günther, Hans Moritz; Bostroem, Azalee; Droettboom, Michael; Bray, Erik; Bratholm, Lars Andersen; Pickering, T. E.; Craig, Matt; Pascual, Sergio; Greco, Johnny; Donath, Axel; Kerzendorf, Wolfgang; Littlefair, Stuart; Barentsen, Geert; D'Eugenio, Francesco; Weaver, Benjamin Alan",
+    "abstract": "Photutils provides tools for detecting and performing photometry of astronomical sources. It can  estimate the background and background rms in astronomical images, detect sources in astronomical images, estimate morphological parameters of those sources (e.g., centroid and shape parameters), and perform aperture and PSF photometry. Written in Python, it is an affiliated package of Astropy (ascl:1304.002).",
+    "topic_id": "34105",
+    "bibcode": "2016ascl.soft09011B",
+    "views": "11087",
+    "preferred_citation": "Please see citation information here: https://github.com/astropy/photutils/blob/master/photutils/CITATION.rst",
+    "site_list": [
+      "https://photutils.readthedocs.io/en/latest/",
+      "https://github.com/astropy/photutils",
+      "https://doi.org/10.5281/zenodo.596036"
+    ],
+    "used_in": [
+      "https://ui.adsabs.harvard.edu/abs/2016MNRAS.456.3335S"
+    ],
+    "described_in": false,
+    "keywords": []
+  },
+  {
+    "ascl_id": "1702.002",
+    "title": "corner.py: Corner plots",
+    "credit": "Foreman-Mackey, Daniel",
+    "abstract": "<i>corner.py</i> uses matplotlib to visualize multidimensional samples using a scatterplot matrix. In these visualizations, each one- and two-dimensional projection of the sample is plotted to reveal covariances. <i>corner.py</i> was originally conceived to display the results of Markov Chain Monte Carlo simulations and the defaults are chosen with this application in mind but it can be used for displaying many qualitatively different samples. An earlier version of <i>corner.py</i> was known as triangle.py.",
+    "topic_id": "34247",
+    "bibcode": "2017ascl.soft02002F",
+    "views": "8320",
+    "preferred_citation": "https://ui.adsabs.harvard.edu/abs/2016JOSS....1...24F",
+    "site_list": [
+      "https://github.com/dfm/corner.py"
+    ],
+    "used_in": [
+      "https://ui.adsabs.harvard.edu/abs/2016AJ....152..206F",
+      "https://ui.adsabs.harvard.edu/abs/2017AJ....153...93K"
+    ],
+    "described_in": [
+      "https://ui.adsabs.harvard.edu/abs/2016JOSS....1...24F"
+    ],
+    "keywords": []
+  },
+  {
+    "ascl_id": "2204.014",
+    "title": "GADGET-4: Parallel cosmological N-body and SPH code",
+    "credit": "Springel, Volker; Pakmor, Rüdiger; Zier, Oliver; Reinecke, Martin",
+    "abstract": "GADGET-4 (GAlaxies with Dark matter and Gas intEracT) is a parallel cosmological N-body and SPH code that simulates cosmic structure formation and calculations relevant for galaxy evolution and galactic dynamics. It is massively parallel and flexible, and can be applied to a variety of different types of simulations, offering a number of sophisticated simulation algorithms. GADGET-4 supports collisionless simulations and smoothed particle hydrodynamics on massively parallel computers. \n\nThe code can be used for plain Newtonian dynamics, or for cosmological integrations in arbitrary cosmologies, both with or without periodic boundary conditions. Stretched periodic boxes, and special cases such as simulations with two periodic dimensions and one non-periodic dimension are supported as well. The modeling of hydrodynamics is optional. The code is adaptive both in space and in time, and its Lagrangian character makes it particularly suitable for simulations of cosmic structure formation. Several post-processing options such as group- and substructure finding, or power spectrum estimation are built in and can be carried out on the fly or applied to existing snapshots. Through a built-in cosmological initial conditions generator, it is also particularly easy to carry out cosmological simulations. In addition, merger trees can be determined directly by the code.",
+    "topic_id": "0",
+    "bibcode": "2022ascl.soft04014S",
+    "views": "5561",
+    "preferred_citation": "https://ui.adsabs.harvard.edu/abs/2021MNRAS.506.2871S",
+    "site_list": [
+      "https://gitlab.mpcdf.mpg.de/vrs/gadget4"
+    ],
+    "used_in": false,
+    "described_in": [
+      "https://ui.adsabs.harvard.edu/abs/2021MNRAS.506.2871S"
+    ],
+    "keywords": []
+  }
+]
