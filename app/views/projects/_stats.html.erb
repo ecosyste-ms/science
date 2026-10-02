@@ -127,4 +127,20 @@
     </div>
   </div>
   <% end %>
+  <% if @stats[:external_sources].present? %>
+    <div class="card well p-3 border-0">
+      <div class="card-body">
+        <h5 class="card-title small">External Sources</h5>
+        <p class="text-muted">Scientific projects with matched external identifiers. A project can appear under more than one source.</p>
+        <div class="list-group list-group-flush bg-transparent mt-4">
+          <% @stats[:external_sources].each do |source, count| %>
+            <div class="d-flex justify-content-between align-items-center bg-transparent list-group-item">
+              <span><%= source == "wikidata" ? "Wikidata" : source.humanize %></span>
+              <span class="badge bg-primary"><%= number_with_delimiter(count) %></span>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
 </div>

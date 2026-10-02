@@ -42,6 +42,7 @@ Rails.application.routes.draw do
           get :ping
           get :search_context
           get :swhids
+          get :external_identifiers
         end
       end
     end

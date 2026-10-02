@@ -28,6 +28,13 @@ class Api::V1::ProjectsController < Api::V1::ApplicationController
     render json: ProjectSwhidEvidence.new(project)
   end
 
+  def external_identifiers
+    project = Project.visible.select(:id).find(params[:id])
+    @pagy, links = pagy_countless(project.project_external_software_records
+      .includes(:external_software_record).order(:id), limit_max: 100)
+    render json: links
+  end
+
   def show
     @project = Project.visible.includes(project_fields: :field).find(params[:id])
   end

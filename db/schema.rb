@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_21_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_02_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -121,6 +121,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_21_160000) do
     t.index ["canonical_key"], name: "index_developer_accounts_on_canonical_key", unique: true
     t.index ["host_id", "login"], name: "index_developer_accounts_on_host_id_and_login", where: "(login IS NOT NULL)"
     t.index ["owner_id"], name: "index_developer_accounts_on_owner_id", unique: true, where: "(owner_id IS NOT NULL)"
+  end
+
+  create_table "external_software_records", force: :cascade do |t|
+    t.string "source", null: false
+    t.string "identifier", null: false
+    t.string "status", default: "pending", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "retrieved_at"
+    t.datetime "attempted_at"
+    t.datetime "next_refresh_at", null: false
+    t.text "last_error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["source", "identifier"], name: "index_external_software_records_on_source_and_identifier", unique: true
+    t.index ["source", "next_refresh_at", "id"], name: "index_external_software_records_on_refresh"
   end
 
   create_table "fields", force: :cascade do |t|
@@ -469,6 +484,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_21_160000) do
     t.index ["purl"], name: "index_project_dependencies_pending_purl_resolution", where: "((package_id IS NULL) AND (purl IS NOT NULL) AND (package_resolution_attempted_at IS NULL))"
   end
 
+  create_table "project_external_software_records", force: :cascade do |t|
+    t.bigint "project_id", null: false
+    t.bigint "external_software_record_id", null: false
+    t.string "relationship", null: false
+    t.string "match_status", null: false
+    t.jsonb "evidence", default: [], null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["external_software_record_id", "project_id"], name: "index_project_external_records_on_record_and_project", unique: true
+    t.index ["project_id", "id"], name: "index_project_external_records_on_project"
+  end
+
   create_table "project_fields", force: :cascade do |t|
     t.float "confidence_score", default: 0.0, null: false
     t.datetime "created_at", null: false
@@ -676,6 +703,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_21_160000) do
   add_foreign_key "project_contributors", "projects", on_delete: :cascade
   add_foreign_key "project_dependencies", "packages", on_delete: :nullify
   add_foreign_key "project_dependencies", "projects"
+  add_foreign_key "project_external_software_records", "external_software_records", on_delete: :cascade
+  add_foreign_key "project_external_software_records", "projects", on_delete: :cascade
   add_foreign_key "project_fields", "fields"
   add_foreign_key "project_fields", "projects"
   add_foreign_key "project_open_alex_topics", "open_alex_topics"

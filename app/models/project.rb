@@ -72,6 +72,8 @@ class Project < ApplicationRecord
   has_many :project_authors, dependent: :delete_all
   has_many :mention_sources, through: :mentions, source: :sources
   has_many :project_contributors, dependent: :delete_all
+  has_many :project_external_software_records, dependent: :delete_all
+  has_many :external_software_records, through: :project_external_software_records
   has_many :author_developer_account_links, dependent: :delete_all
   has_many :repository_aliases,
     class_name: "ProjectRepositoryAlias",
@@ -647,7 +649,8 @@ class Project < ApplicationRecord
       joss_projects: joss_count,
       institutional_owners: institutional_owners_count,
       score_distribution: score_distribution,
-      top_languages: language_distribution
+      top_languages: language_distribution,
+      external_sources: ProjectExternalSoftwareRecord.scientific_source_counts
     }
   end
 

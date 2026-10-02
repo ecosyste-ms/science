@@ -1,10 +1,14 @@
 ---
-:concurrency: 9
+:concurrency: 8
 :queues:
   - [default, 5]
   - [brief, 1]
   - [swhid, 1]
 :capsules:
+  external_metadata:
+    :concurrency: 1
+    :queues:
+      - external_metadata
   swh_api:
     :concurrency: 1
     :queues:

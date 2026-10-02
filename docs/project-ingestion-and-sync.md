@@ -98,6 +98,31 @@ LIMIT=1000 bundle exec rake packages:normalize_rankings
 LIMIT=500 bundle exec rake packages:match_projects
 ```
 
+## Wikidata enrichment
+
+Wikidata enrichment links source records to existing visible projects, including projects below the scientific threshold. It does not create projects or change Science Score. Each entity is stored once in `external_software_records`; a separate join table retains its repository relationships and matching evidence. A source can describe several repositories, and each repository can have several identifiers.
+
+The October 2026 sample compared [SymPy](https://www.wikidata.org/wiki/Q5971368), [NumPy](https://www.wikidata.org/wiki/Q197520) and [SciPy](https://www.wikidata.org/wiki/Q197492) against the public project and search-context APIs. All three repository URLs matched existing projects. Names, descriptions and programming languages overlap with repository and package metadata. Wikidata adds QIDs, swMATH identifiers (940, 6294 and 6293 respectively), typed classifications and statement-level provenance that the existing projections do not retain. These three mathematical Python projects do not establish coverage across disciplines.
+
+The NumPy record includes claims sourced from Wikipedia, the Free Software Directory and Open Hub, alongside claims without references. [Wikidata's data access documentation](https://www.wikidata.org/wiki/Wikidata:Data_access) describes the API and query routes. The importer uses the main query graph for repository discovery and the entity API for full records. It retains original statement IDs, ranks, qualifiers and references so later evidence evaluation can distinguish copied claims. Current repository, package and DOI projections do not replace that claim structure; a swMATH identifier alone also does not establish equivalent coverage of the swMATH record. Direct Wikidata enrichment is useful for these additions. Other registries need their own overlap checks before adding refresh jobs.
+
+`wikidata:import` reads one page of at most 100 repository-linked items, then queues entity requests of at most 50 IDs on `external_metadata`. The queue capsule runs one job per worker process. Each process keeps ten threads: eight for the default queues, one for Software Heritage API work and one for external metadata. The returned `after` cursor follows lexicographic QID order; pass it as `AFTER` until `complete` is true. Start a later sweep without `AFTER` to pick up newly linked older items. The query uses all `P1324` statement ranks; matching accepts normal and preferred statements, while deprecated statements remain only in the stored source record. Publication queries are outside this import and would need to account for Wikidata's separate scholarly graph.
+
+```bash
+LIMIT=100 bundle exec rake wikidata:import
+AFTER=Q5971368 LIMIT=100 bundle exec rake wikidata:import
+IDS=Q5971368,Q197520,Q197492 bundle exec rake wikidata:import
+LIMIT=100 bundle exec rake wikidata:refresh
+```
+
+Run `wikidata:refresh` periodically to queue due records, with a maximum of 1000 per invocation. Successful records are cached for 30 days, missing records for seven days, and failures for one hour. Re-enqueuing a cached ID does not fetch it again. Rate limits and replication lag share a cooldown across workers and reschedule after `Retry-After`; other source failures have three hourly job retries. Missing records and transient failures retain the last successful record and links with an explicit source status. A successful response replaces withdrawn relationships. Unmatched source records remain cached and are matched again on their next refresh.
+
+Matching checks existing case-insensitive URL and alias indexes in batches of at most 100 URLs, selecting only project identity fields. Shared aliases retain every candidate as ambiguous. Distinct repository statements within a suite can each produce a match. Refresh selection uses the `(source, next_refresh_at, id)` index, and project reads use the join table's project index. Network requests occur before row locks; unchanged evidence does not rewrite joins or project metadata.
+
+`GET /api/v1/projects/:id/external_identifiers` returns cached identifiers, relationship evidence, source status, timestamps and entity metadata. Pagination accepts `page` and `per_page` (maximum 100). An empty list does not prove that a project lacks external identifiers. Hidden projects return 404. The endpoint performs no upstream requests or background work.
+
+`homepage:refresh` also caches the external-source breakdown with the existing homepage statistics. Each source counts distinct visible scientific projects with unambiguous matches. Several identifiers from the same source count once; a project can count under several sources. Missing records are excluded, while previously retrieved evidence survives a failed refresh. Homepage requests only read the cache, including when the cache is empty. Run `bundle exec rake homepage:refresh` after an import to update the displayed counts.
+
 ## Partial results and hidden owners
 
 The complete sync is not wrapped in one database transaction. Most fetch stages handle an upstream failure locally and allow later stages to continue, so a project can hold fresh package data and older issue or commit data after the same run. Slow stages of at least five seconds are included in a structured timing log; a total sync of at least 30 seconds records every stage duration.

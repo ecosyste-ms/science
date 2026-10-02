@@ -267,6 +267,62 @@ paths:
                               last_synced_at: {type: string, format: date-time, nullable: true}
         400:
           description: Invalid repository URL or request bounds
+  /projects/{id}/external_identifiers:
+    get:
+      operationId: getProjectExternalIdentifiers
+      tags: [projects]
+      description: >-
+        Read cached external software identifiers and source-code repository relationships
+        for a visible project. Ambiguous candidates are retained. Metadata contains the
+        source entity with statement IDs, ranks, qualifiers and references. Missing or
+        failed source refreshes retain the last successful evidence and retrieval date.
+        An empty list does not establish absence from external sources. No source requests,
+        project writes or job scheduling occur during this request.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer}
+        - name: page
+          in: query
+          schema: {type: integer, minimum: 1}
+        - name: per_page
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 100}
+      responses:
+        200:
+          description: Stored identifiers and their original source records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: {type: integer}
+                    scheme: {type: string, example: wikidata}
+                    identifier: {type: string, example: Q5971368}
+                    relationship: {type: string, example: source_code_repository}
+                    match_status: {type: string, enum: [matched, ambiguous]}
+                    source_status: {type: string, enum: [pending, ok, missing, error]}
+                    retrieved_at: {type: string, format: date-time, nullable: true}
+                    attempted_at: {type: string, format: date-time, nullable: true}
+                    next_refresh_at: {type: string, format: date-time}
+                    last_error: {type: string, nullable: true}
+                    evidence:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          statement_id: {type: string}
+                          repository_url: {type: string}
+                          normalized_url: {type: string}
+                          rank: {type: string, enum: [normal, preferred]}
+                          match_method: {type: string, enum: [project.url, repository_alias]}
+                          ambiguous: {type: boolean}
+                    metadata: {type: object, additionalProperties: true}
+        404:
+          description: Project missing or hidden
   /projects/{id}/swhids:
     get:
       operationId: getProjectSwhids
