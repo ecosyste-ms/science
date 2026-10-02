@@ -1,7 +1,8 @@
 class AsclClient
   CATALOGUE_URL = "https://ascl.net/code/json"
   SEARCH_URL = "https://ascl.net/api/search/"
-  CACHE_KEY = "ascl-catalogue"
+  CACHE_KEY = "ascl-catalogue-chunks"
+  CACHE_CHUNK_BYTES = 256.kilobytes
   COOLDOWN_KEY = "ascl-retry-at"
   PAGE_SIZE = 50
   MAX_RECORDS = 20_000
@@ -30,26 +31,52 @@ class AsclClient
   end
 
   def catalogue
-    Rails.cache.fetch(CACHE_KEY, expires_in: 6.hours) do
-      retrieved_at = Time.current.to_f
-      data = request(CATALOGUE_URL)
-      unless data.is_a?(Hash) && data.size.between?(1, MAX_RECORDS) && data.values.all? { |record| valid_record?(record) }
-        raise Error, "Invalid ASCL catalogue"
-      end
-      records = data.values.sort_by { |record| record.fetch("ascl_id") }
-      ids = records.pluck("ascl_id")
-      raise Error, "Duplicate ASCL identifiers" unless ids.uniq.size == ids.size
-      index = request(SEARCH_URL, { q: '""', fl: "ascl_id" })
-      unless index.is_a?(Array) && index.size.between?(1, MAX_RECORDS) &&
-          index.all? { |entry| entry.is_a?(Hash) && entry["ascl_id"].is_a?(String) }
-        raise Error, "Invalid ASCL identifier index"
-      end
-      published = index.pluck("ascl_id").reject { |id| id == "0000.000" }
-      unless published.sort == ids
-        raise Error, "ASCL catalogue and published identifier index disagree"
-      end
-      { "records" => records, "retrieved_at" => retrieved_at }
+    cached_catalogue || fetch_catalogue
+  end
+
+  def cached_catalogue
+    manifest = Rails.cache.read(CACHE_KEY)
+    return unless manifest.is_a?(Hash) && manifest["keys"].is_a?(Array) && manifest["keys"].any?
+    chunks = Rails.cache.read_multi(*manifest["keys"])
+    return unless manifest["keys"].all? { |key| chunks[key].is_a?(String) }
+    JSON.parse(manifest["keys"].map { |key| chunks.fetch(key) }.join.force_encoding(Encoding::UTF_8))
+  rescue JSON::ParserError
+    nil
+  end
+
+  def cache_catalogue(snapshot)
+    payload = JSON.generate(snapshot).b
+    prefix = "#{CACHE_KEY}:#{SecureRandom.uuid}"
+    keys = []
+    (0...payload.bytesize).step(CACHE_CHUNK_BYTES).each_with_index do |offset, index|
+      key = "#{prefix}:#{index}"
+      return unless Rails.cache.write(key, payload.byteslice(offset, CACHE_CHUNK_BYTES), expires_in: 6.hours + 1.minute)
+      keys << key
     end
+    Rails.cache.write(CACHE_KEY, { "keys" => keys }, expires_in: 6.hours)
+  end
+
+  def fetch_catalogue
+    retrieved_at = Time.current.to_f
+    data = request(CATALOGUE_URL)
+    unless data.is_a?(Hash) && data.size.between?(1, MAX_RECORDS) && data.values.all? { |record| valid_record?(record) }
+      raise Error, "Invalid ASCL catalogue"
+    end
+    records = data.values.sort_by { |record| record.fetch("ascl_id") }
+    ids = records.pluck("ascl_id")
+    raise Error, "Duplicate ASCL identifiers" unless ids.uniq.size == ids.size
+    index = request(SEARCH_URL, { q: '""', fl: "ascl_id" })
+    unless index.is_a?(Array) && index.size.between?(1, MAX_RECORDS) &&
+        index.all? { |entry| entry.is_a?(Hash) && entry["ascl_id"].is_a?(String) }
+      raise Error, "Invalid ASCL identifier index"
+    end
+    published = index.pluck("ascl_id").reject { |id| id == "0000.000" }
+    unless published.sort == ids
+      raise Error, "ASCL catalogue and published identifier index disagree"
+    end
+    snapshot = { "records" => records, "retrieved_at" => retrieved_at }
+    cache_catalogue(snapshot)
+    snapshot
   end
 
   def page(after: nil, limit: PAGE_SIZE)
