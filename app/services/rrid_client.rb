@@ -30,30 +30,70 @@ class RridClient
     id = self.class.identifier(id)
     cooldown = Rails.cache.read(COOLDOWN_KEY)
     raise RateLimited, Time.at(cooldown).utc if cooldown && cooldown > Time.current.to_f
-    response = Faraday.get("#{RESOLVER_URL}/#{id}.json", nil,
-      { "User-Agent" => "science.ecosyste.ms (+https://science.ecosyste.ms)", "Accept" => "application/json" }) do |request|
-      request.options.open_timeout = 5
-      request.options.timeout = 60
+    requested_id = id
+    redirected_ids = []
+    3.times do
+      url = "#{RESOLVER_URL}/#{id}.json"
+      response = Faraday.get(url, nil,
+        { "User-Agent" => "science.ecosyste.ms (+https://science.ecosyste.ms)", "Accept" => "application/json" }) do |request|
+        request.options.open_timeout = 5
+        request.options.timeout = 60
+      end
+      rate_limited!(response.headers["retry-after"]) if [429, 503].include?(response.status)
+      if [301, 302, 307, 308].include?(response.status)
+        target = URI.join(url, response.headers["location"].to_s)
+        match = target.path.match(%r{\A/resolver/(SCR_[0-9]{6})\.json\z}i)
+        unless target.scheme == "https" && target.host == "scicrunch.org" && target.port == 443 &&
+            target.userinfo.nil? && target.query.nil? && target.fragment.nil? && match && match[1].upcase != "SCR_000000"
+          raise Error, "Invalid RRID redirect for #{requested_id}"
+        end
+        redirected_ids << id
+        id = self.class.identifier(match[1])
+        raise Error, "RRID redirect loop for #{requested_id}" if redirected_ids.include?(id)
+        next
+      end
+      record = response_record(response, id)
+      unless redirected_ids.empty?
+        aliases = Array(record.dig("item", "alternateIdentifiers")).filter_map do |entry|
+          self.class.identifier(entry["identifier"]) if entry.is_a?(Hash)
+        rescue ArgumentError
+          nil
+        end
+        unless !record.key?("missing") && (redirected_ids - aliases).empty?
+          raise Error, "Unverified RRID redirect from #{requested_id} to #{id}"
+        end
+      end
+      return record
     end
-    rate_limited!(response.headers["retry-after"]) if [429, 503].include?(response.status)
-    raise Error, "RRID HTTP #{response.status}" unless [200, 404].include?(response.status)
-    raise Error, "RRID response exceeds 5 MB" if response.body.bytesize > 5.megabytes
+    raise Error, "Too many RRID redirects for #{requested_id}"
+  rescue Faraday::Error, JSON::ParserError, URI::InvalidURIError => error
+    raise Error, "RRID request failed for #{requested_id}: #{error.class.name}"
+  end
+
+  def response_record(response, id)
+    raise Error, "RRID HTTP #{response.status} for #{id}" unless [200, 404].include?(response.status)
+    raise Error, "RRID response exceeds 5 MB for #{id}" if response.body.bytesize > 5.megabytes
     data = JSON.parse(response.body)
     hits = data.is_a?(Hash) && data["hits"]
     unless hits.is_a?(Hash) && hits["total"].is_a?(Integer) && hits["hits"].is_a?(Array)
-      raise Error, "Invalid RRID response"
+      raise Error, "Invalid RRID response for #{id}"
     end
     if response.status == 404 && hits["total"] == 0 && hits["hits"].empty? && data["resolver"].is_a?(Hash) && data["resolver"]["error"] == "RRID not found"
       return { "item" => { "identifier" => id }, "missing" => true }
     end
-    hit = hits["hits"].first
-    record = hit["_source"] if hit.is_a?(Hash)
-    unless response.status == 200 && hits["total"] == 1 && hits["hits"].size == 1 && valid_record?(record, id)
-      raise Error, "Incomplete or ambiguous RRID record"
+    unless response.status == 200 && hits["total"].positive? && hits["total"] == hits["hits"].size &&
+        hits["hits"].all? { |hit| hit.is_a?(Hash) && hit["_source"].is_a?(Hash) }
+      raise Error, "Incomplete RRID result set for #{id}"
     end
-    record
-  rescue Faraday::Error, JSON::ParserError => error
-    raise Error, "RRID request failed: #{error.class.name}"
+    exact = hits["hits"].filter_map do |hit|
+      record = hit["_source"]
+      record if record["item"].is_a?(Hash) && self.class.identifier(record["item"]["identifier"]) == id
+    rescue ArgumentError
+      nil
+    end
+    raise Error, "Expected one exact RRID record for #{id}, got #{exact.size}" unless exact.one?
+    raise Error, "Incomplete RRID record for #{id}" unless valid_record?(exact.sole, id)
+    exact.sole
   end
 
   def valid_record?(record, id)

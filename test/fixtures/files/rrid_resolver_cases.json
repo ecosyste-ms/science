@@ -1,0 +1,891 @@
+{
+  "SCR_004706": {
+    "hits": {
+      "total": 2,
+      "hits": [
+        {
+          "_source": {
+            "item": {
+              "supercategory": [
+                {
+                  "type": "supercategory",
+                  "name": "Resource"
+                }
+              ],
+              "contentTypes": [
+                {
+                  "name": "product",
+                  "curie": "ilx:0381348"
+                }
+              ],
+              "language": "en",
+              "description": "Portal providing access to all JGI genomic databases and analytical tools, sequencing projects and their status, search for and download assemblies and annotations of sequenced genomes, and interactively explore those genomes and compare them with other sequenced microbes, fungi, plants or metagenomes using specialized systems tailored to each particular class of organisms. The Department of Energy (DOE) Joint Genome Institute (JGI) is a national user facility with massive-scale DNA sequencing and analysis capabilities dedicated to advancing genomics for bioenergy and environmental applications. Beyond generating tens of trillions of DNA bases annually, the Institute develops and maintains data management systems and specialized analytical capabilities to manage and interpret complex genomic data sets, and to enable an expanding community of users around the world to analyze these data in different contexts over the web.",
+              "identifier": "SCR_002383",
+              "docid": "rrid:scr_002383",
+              "uuid": "145fe594-19c0-5baf-b8bb-5379fe5f41da",
+              "synonyms": [
+                {
+                  "name": "JGI Genome Portal"
+                },
+                {
+                  "name": "DOE Joint Genome Institute Genome Portal"
+                }
+              ],
+              "types": [
+                {
+                  "name": "data or information resource",
+                  "type": "category"
+                },
+                {
+                  "name": "department portal",
+                  "type": "category"
+                },
+                {
+                  "name": "organization portal",
+                  "type": "category"
+                },
+                {
+                  "name": "portal",
+                  "type": "category"
+                }
+              ],
+              "keywords": [
+                {
+                  "keyword": "gene"
+                },
+                {
+                  "keyword": "computation"
+                },
+                {
+                  "keyword": "genome"
+                },
+                {
+                  "keyword": "genomics"
+                },
+                {
+                  "keyword": "model organism"
+                },
+                {
+                  "keyword": "assembly"
+                },
+                {
+                  "keyword": "annotation"
+                },
+                {
+                  "keyword": "sequenced genome"
+                },
+                {
+                  "keyword": "metagenome"
+                },
+                {
+                  "keyword": "bio.tools"
+                }
+              ],
+              "specification": [
+                {
+                  "uri": ""
+                }
+              ],
+              "curie": "SCR_002383",
+              "availability": [
+                {
+                  "description": "",
+                  "keyword": ""
+                }
+              ],
+              "alternateIdentifiers": [
+                {
+                  "identifier": "nif-0000-21230"
+                },
+                {
+                  "identifier": "SCR_004706"
+                },
+                {
+                  "identifier": "OMICS_01654"
+                },
+                {
+                  "identifier": "biotools:jgi_genome_portal"
+                },
+                {
+                  "identifier": "nlx_69965"
+                }
+              ],
+              "abbreviations": [
+                {
+                  "name": ""
+                }
+              ],
+              "name": "JGI Genome Portal"
+            },
+            "authority": {
+              "name": "SciCrunch Registry",
+              "identifier": "SCR_005400",
+              "curie": "RRID:SCR_005400"
+            },
+            "distributions": {
+              "current": [
+                {
+                  "type": "landing page",
+                  "uri": "http://genome.jgi.doe.gov/"
+                }
+              ],
+              "deprecated": [
+                {
+                  "uri": "http://genome.jgi-psf.org/"
+                }
+              ],
+              "alternate": [
+                {
+                  "uri": "http://genome.jgi-psf.org"
+                },
+                {
+                  "uri": "https://bio.tools/jgi_genome_portal"
+                }
+              ]
+            },
+            "rrid": {
+              "is_unique": "true",
+              "curie": "RRID:SCR_002383",
+              "properCitation": "JGI Genome Portal (RRID:SCR_002383)"
+            },
+            "disco": {
+              "v_uuid": "145fe594-19c0-5baf-b8bb-5379fe5f41da"
+            },
+            "graph": {
+              "parent": [
+                {
+                  "relationship": {
+                    "identifier": "7",
+                    "name": "has_parent_organization"
+                  },
+                  "resource": {
+                    "name": "DOE Joint Genome Institute",
+                    "identifier": "SCR_003045"
+                  }
+                }
+              ],
+              "child": [
+                {
+                  "relationship": {
+                    "identifier": "7",
+                    "name": "is_parent_organization_of"
+                  },
+                  "resource": {
+                    "name": "Takifugu rubripes Genome",
+                    "identifier": "SCR_002265"
+                  }
+                }
+              ],
+              "relationships": [
+                {
+                  "relationship": {
+                    "identifier": "4",
+                    "name": "is_listed_by"
+                  },
+                  "resource": {
+                    "name": "OMICtools",
+                    "identifier": "SCR_002250"
+                  }
+                },
+                {
+                  "relationship": {
+                    "identifier": "4",
+                    "name": "is_listed_by"
+                  },
+                  "resource": {
+                    "name": "bio.tools",
+                    "identifier": "SCR_014695"
+                  }
+                },
+                {
+                  "relationship": {
+                    "identifier": "4",
+                    "name": "is_listed_by"
+                  },
+                  "resource": {
+                    "name": "Debian",
+                    "identifier": "SCR_006638"
+                  }
+                },
+                {
+                  "relationship": {
+                    "identifier": "7",
+                    "name": "has_parent_organization"
+                  },
+                  "resource": {
+                    "name": "DOE Joint Genome Institute",
+                    "identifier": "SCR_003045"
+                  }
+                },
+                {
+                  "relationship": {
+                    "identifier": "7",
+                    "name": "is_parent_organization_of"
+                  },
+                  "resource": {
+                    "name": "Takifugu rubripes Genome",
+                    "identifier": "SCR_002265"
+                  }
+                }
+              ]
+            },
+            "legal": {
+              "license": {
+                "name": ""
+              },
+              "terms": {
+                "uris": [
+                  ""
+                ]
+              }
+            },
+            "diseases": {
+              "related": [
+                {
+                  "name": "",
+                  "role": "Related Disease"
+                }
+              ]
+            },
+            "supportingAwards": [
+              {
+                "agency": {
+                  "name": "Department of Energy",
+                  "identifier": ""
+                }
+              }
+            ],
+            "references": [
+              {
+                "curie": "PMID:24225321"
+              },
+              {
+                "curie": "PMID:22110030"
+              }
+            ],
+            "organisms": {
+              "related": [
+                {
+                  "role": "Related Species",
+                  "species": {
+                    "name": "Archaea"
+                  }
+                },
+                {
+                  "role": "Related Species",
+                  "species": {
+                    "name": "Eukaryota"
+                  }
+                },
+                {
+                  "role": "Related Species",
+                  "species": {
+                    "name": "bacteria"
+                  }
+                },
+                {
+                  "role": "Related Species",
+                  "species": {
+                    "name": "Proteobacteria"
+                  }
+                }
+              ]
+            },
+            "organization": {
+              "hierarchy": []
+            },
+            "validation": {
+              "isValidated": false,
+              "totalValidationSites": {
+                "count": 0
+              }
+            },
+            "issues": {
+              "totalIssues": {
+                "count": 0
+              },
+              "status": [
+                "No Known Issues"
+              ]
+            },
+            "mentions": [
+              {
+                "totalRRIDMentions": {
+                  "count": 10
+                },
+                "totalResourceMentions": {
+                  "count": 866
+                },
+                "totalMentions": {
+                  "count": 869
+                },
+                "availability": {
+                  "keyword": "available"
+                },
+                "timestamp": "2026-09-26 21:14:08.458"
+              }
+            ],
+            "recordValid": true
+          }
+        },
+        {
+          "_source": {
+            "item": {
+              "supercategory": [
+                {
+                  "type": "supercategory",
+                  "name": "Resource"
+                }
+              ],
+              "contentTypes": [
+                {
+                  "name": "product",
+                  "curie": "ilx:0381348"
+                }
+              ],
+              "language": "en",
+              "description": "JGI publishes all its sequenced genomes on its Genome Portal. Here you can download sequence files, BLAST against a particular genome, and view annotations. Advanced tools, including genome, GO, KEGG, and KOG browsers, are available for eukaryotes. JGI''s Genome Browser lets you browse through JGI-predicted genes, view sequences, and study detailed alignments with nucleotide and amino acid sequences from relevant sequence databases. Individual genomes sites can be reached using the Tree of Life. These sites provide download access to sequence files and tools for annotation and BLAST alignment. Eukaryotic genome sites include additional resources such as genome browsing, search, and functional (KEG/KOGG/GO) annotations.",
+              "identifier": "SCR_004706",
+              "docid": "rrid:scr_004706",
+              "uuid": "c413fabd-7aa6-5af2-b9ae-73bb84ed497e",
+              "synonyms": [
+                {
+                  "name": "JGI Genome Portal"
+                },
+                {
+                  "name": "DOE Joint Genome Institute Genome Portal"
+                }
+              ],
+              "types": [
+                {
+                  "name": "portal",
+                  "type": "category"
+                },
+                {
+                  "name": "database",
+                  "type": "category"
+                },
+                {
+                  "name": "project portal",
+                  "type": "category"
+                },
+                {
+                  "name": "data or information resource",
+                  "type": "category"
+                }
+              ],
+              "keywords": [
+                {
+                  "keyword": "archaea"
+                },
+                {
+                  "keyword": "bacteria"
+                },
+                {
+                  "keyword": "gebas"
+                },
+                {
+                  "keyword": "metagenomes"
+                },
+                {
+                  "keyword": "plant"
+                },
+                {
+                  "keyword": "fungal"
+                },
+                {
+                  "keyword": "metagenomics"
+                },
+                {
+                  "keyword": "microbial"
+                },
+                {
+                  "keyword": "bio.tools"
+                }
+              ],
+              "curie": "SCR_004706",
+              "availability": [
+                {
+                  "description": "",
+                  "keyword": ""
+                }
+              ],
+              "alternateIdentifiers": [
+                {
+                  "identifier": "nlx_69965"
+                },
+                {
+                  "identifier": "biotools:doe_joint_genome_institute_genome_portal"
+                }
+              ],
+              "abbreviations": [
+                {
+                  "name": "JGIDB"
+                }
+              ],
+              "name": "JGIDB"
+            },
+            "authority": {
+              "name": "SciCrunch Registry",
+              "identifier": "SCR_005400",
+              "curie": "RRID:SCR_005400"
+            },
+            "distributions": {
+              "current": [
+                {
+                  "type": "landing page",
+                  "uri": "http://genome.jgi-psf.org/"
+                }
+              ],
+              "deprecated": [
+                {
+                  "uri": ""
+                }
+              ],
+              "alternate": [
+                {
+                  "uri": "https://bio.tools/doe_joint_genome_institute_genome_portal"
+                }
+              ]
+            },
+            "rrid": {
+              "is_unique": "true",
+              "curie": "RRID:SCR_004706",
+              "properCitation": "JGIDB (RRID:SCR_004706)"
+            },
+            "disco": {
+              "v_uuid": "c413fabd-7aa6-5af2-b9ae-73bb84ed497e"
+            },
+            "graph": {
+              "parent": [
+                {
+                  "relationship": {
+                    "identifier": "7",
+                    "name": "has_parent_organization"
+                  },
+                  "resource": {
+                    "name": "DOE Joint Genome Institute",
+                    "identifier": "SCR_003045"
+                  }
+                }
+              ],
+              "relationships": [
+                {
+                  "relationship": {
+                    "identifier": "4",
+                    "name": "is_listed_by"
+                  },
+                  "resource": {
+                    "name": "bio.tools",
+                    "identifier": "SCR_014695"
+                  }
+                },
+                {
+                  "relationship": {
+                    "identifier": "4",
+                    "name": "is_listed_by"
+                  },
+                  "resource": {
+                    "name": "Debian",
+                    "identifier": "SCR_006638"
+                  }
+                },
+                {
+                  "relationship": {
+                    "identifier": "7",
+                    "name": "has_parent_organization"
+                  },
+                  "resource": {
+                    "name": "DOE Joint Genome Institute",
+                    "identifier": "SCR_003045"
+                  }
+                }
+              ]
+            },
+            "legal": {
+              "license": {
+                "name": ""
+              },
+              "terms": {
+                "uris": [
+                  ""
+                ]
+              }
+            },
+            "diseases": {
+              "related": [
+                {
+                  "name": "",
+                  "role": "Related Disease"
+                }
+              ]
+            },
+            "supportingAwards": [
+              {
+                "agency": {
+                  "name": "DOE",
+                  "identifier": ""
+                }
+              }
+            ],
+            "references": [
+              {
+                "curie": "PMID:24225321"
+              },
+              {
+                "curie": "PMID:22110030"
+              }
+            ],
+            "organisms": {
+              "related": [
+                {
+                  "role": "Related Species",
+                  "species": {
+                    "name": ""
+                  }
+                }
+              ]
+            },
+            "organization": {
+              "hierarchy": []
+            },
+            "validation": {
+              "isValidated": false,
+              "totalValidationSites": {
+                "count": 0
+              }
+            },
+            "issues": {
+              "totalIssues": {
+                "count": 0
+              },
+              "status": [
+                "No Known Issues"
+              ]
+            },
+            "mentions": [
+              {
+                "totalRRIDMentions": {
+                  "count": 0
+                },
+                "totalResourceMentions": {
+                  "count": 619
+                },
+                "totalMentions": {
+                  "count": 619
+                },
+                "availability": {
+                  "keyword": "available"
+                },
+                "timestamp": "2026-09-26 21:15:48.306"
+              }
+            ],
+            "recordValid": false
+          }
+        }
+      ]
+    },
+    "resolver": {
+      "uri": "scicrunch.org/resolver",
+      "timestamp": "2026-10-02T10:43:14-07:00"
+    }
+  },
+  "SCR_004630": {
+    "hits": {
+      "total": 1,
+      "hits": [
+        {
+          "_source": {
+            "item": {
+              "supercategory": [
+                {
+                  "type": "supercategory",
+                  "name": "Resource"
+                }
+              ],
+              "contentTypes": [
+                {
+                  "name": "product",
+                  "curie": "ilx:0381348"
+                }
+              ],
+              "language": "en",
+              "description": "Nucleotide database as collection of sequences from several sources, including GenBank, RefSeq, TPA and PDB. Genome, gene and transcript sequence data provide the foundation for biomedical research and discovery.",
+              "identifier": "SCR_004630",
+              "docid": "rrid:scr_004630",
+              "uuid": "77a6ad28-4f5b-5204-a153-0290c8f6bfd3",
+              "synonyms": [
+                {
+                  "name": ""
+                }
+              ],
+              "types": [
+                {
+                  "name": "data or information resource",
+                  "type": "category"
+                },
+                {
+                  "name": "data repository",
+                  "type": "category"
+                },
+                {
+                  "name": "database",
+                  "type": "category"
+                },
+                {
+                  "name": "service resource",
+                  "type": "category"
+                },
+                {
+                  "name": "storage service resource",
+                  "type": "category"
+                }
+              ],
+              "keywords": [
+                {
+                  "keyword": "Genome"
+                },
+                {
+                  "keyword": "gene"
+                },
+                {
+                  "keyword": "transcript sequence data"
+                },
+                {
+                  "keyword": "GenBank"
+                },
+                {
+                  "keyword": "RefSeq"
+                },
+                {
+                  "keyword": "TPA"
+                },
+                {
+                  "keyword": "PDB"
+                },
+                {
+                  "keyword": "gold standard"
+                }
+              ],
+              "specification": [
+                {
+                  "uri": ""
+                }
+              ],
+              "curie": "SCR_004630",
+              "availability": [
+                {
+                  "description": "Free, Freely available",
+                  "keyword": "Free, Freely available"
+                }
+              ],
+              "alternateIdentifiers": [
+                {
+                  "identifier": "SCR_016578"
+                },
+                {
+                  "identifier": "nlx_62971"
+                }
+              ],
+              "abbreviations": [
+                {
+                  "name": "nucest"
+                }
+              ],
+              "name": "Nucleotide database"
+            },
+            "authority": {
+              "name": "SciCrunch Registry",
+              "identifier": "SCR_005400",
+              "curie": "RRID:SCR_005400"
+            },
+            "distributions": {
+              "current": [
+                {
+                  "type": "landing page",
+                  "uri": "http://www.ncbi.nlm.nih.gov/nucest"
+                }
+              ],
+              "deprecated": [
+                {
+                  "uri": ""
+                }
+              ],
+              "alternate": [
+                {
+                  "uri": ""
+                }
+              ]
+            },
+            "rrid": {
+              "is_unique": "true",
+              "curie": "RRID:SCR_004630",
+              "properCitation": "Nucleotide database (RRID:SCR_004630)"
+            },
+            "disco": {
+              "v_uuid": "77a6ad28-4f5b-5204-a153-0290c8f6bfd3"
+            },
+            "graph": {
+              "parent": [
+                {
+                  "relationship": {
+                    "identifier": "7",
+                    "name": "has_parent_organization"
+                  },
+                  "resource": {
+                    "name": "NCBI",
+                    "identifier": "SCR_006472"
+                  }
+                }
+              ],
+              "related": [
+                {
+                  "relationship": {
+                    "identifier": "6",
+                    "name": "is_related_to"
+                  },
+                  "resource": {
+                    "name": " BMAP cDNA Resources ",
+                    "identifier": "SCR_002973"
+                  }
+                },
+                {
+                  "relationship": {
+                    "identifier": "6",
+                    "name": "is_related_to"
+                  },
+                  "resource": {
+                    "name": "GenBank",
+                    "identifier": "SCR_002760"
+                  }
+                }
+              ],
+              "relationships": [
+                {
+                  "relationship": {
+                    "identifier": "4",
+                    "name": "is_listed_by"
+                  },
+                  "resource": {
+                    "name": "re3data.org",
+                    "identifier": "SCR_006782"
+                  }
+                },
+                {
+                  "relationship": {
+                    "identifier": "6",
+                    "name": "is_related_to"
+                  },
+                  "resource": {
+                    "name": " BMAP cDNA Resources ",
+                    "identifier": "SCR_002973"
+                  }
+                },
+                {
+                  "relationship": {
+                    "identifier": "6",
+                    "name": "is_related_to"
+                  },
+                  "resource": {
+                    "name": "GenBank",
+                    "identifier": "SCR_002760"
+                  }
+                },
+                {
+                  "relationship": {
+                    "identifier": "7",
+                    "name": "has_parent_organization"
+                  },
+                  "resource": {
+                    "name": "NCBI",
+                    "identifier": "SCR_006472"
+                  }
+                }
+              ]
+            },
+            "legal": {
+              "license": {
+                "name": ""
+              },
+              "terms": {
+                "uris": [
+                  ""
+                ]
+              }
+            },
+            "diseases": {
+              "related": [
+                {
+                  "name": "",
+                  "role": "Related Disease"
+                }
+              ]
+            },
+            "supportingAwards": [
+              {
+                "agency": {
+                  "name": "",
+                  "identifier": ""
+                }
+              }
+            ],
+            "references": [
+              {
+                "curie": "PMID:8401577"
+              }
+            ],
+            "organisms": {
+              "related": [
+                {
+                  "role": "Related Species",
+                  "species": {
+                    "name": ""
+                  }
+                }
+              ]
+            },
+            "organization": {
+              "hierarchy": []
+            },
+            "validation": {
+              "isValidated": false,
+              "totalValidationSites": {
+                "count": 0
+              }
+            },
+            "issues": {
+              "totalIssues": {
+                "count": 0
+              },
+              "status": [
+                "No Known Issues"
+              ]
+            },
+            "mentions": [
+              {
+                "totalRRIDMentions": {
+                  "count": 2
+                },
+                "totalResourceMentions": {
+                  "count": 166
+                },
+                "totalMentions": {
+                  "count": 167
+                },
+                "availability": {
+                  "keyword": "available"
+                },
+                "timestamp": "2026-09-26 21:15:46.443"
+              }
+            ],
+            "recordValid": true
+          }
+        }
+      ]
+    },
+    "resolver": {
+      "uri": "scicrunch.org/resolver",
+      "timestamp": "2026-10-02T10:43:59-07:00"
+    }
+  }
+}

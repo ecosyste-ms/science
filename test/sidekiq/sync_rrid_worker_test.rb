@@ -130,4 +130,101 @@ class SyncRridWorkerTest < ActiveSupport::TestCase
     end
     assert_not_requested :any, /scicrunch.org/
   end
+
+  test "resolver search results select the unique exact primary RRID rather than an alias hit" do
+    response = JSON.parse(Rails.root.join("test/fixtures/files/rrid_resolver_cases.json").read).fetch("SCR_004706")
+    rrid_record("SCR_004706", body: response)
+    sync_rrid(["SCR_004706"])
+    record = ExternalSoftwareRecord.sole
+    assert_equal "ok", record.status
+    assert_equal "SCR_004706", record.identifier
+    assert_equal response["hits"]["hits"].last["_source"], record.metadata
+    assert_empty ProjectExternalSoftwareRecord.all
+  end
+
+  test "extra alias search hits do not prevent exact software matches or allow duplicate exact identities" do
+    canonical = @rrid.fetch("SCR_015687")
+    other = @rrid.fetch("SCR_026162")
+    body = { hits: { total: 2, hits: [{ _source: other }, { _source: canonical }] } }
+    rrid_record("SCR_015687", body: body)
+    sync_rrid(["SCR_015687"])
+    assert_equal "SCR_015687", @project.external_software_records.sole.identifier
+    expire_rrid
+    body[:hits][:hits] = [{ _source: canonical }, { _source: canonical }]
+    rrid_record("SCR_015687", body: body)
+    error = assert_raises(RridClient::Error) { sync_rrid(["SCR_015687"]) }
+    assert_equal "Expected one exact RRID record for SCR_015687, got 2", error.message
+    assert_equal canonical, @project.external_software_records.sole.metadata
+    assert_equal 1, @project.project_external_software_records.registry_references.size
+  end
+
+  test "live resolver redirect fixture resolves an explicitly declared nonsoftware alias" do
+    response = JSON.parse(Rails.root.join("test/fixtures/files/rrid_resolver_cases.json").read).fetch("SCR_004630")
+    rrid_record("SCR_016578", status: 302, body: {}, headers: { "Location" => "/resolver/SCR_004630.json" })
+    rrid_record("SCR_004630", body: response)
+    sync_rrid(["SCR_016578"])
+    assert_equal %w[SCR_004630 SCR_016578], ExternalSoftwareRecord.order(:identifier).pluck(:identifier)
+    assert_equal ["ok"], ExternalSoftwareRecord.distinct.pluck(:status)
+    assert_empty ProjectExternalSoftwareRecord.all
+    alias_record = ExternalSoftwareRecord.find_by!(identifier: "SCR_016578")
+    assert_nil alias_record.next_discovery_at
+    assert_equal "SCR_004630", alias_record.metadata.dig("item", "identifier")
+    assert_equal "https://scicrunch.org/resolver/SCR_004630.json", alias_record.collection_url
+  end
+
+  test "verified software aliases refresh once and only canonical records attach to projects" do
+    @rrid["SCR_015687"]["item"]["alternateIdentifiers"] = [{ "identifier" => "SCR_016578" }]
+    redirect = rrid_record("SCR_016578", status: 302, body: {}, headers: { "Location" => "/resolver/SCR_015687.json" })
+    rrid_record("SCR_015687")
+    stale_alias = ExternalSoftwareRecord.create!(source: "rrid", identifier: "SCR_016578", next_refresh_at: 1.day.ago)
+    @project.project_external_software_records.create!(external_software_record: stale_alias,
+      relationship: "source_code_repository", match_status: "matched")
+    before = @project.attributes
+    sync_rrid(%w[SCR_016578 SCR_015687])
+    assert_equal "SCR_015687", @project.external_software_records.sole.identifier
+    assert_equal @rrid["SCR_015687"], stale_alias.reload.metadata
+    assert_equal 1, @project.project_external_software_records.registry_references.size
+    assert_equal [["rrid", 1]], ProjectExternalSoftwareRecord.scientific_source_counts
+    assert_equal before, @project.reload.attributes
+    sync_rrid(["SCR_016578"])
+    assert_requested redirect, times: 1
+  end
+
+  test "redirects cannot change host protocol identity or accept an undeclared alias" do
+    locations = ["https://example.org/resolver/SCR_015687.json", "http://scicrunch.org/resolver/SCR_015687.json",
+      "https://scicrunch.org/resolver/SCR_015687.json?secret=x", "/resolver/SCR_000000.json", "/resolver/SCR_016578.json"]
+    locations.each do |location|
+      expire_rrid
+      rrid_record("SCR_016578", status: 302, body: {}, headers: { "Location" => location })
+      error = assert_raises(RridClient::Error) { sync_rrid(["SCR_016578"]) }
+      assert_includes error.message, "SCR_016578"
+    end
+    expire_rrid
+    rrid_record("SCR_016578", status: 302, body: {}, headers: { "Location" => "/resolver/SCR_015687.json" })
+    rrid_record("SCR_015687")
+    error = assert_raises(RridClient::Error) { sync_rrid(["SCR_016578"]) }
+    assert_equal "Unverified RRID redirect from SCR_016578 to SCR_015687", error.message
+    assert_empty ProjectExternalSoftwareRecord.all
+    assert_not_requested :any, /example.org/
+  end
+
+  test "a malformed record does not prevent later valid records in the batch from being saved" do
+    rrid_record("SCR_026162", body: {})
+    rrid_record("SCR_015687")
+    error = assert_raises(RridClient::Error) { sync_rrid(%w[SCR_026162 SCR_015687]) }
+    assert_equal "Invalid RRID response for SCR_026162", error.message
+    assert_equal "error", ExternalSoftwareRecord.find_by!(identifier: "SCR_026162").status
+    assert_equal "ok", @project.external_software_records.sole.status
+    assert_equal "SCR_015687", @project.external_software_records.sole.identifier
+  end
+
+  test "canonical import and alias completion roll back together" do
+    @rrid["SCR_015687"]["item"]["alternateIdentifiers"] = [{ "identifier" => "SCR_016578" }]
+    rrid_record("SCR_016578", status: 302, body: {}, headers: { "Location" => "/resolver/SCR_015687.json" })
+    rrid_record("SCR_015687")
+    RridImporter.any_instance.stubs(:persist_alias).raises(RuntimeError, "interrupted")
+    assert_raises(RuntimeError) { sync_rrid(["SCR_016578"]) }
+    assert_empty ExternalSoftwareRecord.all
+    assert_empty ProjectExternalSoftwareRecord.all
+  end
 end

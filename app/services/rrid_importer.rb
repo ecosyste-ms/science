@@ -15,18 +15,39 @@ class RridImporter < ExternalSoftwareImporter
     cached = ExternalSoftwareRecord.where(source: SOURCE, identifier: ids)
       .pluck(:identifier, :next_refresh_at).to_h
     records = []
+    aliases = {}
+    failures = []
     ids.each do |id|
       next if cached[id] && cached[id] > started_at
       begin
-        records << RridClient.new.record(id)
+        record = RridClient.new.record(id)
+        records << record
+        aliases[id] = record if RridClient.identifier(record.dig("item", "identifier")) != id
       rescue RridClient::Error => error
         retry_at = error.is_a?(RridClient::RateLimited) ? error.retry_at : 1.hour.from_now
         record_failure(id, error, started_at, retry_at)
-        raise
+        raise if error.is_a?(RridClient::RateLimited)
+        failures << error
       end
     end
+    raise failures.first if failures.any?
   ensure
-    sync_page(records, started_at: started_at) if records&.any?
+    if records&.any?
+      ExternalSoftwareRecord.transaction do
+        sync_page(records.uniq { |record| record.dig("item", "identifier") }, started_at: started_at)
+        aliases.each { |id, record| persist_alias(id, record, started_at) }
+      end
+    end
+  end
+
+  def persist_alias(id, entity, started_at)
+    record = record_for(id, started_at)
+    record.with_lock do
+      next if record.attempted_at && record.attempted_at > started_at
+      record.update!(metadata: entity, status: "ok", retrieved_at: started_at, attempted_at: started_at,
+        last_error: nil, next_refresh_at: 30.days.from_now, collection_url: collection_url(entity), next_discovery_at: nil)
+      record.project_external_software_records.delete_all
+    end
   end
 
   def sync_page(records, started_at: Time.current)
