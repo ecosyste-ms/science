@@ -322,7 +322,7 @@ class ImportWikidataWorkerTest < ActiveSupport::TestCase
     assert_empty ImportWikidataWorker.jobs
     assert_not_requested :any, /wikidata.org/
     cron = JSON.parse(Rails.root.join("app.json").read).fetch("cron")
-    assert_includes cron, { "command" => "bundle exec rake wikidata:resume", "schedule" => "*/10 * * * *" }
+    assert_includes cron, { "command" => "bundle exec rake wikidata:resume wikidata:refresh", "schedule" => "*/10 * * * *" }
   end
 
   test "invalid parameters and attempts to move an active cursor are rejected" do

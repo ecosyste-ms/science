@@ -73,7 +73,7 @@
       "schedule": "5 * * * *"
     },
     {
-      "command": "bundle exec rake wikidata:resume",
+      "command": "bundle exec rake wikidata:resume wikidata:refresh",
       "schedule": "*/10 * * * *"
     },
     {
