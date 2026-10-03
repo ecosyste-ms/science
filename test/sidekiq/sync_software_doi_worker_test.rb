@@ -43,6 +43,61 @@ class SyncSoftwareDoiWorkerTest < ActiveSupport::TestCase
     assert_equal 1, ProjectExternalSoftwareRecord.count
   end
 
+  test "unclassified DataCite records are stored without software links and the batch continues" do
+    id = "10.7488/era/4167"
+    following = "10.6084/m9.figshare.9577868"
+    project = doi_project(doi: id)
+    following_project = doi_project(url: "https://github.com/example/following", doi: following)
+    resource = JSON.parse(Rails.root.join("test/fixtures/files/software_doi_datacite_unclassified.json").read)
+    datacite_record(id, body: { data: resource })
+    datacite_record(following)
+
+    sync_dois([id, following])
+
+    record = ExternalSoftwareRecord.find_by!(source: "doi", identifier: id)
+    assert_equal "ok", record.status
+    assert_nil record.last_error
+    assert_nil record.concept_identifier
+    assert_equal resource, record.metadata["datacite"]
+    assert_in_delta 30.days.from_now.to_f, record.next_refresh_at.to_f, 5
+    assert_empty project.external_software_records
+    assert_equal "ok", following_project.external_software_records.sole.status
+    assert_empty SyncSoftwareDoiWorker.jobs
+  end
+
+  test "missing or null Zenodo classification does not fetch Zenodo or establish software links" do
+    id = "10.5281/zenodo.15878535"
+    project = doi_project(doi: id)
+    [nil, :missing].each do |classification|
+      expire_dois
+      types = @datacite[id]["attributes"]["types"]
+      types["resourceTypeGeneral"] = classification
+      types.delete("resourceTypeGeneral") if classification == :missing
+      datacite_record(id)
+
+      sync_dois([id])
+
+      assert_equal "ok", ExternalSoftwareRecord.find_by!(source: "doi", identifier: id).status
+      assert_empty project.external_software_records
+    end
+    assert_not_requested :any, /zenodo.org/
+  end
+
+  test "malformed DataCite classification remains an error" do
+    id = "10.6084/m9.figshare.9577868"
+    doi_project(doi: id)
+    [false, 123, [], {}].each do |classification|
+      expire_dois
+      @datacite[id]["attributes"]["types"]["resourceTypeGeneral"] = classification
+      datacite_record(id)
+
+      assert_raises(SoftwareDoiClient::Error) { sync_dois([id]) }
+
+      assert_equal "error", ExternalSoftwareRecord.find_by!(source: "doi", identifier: id).status
+      assert_empty ProjectExternalSoftwareRecord.all
+    end
+  end
+
   test "publication and stale search seeds never establish software identity" do
     id = "10.6084/m9.figshare.9577868"
     projects = [

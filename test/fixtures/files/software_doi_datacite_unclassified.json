@@ -1,0 +1,204 @@
+{
+  "id": "10.7488/era/4167",
+  "type": "dois",
+  "attributes": {
+    "doi": "10.7488/era/4167",
+    "prefix": "10.7488",
+    "suffix": "era/4167",
+    "identifiers": [
+      {
+        "identifier": "https://hdl.handle.net/1842/41435",
+        "identifierType": "uri"
+      },
+      {
+        "identifier": "https://github.com/DisneyHogg/Riemann_Surfaces_and_Monopoles",
+        "identifierType": "uri"
+      }
+    ],
+    "alternateIdentifiers": [
+      {
+        "alternateIdentifierType": "uri",
+        "alternateIdentifier": "https://hdl.handle.net/1842/41435"
+      },
+      {
+        "alternateIdentifierType": "uri",
+        "alternateIdentifier": "https://github.com/DisneyHogg/Riemann_Surfaces_and_Monopoles"
+      }
+    ],
+    "creators": [
+      {
+        "name": "Disney-Hogg, Alec Linden",
+        "nameType": "Personal",
+        "givenName": "Alec Linden",
+        "familyName": "Disney-Hogg",
+        "affiliation": [],
+        "nameIdentifiers": []
+      }
+    ],
+    "titles": [
+      {
+        "title": "Symmetries of Riemann surfaces and magnetic monopoles"
+      }
+    ],
+    "publisher": {
+      "name": "The University of Edinburgh"
+    },
+    "container": {},
+    "publicationYear": 2024,
+    "subjects": [
+      {
+        "subject": "Riemann surfaces"
+      },
+      {
+        "subject": "Symmetries of Riemann Surfaces"
+      },
+      {
+        "subject": "Magnetic Monopoles"
+      },
+      {
+        "subject": "symmetry in elucidating structure"
+      },
+      {
+        "subject": "automorphisms of algebraic curves"
+      },
+      {
+        "subject": "Bring’s curve"
+      },
+      {
+        "subject": "constructing magnetic monopole solutions"
+      },
+      {
+        "subject": "Hitchin conditions"
+      }
+    ],
+    "contributors": [
+      {
+        "name": "University Of Edinburgh",
+        "affiliation": [],
+        "contributorType": "DataManager",
+        "nameIdentifiers": []
+      },
+      {
+        "name": "University Of Edinburgh",
+        "affiliation": [],
+        "contributorType": "HostingInstitution",
+        "nameIdentifiers": []
+      },
+      {
+        "name": "Braden, Harry",
+        "nameType": "Personal",
+        "givenName": "Harry",
+        "familyName": "Braden",
+        "affiliation": [],
+        "contributorType": "RelatedPerson",
+        "nameIdentifiers": []
+      },
+      {
+        "name": "Figueroa-O'Farrill, José",
+        "nameType": "Personal",
+        "givenName": "José",
+        "familyName": "Figueroa-O'Farrill",
+        "affiliation": [],
+        "contributorType": "RelatedPerson",
+        "nameIdentifiers": []
+      }
+    ],
+    "dates": [
+      {
+        "date": "2024-02-12",
+        "dateType": "Accepted"
+      },
+      {
+        "date": "2024-02-12",
+        "dateType": "Available"
+      },
+      {
+        "date": "2024-02-12",
+        "dateType": "Issued"
+      }
+    ],
+    "language": null,
+    "types": {
+      "ris": "GEN",
+      "bibtex": "misc",
+      "citeproc": "article",
+      "schemaOrg": "CreativeWork"
+    },
+    "relatedIdentifiers": [],
+    "relatedItems": [],
+    "sizes": [],
+    "formats": [],
+    "version": null,
+    "rightsList": [],
+    "descriptions": [
+      {
+        "description": "This thesis studies, broadly, the role of symmetry in elucidating structure. In particular, I investigate the role that automorphisms of algebraic curves play in three specific contexts; determining the orbits of theta characteristics, influencing the geometry of the highly-symmetric Bring’s curve, and in constructing magnetic monopole solutions. On theta characteristics, I show how to turn questions on the existence of invariant characteristics into questions of group cohomology, compute comprehensive tables of orbit decompositions for curves of genus 9 or less, and prove results on the existence of infinite families of curves with invariant characteristics. On Bring’s curve, I identify key points with geometric significance on the curve, completely determine the structure of the quotients by subgroups of automorphisms, finding new elliptic curves in the process, and identify the unique invariant theta characteristic on the curve. With respect to monopoles, I elucidate the role that the Hitchin conditions play in determining monopole spectral curves, the relation between these conditions and the automorphism group of the curve, and I develop the theory of computing Nahm data of symmetric monopoles. As such I classify all 3-monopoles whose Nahm data may be solved for in terms of elliptic functions.",
+        "descriptionType": "Abstract"
+      }
+    ],
+    "geoLocations": [],
+    "fundingReferences": [],
+    "xml": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHJlc291cmNlIHhtbG5zPSJodHRwOi8vZGF0YWNpdGUub3JnL3NjaGVtYS9rZXJuZWwtMyIgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSIgeG1sbnM6ZHNwYWNlPSJodHRwOi8vd3d3LmRzcGFjZS5vcmcveG1sbnMvZHNwYWNlL2RpbSIgeHNpOnNjaGVtYUxvY2F0aW9uPSJodHRwOi8vZGF0YWNpdGUub3JnL3NjaGVtYS9rZXJuZWwtMyBodHRwOi8vc2NoZW1hLmRhdGFjaXRlLm9yZy9tZXRhL2tlcm5lbC0zL21ldGFkYXRhLnhzZCI+CiAgPGlkZW50aWZpZXIgaWRlbnRpZmllclR5cGU9IkRPSSI+MTAuNzQ4OC9FUkEvNDE2NzwvaWRlbnRpZmllcj4KICA8Y3JlYXRvcnM+CiAgICA8Y3JlYXRvcj4KICAgICAgPGNyZWF0b3JOYW1lPkRpc25leS1Ib2dnLCBBbGVjIExpbmRlbjwvY3JlYXRvck5hbWU+CiAgICA8L2NyZWF0b3I+CiAgPC9jcmVhdG9ycz4KICA8dGl0bGVzPgogICAgPHRpdGxlPlN5bW1ldHJpZXMgb2YgUmllbWFubiBzdXJmYWNlcyBhbmQgbWFnbmV0aWMgbW9ub3BvbGVzPC90aXRsZT4KICA8L3RpdGxlcz4KICA8cHVibGlzaGVyPlRoZSBVbml2ZXJzaXR5IG9mIEVkaW5idXJnaDwvcHVibGlzaGVyPgogIDxwdWJsaWNhdGlvblllYXI+MjAyNDwvcHVibGljYXRpb25ZZWFyPgogIDxzdWJqZWN0cz4KICAgIDxzdWJqZWN0PlJpZW1hbm4gc3VyZmFjZXM8L3N1YmplY3Q+CiAgICA8c3ViamVjdD5TeW1tZXRyaWVzIG9mIFJpZW1hbm4gU3VyZmFjZXM8L3N1YmplY3Q+CiAgICA8c3ViamVjdD5NYWduZXRpYyBNb25vcG9sZXM8L3N1YmplY3Q+CiAgICA8c3ViamVjdD5zeW1tZXRyeSBpbiBlbHVjaWRhdGluZyBzdHJ1Y3R1cmU8L3N1YmplY3Q+CiAgICA8c3ViamVjdD5hdXRvbW9ycGhpc21zIG9mIGFsZ2VicmFpYyBjdXJ2ZXM8L3N1YmplY3Q+CiAgICA8c3ViamVjdD5CcmluZ+KAmXMgY3VydmU8L3N1YmplY3Q+CiAgICA8c3ViamVjdD5jb25zdHJ1Y3RpbmcgbWFnbmV0aWMgbW9ub3BvbGUgc29sdXRpb25zPC9zdWJqZWN0PgogICAgPHN1YmplY3Q+SGl0Y2hpbiBjb25kaXRpb25zPC9zdWJqZWN0PgogIDwvc3ViamVjdHM+CiAgPGNvbnRyaWJ1dG9ycz4KICAgIDxjb250cmlidXRvciBjb250cmlidXRvclR5cGU9IkRhdGFNYW5hZ2VyIj4KICAgICAgPGNvbnRyaWJ1dG9yTmFtZT5Vbml2ZXJzaXR5IG9mIEVkaW5idXJnaDwvY29udHJpYnV0b3JOYW1lPgogICAgPC9jb250cmlidXRvcj4KICAgIDxjb250cmlidXRvciBjb250cmlidXRvclR5cGU9Ikhvc3RpbmdJbnN0aXR1dGlvbiI+CiAgICAgIDxjb250cmlidXRvck5hbWU+VW5pdmVyc2l0eSBvZiBFZGluYnVyZ2g8L2NvbnRyaWJ1dG9yTmFtZT4KICAgIDwvY29udHJpYnV0b3I+CiAgICA8Y29udHJpYnV0b3IgY29udHJpYnV0b3JUeXBlPSJSZWxhdGVkUGVyc29uIj4KICAgICAgPGNvbnRyaWJ1dG9yTmFtZT5CcmFkZW4sIEhhcnJ5PC9jb250cmlidXRvck5hbWU+CiAgICA8L2NvbnRyaWJ1dG9yPgogICAgPGNvbnRyaWJ1dG9yIGNvbnRyaWJ1dG9yVHlwZT0iUmVsYXRlZFBlcnNvbiI+CiAgICAgIDxjb250cmlidXRvck5hbWU+RmlndWVyb2EtTydGYXJyaWxsLCBKb3PDqTwvY29udHJpYnV0b3JOYW1lPgogICAgPC9jb250cmlidXRvcj4KICA8L2NvbnRyaWJ1dG9ycz4KICA8ZGF0ZXM+CiAgICA8ZGF0ZSBkYXRlVHlwZT0iQWNjZXB0ZWQiPjIwMjQtMDItMTI8L2RhdGU+CiAgICA8ZGF0ZSBkYXRlVHlwZT0iQXZhaWxhYmxlIj4yMDI0LTAyLTEyPC9kYXRlPgogICAgPGRhdGUgZGF0ZVR5cGU9Iklzc3VlZCI+MjAyNC0wMi0xMjwvZGF0ZT4KICA8L2RhdGVzPgogIDxhbHRlcm5hdGVJZGVudGlmaWVycz4KICAgIDxhbHRlcm5hdGVJZGVudGlmaWVyIGFsdGVybmF0ZUlkZW50aWZpZXJUeXBlPSJ1cmkiPmh0dHBzOi8vaGRsLmhhbmRsZS5uZXQvMTg0Mi80MTQzNTwvYWx0ZXJuYXRlSWRlbnRpZmllcj4KICAgIDxhbHRlcm5hdGVJZGVudGlmaWVyIGFsdGVybmF0ZUlkZW50aWZpZXJUeXBlPSJ1cmkiPmh0dHBzOi8vZ2l0aHViLmNvbS9EaXNuZXlIb2dnL1JpZW1hbm5fU3VyZmFjZXNfYW5kX01vbm9wb2xlczwvYWx0ZXJuYXRlSWRlbnRpZmllcj4KICA8L2FsdGVybmF0ZUlkZW50aWZpZXJzPgogIDxkZXNjcmlwdGlvbnM+CiAgICA8ZGVzY3JpcHRpb24gZGVzY3JpcHRpb25UeXBlPSJBYnN0cmFjdCI+VGhpcyB0aGVzaXMgc3R1ZGllcywgYnJvYWRseSwgdGhlIHJvbGUgb2Ygc3ltbWV0cnkgaW4gZWx1Y2lkYXRpbmcgc3RydWN0dXJlLiBJbiBwYXJ0aWN1bGFyLCBJIGludmVzdGlnYXRlIHRoZSByb2xlIHRoYXQgYXV0b21vcnBoaXNtcyBvZiBhbGdlYnJhaWMgY3VydmVzIHBsYXkgaW4gdGhyZWUgc3BlY2lmaWMgY29udGV4dHM7IGRldGVybWluaW5nIHRoZSBvcmJpdHMgb2YgdGhldGEgY2hhcmFjdGVyaXN0aWNzLCBpbmZsdWVuY2luZyB0aGUgZ2VvbWV0cnkgb2YgdGhlIGhpZ2hseS1zeW1tZXRyaWMgQnJpbmfigJlzIGN1cnZlLCBhbmQgaW4gY29uc3RydWN0aW5nIG1hZ25ldGljIG1vbm9wb2xlIHNvbHV0aW9ucy4gT24gdGhldGEgY2hhcmFjdGVyaXN0aWNzLCBJIHNob3cgaG93IHRvIHR1cm4gcXVlc3Rpb25zIG9uIHRoZSBleGlzdGVuY2Ugb2YgaW52YXJpYW50IGNoYXJhY3RlcmlzdGljcyBpbnRvIHF1ZXN0aW9ucyBvZiBncm91cCBjb2hvbW9sb2d5LCBjb21wdXRlIGNvbXByZWhlbnNpdmUgdGFibGVzIG9mIG9yYml0IGRlY29tcG9zaXRpb25zIGZvciBjdXJ2ZXMgb2YgZ2VudXMgOSBvciBsZXNzLCBhbmQgcHJvdmUgcmVzdWx0cyBvbiB0aGUgZXhpc3RlbmNlIG9mIGluZmluaXRlIGZhbWlsaWVzIG9mIGN1cnZlcyB3aXRoIGludmFyaWFudCBjaGFyYWN0ZXJpc3RpY3MuIE9uIEJyaW5n4oCZcyBjdXJ2ZSwgSSBpZGVudGlmeSBrZXkgcG9pbnRzIHdpdGggZ2VvbWV0cmljIHNpZ25pZmljYW5jZSBvbiB0aGUgY3VydmUsIGNvbXBsZXRlbHkgZGV0ZXJtaW5lIHRoZSBzdHJ1Y3R1cmUgb2YgdGhlIHF1b3RpZW50cyBieSBzdWJncm91cHMgb2YgYXV0b21vcnBoaXNtcywgZmluZGluZyBuZXcgZWxsaXB0aWMgY3VydmVzIGluIHRoZSBwcm9jZXNzLCBhbmQgaWRlbnRpZnkgdGhlIHVuaXF1ZSBpbnZhcmlhbnQgdGhldGEgY2hhcmFjdGVyaXN0aWMgb24gdGhlIGN1cnZlLiBXaXRoIHJlc3BlY3QgdG8gbW9ub3BvbGVzLCBJIGVsdWNpZGF0ZSB0aGUgcm9sZSB0aGF0IHRoZSBIaXRjaGluIGNvbmRpdGlvbnMgcGxheSBpbiBkZXRlcm1pbmluZyBtb25vcG9sZSBzcGVjdHJhbCBjdXJ2ZXMsIHRoZSByZWxhdGlvbiBiZXR3ZWVuIHRoZXNlIGNvbmRpdGlvbnMgYW5kIHRoZSBhdXRvbW9ycGhpc20gZ3JvdXAgb2YgdGhlIGN1cnZlLCBhbmQgSSBkZXZlbG9wIHRoZSB0aGVvcnkgb2YgY29tcHV0aW5nIE5haG0gZGF0YSBvZiBzeW1tZXRyaWMgbW9ub3BvbGVzLiBBcyBzdWNoIEkgY2xhc3NpZnkgYWxsIDMtbW9ub3BvbGVzIHdob3NlIE5haG0gZGF0YSBtYXkgYmUgc29sdmVkIGZvciBpbiB0ZXJtcyBvZiBlbGxpcHRpYyBmdW5jdGlvbnMuPC9kZXNjcmlwdGlvbj4KICA8L2Rlc2NyaXB0aW9ucz4KPC9yZXNvdXJjZT4=",
+    "url": "https://era.ed.ac.uk/handle/1842/41435",
+    "contentUrl": null,
+    "metadataVersion": 1,
+    "schemaVersion": "http://datacite.org/schema/kernel-3",
+    "source": "mds",
+    "isActive": true,
+    "state": "findable",
+    "reason": null,
+    "viewCount": 0,
+    "viewsOverTime": [],
+    "downloadCount": 0,
+    "downloadsOverTime": [],
+    "referenceCount": 0,
+    "citationCount": 0,
+    "citationsOverTime": [],
+    "partCount": 0,
+    "partOfCount": 0,
+    "versionCount": 0,
+    "versionOfCount": 0,
+    "created": "2024-02-12T15:00:24.000Z",
+    "registered": "2024-02-12T15:00:54.000Z",
+    "published": "2024",
+    "updated": "2024-02-13T11:00:36.000Z"
+  },
+  "relationships": {
+    "client": {
+      "data": {
+        "id": "bl.ed",
+        "type": "clients"
+      }
+    },
+    "provider": {
+      "data": {
+        "id": "qsdg",
+        "type": "providers"
+      }
+    },
+    "media": {
+      "data": {
+        "id": "10.7488/era/4167",
+        "type": "media"
+      }
+    },
+    "references": {
+      "data": []
+    },
+    "citations": {
+      "data": []
+    },
+    "parts": {
+      "data": []
+    },
+    "partOf": {
+      "data": []
+    },
+    "versions": {
+      "data": []
+    },
+    "versionOf": {
+      "data": []
+    }
+  }
+}

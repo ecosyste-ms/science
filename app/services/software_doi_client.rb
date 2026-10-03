@@ -52,7 +52,7 @@ class SoftwareDoiClient
     resource = data["data"] if data.is_a?(Hash)
     raise Error, "Invalid DataCite DOI record" unless valid_datacite?(resource, id)
     result = { "doi" => id, "datacite" => resource }
-    if resource.dig("attributes", "types", "resourceTypeGeneral").casecmp?("software") && id.match?(%r{\A10\.5281/zenodo\.[1-9][0-9]*\z})
+    if resource.dig("attributes", "types", "resourceTypeGeneral").to_s.casecmp?("software") && id.match?(%r{\A10\.5281/zenodo\.[1-9][0-9]*\z})
       result["zenodo"] = zenodo_record(id)
       return { "doi" => id, "missing" => true } unless result["zenodo"]
       parents = resource["attributes"]["relatedIdentifiers"].filter_map do |item|
@@ -73,7 +73,9 @@ class SoftwareDoiClient
     attributes = resource["attributes"]
     return false unless self.class.identifier(resource["id"]) == id && self.class.identifier(attributes["doi"]) == id
     return false unless attributes["state"] == "findable" && attributes["isActive"] == true &&
-      attributes["types"].is_a?(Hash) && attributes["types"]["resourceTypeGeneral"].is_a?(String)
+      attributes["types"].is_a?(Hash)
+    classification = attributes["types"]["resourceTypeGeneral"]
+    return false unless classification.nil? || classification.is_a?(String)
     attributes["relatedIdentifiers"].is_a?(Array) && attributes["relatedIdentifiers"].all? do |item|
       item.is_a?(Hash) && %w[relatedIdentifier relatedIdentifierType relationType].all? { |key| item[key].is_a?(String) }
     end
