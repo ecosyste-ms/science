@@ -54,6 +54,7 @@ class SoftwareDoiClient
     result = { "doi" => id, "datacite" => resource }
     if resource.dig("attributes", "types", "resourceTypeGeneral").casecmp?("software") && id.match?(%r{\A10\.5281/zenodo\.[1-9][0-9]*\z})
       result["zenodo"] = zenodo_record(id)
+      return { "doi" => id, "missing" => true } unless result["zenodo"]
       parents = resource["attributes"]["relatedIdentifiers"].filter_map do |item|
         next unless item["relationType"].casecmp?("IsVersionOf") && item["relatedIdentifierType"].casecmp?("DOI")
         self.class.identifier(item["relatedIdentifier"])
@@ -93,6 +94,7 @@ class SoftwareDoiClient
         url = uri.to_s
         next
       end
+      return nil if response.status == 410
       raise Error, "Zenodo HTTP #{response.status}" unless response.status == 200
       record = parse(response)
       raise Error, "Invalid or mismatched Zenodo record" unless valid_zenodo?(record, id, url)

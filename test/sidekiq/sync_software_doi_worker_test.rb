@@ -163,6 +163,47 @@ class SyncSoftwareDoiWorkerTest < ActiveSupport::TestCase
     assert_empty project.project_external_software_records.registry_references
   end
 
+  test "deleted Zenodo records hide references and preserve metadata while the batch continues" do
+    id = "10.5281/zenodo.15878535"
+    following = "10.6084/m9.figshare.9577868"
+    project = doi_project(doi: id)
+    doi_record(id)
+    sync_dois([id])
+    saved = project.external_software_records.sole
+    before = saved.attributes.slice("metadata", "retrieved_at", "collection_url", "concept_identifier")
+    expire_dois
+    stub_request(:get, "https://zenodo.org/api/records/15878535")
+      .to_return(status: 410, body: { status: 410, message: "Record deleted", tombstone: { is_visible: true } }.to_json)
+    datacite_record(following)
+
+    sync_dois([id, following])
+
+    assert_equal "missing", saved.reload.status
+    assert_nil saved.last_error
+    assert_equal before, saved.attributes.slice(*before.keys)
+    assert_in_delta 7.days.from_now.to_f, saved.next_refresh_at.to_f, 5
+    assert_empty project.project_external_software_records.registry_references
+    assert_equal "ok", ExternalSoftwareRecord.find_by!(identifier: following).status
+    assert_empty SyncSoftwareDoiWorker.jobs
+  end
+
+  test "a new Zenodo concept redirected to a deleted record is stored as missing" do
+    id = "10.5281/zenodo.596036"
+    project = doi_project(doi: id)
+    doi_record(id)
+    stub_request(:get, "https://zenodo.org/api/records/19636730")
+      .to_return(status: 410, body: { status: 410, message: "Record deleted" }.to_json)
+
+    sync_dois([id])
+
+    record = ExternalSoftwareRecord.find_by!(source: "doi", identifier: id)
+    assert_equal "missing", record.status
+    assert_nil record.last_error
+    assert_nil record.retrieved_at
+    assert_empty project.external_software_records
+    assert_empty SyncSoftwareDoiWorker.jobs
+  end
+
   test "rate limits retain partial batches and delay jobs with separate service cooldowns" do
     first = "10.6084/m9.figshare.9577868"
     second = "10.5281/zenodo.15878535"
