@@ -32,7 +32,7 @@ jobs:
         run: sudo apt-get install libpq-dev libidn11-dev
       - name: Install Brief
         run: |
-          curl --fail --location https://github.com/git-pkgs/brief/releases/download/v0.12.1/brief_0.12.1_linux_amd64.tar.gz | sudo tar -xz -C /usr/local/bin brief
+          curl --fail --location https://github.com/git-pkgs/brief/releases/download/v0.14.0/brief_0.14.0_linux_amd64.tar.gz | sudo tar -xz -C /usr/local/bin brief
           brief --version
       - name: Install swhid
         run: |
