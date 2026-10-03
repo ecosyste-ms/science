@@ -236,7 +236,7 @@ class SyncSoftwareDoiWorkerTest < ActiveSupport::TestCase
     assert_empty hidden.external_software_records
   end
 
-  test "invalid responses and mismatched version families retain successful evidence" do
+  test "invalid responses retain successful evidence" do
     id = "10.5281/zenodo.15878535"
     project = doi_project(doi: id)
     doi_record(id)
@@ -256,11 +256,143 @@ class SyncSoftwareDoiWorkerTest < ActiveSupport::TestCase
     stub_request(:get, "https://zenodo.org/api/records/15878535").to_return(status: 500, body: "unavailable")
     assert_raises(SoftwareDoiClient::Error) { sync_dois([id]) }
     assert_equal before, saved.reload.attributes.slice(*before.keys)
-    expire_dois
+  end
+
+  test "deposited DataCite relationships do not override the validated Zenodo concept" do
+    id = "10.5281/zenodo.15878535"
+    project = doi_project(doi: id)
     @datacite[id]["attributes"]["relatedIdentifiers"] = [{ "relationType" => "IsVersionOf", "relatedIdentifierType" => "DOI", "relatedIdentifier" => "10.5281/zenodo.999" }]
     doi_record(id)
-    assert_raises(SoftwareDoiClient::Error) { sync_dois([id]) }
-    assert_equal before, saved.reload.attributes.slice(*before.keys)
+
+    sync_dois([id])
+
+    record = project.external_software_records.sole
+    assert_equal "ok", record.status
+    assert_equal "10.5281/zenodo.3874237", record.concept_identifier
+    assert_equal @datacite[id], record.metadata["datacite"]
+    assert_equal "software_version", project.project_external_software_records.sole.relationship
+  end
+
+  test "blank and multiple deposited version relationships retain software records and repositories" do
+    entities = JSON.parse(Rails.root.join("test/fixtures/files/software_doi_relationships.json").read)
+    projects = [doi_project(url: "https://github.com/MUON-CFD/SOMAR"), doi_project(url: "https://github.com/rraadd88/beditor")]
+    entities.each do |entity|
+      datacite_record(entity["doi"], body: { data: entity["datacite"] })
+      stub_request(:get, "https://zenodo.org/api/records/#{entity['zenodo']['id']}").to_return(body: entity["zenodo"].to_json)
+    end
+
+    sync_dois(entities.pluck("doi"))
+
+    projects.zip(entities).each do |project, entity|
+      record = project.external_software_records.sole
+      assert_equal "ok", record.status
+      assert_nil record.last_error
+      assert_equal entity, record.metadata
+      assert_in_delta 30.days.from_now.to_f, record.next_refresh_at.to_f, 5
+    end
+    assert_nil projects.first.external_software_records.sole.concept_identifier
+    assert_equal "software", projects.first.project_external_software_records.sole.relationship
+    assert_equal "10.5281/zenodo.10648263", projects.last.external_software_records.sole.concept_identifier
+    assert_equal "software_version", projects.last.project_external_software_records.sole.relationship
+  end
+
+  test "unusable optional relationship collections preserve exact DOI matches and raw metadata" do
+    id = "10.5281/zenodo.15878535"
+    project = doi_project(doi: id)
+    [nil, :missing, {}, "invalid", false].each do |relationships|
+      expire_dois
+      @datacite[id]["attributes"]["relatedIdentifiers"] = relationships
+      @zenodo[id]["metadata"]["related_identifiers"] = relationships
+      if relationships == :missing
+        @datacite[id]["attributes"].delete("relatedIdentifiers")
+        @zenodo[id]["metadata"].delete("related_identifiers")
+      end
+      doi_record(id)
+
+      sync_dois([id])
+
+      record = project.external_software_records.sole
+      assert_equal "ok", record.status
+      assert_equal @datacite[id], record.metadata["datacite"]
+      assert_equal @zenodo[id], record.metadata["zenodo"]
+      assert_equal "10.5281/zenodo.3874237", record.concept_identifier
+    end
+  end
+
+  test "malformed relationship entries cannot supply links or hide valid relationships" do
+    id = "10.5281/zenodo.15878535"
+    datacite_project = doi_project(url: "https://github.com/example/datacite")
+    zenodo_project = doi_project(url: "https://github.com/example/zenodo")
+    unrelated = doi_project(url: "https://github.com/example/unrelated")
+    @datacite[id]["attributes"]["relatedIdentifiers"] = [nil, false, [], "invalid", {},
+      { "relatedIdentifier" => unrelated.url, "relatedIdentifierType" => [], "relationType" => "IsSupplementTo" },
+      { "relatedIdentifier" => unrelated.url, "relatedIdentifierType" => "URL", "relationType" => nil },
+      { "relatedIdentifier" => [], "relatedIdentifierType" => "URL", "relationType" => "IsSupplementTo" },
+      { "relatedIdentifier" => "", "relatedIdentifierType" => "DOI", "relationType" => "IsVersionOf" },
+      { "relatedIdentifier" => datacite_project.url, "relatedIdentifierType" => "URL", "relationType" => "IsSupplementTo" }]
+    @zenodo[id]["metadata"]["related_identifiers"] = [nil, false, [], "invalid", {},
+      { "identifier" => unrelated.url, "scheme" => [], "relation" => "isSupplementTo" },
+      { "identifier" => unrelated.url, "scheme" => "url", "relation" => nil },
+      { "identifier" => [], "scheme" => "url", "relation" => "isSupplementTo" },
+      { "identifier" => zenodo_project.url, "scheme" => "url", "relation" => "isSupplementTo" }]
+    doi_record(id)
+
+    sync_dois([id])
+
+    record = ExternalSoftwareRecord.find_by!(source: "doi", identifier: id)
+    assert_equal "ok", record.status
+    assert_equal @datacite[id], record.metadata["datacite"]
+    assert_equal @zenodo[id], record.metadata["zenodo"]
+    assert_equal [datacite_project.id, zenodo_project.id].sort, record.projects.pluck(:id).sort
+    assert_empty unrelated.external_software_records
+  end
+
+  test "DataCite family inference ignores malformed and ambiguous DOI relationships" do
+    id = "10.6084/m9.figshare.9577868"
+    parent = "10.6084/m9.figshare.12345"
+    project = doi_project(doi: id)
+    malformed = [nil, {}, { "relationType" => "HasVersion" },
+      { "relatedIdentifier" => "invalid", "relatedIdentifierType" => "DOI", "relationType" => "HasVersion" },
+      { "relatedIdentifier" => "", "relatedIdentifierType" => "DOI", "relationType" => "IsVersionOf" }]
+    version = { "relatedIdentifier" => parent, "relatedIdentifierType" => "DOI", "relationType" => "IsVersionOf" }
+    [[malformed, nil, "software"],
+      [malformed + [version], parent, "software_version"],
+      [malformed + [version, version.merge("relatedIdentifier" => "10.6084/m9.figshare.67890")], nil, "software"],
+      [malformed + [version.merge("relationType" => "HasVersion")], nil, "software_concept"]].each do |relations, concept, relationship|
+      expire_dois
+      @datacite[id]["attributes"]["relatedIdentifiers"] = relations
+      datacite_record(id)
+
+      sync_dois([id])
+
+      record = project.external_software_records.sole
+      assert_equal "ok", record.status
+      concept ? assert_equal(concept, record.concept_identifier) : assert_nil(record.concept_identifier)
+      assert_equal relationship, project.project_external_software_records.sole.relationship
+    end
+  end
+
+  test "failed records preserve evidence and do not prevent the rest of the batch from syncing" do
+    id = "10.5281/zenodo.15878535"
+    following = "10.6084/m9.figshare.9577868"
+    project = doi_project(doi: id)
+    doi_record(id)
+    sync_dois([id])
+    saved = project.external_software_records.sole
+    before = saved.attributes.slice("metadata", "retrieved_at", "concept_identifier")
+    expire_dois
+    datacite_record(id, body: {})
+    following_request = datacite_record(following)
+
+    error = assert_raises(SoftwareDoiClient::Error) { sync_dois([id, following]) }
+
+    assert_equal "#{id}: Invalid DataCite DOI record", error.message
+    assert_equal "error", saved.reload.status
+    assert_equal error.message, saved.last_error
+    assert_equal before, saved.attributes.slice(*before.keys)
+    assert_equal 1, project.project_external_software_records.registry_references.size
+    assert_equal "ok", ExternalSoftwareRecord.find_by!(source: "doi", identifier: following).status
+    assert_requested following_request, times: 1
   end
 
   test "Zenodo redirects are restricted to matching published records on the same service" do
@@ -338,13 +470,16 @@ class SyncSoftwareDoiWorkerTest < ActiveSupport::TestCase
   test "rate limits retain partial batches and delay jobs with separate service cooldowns" do
     first = "10.6084/m9.figshare.9577868"
     second = "10.5281/zenodo.15878535"
+    third = "10.5281/zenodo.596036"
     datacite_record(first)
     datacite_record(second)
     request = stub_request(:get, "https://zenodo.org/api/records/15878535").to_return(status: 429, headers: { "Retry-After" => "600" })
-    sync_dois([first, second])
+    sync_dois([first, second, third])
     assert_equal "ok", ExternalSoftwareRecord.find_by!(identifier: first).status
     assert_equal "error", ExternalSoftwareRecord.find_by!(identifier: second).status
     assert SyncSoftwareDoiWorker.jobs.sole["at"] >= 9.minutes.from_now.to_f
+    assert_equal [[first, second, third]], SyncSoftwareDoiWorker.jobs.sole["args"]
+    assert_not_requested :get, SoftwareDoiClient.collection_url(third)
     assert_raises(SoftwareDoiClient::RateLimited) { SoftwareDoiClient.new.record(second) }
     assert_equal first, SoftwareDoiClient.new.record(first)["doi"]
     assert_requested request, times: 1
@@ -364,7 +499,7 @@ class SyncSoftwareDoiWorkerTest < ActiveSupport::TestCase
     end)
     datacite_record(id)
     error = assert_raises(SoftwareDoiClient::Error) { sync_dois([id]) }
-    assert_equal "DOI has more than 100 candidate projects", error.message
+    assert_equal "#{id}: DOI has more than 100 candidate projects", error.message
     assert_equal "error", ExternalSoftwareRecord.sole.status
     assert_empty ProjectExternalSoftwareRecord.all
   end

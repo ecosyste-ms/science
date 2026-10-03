@@ -1,0 +1,630 @@
+[
+  {
+    "doi": "10.5281/zenodo.14609305",
+    "datacite": {
+      "id": "10.5281/zenodo.14609305",
+      "type": "dois",
+      "attributes": {
+        "doi": "10.5281/zenodo.14609305",
+        "prefix": "10.5281",
+        "suffix": "zenodo.14609305",
+        "identifiers": [
+          {
+            "identifier": "oai:zenodo.org:14609305",
+            "identifierType": "oai"
+          }
+        ],
+        "alternateIdentifiers": [
+          {
+            "alternateIdentifierType": "oai",
+            "alternateIdentifier": "oai:zenodo.org:14609305"
+          }
+        ],
+        "creators": [
+          {
+            "name": "Santilli, Edward",
+            "nameType": "Personal",
+            "givenName": "Edward",
+            "familyName": "Santilli",
+            "affiliation": [
+              {
+                "name": "Jefferson East Falls"
+              }
+            ],
+            "nameIdentifiers": [
+              {
+                "nameIdentifier": "0000-0001-7925-7252",
+                "nameIdentifierScheme": "ORCID"
+              }
+            ]
+          },
+          {
+            "name": "Scotti, Alberto",
+            "nameType": "Personal",
+            "givenName": "Alberto",
+            "familyName": "Scotti",
+            "affiliation": [
+              {
+                "name": "Arizona State University"
+              }
+            ],
+            "nameIdentifiers": [
+              {
+                "nameIdentifier": "0000-0001-8283-3070",
+                "nameIdentifierScheme": "ORCID"
+              }
+            ]
+          }
+        ],
+        "titles": [
+          {
+            "title": "The Stratified Ocean Model with Adaptive Refinement (SOMAR)"
+          }
+        ],
+        "publisher": {
+          "name": "Zenodo"
+        },
+        "container": {},
+        "publicationYear": 2025,
+        "subjects": [],
+        "contributors": [],
+        "dates": [
+          {
+            "date": "2025-01-07",
+            "dateType": "Issued"
+          }
+        ],
+        "language": null,
+        "types": {
+          "ris": "COMP",
+          "bibtex": "misc",
+          "citeproc": "article",
+          "schemaOrg": "SoftwareSourceCode",
+          "resourceType": "",
+          "resourceTypeGeneral": "Software"
+        },
+        "relatedIdentifiers": [
+          {
+            "relationType": "IsSupplementTo",
+            "relatedIdentifier": "https://github.com/MUON-CFD/SOMAR/tree/v2.0.0",
+            "resourceTypeGeneral": "Software",
+            "relatedIdentifierType": "URL"
+          },
+          {
+            "relationType": "IsVersionOf",
+            "relatedIdentifier": "",
+            "relatedIdentifierType": "DOI"
+          }
+        ],
+        "relatedItems": [],
+        "sizes": [],
+        "formats": [],
+        "version": "v2.0.0",
+        "rightsList": [
+          {
+            "rights": "GNU Lesser General Public License v2.1 only",
+            "rightsUri": "https://www.gnu.org/licenses/old-licenses/lgpl-2.1-standalone.html",
+            "schemeUri": "https://spdx.org/licenses/",
+            "rightsIdentifier": "lgpl-2.1",
+            "rightsIdentifierScheme": "SPDX"
+          }
+        ],
+        "descriptions": [
+          {
+            "description": "This is a pre-release version of SOMAR v2.0.0. It is the code that was used to run test cases for an upcoming paper.\n\nSummary of changes\n\nSOMAR v1.0.0 used cell-averaged state variables (for both the velocity and scalars), an approximate projection scheme, and a time-stepping method based on the works of Bell, Colella, and Glaz. Nonlinear advective fluxes were computed using Colella and Woodward's piecewise parabolic method and Saltzman's unsplit 3D assembly scheme. Also, topographies were handled using a non-orthogonal sigma-coordinate system. These choices raised a number of concerns.\n\n\n\n\nIncompressible flows are very naturally modeled using staggered meshes. Cell-centered velocity discretizations rely on approximate projections that have poor convergence and stability properties and fail to remove high-wavenumber irrotational flow components, both of which lead to instabilities when the flow is marginally resolved.\n\n\n\nThe time integration scheme of Bell, Collela, and Glaz has an $\\mathcal{O}(\\Delta t^2)$ local error in the velocity. After proceeding through $1/\\Delta t$ timesteps, diffusive errors appear, interfering with the operation of the turbulence model.\n\n\n\nThe piecewise parabolic method is an excellent method for modeling the nonlinear advection terms present in the Navier-Stokes equations, but we found that upwinding methods are not well-trusted by the community of turbulence modelers. Much of this distrust is warranted, as upwinding schemes are typically associated with limiters, artificial viscosity, and implicit LES schemes.\n\n\n\nNon-orthogonal coordinate systems have a number of disadvantages. With off-diagonal metric terms present, Laplacians have elevated condition numbers and more terms to compute. Poisson solvers are thus made considerably more expensive than their orthogonal counterparts -- about 5-8 times more expensive in our experience. Also, strongly non-orthogonal coordinates have been shown to incur first-order spatial errors. Worse of all, sigma coordinates are only useful when modeling simple, idealized terrain.\n\n\n\nTo address these issues, SOMARv2 uses Arakawa-C grids for the velocity and pressure with standard finite difference stencils. The advective forcing terms are computed in conservative form with fluxes generated using unbiased, fourth-order averaging stencils to re-center the velocity components where necessary. Time integration is accomplished with a globally third-order Runge-Kutta method with excellent stability properties and error control. (We will soon incorporate an immersed boundary method to model complex bathymetry without the need for a non-orthogonal coordinate system.)\n\nAll of these changes led to a more accurate fluid solver, whose AMR capabilities are significantly more robust. Second-order AMR solvers suffer from so-called ''mesh-imprinting errors'' when features that require fine-level discretization slip past the coarse-fine interface (CFI) and into the coarser level. These errors reveal themselves as large, first-order errors in the cells that abut the CFI. In SOMAR v1.0.0, subduing these errors required a great deal of care when choosing refinement criteria. SOMAR v2.0.0's use of Arakawa-C grids and higher-order temporal accuracy eliminates these errors, removing much of the ``art'' of choosing appropriate fine-level grids.",
+            "descriptionType": "Abstract"
+          },
+          {
+            "description": "If you use this software, please cite it using the metadata from this file.",
+            "descriptionType": "Other"
+          }
+        ],
+        "geoLocations": [],
+        "fundingReferences": [],
+        "xml": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHJlc291cmNlIHhtbG5zOnhzaT0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEtaW5zdGFuY2UiIHhtbG5zPSJodHRwOi8vZGF0YWNpdGUub3JnL3NjaGVtYS9rZXJuZWwtNCIgeHNpOnNjaGVtYUxvY2F0aW9uPSJodHRwOi8vZGF0YWNpdGUub3JnL3NjaGVtYS9rZXJuZWwtNCBodHRwOi8vc2NoZW1hLmRhdGFjaXRlLm9yZy9tZXRhL2tlcm5lbC00L21ldGFkYXRhLnhzZCI+CiAgPGlkZW50aWZpZXIgaWRlbnRpZmllclR5cGU9IkRPSSI+MTAuNTI4MS9aRU5PRE8uMTQ2MDkzMDU8L2lkZW50aWZpZXI+CiAgPGNyZWF0b3JzPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPlNhbnRpbGxpLCBFZHdhcmQ8L2NyZWF0b3JOYW1lPgogICAgICA8Z2l2ZW5OYW1lPkVkd2FyZDwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5TYW50aWxsaTwvZmFtaWx5TmFtZT4KICAgICAgPG5hbWVJZGVudGlmaWVyIG5hbWVJZGVudGlmaWVyU2NoZW1lPSJPUkNJRCIgc2NoZW1lVVJJPSIiPjAwMDAtMDAwMS03OTI1LTcyNTI8L25hbWVJZGVudGlmaWVyPgogICAgICA8YWZmaWxpYXRpb24+SmVmZmVyc29uIEVhc3QgRmFsbHM8L2FmZmlsaWF0aW9uPgogICAgPC9jcmVhdG9yPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPlNjb3R0aSwgQWxiZXJ0bzwvY3JlYXRvck5hbWU+CiAgICAgIDxnaXZlbk5hbWU+QWxiZXJ0bzwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5TY290dGk8L2ZhbWlseU5hbWU+CiAgICAgIDxuYW1lSWRlbnRpZmllciBuYW1lSWRlbnRpZmllclNjaGVtZT0iT1JDSUQiIHNjaGVtZVVSST0iIj4wMDAwLTAwMDEtODI4My0zMDcwPC9uYW1lSWRlbnRpZmllcj4KICAgICAgPGFmZmlsaWF0aW9uPkFyaXpvbmEgU3RhdGUgVW5pdmVyc2l0eTwvYWZmaWxpYXRpb24+CiAgICA8L2NyZWF0b3I+CiAgPC9jcmVhdG9ycz4KICA8dGl0bGVzPgogICAgPHRpdGxlPlRoZSBTdHJhdGlmaWVkIE9jZWFuIE1vZGVsIHdpdGggQWRhcHRpdmUgUmVmaW5lbWVudCAoU09NQVIpPC90aXRsZT4KICA8L3RpdGxlcz4KICA8cHVibGlzaGVyPlplbm9kbzwvcHVibGlzaGVyPgogIDxwdWJsaWNhdGlvblllYXI+MjAyNTwvcHVibGljYXRpb25ZZWFyPgogIDxyZXNvdXJjZVR5cGUgcmVzb3VyY2VUeXBlR2VuZXJhbD0iU29mdHdhcmUiLz4KICA8ZGF0ZXM+CiAgICA8ZGF0ZSBkYXRlVHlwZT0iSXNzdWVkIj4yMDI1LTAxLTA3PC9kYXRlPgogIDwvZGF0ZXM+CiAgPGFsdGVybmF0ZUlkZW50aWZpZXJzPgogICAgPGFsdGVybmF0ZUlkZW50aWZpZXIgYWx0ZXJuYXRlSWRlbnRpZmllclR5cGU9Im9haSI+b2FpOnplbm9kby5vcmc6MTQ2MDkzMDU8L2FsdGVybmF0ZUlkZW50aWZpZXI+CiAgPC9hbHRlcm5hdGVJZGVudGlmaWVycz4KICA8cmVsYXRlZElkZW50aWZpZXJzPgogICAgPHJlbGF0ZWRJZGVudGlmaWVyIHJlbGF0ZWRJZGVudGlmaWVyVHlwZT0iVVJMIiByZWxhdGlvblR5cGU9IklzU3VwcGxlbWVudFRvIiByZXNvdXJjZVR5cGVHZW5lcmFsPSJTb2Z0d2FyZSI+aHR0cHM6Ly9naXRodWIuY29tL01VT04tQ0ZEL1NPTUFSL3RyZWUvdjIuMC4wPC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJJc1ZlcnNpb25PZiIvPgogIDwvcmVsYXRlZElkZW50aWZpZXJzPgogIDxzaXplcy8+CiAgPGZvcm1hdHMvPgogIDx2ZXJzaW9uPnYyLjAuMDwvdmVyc2lvbj4KICA8cmlnaHRzTGlzdD4KICAgIDxyaWdodHMgcmlnaHRzVVJJPSJodHRwczovL3d3dy5nbnUub3JnL2xpY2Vuc2VzL29sZC1saWNlbnNlcy9sZ3BsLTIuMS1zdGFuZGFsb25lLmh0bWwiIHJpZ2h0c0lkZW50aWZpZXI9ImxncGwtMi4xLW9ubHkiIHJpZ2h0c0lkZW50aWZpZXJTY2hlbWU9InNwZHgiPkdOVSBMZXNzZXIgR2VuZXJhbCBQdWJsaWMgTGljZW5zZSB2Mi4xIG9ubHk8L3JpZ2h0cz4KICA8L3JpZ2h0c0xpc3Q+CiAgPGRlc2NyaXB0aW9ucz4KICAgIDxkZXNjcmlwdGlvbiBkZXNjcmlwdGlvblR5cGU9IkFic3RyYWN0Ij5UaGlzIGlzIGEgcHJlLXJlbGVhc2UgdmVyc2lvbiBvZiBTT01BUiB2Mi4wLjAuIEl0IGlzIHRoZSBjb2RlIHRoYXQgd2FzIHVzZWQgdG8gcnVuIHRlc3QgY2FzZXMgZm9yIGFuIHVwY29taW5nIHBhcGVyLgoKU3VtbWFyeSBvZiBjaGFuZ2VzCgpTT01BUiB2MS4wLjAgdXNlZCBjZWxsLWF2ZXJhZ2VkIHN0YXRlIHZhcmlhYmxlcyAoZm9yIGJvdGggdGhlIHZlbG9jaXR5IGFuZCBzY2FsYXJzKSwgYW4gYXBwcm94aW1hdGUgcHJvamVjdGlvbiBzY2hlbWUsIGFuZCBhIHRpbWUtc3RlcHBpbmcgbWV0aG9kIGJhc2VkIG9uIHRoZSB3b3JrcyBvZiBCZWxsLCBDb2xlbGxhLCBhbmQgR2xhei4gTm9ubGluZWFyIGFkdmVjdGl2ZSBmbHV4ZXMgd2VyZSBjb21wdXRlZCB1c2luZyBDb2xlbGxhIGFuZCBXb29kd2FyZCdzIHBpZWNld2lzZSBwYXJhYm9saWMgbWV0aG9kIGFuZCBTYWx0em1hbidzIHVuc3BsaXQgM0QgYXNzZW1ibHkgc2NoZW1lLiBBbHNvLCB0b3BvZ3JhcGhpZXMgd2VyZSBoYW5kbGVkIHVzaW5nIGEgbm9uLW9ydGhvZ29uYWwgc2lnbWEtY29vcmRpbmF0ZSBzeXN0ZW0uIFRoZXNlIGNob2ljZXMgcmFpc2VkIGEgbnVtYmVyIG9mIGNvbmNlcm5zLgoKCgoKSW5jb21wcmVzc2libGUgZmxvd3MgYXJlIHZlcnkgbmF0dXJhbGx5IG1vZGVsZWQgdXNpbmcgc3RhZ2dlcmVkIG1lc2hlcy4gQ2VsbC1jZW50ZXJlZCB2ZWxvY2l0eSBkaXNjcmV0aXphdGlvbnMgcmVseSBvbiBhcHByb3hpbWF0ZSBwcm9qZWN0aW9ucyB0aGF0IGhhdmUgcG9vciBjb252ZXJnZW5jZSBhbmQgc3RhYmlsaXR5IHByb3BlcnRpZXMgYW5kIGZhaWwgdG8gcmVtb3ZlIGhpZ2gtd2F2ZW51bWJlciBpcnJvdGF0aW9uYWwgZmxvdyBjb21wb25lbnRzLCBib3RoIG9mIHdoaWNoIGxlYWQgdG8gaW5zdGFiaWxpdGllcyB3aGVuIHRoZSBmbG93IGlzIG1hcmdpbmFsbHkgcmVzb2x2ZWQuCgoKClRoZSB0aW1lIGludGVncmF0aW9uIHNjaGVtZSBvZiBCZWxsLCBDb2xsZWxhLCBhbmQgR2xheiBoYXMgYW4gJFxtYXRoY2Fse099KFxEZWx0YSB0XjIpJCBsb2NhbCBlcnJvciBpbiB0aGUgdmVsb2NpdHkuIEFmdGVyIHByb2NlZWRpbmcgdGhyb3VnaCAkMS9cRGVsdGEgdCQgdGltZXN0ZXBzLCBkaWZmdXNpdmUgZXJyb3JzIGFwcGVhciwgaW50ZXJmZXJpbmcgd2l0aCB0aGUgb3BlcmF0aW9uIG9mIHRoZSB0dXJidWxlbmNlIG1vZGVsLgoKCgpUaGUgcGllY2V3aXNlIHBhcmFib2xpYyBtZXRob2QgaXMgYW4gZXhjZWxsZW50IG1ldGhvZCBmb3IgbW9kZWxpbmcgdGhlIG5vbmxpbmVhciBhZHZlY3Rpb24gdGVybXMgcHJlc2VudCBpbiB0aGUgTmF2aWVyLVN0b2tlcyBlcXVhdGlvbnMsIGJ1dCB3ZSBmb3VuZCB0aGF0IHVwd2luZGluZyBtZXRob2RzIGFyZSBub3Qgd2VsbC10cnVzdGVkIGJ5IHRoZSBjb21tdW5pdHkgb2YgdHVyYnVsZW5jZSBtb2RlbGVycy4gTXVjaCBvZiB0aGlzIGRpc3RydXN0IGlzIHdhcnJhbnRlZCwgYXMgdXB3aW5kaW5nIHNjaGVtZXMgYXJlIHR5cGljYWxseSBhc3NvY2lhdGVkIHdpdGggbGltaXRlcnMsIGFydGlmaWNpYWwgdmlzY29zaXR5LCBhbmQgaW1wbGljaXQgTEVTIHNjaGVtZXMuCgoKCk5vbi1vcnRob2dvbmFsIGNvb3JkaW5hdGUgc3lzdGVtcyBoYXZlIGEgbnVtYmVyIG9mIGRpc2FkdmFudGFnZXMuIFdpdGggb2ZmLWRpYWdvbmFsIG1ldHJpYyB0ZXJtcyBwcmVzZW50LCBMYXBsYWNpYW5zIGhhdmUgZWxldmF0ZWQgY29uZGl0aW9uIG51bWJlcnMgYW5kIG1vcmUgdGVybXMgdG8gY29tcHV0ZS4gUG9pc3NvbiBzb2x2ZXJzIGFyZSB0aHVzIG1hZGUgY29uc2lkZXJhYmx5IG1vcmUgZXhwZW5zaXZlIHRoYW4gdGhlaXIgb3J0aG9nb25hbCBjb3VudGVycGFydHMgLS0gYWJvdXQgNS04IHRpbWVzIG1vcmUgZXhwZW5zaXZlIGluIG91ciBleHBlcmllbmNlLiBBbHNvLCBzdHJvbmdseSBub24tb3J0aG9nb25hbCBjb29yZGluYXRlcyBoYXZlIGJlZW4gc2hvd24gdG8gaW5jdXIgZmlyc3Qtb3JkZXIgc3BhdGlhbCBlcnJvcnMuIFdvcnNlIG9mIGFsbCwgc2lnbWEgY29vcmRpbmF0ZXMgYXJlIG9ubHkgdXNlZnVsIHdoZW4gbW9kZWxpbmcgc2ltcGxlLCBpZGVhbGl6ZWQgdGVycmFpbi4KCgoKVG8gYWRkcmVzcyB0aGVzZSBpc3N1ZXMsIFNPTUFSdjIgdXNlcyBBcmFrYXdhLUMgZ3JpZHMgZm9yIHRoZSB2ZWxvY2l0eSBhbmQgcHJlc3N1cmUgd2l0aCBzdGFuZGFyZCBmaW5pdGUgZGlmZmVyZW5jZSBzdGVuY2lscy4gVGhlIGFkdmVjdGl2ZSBmb3JjaW5nIHRlcm1zIGFyZSBjb21wdXRlZCBpbiBjb25zZXJ2YXRpdmUgZm9ybSB3aXRoIGZsdXhlcyBnZW5lcmF0ZWQgdXNpbmcgdW5iaWFzZWQsIGZvdXJ0aC1vcmRlciBhdmVyYWdpbmcgc3RlbmNpbHMgdG8gcmUtY2VudGVyIHRoZSB2ZWxvY2l0eSBjb21wb25lbnRzIHdoZXJlIG5lY2Vzc2FyeS4gVGltZSBpbnRlZ3JhdGlvbiBpcyBhY2NvbXBsaXNoZWQgd2l0aCBhIGdsb2JhbGx5IHRoaXJkLW9yZGVyIFJ1bmdlLUt1dHRhIG1ldGhvZCB3aXRoIGV4Y2VsbGVudCBzdGFiaWxpdHkgcHJvcGVydGllcyBhbmQgZXJyb3IgY29udHJvbC4gKFdlIHdpbGwgc29vbiBpbmNvcnBvcmF0ZSBhbiBpbW1lcnNlZCBib3VuZGFyeSBtZXRob2QgdG8gbW9kZWwgY29tcGxleCBiYXRoeW1ldHJ5IHdpdGhvdXQgdGhlIG5lZWQgZm9yIGEgbm9uLW9ydGhvZ29uYWwgY29vcmRpbmF0ZSBzeXN0ZW0uKQoKQWxsIG9mIHRoZXNlIGNoYW5nZXMgbGVkIHRvIGEgbW9yZSBhY2N1cmF0ZSBmbHVpZCBzb2x2ZXIsIHdob3NlIEFNUiBjYXBhYmlsaXRpZXMgYXJlIHNpZ25pZmljYW50bHkgbW9yZSByb2J1c3QuIFNlY29uZC1vcmRlciBBTVIgc29sdmVycyBzdWZmZXIgZnJvbSBzby1jYWxsZWQgJydtZXNoLWltcHJpbnRpbmcgZXJyb3JzJycgd2hlbiBmZWF0dXJlcyB0aGF0IHJlcXVpcmUgZmluZS1sZXZlbCBkaXNjcmV0aXphdGlvbiBzbGlwIHBhc3QgdGhlIGNvYXJzZS1maW5lIGludGVyZmFjZSAoQ0ZJKSBhbmQgaW50byB0aGUgY29hcnNlciBsZXZlbC4gVGhlc2UgZXJyb3JzIHJldmVhbCB0aGVtc2VsdmVzIGFzIGxhcmdlLCBmaXJzdC1vcmRlciBlcnJvcnMgaW4gdGhlIGNlbGxzIHRoYXQgYWJ1dCB0aGUgQ0ZJLiBJbiBTT01BUiB2MS4wLjAsIHN1YmR1aW5nIHRoZXNlIGVycm9ycyByZXF1aXJlZCBhIGdyZWF0IGRlYWwgb2YgY2FyZSB3aGVuIGNob29zaW5nIHJlZmluZW1lbnQgY3JpdGVyaWEuIFNPTUFSIHYyLjAuMCdzIHVzZSBvZiBBcmFrYXdhLUMgZ3JpZHMgYW5kIGhpZ2hlci1vcmRlciB0ZW1wb3JhbCBhY2N1cmFjeSBlbGltaW5hdGVzIHRoZXNlIGVycm9ycywgcmVtb3ZpbmcgbXVjaCBvZiB0aGUgYGBhcnQnJyBvZiBjaG9vc2luZyBhcHByb3ByaWF0ZSBmaW5lLWxldmVsIGdyaWRzLjwvZGVzY3JpcHRpb24+CiAgICA8ZGVzY3JpcHRpb24gZGVzY3JpcHRpb25UeXBlPSJPdGhlciI+SWYgeW91IHVzZSB0aGlzIHNvZnR3YXJlLCBwbGVhc2UgY2l0ZSBpdCB1c2luZyB0aGUgbWV0YWRhdGEgZnJvbSB0aGlzIGZpbGUuPC9kZXNjcmlwdGlvbj4KICA8L2Rlc2NyaXB0aW9ucz4KPC9yZXNvdXJjZT4K",
+        "url": "https://zenodo.org/doi/10.5281/zenodo.14609305",
+        "contentUrl": null,
+        "metadataVersion": 0,
+        "schemaVersion": "http://datacite.org/schema/kernel-4",
+        "source": "api",
+        "isActive": true,
+        "state": "findable",
+        "reason": null,
+        "viewCount": 0,
+        "viewsOverTime": [],
+        "downloadCount": 0,
+        "downloadsOverTime": [],
+        "referenceCount": 0,
+        "citationCount": 0,
+        "citationsOverTime": [
+          {
+            "year": "2025",
+            "total": 1
+          }
+        ],
+        "partCount": 0,
+        "partOfCount": 0,
+        "versionCount": 0,
+        "versionOfCount": 0,
+        "created": "2025-01-07T12:28:21.000Z",
+        "registered": "2025-01-07T12:28:21.000Z",
+        "published": "2025",
+        "updated": "2025-01-07T12:28:21.000Z"
+      },
+      "relationships": {
+        "client": {
+          "data": {
+            "id": "cern.zenodo",
+            "type": "clients"
+          }
+        },
+        "provider": {
+          "data": {
+            "id": "cern",
+            "type": "providers"
+          }
+        },
+        "media": {
+          "data": {
+            "id": "10.5281/zenodo.14609305",
+            "type": "media"
+          }
+        },
+        "references": {
+          "data": []
+        },
+        "citations": {
+          "data": []
+        },
+        "parts": {
+          "data": []
+        },
+        "partOf": {
+          "data": []
+        },
+        "versions": {
+          "data": []
+        },
+        "versionOf": {
+          "data": []
+        }
+      }
+    },
+    "zenodo": {
+      "created": "2025-01-07T12:28:20.737044+00:00",
+      "modified": "2025-01-07T12:28:20.916377+00:00",
+      "id": 14609305,
+      "conceptrecid": "593494",
+      "doi": "10.5281/zenodo.14609305",
+      "conceptdoi": "",
+      "doi_url": "https://doi.org/10.5281/zenodo.14609305",
+      "metadata": {
+        "title": "The Stratified Ocean Model with Adaptive Refinement (SOMAR)",
+        "doi": "10.5281/zenodo.14609305",
+        "publication_date": "2025-01-07",
+        "description": "<p>This is a pre-release version of SOMAR v2.0.0. It is the code that was used to run test cases for an upcoming paper.</p>\n<h2>Summary of changes</h2>\n<p>SOMAR v1.0.0 used cell-averaged state variables (for both the velocity and scalars), an approximate projection scheme, and a time-stepping method based on the works of Bell, Colella, and Glaz. Nonlinear advective fluxes were computed using Colella and Woodward's piecewise parabolic method and Saltzman's unsplit 3D assembly scheme. Also, topographies were handled using a non-orthogonal sigma-coordinate system. These choices raised a number of concerns.</p>\n<ol>\n<li><p>Incompressible flows are very naturally modeled using staggered meshes. Cell-centered velocity discretizations rely on approximate projections that have poor convergence and stability properties and fail to remove high-wavenumber irrotational flow components, both of which lead to instabilities when the flow is marginally resolved.</p>\n</li>\n<li><p>The time integration scheme of Bell, Collela, and Glaz has an $\\mathcal{O}(\\Delta t^2)$ local error in the velocity. After proceeding through $1/\\Delta t$ timesteps, diffusive errors appear, interfering with the operation of the turbulence model.</p>\n</li>\n<li><p>The piecewise parabolic method is an excellent method for modeling the nonlinear advection terms present in the Navier-Stokes equations, but we found that upwinding methods are not well-trusted by the community of turbulence modelers. Much of this distrust is warranted, as upwinding schemes are typically associated with limiters, artificial viscosity, and implicit LES schemes.</p>\n</li>\n<li><p>Non-orthogonal coordinate systems have a number of disadvantages. With off-diagonal metric terms present, Laplacians have elevated condition numbers and more terms to compute. Poisson solvers are thus made considerably more expensive than their orthogonal counterparts -- about 5-8 times more expensive in our experience. Also, strongly non-orthogonal coordinates have been shown to incur first-order spatial errors. Worse of all, sigma coordinates are only useful when modeling simple, idealized terrain.</p>\n</li>\n</ol>\n<p>To address these issues, SOMARv2 uses Arakawa-C grids for the velocity and pressure with standard finite difference stencils. The advective forcing terms are computed in conservative form with fluxes generated using unbiased, fourth-order averaging stencils to re-center the velocity components where necessary. Time integration is accomplished with a globally third-order Runge-Kutta method with excellent stability properties and error control. (We will soon incorporate an immersed boundary method to model complex bathymetry without the need for a non-orthogonal coordinate system.)</p>\n<p>All of these changes led to a more accurate fluid solver, whose AMR capabilities are significantly more robust. Second-order AMR solvers suffer from so-called ''mesh-imprinting errors'' when features that require fine-level discretization slip past the coarse-fine interface (CFI) and into the coarser level. These errors reveal themselves as large, first-order errors in the cells that abut the CFI. In SOMAR v1.0.0, subduing these errors required a great deal of care when choosing refinement criteria. SOMAR v2.0.0's use of Arakawa-C grids and higher-order temporal accuracy eliminates these errors, removing much of the ``art'' of choosing appropriate fine-level grids.</p>",
+        "access_right": "open",
+        "creators": [
+          {
+            "name": "Santilli, Edward",
+            "affiliation": "Jefferson East Falls",
+            "orcid": "0000-0001-7925-7252"
+          },
+          {
+            "name": "Scotti, Alberto",
+            "affiliation": "Arizona State University",
+            "orcid": "0000-0001-8283-3070"
+          }
+        ],
+        "related_identifiers": [
+          {
+            "identifier": "https://github.com/MUON-CFD/SOMAR/tree/v2.0.0",
+            "relation": "isSupplementTo",
+            "resource_type": "software",
+            "scheme": "url"
+          }
+        ],
+        "version": "v2.0.0",
+        "custom": {
+          "code:codeRepository": "https://github.com/MUON-CFD/SOMAR"
+        },
+        "resource_type": {
+          "title": "Software",
+          "type": "software"
+        },
+        "license": {
+          "id": "lgpl-2.1"
+        },
+        "relations": {
+          "version": [
+            {
+              "index": 1,
+              "is_last": false,
+              "parent": {
+                "pid_type": "recid",
+                "pid_value": "593494"
+              }
+            }
+          ]
+        },
+        "notes": "If you use this software, please cite it using the metadata from this file."
+      },
+      "title": "The Stratified Ocean Model with Adaptive Refinement (SOMAR)",
+      "links": {
+        "self": "https://zenodo.org/api/records/14609305",
+        "self_html": "https://zenodo.org/records/14609305",
+        "preview_html": "https://zenodo.org/records/14609305?preview=1",
+        "doi": "https://doi.org/10.5281/zenodo.14609305",
+        "self_doi": "https://doi.org/10.5281/zenodo.14609305",
+        "self_doi_html": "https://zenodo.org/doi/10.5281/zenodo.14609305",
+        "reserve_doi": "https://zenodo.org/api/records/14609305/draft/pids/doi",
+        "parent": "https://zenodo.org/api/records/593494",
+        "parent_html": "https://zenodo.org/records/593494",
+        "parent_doi": "https://doi.org/",
+        "parent_doi_html": "https://zenodo.org/doi/",
+        "self_iiif_manifest": "https://zenodo.org/api/iiif/record:14609305/manifest",
+        "self_iiif_sequence": "https://zenodo.org/api/iiif/record:14609305/sequence/default",
+        "files": "https://zenodo.org/api/records/14609305/files",
+        "media_files": "https://zenodo.org/api/records/14609305/media-files",
+        "archive": "https://zenodo.org/api/records/14609305/files-archive",
+        "archive_media": "https://zenodo.org/api/records/14609305/media-files-archive",
+        "latest": "https://zenodo.org/api/records/14609305/versions/latest",
+        "latest_html": "https://zenodo.org/records/14609305/latest",
+        "versions": "https://zenodo.org/api/records/14609305/versions",
+        "draft": "https://zenodo.org/api/records/14609305/draft",
+        "access_links": "https://zenodo.org/api/records/14609305/access/links",
+        "access_grants": "https://zenodo.org/api/records/14609305/access/grants",
+        "access_users": "https://zenodo.org/api/records/14609305/access/users",
+        "access_request": "https://zenodo.org/api/records/14609305/access/request",
+        "access": "https://zenodo.org/api/records/14609305/access",
+        "communities": "https://zenodo.org/api/records/14609305/communities",
+        "communities-suggestions": "https://zenodo.org/api/records/14609305/communities-suggestions",
+        "request_deletion": "https://zenodo.org/api/records/14609305/request-deletion",
+        "file_modification": "https://zenodo.org/api/records/14609305/file-modification",
+        "quota_increase": "https://zenodo.org/api/records/14609305/quota-increase",
+        "requests": "https://zenodo.org/api/records/14609305/requests"
+      },
+      "updated": "2025-01-07T12:28:20.916377+00:00",
+      "recid": "14609305",
+      "revision": 4,
+      "files": [
+        {
+          "id": "34921586-8d0c-45ba-abd7-34f5f6941bdb",
+          "key": "MUON-CFD/SOMAR-v2.0.0.zip",
+          "size": 3513242,
+          "checksum": "md5:180c4d95ca9d3ca2365bd5ec640ff722",
+          "links": {
+            "self": "https://zenodo.org/api/records/14609305/files/MUON-CFD/SOMAR-v2.0.0.zip/content"
+          }
+        }
+      ],
+      "swh": {},
+      "owners": [
+        {
+          "id": "27305"
+        }
+      ],
+      "status": "published",
+      "stats": {
+        "downloads": 52,
+        "unique_downloads": 49,
+        "views": 318,
+        "unique_views": 306,
+        "version_downloads": 15,
+        "version_unique_downloads": 15,
+        "version_unique_views": 95,
+        "version_views": 99
+      },
+      "state": "done",
+      "submitted": true
+    }
+  },
+  {
+    "doi": "10.5281/zenodo.10648264",
+    "datacite": {
+      "id": "10.5281/zenodo.10648264",
+      "type": "dois",
+      "attributes": {
+        "doi": "10.5281/zenodo.10648264",
+        "prefix": "10.5281",
+        "suffix": "zenodo.10648264",
+        "identifiers": [
+          {
+            "identifier": "oai:zenodo.org:10648264",
+            "identifierType": "oai"
+          }
+        ],
+        "alternateIdentifiers": [
+          {
+            "alternateIdentifierType": "oai",
+            "alternateIdentifier": "oai:zenodo.org:10648264"
+          }
+        ],
+        "creators": [
+          {
+            "name": "Dandage, Rohan",
+            "nameType": "Personal",
+            "givenName": "Rohan",
+            "familyName": "Dandage",
+            "nameIdentifiers": [
+              {
+                "nameIdentifier": "0000-0002-6421-2067",
+                "nameIdentifierScheme": "ORCID"
+              }
+            ],
+            "affiliation": []
+          }
+        ],
+        "titles": [
+          {
+            "title": "A Computational Workflow for Designing Libraries of sgRNAs for CRISPR-Mediated Base Editing"
+          }
+        ],
+        "publisher": {
+          "name": "Zenodo"
+        },
+        "container": {},
+        "publicationYear": 2024,
+        "subjects": [],
+        "contributors": [],
+        "dates": [
+          {
+            "date": "2024-02-12",
+            "dateType": "Issued"
+          },
+          {
+            "date": "2024-02-11",
+            "dateType": "Updated"
+          }
+        ],
+        "language": null,
+        "types": {
+          "ris": "COMP",
+          "bibtex": "misc",
+          "citeproc": "article",
+          "schemaOrg": "SoftwareSourceCode",
+          "resourceType": "",
+          "resourceTypeGeneral": "Software"
+        },
+        "relatedIdentifiers": [
+          {
+            "relationType": "IsVersionOf",
+            "relatedIdentifier": "10.1534/genetics.119.302089",
+            "relatedIdentifierType": "DOI"
+          },
+          {
+            "relationType": "IsVersionOf",
+            "relatedIdentifier": "10.5281/zenodo.10648263",
+            "relatedIdentifierType": "DOI"
+          }
+        ],
+        "relatedItems": [],
+        "sizes": [],
+        "formats": [],
+        "version": "2.0.1",
+        "rightsList": [
+          {
+            "rights": "GNU General Public License v3.0 or later",
+            "rightsUri": "https://www.gnu.org/licenses/gpl-3.0-standalone.html",
+            "schemeUri": "https://spdx.org/licenses/",
+            "rightsIdentifier": "gpl-3.0+",
+            "rightsIdentifierScheme": "SPDX"
+          }
+        ],
+        "descriptions": [],
+        "geoLocations": [],
+        "fundingReferences": [],
+        "xml": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHJlc291cmNlIHhtbG5zOnhzaT0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEtaW5zdGFuY2UiIHhtbG5zPSJodHRwOi8vZGF0YWNpdGUub3JnL3NjaGVtYS9rZXJuZWwtNCIgeHNpOnNjaGVtYUxvY2F0aW9uPSJodHRwOi8vZGF0YWNpdGUub3JnL3NjaGVtYS9rZXJuZWwtNCBodHRwOi8vc2NoZW1hLmRhdGFjaXRlLm9yZy9tZXRhL2tlcm5lbC00L21ldGFkYXRhLnhzZCI+CiAgPGlkZW50aWZpZXIgaWRlbnRpZmllclR5cGU9IkRPSSI+MTAuNTI4MS9aRU5PRE8uMTA2NDgyNjQ8L2lkZW50aWZpZXI+CiAgPGNyZWF0b3JzPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZSBuYW1lVHlwZT0iUGVyc29uYWwiPkRhbmRhZ2UsIFJvaGFuPC9jcmVhdG9yTmFtZT4KICAgICAgPGdpdmVuTmFtZT5Sb2hhbjwvZ2l2ZW5OYW1lPgogICAgICA8ZmFtaWx5TmFtZT5EYW5kYWdlPC9mYW1pbHlOYW1lPgogICAgICA8bmFtZUlkZW50aWZpZXIgbmFtZUlkZW50aWZpZXJTY2hlbWU9Ik9SQ0lEIiBzY2hlbWVVUkk9IiI+MDAwMC0wMDAyLTY0MjEtMjA2NzwvbmFtZUlkZW50aWZpZXI+CiAgICA8L2NyZWF0b3I+CiAgPC9jcmVhdG9ycz4KICA8dGl0bGVzPgogICAgPHRpdGxlPkEgQ29tcHV0YXRpb25hbCBXb3JrZmxvdyBmb3IgRGVzaWduaW5nIExpYnJhcmllcyBvZiBzZ1JOQXMgZm9yIENSSVNQUi1NZWRpYXRlZCBCYXNlIEVkaXRpbmc8L3RpdGxlPgogIDwvdGl0bGVzPgogIDxwdWJsaXNoZXI+WmVub2RvPC9wdWJsaXNoZXI+CiAgPHB1YmxpY2F0aW9uWWVhcj4yMDI0PC9wdWJsaWNhdGlvblllYXI+CiAgPHJlc291cmNlVHlwZSByZXNvdXJjZVR5cGVHZW5lcmFsPSJTb2Z0d2FyZSIvPgogIDxkYXRlcz4KICAgIDxkYXRlIGRhdGVUeXBlPSJJc3N1ZWQiPjIwMjQtMDItMTI8L2RhdGU+CiAgICA8ZGF0ZSBkYXRlVHlwZT0iVXBkYXRlZCI+MjAyNC0wMi0xMTwvZGF0ZT4KICA8L2RhdGVzPgogIDxhbHRlcm5hdGVJZGVudGlmaWVycz4KICAgIDxhbHRlcm5hdGVJZGVudGlmaWVyIGFsdGVybmF0ZUlkZW50aWZpZXJUeXBlPSJvYWkiPm9haTp6ZW5vZG8ub3JnOjEwNjQ4MjY0PC9hbHRlcm5hdGVJZGVudGlmaWVyPgogIDwvYWx0ZXJuYXRlSWRlbnRpZmllcnM+CiAgPHJlbGF0ZWRJZGVudGlmaWVycz4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJJc1ZlcnNpb25PZiI+MTAuMTUzNC9nZW5ldGljcy4xMTkuMzAyMDg5PC9yZWxhdGVkSWRlbnRpZmllcj4KICAgIDxyZWxhdGVkSWRlbnRpZmllciByZWxhdGVkSWRlbnRpZmllclR5cGU9IkRPSSIgcmVsYXRpb25UeXBlPSJJc1ZlcnNpb25PZiI+MTAuNTI4MS96ZW5vZG8uMTA2NDgyNjM8L3JlbGF0ZWRJZGVudGlmaWVyPgogIDwvcmVsYXRlZElkZW50aWZpZXJzPgogIDxzaXplcy8+CiAgPGZvcm1hdHMvPgogIDx2ZXJzaW9uPjIuMC4xPC92ZXJzaW9uPgogIDxyaWdodHNMaXN0PgogICAgPHJpZ2h0cyByaWdodHNVUkk9Imh0dHBzOi8vd3d3LmdudS5vcmcvbGljZW5zZXMvZ3BsLTMuMC1zdGFuZGFsb25lLmh0bWwiIHJpZ2h0c0lkZW50aWZpZXI9ImdwbC0zLjAtb3ItbGF0ZXIiIHJpZ2h0c0lkZW50aWZpZXJTY2hlbWU9InNwZHgiPkdOVSBHZW5lcmFsIFB1YmxpYyBMaWNlbnNlIHYzLjAgb3IgbGF0ZXI8L3JpZ2h0cz4KICA8L3JpZ2h0c0xpc3Q+CjwvcmVzb3VyY2U+Cg==",
+        "url": "https://zenodo.org/doi/10.5281/zenodo.10648264",
+        "contentUrl": null,
+        "metadataVersion": 0,
+        "schemaVersion": "http://datacite.org/schema/kernel-4",
+        "source": "api",
+        "isActive": true,
+        "state": "findable",
+        "reason": null,
+        "viewCount": 0,
+        "viewsOverTime": [],
+        "downloadCount": 0,
+        "downloadsOverTime": [],
+        "referenceCount": 0,
+        "citationCount": 0,
+        "citationsOverTime": [],
+        "partCount": 0,
+        "partOfCount": 0,
+        "versionCount": 0,
+        "versionOfCount": 2,
+        "created": "2024-02-12T01:21:03.000Z",
+        "registered": "2024-02-12T01:21:03.000Z",
+        "published": "2024",
+        "updated": "2024-02-12T01:21:05.000Z"
+      },
+      "relationships": {
+        "client": {
+          "data": {
+            "id": "cern.zenodo",
+            "type": "clients"
+          }
+        },
+        "provider": {
+          "data": {
+            "id": "cern",
+            "type": "providers"
+          }
+        },
+        "media": {
+          "data": {
+            "id": "10.5281/zenodo.10648264",
+            "type": "media"
+          }
+        },
+        "references": {
+          "data": []
+        },
+        "citations": {
+          "data": []
+        },
+        "parts": {
+          "data": []
+        },
+        "partOf": {
+          "data": []
+        },
+        "versions": {
+          "data": []
+        },
+        "versionOf": {
+          "data": [
+            {
+              "id": "10.5281/zenodo.10648263",
+              "type": "dois"
+            },
+            {
+              "id": "10.1534/genetics.119.302089",
+              "type": "dois"
+            }
+          ]
+        }
+      }
+    },
+    "zenodo": {
+      "created": "2024-02-12T01:19:55.515468+00:00",
+      "modified": "2024-02-12T01:19:55.707717+00:00",
+      "id": 10648264,
+      "conceptrecid": "10648263",
+      "doi": "10.5281/zenodo.10648264",
+      "conceptdoi": "10.5281/zenodo.10648263",
+      "doi_url": "https://doi.org/10.5281/zenodo.10648264",
+      "metadata": {
+        "title": "A Computational Workflow for Designing Libraries of sgRNAs for CRISPR-Mediated Base Editing",
+        "doi": "10.5281/zenodo.10648264",
+        "publication_date": "2024-02-12",
+        "access_right": "open",
+        "creators": [
+          {
+            "name": "Dandage, Rohan",
+            "affiliation": null,
+            "orcid": "0000-0002-6421-2067"
+          }
+        ],
+        "related_identifiers": [
+          {
+            "identifier": "10.1534/genetics.119.302089",
+            "relation": "isVersionOf",
+            "scheme": "doi"
+          }
+        ],
+        "dates": [
+          {
+            "type": "updated"
+          }
+        ],
+        "version": "2.0.1",
+        "custom": {
+          "code:codeRepository": "https://github.com/rraadd88/beditor",
+          "code:programmingLanguage": [
+            {
+              "id": "python",
+              "title": {
+                "en": "Python"
+              }
+            }
+          ],
+          "code:developmentStatus": {
+            "id": "active",
+            "title": {
+              "en": "Active"
+            }
+          }
+        },
+        "resource_type": {
+          "title": "Software",
+          "type": "software"
+        },
+        "license": {
+          "id": "gpl-3.0-or-later"
+        },
+        "relations": {
+          "version": [
+            {
+              "index": 0,
+              "is_last": true,
+              "parent": {
+                "pid_type": "recid",
+                "pid_value": "10648263"
+              }
+            }
+          ]
+        }
+      },
+      "title": "A Computational Workflow for Designing Libraries of sgRNAs for CRISPR-Mediated Base Editing",
+      "links": {
+        "self": "https://zenodo.org/api/records/10648264",
+        "self_html": "https://zenodo.org/records/10648264",
+        "preview_html": "https://zenodo.org/records/10648264?preview=1",
+        "doi": "https://doi.org/10.5281/zenodo.10648264",
+        "self_doi": "https://doi.org/10.5281/zenodo.10648264",
+        "self_doi_html": "https://zenodo.org/doi/10.5281/zenodo.10648264",
+        "reserve_doi": "https://zenodo.org/api/records/10648264/draft/pids/doi",
+        "parent": "https://zenodo.org/api/records/10648263",
+        "parent_html": "https://zenodo.org/records/10648263",
+        "parent_doi": "https://doi.org/10.5281/zenodo.10648263",
+        "parent_doi_html": "https://zenodo.org/doi/10.5281/zenodo.10648263",
+        "self_iiif_manifest": "https://zenodo.org/api/iiif/record:10648264/manifest",
+        "self_iiif_sequence": "https://zenodo.org/api/iiif/record:10648264/sequence/default",
+        "files": "https://zenodo.org/api/records/10648264/files",
+        "media_files": "https://zenodo.org/api/records/10648264/media-files",
+        "archive": "https://zenodo.org/api/records/10648264/files-archive",
+        "archive_media": "https://zenodo.org/api/records/10648264/media-files-archive",
+        "latest": "https://zenodo.org/api/records/10648264/versions/latest",
+        "latest_html": "https://zenodo.org/records/10648264/latest",
+        "versions": "https://zenodo.org/api/records/10648264/versions",
+        "draft": "https://zenodo.org/api/records/10648264/draft",
+        "access_links": "https://zenodo.org/api/records/10648264/access/links",
+        "access_grants": "https://zenodo.org/api/records/10648264/access/grants",
+        "access_users": "https://zenodo.org/api/records/10648264/access/users",
+        "access_request": "https://zenodo.org/api/records/10648264/access/request",
+        "access": "https://zenodo.org/api/records/10648264/access",
+        "communities": "https://zenodo.org/api/records/10648264/communities",
+        "communities-suggestions": "https://zenodo.org/api/records/10648264/communities-suggestions",
+        "request_deletion": "https://zenodo.org/api/records/10648264/request-deletion",
+        "file_modification": "https://zenodo.org/api/records/10648264/file-modification",
+        "quota_increase": "https://zenodo.org/api/records/10648264/quota-increase",
+        "requests": "https://zenodo.org/api/records/10648264/requests"
+      },
+      "updated": "2024-02-12T01:19:55.707717+00:00",
+      "recid": "10648264",
+      "revision": 4,
+      "files": [
+        {
+          "id": "ddae94cf-e605-4507-8601-d1e88056eded",
+          "key": "beditor-2.0.1.tar.gz",
+          "size": 276634,
+          "checksum": "md5:373847641c5a37fb893e724f61f2236f",
+          "links": {
+            "self": "https://zenodo.org/api/records/10648264/files/beditor-2.0.1.tar.gz/content"
+          }
+        }
+      ],
+      "swh": {},
+      "owners": [
+        {
+          "id": "66352"
+        }
+      ],
+      "status": "published",
+      "stats": {
+        "downloads": 15,
+        "unique_downloads": 15,
+        "views": 90,
+        "unique_views": 86,
+        "version_downloads": 15,
+        "version_unique_downloads": 15,
+        "version_unique_views": 86,
+        "version_views": 90
+      },
+      "state": "done",
+      "submitted": true
+    }
+  }
+]

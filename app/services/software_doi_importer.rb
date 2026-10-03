@@ -6,6 +6,7 @@ class SoftwareDoiImporter < ExternalSoftwareImporter
     ids = SoftwareDoiClient.validate_ids!(ids)
     started_at = Time.current
     cached = ExternalSoftwareRecord.where(source: SOURCE, identifier: ids).pluck(:identifier, :next_refresh_at).to_h
+    failures = []
     ids.each do |id|
       next if cached[id] && cached[id] > started_at
       begin
@@ -14,10 +15,13 @@ class SoftwareDoiImporter < ExternalSoftwareImporter
           collection_url: SoftwareDoiClient.collection_url(id), concept_identifier: concept_identifier(entity))
       rescue SoftwareDoiClient::Error => error
         retry_at = error.is_a?(SoftwareDoiClient::RateLimited) ? error.retry_at : 1.hour.from_now
+        error = error.exception("#{id}: #{error.message}") unless error.is_a?(SoftwareDoiClient::RateLimited)
         record_failure(id, error, started_at, retry_at)
-        raise
+        raise if error.is_a?(SoftwareDoiClient::RateLimited)
+        failures << error
       end
     end
+    raise failures.first if failures.any?
   end
 
   def software?(entity)
@@ -31,21 +35,32 @@ class SoftwareDoiImporter < ExternalSoftwareImporter
       return if zenodo["conceptdoi"].blank?
       return SoftwareDoiClient.identifier(zenodo["conceptdoi"])
     end
-    relations = entity.dig("datacite", "attributes", "relatedIdentifiers")
-    parents = Array(relations).filter_map do |item|
-      next unless item["relationType"].casecmp?("IsVersionOf") && item["relatedIdentifierType"].casecmp?("DOI")
+    parents = related_dois(entity, "IsVersionOf")
+    parents.sole if parents.one?
+  end
+
+  def relationships(items, keys)
+    return [] unless items.is_a?(Array)
+    items.select { |item| item.is_a?(Hash) && keys.all? { |key| item[key].is_a?(String) && item[key].present? } }
+  end
+
+  def datacite_relationships(entity)
+    relationships(entity.dig("datacite", "attributes", "relatedIdentifiers"), %w[relatedIdentifier relatedIdentifierType relationType])
+  end
+
+  def related_dois(entity, relation)
+    datacite_relationships(entity).filter_map do |item|
+      next unless item["relationType"].casecmp?(relation) && item["relatedIdentifierType"].casecmp?("DOI")
       SoftwareDoiClient.identifier(item["relatedIdentifier"])
     rescue ArgumentError
       nil
     end.uniq
-    parents.sole if parents.one?
   end
 
   def relationship_for(entity)
     parent = concept_identifier(entity)
     return "software_version" if parent && parent != entity["doi"]
-    return "software_concept" if parent == entity["doi"] || Array(entity.dig("datacite", "attributes", "relatedIdentifiers"))
-      .any? { |item| item["relationType"].casecmp?("HasVersion") }
+    return "software_concept" if parent == entity["doi"] || (!entity["zenodo"] && related_dois(entity, "HasVersion").any?)
     "software"
   end
 
@@ -53,7 +68,7 @@ class SoftwareDoiImporter < ExternalSoftwareImporter
     return [] unless software?(entity)
     attributes = entity.dig("datacite", "attributes")
     entries = [{ repository_url: attributes["url"], source_field: "datacite.url" }]
-    attributes["relatedIdentifiers"].each do |item|
+    datacite_relationships(entity).each do |item|
       next unless item["relatedIdentifierType"].casecmp?("URL") && REPOSITORY_RELATIONS.include?(item["relationType"].downcase)
       entries << { repository_url: item["relatedIdentifier"], source_field: "datacite.relatedIdentifiers", source_relation: item["relationType"] }
     end
@@ -62,7 +77,7 @@ class SoftwareDoiImporter < ExternalSoftwareImporter
       url = "#{SoftwareDoiClient::ZENODO_URL}/#{zenodo['id']}"
       entries << { repository_url: zenodo.dig("metadata", "custom", "code:codeRepository"),
         source_field: "zenodo.metadata.custom.code:codeRepository", collection_url: url }
-      Array(zenodo.dig("metadata", "related_identifiers")).each do |item|
+      relationships(zenodo.dig("metadata", "related_identifiers"), %w[identifier scheme relation]).each do |item|
         next unless item["scheme"].casecmp?("url") && REPOSITORY_RELATIONS.include?(item["relation"].downcase)
         entries << { repository_url: item["identifier"], source_field: "zenodo.metadata.related_identifiers",
           source_relation: item["relation"], collection_url: url }

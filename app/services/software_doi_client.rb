@@ -55,16 +55,6 @@ class SoftwareDoiClient
     if resource.dig("attributes", "types", "resourceTypeGeneral").to_s.casecmp?("software") && id.match?(%r{\A10\.5281/zenodo\.[1-9][0-9]*\z})
       result["zenodo"] = zenodo_record(id)
       return { "doi" => id, "missing" => true } unless result["zenodo"]
-      parents = resource["attributes"]["relatedIdentifiers"].filter_map do |item|
-        next unless item["relationType"].casecmp?("IsVersionOf") && item["relatedIdentifierType"].casecmp?("DOI")
-        self.class.identifier(item["relatedIdentifier"])
-      rescue ArgumentError
-        raise Error, "Invalid DataCite version relationship"
-      end.uniq
-      concept = result["zenodo"]["conceptdoi"]
-      unless concept.blank? || parents.empty? || parents == [self.class.identifier(concept)]
-        raise Error, "Conflicting DataCite and Zenodo version relationships"
-      end
     end
     result
   end
@@ -76,10 +66,7 @@ class SoftwareDoiClient
     return false unless attributes["state"] == "findable" && attributes["isActive"] == true &&
       attributes["types"].is_a?(Hash)
     classification = attributes["types"]["resourceTypeGeneral"]
-    return false unless classification.nil? || classification.is_a?(String)
-    attributes["relatedIdentifiers"].is_a?(Array) && attributes["relatedIdentifiers"].all? do |item|
-      item.is_a?(Hash) && %w[relatedIdentifier relatedIdentifierType relationType].all? { |key| item[key].is_a?(String) }
-    end
+    classification.nil? || classification.is_a?(String)
   rescue ArgumentError
     false
   end
@@ -116,12 +103,8 @@ class SoftwareDoiClient
     return false unless [doi, concept].include?(id) && doi == "10.5281/zenodo.#{record['id']}" &&
       (concept.nil? || concept == "10.5281/zenodo.#{record['conceptrecid']}") && url == "#{ZENODO_URL}/#{record['id']}"
     metadata = record["metadata"]
-    return false unless metadata.dig("resource_type", "type") == "software" &&
+    metadata.dig("resource_type", "type") == "software" &&
       (metadata["custom"].nil? || metadata["custom"].is_a?(Hash))
-    related = metadata["related_identifiers"]
-    related.nil? || (related.is_a?(Array) && related.all? do |item|
-      item.is_a?(Hash) && %w[identifier scheme relation].all? { |key| item[key].is_a?(String) }
-    end)
   rescue ArgumentError, TypeError
     false
   end
