@@ -65,6 +65,82 @@ class SyncSoftwareDoiWorkerTest < ActiveSupport::TestCase
     assert_empty SyncSoftwareDoiWorker.jobs
   end
 
+  test "Zenodo software without a concept DOI retains metadata and links while the batch continues" do
+    id = "10.5281/zenodo.546311"
+    following = "10.6084/m9.figshare.9577868"
+    project = doi_project(url: "https://github.com/FowlerLab/simdms", doi: id)
+    resource = JSON.parse(Rails.root.join("test/fixtures/files/software_doi_datacite_without_concept.json").read)
+    zenodo = JSON.parse(Rails.root.join("test/fixtures/files/software_doi_zenodo_without_concept.json").read)
+    datacite_record(id, body: { data: resource })
+    stub_request(:get, "https://zenodo.org/api/records/546311").to_return(body: zenodo.to_json)
+    datacite_record(following)
+
+    sync_dois([id, following])
+
+    record = project.external_software_records.sole
+    assert_equal "ok", record.status
+    assert_nil record.last_error
+    assert_nil record.concept_identifier
+    assert_equal resource, record.metadata["datacite"]
+    assert_equal zenodo, record.metadata["zenodo"]
+    link = project.project_external_software_records.sole
+    assert_equal "software", link.relationship
+    assert_includes link.evidence.pluck("source_field"), "zenodo.metadata.related_identifiers"
+    assert_equal "ok", ExternalSoftwareRecord.find_by!(source: "doi", identifier: following).status
+    assert_empty SyncSoftwareDoiWorker.jobs
+  end
+
+  test "missing Zenodo concept DOIs do not establish DataCite version relationships" do
+    id = "10.5281/zenodo.15878535"
+    project = doi_project(doi: id)
+    [nil, "", :missing].each do |concept|
+      expire_dois
+      @zenodo[id]["conceptdoi"] = concept
+      @zenodo[id].delete("conceptdoi") if concept == :missing
+      doi_record(id)
+
+      sync_dois([id])
+
+      assert_equal "ok", project.external_software_records.sole.status
+      assert_nil project.external_software_records.sole.concept_identifier
+      assert_equal "software", project.project_external_software_records.sole.relationship
+    end
+  end
+
+  test "malformed or mismatched Zenodo concept DOIs preserve successful evidence" do
+    id = "10.5281/zenodo.15878535"
+    project = doi_project(doi: id)
+    doi_record(id)
+    sync_dois([id])
+    record = project.external_software_records.sole
+    before = record.attributes.slice("metadata", "retrieved_at", "concept_identifier")
+    [false, [], {}, "invalid", "10.5281/zenodo.999"].each do |concept|
+      expire_dois
+      @zenodo[id]["conceptdoi"] = concept
+      doi_record(id)
+
+      assert_raises(SoftwareDoiClient::Error) { sync_dois([id]) }
+
+      assert_equal "error", record.reload.status
+      assert_equal before, record.attributes.slice(*before.keys)
+      assert_equal "software_version", project.project_external_software_records.sole.relationship
+    end
+  end
+
+  test "Zenodo concept redirects still require a matching concept DOI" do
+    id = "10.5281/zenodo.596036"
+    datacite_record(id)
+    @zenodo["10.5281/zenodo.19636730"]["conceptdoi"] = ""
+    stub_request(:get, "https://zenodo.org/api/records/596036")
+      .to_return(status: 302, headers: { "Location" => "https://zenodo.org/api/records/19636730" })
+    zenodo_record("10.5281/zenodo.19636730")
+
+    assert_raises(SoftwareDoiClient::Error) { sync_dois([id]) }
+
+    assert_equal "error", ExternalSoftwareRecord.find_by!(source: "doi", identifier: id).status
+    assert_empty ProjectExternalSoftwareRecord.all
+  end
+
   test "missing or null Zenodo classification does not fetch Zenodo or establish software links" do
     id = "10.5281/zenodo.15878535"
     project = doi_project(doi: id)

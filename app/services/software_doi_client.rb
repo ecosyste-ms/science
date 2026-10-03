@@ -61,7 +61,8 @@ class SoftwareDoiClient
       rescue ArgumentError
         raise Error, "Invalid DataCite version relationship"
       end.uniq
-      unless parents.empty? || parents == [self.class.identifier(result["zenodo"]["conceptdoi"])]
+      concept = result["zenodo"]["conceptdoi"]
+      unless concept.blank? || parents.empty? || parents == [self.class.identifier(concept)]
         raise Error, "Conflicting DataCite and Zenodo version relationships"
       end
     end
@@ -111,9 +112,9 @@ class SoftwareDoiClient
     return false unless record.is_a?(Hash) && record["metadata"].is_a?(Hash)
     return false unless record["status"] == "published" && record["submitted"] == true
     doi = self.class.identifier(record["doi"])
-    concept = self.class.identifier(record["conceptdoi"])
+    concept = self.class.identifier(record["conceptdoi"]) unless record["conceptdoi"].nil? || record["conceptdoi"] == ""
     return false unless [doi, concept].include?(id) && doi == "10.5281/zenodo.#{record['id']}" &&
-      concept == "10.5281/zenodo.#{record['conceptrecid']}" && url == "#{ZENODO_URL}/#{record['id']}"
+      (concept.nil? || concept == "10.5281/zenodo.#{record['conceptrecid']}") && url == "#{ZENODO_URL}/#{record['id']}"
     metadata = record["metadata"]
     return false unless metadata.dig("resource_type", "type") == "software" &&
       (metadata["custom"].nil? || metadata["custom"].is_a?(Hash))

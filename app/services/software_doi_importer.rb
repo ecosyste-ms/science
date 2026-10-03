@@ -27,7 +27,10 @@ class SoftwareDoiImporter < ExternalSoftwareImporter
   def concept_identifier(entity)
     return unless software?(entity)
     zenodo = entity["zenodo"]
-    return SoftwareDoiClient.identifier(zenodo["conceptdoi"]) if zenodo
+    if zenodo
+      return if zenodo["conceptdoi"].blank?
+      return SoftwareDoiClient.identifier(zenodo["conceptdoi"])
+    end
     relations = entity.dig("datacite", "attributes", "relatedIdentifiers")
     parents = Array(relations).filter_map do |item|
       next unless item["relationType"].casecmp?("IsVersionOf") && item["relatedIdentifierType"].casecmp?("DOI")

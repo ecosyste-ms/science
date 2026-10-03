@@ -1,0 +1,117 @@
+{
+  "created": "2017-04-15T08:00:03.427583+00:00",
+  "modified": "2020-01-25T07:26:17.285260+00:00",
+  "id": 546311,
+  "conceptrecid": "597447",
+  "doi": "10.5281/zenodo.546311",
+  "conceptdoi": "",
+  "doi_url": "https://doi.org/10.5281/zenodo.546311",
+  "metadata": {
+    "title": "FowlerLab/simdms: 0.1",
+    "doi": "10.5281/zenodo.546311",
+    "publication_date": "2017-04-15",
+    "description": "<p>Initial release.</p>",
+    "access_right": "open",
+    "creators": [
+      {
+        "name": "Alan Rubin",
+        "affiliation": "The Walter and Eliza Hall Institute of Medical Research"
+      }
+    ],
+    "related_identifiers": [
+      {
+        "identifier": "https://github.com/FowlerLab/simdms/tree/v0.1",
+        "relation": "isSupplementTo",
+        "scheme": "url"
+      }
+    ],
+    "version": "v0.1",
+    "resource_type": {
+      "title": "Software",
+      "type": "software"
+    },
+    "license": {
+      "id": "other-open"
+    },
+    "relations": {
+      "version": [
+        {
+          "index": 0,
+          "is_last": true,
+          "parent": {
+            "pid_type": "recid",
+            "pid_value": "597447"
+          }
+        }
+      ]
+    }
+  },
+  "title": "FowlerLab/simdms: 0.1",
+  "links": {
+    "self": "https://zenodo.org/api/records/546311",
+    "self_html": "https://zenodo.org/records/546311",
+    "preview_html": "https://zenodo.org/records/546311?preview=1",
+    "doi": "https://doi.org/10.5281/zenodo.546311",
+    "self_doi": "https://doi.org/10.5281/zenodo.546311",
+    "self_doi_html": "https://zenodo.org/doi/10.5281/zenodo.546311",
+    "reserve_doi": "https://zenodo.org/api/records/546311/draft/pids/doi",
+    "parent": "https://zenodo.org/api/records/597447",
+    "parent_html": "https://zenodo.org/records/597447",
+    "parent_doi": "https://doi.org/",
+    "parent_doi_html": "https://zenodo.org/doi/",
+    "self_iiif_manifest": "https://zenodo.org/api/iiif/record:546311/manifest",
+    "self_iiif_sequence": "https://zenodo.org/api/iiif/record:546311/sequence/default",
+    "files": "https://zenodo.org/api/records/546311/files",
+    "media_files": "https://zenodo.org/api/records/546311/media-files",
+    "archive": "https://zenodo.org/api/records/546311/files-archive",
+    "archive_media": "https://zenodo.org/api/records/546311/media-files-archive",
+    "latest": "https://zenodo.org/api/records/546311/versions/latest",
+    "latest_html": "https://zenodo.org/records/546311/latest",
+    "versions": "https://zenodo.org/api/records/546311/versions",
+    "draft": "https://zenodo.org/api/records/546311/draft",
+    "access_links": "https://zenodo.org/api/records/546311/access/links",
+    "access_grants": "https://zenodo.org/api/records/546311/access/grants",
+    "access_users": "https://zenodo.org/api/records/546311/access/users",
+    "access_request": "https://zenodo.org/api/records/546311/access/request",
+    "access": "https://zenodo.org/api/records/546311/access",
+    "communities": "https://zenodo.org/api/records/546311/communities",
+    "communities-suggestions": "https://zenodo.org/api/records/546311/communities-suggestions",
+    "request_deletion": "https://zenodo.org/api/records/546311/request-deletion",
+    "file_modification": "https://zenodo.org/api/records/546311/file-modification",
+    "quota_increase": "https://zenodo.org/api/records/546311/quota-increase",
+    "requests": "https://zenodo.org/api/records/546311/requests"
+  },
+  "updated": "2020-01-25T07:26:17.285260+00:00",
+  "recid": "546311",
+  "revision": 7,
+  "files": [
+    {
+      "id": "010c47e5-0198-4d0a-b045-642ce3f4cd86",
+      "key": "FowlerLab/simdms-v0.1.zip",
+      "size": 21195,
+      "checksum": "md5:491754800d8c27b44f4db0e1ffb16e92",
+      "links": {
+        "self": "https://zenodo.org/api/records/546311/files/FowlerLab/simdms-v0.1.zip/content"
+      }
+    }
+  ],
+  "swh": {},
+  "owners": [
+    {
+      "id": "24663"
+    }
+  ],
+  "status": "published",
+  "stats": {
+    "downloads": 45,
+    "unique_downloads": 44,
+    "views": 314,
+    "unique_views": 308,
+    "version_downloads": 45,
+    "version_unique_downloads": 44,
+    "version_unique_views": 308,
+    "version_views": 314
+  },
+  "state": "done",
+  "submitted": true
+}

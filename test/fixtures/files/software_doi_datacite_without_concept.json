@@ -1,0 +1,138 @@
+{
+  "id": "10.5281/zenodo.546311",
+  "type": "dois",
+  "attributes": {
+    "doi": "10.5281/zenodo.546311",
+    "prefix": "10.5281",
+    "suffix": "zenodo.546311",
+    "identifiers": [],
+    "alternateIdentifiers": [],
+    "creators": [
+      {
+        "name": "Rubin, Alan",
+        "nameType": "Personal",
+        "givenName": "Alan",
+        "familyName": "Rubin",
+        "affiliation": [
+          {
+            "name": "The Walter and Eliza Hall Institute of Medical Research"
+          }
+        ],
+        "nameIdentifiers": []
+      }
+    ],
+    "titles": [
+      {
+        "title": "FowlerLab/simdms: 0.1"
+      }
+    ],
+    "publisher": {
+      "name": "Zenodo"
+    },
+    "container": {},
+    "publicationYear": 2017,
+    "subjects": [],
+    "contributors": [],
+    "dates": [
+      {
+        "date": "2017-04-15",
+        "dateType": "Issued"
+      }
+    ],
+    "language": null,
+    "types": {
+      "ris": "COMP",
+      "bibtex": "misc",
+      "citeproc": "article",
+      "schemaOrg": "SoftwareSourceCode",
+      "resourceTypeGeneral": "Software"
+    },
+    "relatedIdentifiers": [
+      {
+        "relationType": "IsSupplementTo",
+        "relatedIdentifier": "https://github.com/FowlerLab/simdms/tree/v0.1",
+        "relatedIdentifierType": "URL"
+      }
+    ],
+    "relatedItems": [],
+    "sizes": [],
+    "formats": [],
+    "version": "v0.1",
+    "rightsList": [
+      {
+        "rights": "Open Access",
+        "rightsUri": "info:eu-repo/semantics/openAccess"
+      }
+    ],
+    "descriptions": [
+      {
+        "description": "Initial release.",
+        "descriptionType": "Abstract"
+      }
+    ],
+    "geoLocations": [],
+    "fundingReferences": [],
+    "xml": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPHJlc291cmNlIHhtbG5zOnhzaT0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEtaW5zdGFuY2UiIHhtbG5zPSJodHRwOi8vZGF0YWNpdGUub3JnL3NjaGVtYS9rZXJuZWwtNCIgeHNpOnNjaGVtYUxvY2F0aW9uPSJodHRwOi8vZGF0YWNpdGUub3JnL3NjaGVtYS9rZXJuZWwtNCBodHRwOi8vc2NoZW1hLmRhdGFjaXRlLm9yZy9tZXRhL2tlcm5lbC00LjEvbWV0YWRhdGEueHNkIj4KICA8aWRlbnRpZmllciBpZGVudGlmaWVyVHlwZT0iRE9JIj4xMC41MjgxL1pFTk9ETy41NDYzMTE8L2lkZW50aWZpZXI+CiAgPGNyZWF0b3JzPgogICAgPGNyZWF0b3I+CiAgICAgIDxjcmVhdG9yTmFtZT5BbGFuIFJ1YmluPC9jcmVhdG9yTmFtZT4KICAgICAgPGFmZmlsaWF0aW9uPlRoZSBXYWx0ZXIgYW5kIEVsaXphIEhhbGwgSW5zdGl0dXRlIG9mIE1lZGljYWwgUmVzZWFyY2g8L2FmZmlsaWF0aW9uPgogICAgPC9jcmVhdG9yPgogIDwvY3JlYXRvcnM+CiAgPHRpdGxlcz4KICAgIDx0aXRsZT5Gb3dsZXJMYWIvc2ltZG1zOiAwLjE8L3RpdGxlPgogIDwvdGl0bGVzPgogIDxwdWJsaXNoZXI+WmVub2RvPC9wdWJsaXNoZXI+CiAgPHB1YmxpY2F0aW9uWWVhcj4yMDE3PC9wdWJsaWNhdGlvblllYXI+CiAgPGRhdGVzPgogICAgPGRhdGUgZGF0ZVR5cGU9Iklzc3VlZCI+MjAxNy0wNC0xNTwvZGF0ZT4KICA8L2RhdGVzPgogIDxyZXNvdXJjZVR5cGUgcmVzb3VyY2VUeXBlR2VuZXJhbD0iU29mdHdhcmUiLz4KICA8YWx0ZXJuYXRlSWRlbnRpZmllcnM+CiAgICA8YWx0ZXJuYXRlSWRlbnRpZmllciBhbHRlcm5hdGVJZGVudGlmaWVyVHlwZT0idXJsIj5odHRwczovL3plbm9kby5vcmcvcmVjb3JkLzU0NjMxMTwvYWx0ZXJuYXRlSWRlbnRpZmllcj4KICA8L2FsdGVybmF0ZUlkZW50aWZpZXJzPgogIDxyZWxhdGVkSWRlbnRpZmllcnM+CiAgICA8cmVsYXRlZElkZW50aWZpZXIgcmVsYXRlZElkZW50aWZpZXJUeXBlPSJVUkwiIHJlbGF0aW9uVHlwZT0iSXNTdXBwbGVtZW50VG8iPmh0dHBzOi8vZ2l0aHViLmNvbS9Gb3dsZXJMYWIvc2ltZG1zL3RyZWUvdjAuMTwvcmVsYXRlZElkZW50aWZpZXI+CiAgPC9yZWxhdGVkSWRlbnRpZmllcnM+CiAgPHZlcnNpb24+djAuMTwvdmVyc2lvbj4KICA8cmlnaHRzTGlzdD4KICAgIDxyaWdodHMgcmlnaHRzVVJJPSJpbmZvOmV1LXJlcG8vc2VtYW50aWNzL29wZW5BY2Nlc3MiPk9wZW4gQWNjZXNzPC9yaWdodHM+CiAgPC9yaWdodHNMaXN0PgogIDxkZXNjcmlwdGlvbnM+CiAgICA8ZGVzY3JpcHRpb24gZGVzY3JpcHRpb25UeXBlPSJBYnN0cmFjdCI+Jmx0O3AmZ3Q7SW5pdGlhbCByZWxlYXNlLiZsdDsvcCZndDs8L2Rlc2NyaXB0aW9uPgogIDwvZGVzY3JpcHRpb25zPgo8L3Jlc291cmNlPg==",
+    "url": "https://zenodo.org/record/546311",
+    "contentUrl": null,
+    "metadataVersion": 9,
+    "schemaVersion": "http://datacite.org/schema/kernel-4",
+    "source": "mds",
+    "isActive": true,
+    "state": "findable",
+    "reason": null,
+    "viewCount": 0,
+    "viewsOverTime": [],
+    "downloadCount": 0,
+    "downloadsOverTime": [],
+    "referenceCount": 0,
+    "citationCount": 0,
+    "citationsOverTime": [],
+    "partCount": 0,
+    "partOfCount": 0,
+    "versionCount": 0,
+    "versionOfCount": 0,
+    "created": "2017-04-15T08:00:03.000Z",
+    "registered": "2017-04-15T08:00:04.000Z",
+    "published": "2017",
+    "updated": "2023-04-25T16:25:25.000Z"
+  },
+  "relationships": {
+    "client": {
+      "data": {
+        "id": "cern.zenodo",
+        "type": "clients"
+      }
+    },
+    "provider": {
+      "data": {
+        "id": "cern",
+        "type": "providers"
+      }
+    },
+    "media": {
+      "data": {
+        "id": "10.5281/zenodo.546311",
+        "type": "media"
+      }
+    },
+    "references": {
+      "data": []
+    },
+    "citations": {
+      "data": []
+    },
+    "parts": {
+      "data": []
+    },
+    "partOf": {
+      "data": []
+    },
+    "versions": {
+      "data": []
+    },
+    "versionOf": {
+      "data": []
+    }
+  }
+}
