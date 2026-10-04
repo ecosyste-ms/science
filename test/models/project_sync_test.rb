@@ -375,13 +375,32 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_equal "https://github.com/new/name", p.reload.url
   end
 
-  test "check_url destroys record when redirect target already exists" do
-    Project.create!(url: "https://github.com/new/name")
+  test "worker stops when redirect target already exists" do
+    target = Project.create!(url: "https://github.com/new/name")
     p = Project.create!(url: "https://github.com/old/name")
     stub_request(:get, "https://github.com/old/name").to_return(status: 301, headers: { "Location" => "https://github.com/new/name" })
     stub_request(:get, "https://github.com/new/name").to_return(status: 200)
-    capture_io { p.check_url }
+    Project.any_instance.expects(:fetch_repository).never
+    capture_io { SyncProjectWorker.new.perform(p.id) }
     refute Project.exists?(p.id)
+    assert_equal "https://github.com/new/name", target.reload.url
+  end
+
+  test "worker stops when the database rejects a duplicate redirect target" do
+    target = Project.create!(url: "https://github.com/new/name")
+    project = Project.create!(url: "https://github.com/old/name")
+    stub_request(:get, project.url).to_return(status: 301, headers: { "Location" => target.url })
+    stub_request(:get, target.url).to_return(status: 200)
+    Project.expects(:find_by_id).with(project.id).returns(project)
+    # Simulate validation succeeding before a competing sync saves the target URL.
+    project.stubs(:valid?).returns(true)
+    project.expects(:fetch_repository).never
+
+    output, = capture_io { SyncProjectWorker.new.perform(project.id) }
+
+    assert_includes output, "ActiveRecord::RecordNotUnique"
+    refute Project.exists?(project.id)
+    assert_equal "https://github.com/new/name", target.reload.url
   end
 
   # ---- find_or_create_host / find_or_create_owner ----

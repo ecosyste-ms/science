@@ -145,9 +145,10 @@ module Project::Sync
 
     response = conn.get
     return unless response.success?
-    update!(url: response.env.url.to_s) 
-    # TODO avoid duplicates
-  rescue ActiveRecord::RecordInvalid => e
+    self.class.transaction(requires_new: true) do
+      update!(url: response.env.url.to_s)
+    end
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => e
     puts "Duplicate url #{url}"
     puts e.class
     destroy
