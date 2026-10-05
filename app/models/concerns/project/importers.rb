@@ -14,7 +14,7 @@ module Project::Importers
     pangeo-data/awesome-open-climate-science
     jonathansick/awesome-astronomy
     wbierbower/awesome-physics
-    nerwanp/awesome-spectra
+    erwanp/awesome-spectra
     quentinwach/awesome-inverse-design
     qosf/awesome-quantum-software
     nschloe/awesome-scientific-computing
