@@ -2,6 +2,8 @@ class Owner < ApplicationRecord
   belongs_to :host
   has_many :projects, foreign_key: 'owner_id'
   has_one :developer_account, dependent: :nullify
+  has_many :owner_research_organizations, dependent: :delete_all
+  has_many :research_organizations, through: :owner_research_organizations
 
   counter_culture :host, column_name: :owners_count
 
@@ -28,6 +30,8 @@ class Owner < ApplicationRecord
     if: -> { new_record? || will_save_change_to_website? || will_save_change_to_kind? }
   after_update_commit :refresh_public_evidence_counts,
     if: :saved_change_to_hidden?
+  after_save :sync_research_organization_links!,
+    if: -> { saved_change_to_website? || saved_change_to_kind? || saved_change_to_hidden? }
 
   def self.reclassify_research_organizations!(scope: all, progress: nil)
     counts = { processed: 0, institutional: 0, updated: 0 }
@@ -62,6 +66,21 @@ class Owner < ApplicationRecord
 
   def institutional?
     kind == 'organization' && institutional_domain.present?
+  end
+
+  def sync_research_organization_links!
+    ResearchOrganizationOwnerMatcher.call(self)
+  end
+
+  def set_research_organization!(organization, evidence:, status: "matched")
+    with_lock do
+      owner_research_organizations.where(source: "ror").where.not(match_status: "superseded")
+        .update_all(match_status: "superseded", updated_at: Time.current)
+      link = owner_research_organizations.find_or_initialize_by(research_organization: organization,
+        source: "manual", relationship: "repository_owner")
+      link.update!(match_status: status, match_method: "manual", evidence: evidence, observed_at: Time.current)
+      link
+    end
   end
 
   def institutional_match

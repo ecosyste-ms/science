@@ -157,7 +157,7 @@ class AppJsonTest < ActiveSupport::TestCase
 
     assert_equal [
       {
-        "command" => "bundle exec rake research_organizations:sync",
+        "command" => "bundle exec rake research_organizations:sync research_organizations:import_ror research_organizations:backfill",
         "schedule" => "0 4 * * 1",
       },
     ], crons

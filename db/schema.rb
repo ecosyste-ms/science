@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_02_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_05_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -290,6 +290,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_170000) do
     t.index ["field_id"], name: "index_open_alex_topics_on_field_id"
     t.index ["openalex_id"], name: "index_open_alex_topics_on_openalex_id", unique: true
     t.index ["subfield_id"], name: "index_open_alex_topics_on_subfield_id"
+  end
+
+  create_table "owner_research_organizations", force: :cascade do |t|
+    t.bigint "owner_id", null: false
+    t.bigint "research_organization_id", null: false
+    t.string "source", null: false
+    t.string "relationship", default: "repository_owner", null: false
+    t.string "match_method", null: false
+    t.string "match_status", null: false
+    t.jsonb "evidence", default: {}, null: false
+    t.datetime "observed_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["owner_id", "research_organization_id", "source", "relationship"], name: "index_owner_research_organizations_on_identity", unique: true
+    t.index ["research_organization_id"], name: "index_owner_research_organizations_on_research_organization_id"
   end
 
   create_table "owners", force: :cascade do |t|
@@ -711,6 +726,56 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_170000) do
     t.index ["source", "source_version", "domain", "external_id"], name: "index_research_domains_on_source_version_domain_id", unique: true
   end
 
+  create_table "research_organization_imports", force: :cascade do |t|
+    t.string "source_version", null: false
+    t.string "checksum", null: false
+    t.jsonb "source_metadata", default: {}, null: false
+    t.datetime "retrieved_at", null: false
+    t.bigint "byte_offset", default: 0, null: false
+    t.integer "records_processed", default: 0, null: false
+    t.boolean "current", default: false, null: false
+    t.datetime "completed_at"
+    t.string "lease_token"
+    t.datetime "lease_expires_at"
+    t.text "last_error"
+    t.bigint "owner_cursor", default: 0, null: false
+    t.bigint "owner_upper_bound"
+    t.jsonb "owner_counts", default: {}, null: false
+    t.datetime "backfill_completed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "(1)", name: "index_research_organization_imports_on_unfinished", unique: true, where: "(completed_at IS NULL)"
+    t.index ["current"], name: "index_research_organization_imports_on_current", unique: true, where: "(current = true)"
+    t.index ["source_version"], name: "index_research_organization_imports_on_source_version", unique: true
+  end
+
+  create_table "research_organization_relationships", force: :cascade do |t|
+    t.bigint "research_organization_import_id", null: false
+    t.string "ror_id", null: false
+    t.string "related_ror_id", null: false
+    t.string "kind", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["research_organization_import_id", "related_ror_id", "kind"], name: "index_research_organization_relationships_on_target"
+    t.index ["research_organization_import_id", "ror_id", "kind", "related_ror_id"], name: "index_research_organization_relationships_on_identity", unique: true
+  end
+
+  create_table "research_organizations", force: :cascade do |t|
+    t.string "ror_id", null: false
+    t.bigint "current_import_id"
+    t.bigint "pending_import_id"
+    t.jsonb "metadata", default: {}, null: false
+    t.jsonb "pending_metadata"
+    t.text "matching_domains", default: [], null: false, array: true
+    t.text "pending_domains", default: [], null: false, array: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["current_import_id"], name: "index_research_organizations_on_current_import_id"
+    t.index ["matching_domains"], name: "index_research_organizations_on_matching_domains", using: :gin
+    t.index ["pending_import_id"], name: "index_research_organizations_on_pending_import_id"
+    t.index ["ror_id"], name: "index_research_organizations_on_ror_id", unique: true
+  end
+
   create_table "votes", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "project_id"
@@ -731,6 +796,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_170000) do
   add_foreign_key "developer_accounts", "owners", on_delete: :nullify
   add_foreign_key "external_project_syncs", "projects", on_delete: :cascade
   add_foreign_key "mention_sources", "mentions", on_delete: :cascade
+  add_foreign_key "owner_research_organizations", "owners", on_delete: :cascade
+  add_foreign_key "owner_research_organizations", "research_organizations"
   add_foreign_key "package_versions", "packages", on_delete: :cascade
   add_foreign_key "package_versions", "releases", on_delete: :nullify
   add_foreign_key "packages", "package_registries"
@@ -752,4 +819,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_170000) do
   add_foreign_key "project_open_alex_topics", "open_alex_topics"
   add_foreign_key "project_open_alex_topics", "projects"
   add_foreign_key "project_repository_aliases", "projects"
+  add_foreign_key "research_organization_relationships", "research_organization_imports"
+  add_foreign_key "research_organizations", "research_organization_imports", column: "current_import_id"
+  add_foreign_key "research_organizations", "research_organization_imports", column: "pending_import_id"
 end
