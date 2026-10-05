@@ -31,7 +31,7 @@ class Owner < ApplicationRecord
   after_update_commit :refresh_public_evidence_counts,
     if: :saved_change_to_hidden?
   after_save :sync_research_organization_links!,
-    if: -> { saved_change_to_website? || saved_change_to_kind? || saved_change_to_hidden? }
+    if: -> { saved_change_to_website? || saved_change_to_kind? || saved_change_to_hidden? || saved_change_to_login? || saved_change_to_host_id? }
 
   def self.reclassify_research_organizations!(scope: all, progress: nil)
     counts = { processed: 0, institutional: 0, updated: 0 }

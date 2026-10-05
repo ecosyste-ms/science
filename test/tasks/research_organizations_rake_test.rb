@@ -9,6 +9,7 @@ class ResearchOrganizationsRakeTest < ActiveSupport::TestCase
   JHU = "https://ror.org/00za53h95"
   LAB = "https://ror.org/029pp9z10"
   OTHER = "https://ror.org/02wt5sv47"
+  CICE = "https://ror.org/040g91402"
 
   setup do
     @env = ENV.to_h.slice(*ENV_KEYS)
@@ -26,6 +27,139 @@ class ResearchOrganizationsRakeTest < ActiveSupport::TestCase
     @env.each { |key, value| ENV[key] = value }
     FileUtils.remove_entry(@directory)
     ResearchOrganizationDomainMatcher.reset_cache!
+  end
+
+  test "backfill matches a real ROR forge link without an owner website and exposes its evidence" do
+    owner = Owner.create!(host: @host, login: "cice-consortium", kind: "organization")
+    project = Project.create!(url: "https://github.com/cice-consortium/CICE", owner_record: owner, science_score: 42)
+    original = project.attributes
+    import_records([JSON.parse(Rails.root.join("test/fixtures/files/ror_cice_consortium.json").read)])
+    run_task("backfill")
+    link = owner.owner_research_organizations.confirmed.sole
+    assert_equal CICE, link.research_organization.ror_id
+    assert_equal "ror_forge_url", link.match_method
+    assert_equal "github.com", link.evidence.fetch("host")
+    assert_equal "cice-consortium", link.evidence.fetch("owner_login")
+    assert_equal ["https://github.com/CICE-Consortium"], link.evidence.fetch("matched_urls")
+    assert_equal "first", link.evidence.fetch("source_version")
+    assert_nil owner.reload.institutional_domain
+    assert_equal original, project.reload.attributes
+    session = ActionDispatch::Integration::Session.new(Rails.application)
+    session.get("/api/v1/research_organizations/040g91402/owners")
+    assert_equal 200, session.response.status
+    entry = JSON.parse(session.response.body).sole
+    assert_equal owner.id, entry.fetch("id")
+    assert_equal "ror_forge_url", entry.fetch("organization_matches").sole.fetch("match_method")
+    assert_equal link.evidence, entry.fetch("organization_matches").sole.fetch("evidence")
+    session.get("/research-organizations/040g91402/owners")
+    assert_equal 200, session.response.status
+    assert_includes session.response.body, 'href="https://github.com/CICE-Consortium"'
+  end
+
+  test "backfill ignores unrelated account paths shared forge roots and other link types" do
+    urls = ["https://github.com", "https://github.com/", "https://github.com/cice-consortium-other",
+      "https://github.com/cice-consortium/repository", "https://github.com/orgs/cice-consortium/repositories",
+      "https://notgithub.com/cice-consortium", "https://github.com.example.org/cice-consortium",
+      "https://github.com:8443/cice-consortium", "https://user@github.com/cice-consortium",
+      "https://example.org/?next=https://github.com/cice-consortium", "https://cice-consortium.github.io"]
+    records = [record(JHU, domains: [], links: urls.map { |url| { "type" => "website", "value" => url } }),
+      record(LAB, domains: [], links: [{ "type" => "wikipedia", "value" => "https://github.com/cice-consortium" }])]
+    owner = Owner.create!(host: @host, login: "cice-consortium", kind: "organization")
+    import_records(records)
+    run_task("backfill")
+    assert_empty owner.owner_research_organizations
+  end
+
+  test "GitLab groups Codeberg accounts and self-hosted forge paths match the correct host" do
+    gitlab = Host.create!(name: "GitLab", kind: "gitlab", url: "https://gitlab.com")
+    codeberg = Host.create!(name: "codeberg.org", kind: "gitea", url: "https://codeberg.org")
+    self_hosted = Host.create!(name: "git.example.org", kind: "gitlab", url: "https://git.example.org:8443/forge")
+    owners = [Owner.create!(host: gitlab, login: "My-Org/lab", kind: "organization"),
+      Owner.create!(host: codeberg, login: "My-Org", kind: "organization"),
+      Owner.create!(host: self_hosted, login: "My-Org/lab", kind: "organization")]
+    wrong_host = Owner.create!(host: @host, login: "My-Org", kind: "organization")
+    urls = ["https://GITLAB.com/groups/my-org/lab/?view=projects", "http://codeberg.org/my-org#readme",
+      "https://git.example.org:8443/forge/groups/my-org/lab"]
+    import_records([JHU, LAB, OTHER].zip(urls).map { |id, url| record(id, domains: [], links: [{ "type" => "website", "value" => url }]) })
+    run_task("backfill")
+    owners.zip([JHU, LAB, OTHER], urls).each do |owner, id, url|
+      link = owner.owner_research_organizations.confirmed.sole
+      assert_equal id, link.research_organization.ror_id
+      assert_equal [url], link.evidence.fetch("matched_urls")
+    end
+    assert_empty wrong_host.owner_research_organizations
+  end
+
+  test "forge links remain ambiguous when institutions share an account or domain evidence conflicts" do
+    url = { "type" => "website", "value" => "https://github.com/shared" }
+    owner = Owner.create!(host: @host, login: "shared", kind: "organization", website: "https://jhu.edu")
+    import_records([@record, record(LAB, domains: [], links: [url]), record(OTHER, domains: [], links: [url])])
+    run_task("backfill")
+    assert_equal 3, owner.owner_research_organizations.count
+    assert_equal ["ambiguous"], owner.owner_research_organizations.distinct.pluck(:match_status)
+    assert_empty owner.owner_research_organizations.confirmed
+    assert_equal "ror_domain", owner.owner_research_organizations.find_by!(research_organization: ResearchOrganization.find_by!(ror_id: JHU)).match_method
+    owner.set_research_organization!(ResearchOrganization.find_by!(ror_id: LAB), evidence: { "confirmed_by" => "institution" })
+    ENV["RESTART"] = "true"
+    run_task("backfill")
+    assert_equal ["manual"], owner.owner_research_organizations.confirmed.pluck(:source)
+    assert_equal ["superseded"], owner.owner_research_organizations.where(source: "ror").distinct.pluck(:match_status)
+  end
+
+  test "forge and domain evidence for one institution produce one confirmed association" do
+    owner = Owner.create!(host: @host, login: "jhu", kind: "organization", website: "https://jhu.edu")
+    import_records([record(JHU, links: [{ "type" => "website", "value" => "https://github.com/jhu" }])])
+    run_task("backfill")
+    link = owner.owner_research_organizations.confirmed.sole
+    assert_equal "ror_forge_url", link.match_method
+    assert_equal "jhu.edu", link.evidence.fetch("matched_domain")
+    assert_equal ["https://github.com/jhu"], link.evidence.fetch("matched_urls")
+    before = link.attributes
+    ENV["RESTART"] = "true"
+    run_task("backfill")
+    assert_equal before, link.reload.attributes
+  end
+
+  test "account identity changes refresh forge links without changing the website" do
+    import_records([record(JHU, domains: [], links: [{ "type" => "website", "value" => "https://github.com/renamed" }])])
+    owner = Owner.create!(host: @host, login: "original", kind: "organization")
+    assert_empty owner.owner_research_organizations
+    owner.update!(login: "ReNamed")
+    assert_equal "ror_forge_url", owner.owner_research_organizations.confirmed.sole.match_method
+    owner.update!(host: Host.create!(name: "Codeberg", url: "https://codeberg.org"))
+    assert_empty owner.owner_research_organizations.confirmed
+    assert_equal "superseded", owner.owner_research_organizations.sole.match_status
+    owner.update!(host: @host)
+    assert_equal "matched", owner.owner_research_organizations.sole.match_status
+    owner.update!(hidden: true)
+    assert_equal "superseded", owner.owner_research_organizations.sole.match_status
+  end
+
+  test "backfill restarts completed releases and matches only current active organization records" do
+    owner = Owner.create!(host: @host, login: "forge", kind: "organization")
+    user = Owner.create!(host: @host, login: "person", kind: "user")
+    hidden = Owner.create!(host: @host, login: "hidden", kind: "organization", hidden: true)
+    url = { "type" => "website", "value" => "https://github.com/forge" }
+    import_records([record(JHU, domains: [], links: [url])])
+    ResearchOrganizationForgeMatcher.stubs(:call).returns([])
+    run_task("backfill")
+    ResearchOrganizationForgeMatcher.unstub(:call)
+    run_task("backfill")
+    assert_empty owner.owner_research_organizations
+    ENV["RESTART"] = "true"
+    run_task("backfill")
+    assert_equal "matched", owner.owner_research_organizations.sole.match_status
+    import_records([record(JHU, domains: [], links: [url], status: "inactive"),
+      record(LAB, domains: [], links: [{ "type" => "website", "value" => "https://github.com/person" }]),
+      record(OTHER, domains: [], links: [{ "type" => "website", "value" => "https://github.com/hidden" }])], version: "second")
+    ENV.delete("RESTART")
+    run_task("backfill")
+    assert_equal "superseded", owner.owner_research_organizations.sole.match_status
+    assert_empty user.owner_research_organizations
+    assert_empty hidden.owner_research_organizations
+    import_records([record(LAB, domains: [], links: [])], version: "third")
+    run_task("backfill")
+    assert_empty owner.owner_research_organizations.confirmed
   end
 
   test "archive import retains full records and owner backfill leaves existing projects and scores intact" do

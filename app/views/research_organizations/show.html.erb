@@ -26,6 +26,9 @@
         <p><%= @account_list.project_counts.fetch(account.id, 0) %> scientific projects</p>
         <% @account_list.evidence.fetch(account.id, []).each do |link| %>
           <p class="text-muted mb-1">Linked to <%= link_to link.research_organization.display_name, research_organization_path(link.research_organization) %> by <%= link.match_method %> (<%= link.source %>), observed <%= link.observed_at.utc %><% if link.evidence["matched_domain"] %>; domain <%= link.evidence["matched_domain"] %><% end %>.</p>
+          <% link.evidence.fetch("matched_urls", []).each do |url| %>
+            <p class="mb-1">ROR account link: <%= link_to url, url %></p>
+          <% end %>
         <% end %>
       </div></div>
     <% end %>

@@ -1269,6 +1269,8 @@ components:
                 - repository_owner
               match_method:
                 type: string
+                description: Exact ROR forge account URLs use ror_forge_url. Manual links retain priority; conflicting automatic evidence remains ambiguous and is excluded from this endpoint.
+                enum: [ror_domain, ror_website, ror_forge_url, manual]
               match_status:
                 type: string
                 enum:
@@ -1276,6 +1278,28 @@ components:
               evidence:
                 type: object
                 additionalProperties: true
+                description: Matching inputs and ROR source provenance. Forge matches record the host, owner login and exact source URLs.
+                properties:
+                  host:
+                    type: string
+                    example: github.com
+                  owner_login:
+                    type: string
+                    example: CICE-Consortium
+                  matched_urls:
+                    type: array
+                    items:
+                      type: string
+                      format: uri
+                    example: [https://github.com/CICE-Consortium]
+                  ror_id:
+                    type: string
+                    format: uri
+                  source_version:
+                    type: string
+                  retrieved_at:
+                    type: string
+                    format: date-time
               observed_at:
                 type: string
                 format: date-time
