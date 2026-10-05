@@ -1,0 +1,33 @@
+<% @meta_title = "Research Organizations" %>
+<div class="container-sm">
+  <h1>Research Organizations</h1>
+  <p>Search institutions by name, alias or country. Results show institutions with confirmed forge account links unless you include the full ROR catalogue.</p>
+  <%= form_with url: research_organizations_path, method: :get, class: "row g-3 mb-4" do |form| %>
+    <div class="col-md-7">
+      <%= form.label :q, "Name or alias", class: "form-label" %>
+      <%= form.search_field :q, value: @index.query, maxlength: 200, class: "form-control" %>
+    </div>
+    <div class="col-md-3">
+      <%= form.label :country, "Country code", class: "form-label" %>
+      <%= form.text_field :country, value: @index.country, maxlength: 2, placeholder: "US", class: "form-control" %>
+    </div>
+    <div class="col-12">
+      <%= form.check_box :include_unlinked, { checked: @index.include_unlinked, class: "form-check-input" }, "true", "false" %>
+      <%= form.label :include_unlinked, "Include institutions without confirmed account links", class: "form-check-label" %>
+    </div>
+    <div class="col-12"><%= form.submit "Search", class: "btn btn-primary" %></div>
+  <% end %>
+  <p><%= link_to "Browse accounts matched by institutional domain", research_organization_accounts_path %></p>
+  <p><%= number_with_delimiter(@pagy.count) %> institutions</p>
+  <% @organizations.each do |organization| %>
+    <div class="card mb-3">
+      <div class="card-body">
+        <h2 class="h4"><%= link_to organization.display_name, research_organization_path(organization) %></h2>
+        <p class="mb-1"><%= organization.countries.map { |country| country[:name] || country[:code] }.join(", ") %></p>
+        <p class="text-muted mb-0"><%= organization.metadata["status"] %>; <%= @account_counts.fetch(organization.id, 0) %> confirmed accounts</p>
+      </div>
+    </div>
+  <% end %>
+  <% if @organizations.empty? %><p>No institutions match these filters.</p><% end %>
+  <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
+</div>

@@ -15,6 +15,14 @@ Rails.application.routes.draw do
 
   namespace :api, :defaults => {:format => :json} do
     namespace :v1 do
+      resources :research_organizations, only: %i[index show] do
+        collection { get :accounts }
+        member do
+          get :owners
+          get :projects
+          get :packages
+        end
+      end
       resources :swhids, only: [:index]
       get "software/lookup", to: "software#lookup"
       get "software/search", to: "software#search"
@@ -90,7 +98,14 @@ Rails.application.routes.draw do
 
   resources :exports, only: [:index], path: 'open-data'
 
-  get '/research-organizations', to: 'owners#research_organizations', as: :research_organizations
+  get '/research-organizations/accounts', to: 'owners#research_organizations', as: :research_organization_accounts
+  resources :research_organizations, path: 'research-organizations', only: %i[index show] do
+    member do
+      get :owners
+      get :projects
+      get :packages
+    end
+  end
   get '/institutional-owners', to: redirect('/research-organizations'), as: :institutional_owners
 
   resources :hosts, constraints: { id: /.*/ }, only: [:index, :show] do

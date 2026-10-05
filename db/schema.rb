@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_05_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_05_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -770,6 +770,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_120000) do
     t.text "pending_domains", default: [], null: false, array: true
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index "(((metadata -> 'names'::text))::text) gin_trgm_ops", name: "index_research_organizations_on_names", using: :gin
+    t.index "jsonb_path_query_array(metadata, '$.\"locations\"[*].\"geonames_details\".\"country_code\"'::jsonpath)", name: "index_research_organizations_on_countries", using: :gin
     t.index ["current_import_id"], name: "index_research_organizations_on_current_import_id"
     t.index ["matching_domains"], name: "index_research_organizations_on_matching_domains", using: :gin
     t.index ["pending_import_id"], name: "index_research_organizations_on_pending_import_id"

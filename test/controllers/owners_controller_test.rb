@@ -80,7 +80,7 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
     regular_owner = Owner.create!(host: host, login: "mycompany", kind: "organization", website: "mycompany.com")
     user_owner = Owner.create!(host: host, login: "johndoe", kind: "user", website: "johndoe.com")
 
-    get research_organizations_url
+    get research_organization_accounts_url
     assert_response :success
     assert_select "h1", /Research Organizations/
     assert_match institutional_owner.login, response.body

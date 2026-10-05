@@ -16,6 +16,235 @@ externalDocs:
 servers:
   - url: https://science.ecosyste.ms/api/v1
 paths:
+  "/research_organizations":
+    get:
+      operationId: getResearchOrganizations
+      tags:
+      - research organizations
+      description: Search current ROR institutions by case-insensitive literal substring
+        in names and aliases, and any recorded country. Defaults to institutions with
+        confirmed visible account links. Include unlinked records to search the full
+        catalogue, including inactive and withdrawn records.
+      parameters:
+      - name: q
+        in: query
+        description: Institution name or alias. SQL wildcard characters are treated
+          literally.
+        schema:
+          type: string
+          maxLength: 200
+          example: JHU
+      - name: country
+        in: query
+        description: Two-letter country code, normalized to uppercase.
+        schema:
+          type: string
+          pattern: "^[A-Za-z]{2}$"
+          example: US
+      - name: include_unlinked
+        in: query
+        description: Include institutions without confirmed account links. Only true
+          and false are accepted.
+        schema:
+          type: boolean
+          default: false
+      - "$ref": "#/components/parameters/ResearchOrganizationPage"
+      - "$ref": "#/components/parameters/ResearchOrganizationPerPage"
+      responses:
+        '200':
+          description: Recorded results; no imports or matching jobs are triggered by
+            the request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/ResearchOrganizationSummary"
+          headers:
+            total-count:
+              "$ref": "#/components/headers/ResearchOrganizationTotalCount"
+            current-page:
+              "$ref": "#/components/headers/ResearchOrganizationCurrentPage"
+            page-items:
+              "$ref": "#/components/headers/ResearchOrganizationPageItems"
+            total-pages:
+              "$ref": "#/components/headers/ResearchOrganizationTotalPages"
+            link:
+              "$ref": "#/components/headers/ResearchOrganizationLink"
+        '400':
+          "$ref": "#/components/responses/ResearchOrganizationInvalidParameters"
+  "/research_organizations/accounts":
+    get:
+      operationId: getInstitutionalAccounts
+      tags:
+      - research organizations
+      description: Legacy institutional-domain account browse. Includes visible organization
+        accounts classified by institutional domain, even when no confirmed ROR link
+        is recorded.
+      parameters:
+      - "$ref": "#/components/parameters/ResearchOrganizationPage"
+      - "$ref": "#/components/parameters/ResearchOrganizationPerPage"
+      responses:
+        '200':
+          description: Recorded results; no imports or matching jobs are triggered by
+            the request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/ResearchOrganizationAccount"
+          headers:
+            total-count:
+              "$ref": "#/components/headers/ResearchOrganizationTotalCount"
+            current-page:
+              "$ref": "#/components/headers/ResearchOrganizationCurrentPage"
+            page-items:
+              "$ref": "#/components/headers/ResearchOrganizationPageItems"
+            total-pages:
+              "$ref": "#/components/headers/ResearchOrganizationTotalPages"
+            link:
+              "$ref": "#/components/headers/ResearchOrganizationLink"
+        '400':
+          "$ref": "#/components/responses/ResearchOrganizationInvalidParameters"
+  "/research_organizations/{id}":
+    get:
+      operationId: getResearchOrganization
+      tags:
+      - research organizations
+      description: Institution metadata, source freshness and coverage counts. Earlier
+        records retained after a ROR release remain accessible with source.current false.
+        Account links establish repository ownership; they do not establish institutional
+        authorship.
+      parameters:
+      - "$ref": "#/components/parameters/ResearchOrganizationId"
+      - "$ref": "#/components/parameters/ResearchOrganizationIncludeDescendants"
+      responses:
+        '200':
+          description: Recorded results; no imports or matching jobs are triggered by
+            the request.
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ResearchOrganizationProfile"
+        '400':
+          "$ref": "#/components/responses/ResearchOrganizationInvalidParameters"
+        '404':
+          description: No published organization with this ROR identifier.
+  "/research_organizations/{id}/owners":
+    get:
+      operationId: getResearchOrganizationOwners
+      tags:
+      - research organizations
+      description: Confirmed visible forge accounts with matching evidence. Ambiguous,
+        rejected and superseded links are excluded. With descendants enabled, evidence
+        is restricted to the selected institutions.
+      parameters:
+      - "$ref": "#/components/parameters/ResearchOrganizationId"
+      - "$ref": "#/components/parameters/ResearchOrganizationIncludeDescendants"
+      - "$ref": "#/components/parameters/ResearchOrganizationPage"
+      - "$ref": "#/components/parameters/ResearchOrganizationPerPage"
+      responses:
+        '200':
+          description: Recorded results; no imports or matching jobs are triggered by
+            the request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/ResearchOrganizationAccount"
+          headers:
+            total-count:
+              "$ref": "#/components/headers/ResearchOrganizationTotalCount"
+            current-page:
+              "$ref": "#/components/headers/ResearchOrganizationCurrentPage"
+            page-items:
+              "$ref": "#/components/headers/ResearchOrganizationPageItems"
+            total-pages:
+              "$ref": "#/components/headers/ResearchOrganizationTotalPages"
+            link:
+              "$ref": "#/components/headers/ResearchOrganizationLink"
+        '400':
+          "$ref": "#/components/responses/ResearchOrganizationInvalidParameters"
+        '404':
+          description: No published organization with this ROR identifier.
+  "/research_organizations/{id}/projects":
+    get:
+      operationId: getResearchOrganizationProjects
+      tags:
+      - research organizations
+      description: Visible projects owned by confirmed accounts with science_score at
+        least 20, ordered by descending science_score then project ID. This scope does
+        not include projects solely through contributor affiliation or dependencies.
+      parameters:
+      - "$ref": "#/components/parameters/ResearchOrganizationId"
+      - "$ref": "#/components/parameters/ResearchOrganizationIncludeDescendants"
+      - "$ref": "#/components/parameters/ResearchOrganizationPage"
+      - "$ref": "#/components/parameters/ResearchOrganizationPerPage"
+      responses:
+        '200':
+          description: Recorded results; no imports or matching jobs are triggered by
+            the request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/Project"
+          headers:
+            total-count:
+              "$ref": "#/components/headers/ResearchOrganizationTotalCount"
+            current-page:
+              "$ref": "#/components/headers/ResearchOrganizationCurrentPage"
+            page-items:
+              "$ref": "#/components/headers/ResearchOrganizationPageItems"
+            total-pages:
+              "$ref": "#/components/headers/ResearchOrganizationTotalPages"
+            link:
+              "$ref": "#/components/headers/ResearchOrganizationLink"
+        '400':
+          "$ref": "#/components/responses/ResearchOrganizationInvalidParameters"
+        '404':
+          description: No published organization with this ROR identifier.
+  "/research_organizations/{id}/packages":
+    get:
+      operationId: getResearchOrganizationPackages
+      tags:
+      - research organizations
+      description: Packages associated through published_by_project with scientific
+        projects owned by confirmed accounts. The account association does not establish
+        institutional publishing credit.
+      parameters:
+      - "$ref": "#/components/parameters/ResearchOrganizationId"
+      - "$ref": "#/components/parameters/ResearchOrganizationIncludeDescendants"
+      - "$ref": "#/components/parameters/ResearchOrganizationPage"
+      - "$ref": "#/components/parameters/ResearchOrganizationPerPage"
+      responses:
+        '200':
+          description: Recorded results; no imports or matching jobs are triggered by
+            the request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/ResearchOrganizationPackage"
+          headers:
+            total-count:
+              "$ref": "#/components/headers/ResearchOrganizationTotalCount"
+            current-page:
+              "$ref": "#/components/headers/ResearchOrganizationCurrentPage"
+            page-items:
+              "$ref": "#/components/headers/ResearchOrganizationPageItems"
+            total-pages:
+              "$ref": "#/components/headers/ResearchOrganizationTotalPages"
+            link:
+              "$ref": "#/components/headers/ResearchOrganizationLink"
+        '400':
+          "$ref": "#/components/responses/ResearchOrganizationInvalidParameters"
+        '404':
+          description: No published organization with this ROR identifier.
   /swhids:
     get:
       description: Software Heritage coverage among eligible science projects, archival requests, imports, and distinct confirmed contributions across all recorded projects. Refreshed every six hours; requests only read the last stored snapshot.
@@ -721,7 +950,79 @@ paths:
                 items:
                   $ref: "#/components/schemas/Issue"
 components:
+  headers:
+    ResearchOrganizationTotalCount:
+      description: Total matching records.
+      schema:
+        type: integer
+        minimum: 0
+    ResearchOrganizationCurrentPage:
+      description: Current page number.
+      schema:
+        type: integer
+        minimum: 1
+    ResearchOrganizationPageItems:
+      description: Configured records per page.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+    ResearchOrganizationTotalPages:
+      description: Total pages.
+      schema:
+        type: integer
+        minimum: 0
+    ResearchOrganizationLink:
+      description: Pagination links.
+      schema:
+        type: string
+  responses:
+    ResearchOrganizationInvalidParameters:
+      description: Invalid query parameters
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - error
+            properties:
+              error:
+                type: string
   parameters:
+    ResearchOrganizationPage:
+      name: page
+      in: query
+      description: Page number. Out-of-range pages return an empty array.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    ResearchOrganizationPerPage:
+      name: per_page
+      in: query
+      description: Records per page. Values greater than 100 are capped at 100.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    ResearchOrganizationId:
+      name: id
+      in: path
+      description: Short ROR identifier.
+      schema:
+        type: string
+        pattern: "^0[a-z0-9]{6}[0-9]{2}$"
+        example: 00za53h95
+      required: true
+    ResearchOrganizationIncludeDescendants:
+      name: include_descendants
+      in: query
+      description: Include current ROR child institutions recursively. Accounts, projects
+        and packages are counted once. Only true and false are accepted.
+      schema:
+        type: boolean
+        default: false
     SoftwareLimit:
       name: limit
       in: query
@@ -739,6 +1040,296 @@ components:
         minimum: 0
         default: 0
   schemas:
+    ResearchOrganization:
+      type: object
+      required:
+      - id
+      - ror_id
+      - name
+      - names
+      - status
+      - countries
+      - source
+      - html_url
+      - api_url
+      properties:
+        id:
+          type: string
+        ror_id:
+          type: string
+          format: uri
+        name:
+          type: string
+          nullable: true
+        names:
+          type: array
+          items:
+            type: object
+            required:
+            - value
+            - types
+            properties:
+              value:
+                type: string
+              types:
+                type: array
+                items:
+                  type: string
+              lang:
+                type: string
+                nullable: true
+        status:
+          type: string
+          enum:
+          - active
+          - inactive
+          - withdrawn
+        countries:
+          type: array
+          items:
+            type: object
+            required:
+            - code
+            - name
+            properties:
+              code:
+                type: string
+              name:
+                type: string
+                nullable: true
+        source:
+          type: object
+          required:
+          - version
+          - retrieved_at
+          - current
+          - backfill_complete
+          properties:
+            version:
+              type: string
+            retrieved_at:
+              type: string
+              format: date-time
+            current:
+              type: boolean
+            backfill_complete:
+              type: boolean
+        html_url:
+          type: string
+          format: uri
+        api_url:
+          type: string
+          format: uri
+    ResearchOrganizationSummary:
+      allOf:
+      - "$ref": "#/components/schemas/ResearchOrganization"
+      - type: object
+        required:
+        - linked_accounts_count
+        properties:
+          linked_accounts_count:
+            type: integer
+            minimum: 0
+    ResearchOrganizationProfile:
+      allOf:
+      - "$ref": "#/components/schemas/ResearchOrganization"
+      - type: object
+        required:
+        - metadata
+        - include_descendants
+        - counts
+        - coverage
+        - links
+        properties:
+          metadata:
+            type: object
+            additionalProperties: true
+            description: Full preserved ROR record, including locations, external IDs,
+              website links and typed relationships.
+          include_descendants:
+            type: boolean
+          counts:
+            type: object
+            required:
+            - organizations
+            - accounts
+            - scientific_projects
+            - packages
+            - ambiguous_accounts
+            properties:
+              organizations:
+                type: integer
+                minimum: 0
+              accounts:
+                type: integer
+                minimum: 0
+              scientific_projects:
+                type: integer
+                minimum: 0
+              packages:
+                type: integer
+                minimum: 0
+              ambiguous_accounts:
+                type: integer
+                minimum: 0
+          coverage:
+            type: object
+            required:
+            - relationship
+            - science_score_threshold
+            - ambiguous_links_included
+            - description
+            properties:
+              relationship:
+                type: string
+                enum:
+                - repository_owner
+              science_score_threshold:
+                type: number
+                example: 20
+              ambiguous_links_included:
+                type: boolean
+              description:
+                type: string
+          links:
+            type: object
+            required:
+            - owners
+            - projects
+            - packages
+            properties:
+              owners:
+                type: string
+                format: uri
+              projects:
+                type: string
+                format: uri
+              packages:
+                type: string
+                format: uri
+    ResearchOrganizationAccount:
+      type: object
+      required:
+      - id
+      - login
+      - name
+      - kind
+      - website
+      - host
+      - html_url
+      - scientific_projects_count
+      - organization_matches
+      properties:
+        id:
+          type: integer
+          minimum: 0
+        login:
+          type: string
+        name:
+          type: string
+          nullable: true
+        kind:
+          type: string
+          nullable: true
+        website:
+          type: string
+          nullable: true
+        host:
+          type: string
+        html_url:
+          type: string
+          format: uri
+        scientific_projects_count:
+          type: integer
+          minimum: 0
+        organization_matches:
+          type: array
+          items:
+            type: object
+            required:
+            - ror_id
+            - source
+            - relationship
+            - match_method
+            - match_status
+            - evidence
+            - observed_at
+            properties:
+              ror_id:
+                type: string
+                format: uri
+              source:
+                type: string
+                enum:
+                - ror
+                - manual
+              relationship:
+                type: string
+                enum:
+                - repository_owner
+              match_method:
+                type: string
+              match_status:
+                type: string
+                enum:
+                - matched
+              evidence:
+                type: object
+                additionalProperties: true
+              observed_at:
+                type: string
+                format: date-time
+    ResearchOrganizationPackage:
+      type: object
+      required:
+      - id
+      - name
+      - purl
+      - namespace
+      - registry
+      - published_by_project
+      properties:
+        id:
+          type: integer
+          minimum: 0
+        name:
+          type: string
+        purl:
+          type: string
+          nullable: true
+        namespace:
+          type: string
+          nullable: true
+        registry:
+          type: object
+          required:
+          - name
+          - ecosystem
+          properties:
+            name:
+              type: string
+            ecosystem:
+              type: string
+        published_by_project:
+          type: object
+          required:
+          - id
+          - repository_url
+          - api_url
+          - html_url
+          properties:
+            id:
+              type: integer
+              minimum: 0
+            repository_url:
+              type: string
+              format: uri
+            api_url:
+              type: string
+              format: uri
+            html_url:
+              type: string
+              format: uri
     SoftwareResults:
       type: object
       required: [query, kind, match, next_after_id, projects]

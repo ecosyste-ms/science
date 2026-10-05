@@ -12,6 +12,17 @@ class ResearchOrganization < ApplicationRecord
   scope :current, -> { where(current_import_id: ResearchOrganizationImport.where(current: true).select(:id)) }
   scope :active, -> { current.where("metadata ->> 'status' = ?", "active") }
 
+  def to_param
+    ror_id.delete_prefix("https://ror.org/")
+  end
+
+  def countries
+    locations.filter_map do |location|
+      details = location["geonames_details"]
+      { code: details["country_code"], name: details["country_name"] } if details && details["country_code"]
+    end.uniq
+  end
+
   def display_name
     metadata.fetch("names", []).find { |name| name.fetch("types", []).include?("ror_display") }&.fetch("value")
   end

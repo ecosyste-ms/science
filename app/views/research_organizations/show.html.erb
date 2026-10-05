@@ -1,0 +1,47 @@
+<% @meta_title = @organization.display_name %>
+<div class="container-sm">
+  <p><%= link_to "Research Organizations", research_organizations_path %></p>
+  <h1><%= @organization.display_name %></h1>
+  <p><%= link_to @organization.ror_id, @organization.ror_id %> · <%= @organization.metadata["status"] %> · <%= @organization.countries.map { |country| country[:name] || country[:code] }.join(", ") %></p>
+  <p>Other names: <%= @organization.metadata.fetch("names", []).map { |name| name["value"] }.uniq.reject { |name| name == @organization.display_name }.join(", ") %></p>
+  <p class="text-muted">ROR source <%= @organization.current_import.source_version %>, retrieved <%= @organization.current_import.retrieved_at&.utc %>.</p>
+  <% unless @organization.current_import.current? %><p class="alert alert-warning">This record was retained from an earlier ROR release.</p><% end %>
+  <% unless @organization.current_import.backfill_completed_at %><p class="alert alert-info">Account matching for this ROR release is still in progress.</p><% end %>
+  <%= form_with url: url_for(action: @section), method: :get, class: "mb-3" do |form| %>
+    <%= form.check_box :include_descendants, { checked: @report.include_descendants, class: "form-check-input" }, "true", "false" %>
+    <%= form.label :include_descendants, "Include child institutions", class: "form-check-label" %>
+    <%= form.submit "Apply", class: "btn btn-sm btn-primary ms-2" %>
+  <% end %>
+  <p><%= @counts[:organizations] %> institutions; <%= @counts[:accounts] %> confirmed accounts; <%= @counts[:scientific_projects] %> scientific projects; <%= @counts[:packages] %> packages.</p>
+  <p>Projects are owned by linked accounts and meet the science score threshold of <%= Project::SCIENCE_SCORE_THRESHOLD %>. Packages are associated with those projects. These links do not establish institutional authorship. <%= @counts[:ambiguous_accounts] %> accounts have ambiguous links in this scope; those links are excluded.</p>
+  <nav class="nav nav-pills mb-4" aria-label="Institution records">
+    <% %w[owners projects packages].each do |section| %>
+      <%= link_to section == "owners" ? "Accounts" : section.capitalize, url_for(action: section, include_descendants: @report.include_descendants), class: "nav-link #{'active' if @section == section}" %>
+    <% end %>
+  </nav>
+  <% if @section == "owners" %>
+    <% @accounts.each do |account| %>
+      <div class="card mb-3"><div class="card-body">
+        <h2 class="h4"><%= link_to "#{account.host.name}/#{account.login}", host_owner_path(account.host.name, account.login) %></h2>
+        <p><%= @account_list.project_counts.fetch(account.id, 0) %> scientific projects</p>
+        <% @account_list.evidence.fetch(account.id, []).each do |link| %>
+          <p class="text-muted mb-1">Linked to <%= link_to link.research_organization.display_name, research_organization_path(link.research_organization) %> by <%= link.match_method %> (<%= link.source %>), observed <%= link.observed_at.utc %><% if link.evidence["matched_domain"] %>; domain <%= link.evidence["matched_domain"] %><% end %>.</p>
+        <% end %>
+      </div></div>
+    <% end %>
+    <% if @accounts.empty? %><p>No confirmed account links are recorded in this scope.</p><% end %>
+  <% elsif @section == "projects" %>
+    <%= render partial: "projects/project", collection: @projects %>
+    <% if @projects.empty? %><p>No scientific projects are indexed for confirmed accounts in this scope.</p><% end %>
+  <% else %>
+    <% @packages.each do |package| %>
+      <div class="card mb-3"><div class="card-body">
+        <h2 class="h4"><%= package.name %></h2>
+        <p><%= package.package_registry.name %> · <%= package.purl %></p>
+        <p>Associated project: <%= link_to package.published_by_project.to_s, project_path(package.published_by_project) %></p>
+      </div></div>
+    <% end %>
+    <% if @packages.empty? %><p>No packages are indexed for scientific projects in this scope.</p><% end %>
+  <% end %>
+  <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
+</div>
