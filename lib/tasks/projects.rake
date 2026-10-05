@@ -209,6 +209,14 @@ namespace :projects do
     Project.import_from_ost
   end
 
+  desc 'import candidate projects from curated awesome lists (optional: LISTS=owner/repo MAX_PAGES=100)'
+  task :import_awesome_lists => :environment do
+    lists = ENV["LISTS"].present? ? ENV.fetch("LISTS").split(",") : Project::Importers::AWESOME_LISTS
+    stats = Project.import_from_awesome_lists(lists: lists, max_pages: Integer(ENV.fetch("MAX_PAGES", "100"), 10))
+    puts JSON.generate(stats)
+    abort "Awesome list import incomplete" if stats.values_at(:failed_lists, :truncated_lists).any?(&:positive?)
+  end
+
   desc 'export keywords from JOSS projects to CSV'
   task :export_joss_keywords => :environment do
     projects = Project.with_joss

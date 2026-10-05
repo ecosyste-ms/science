@@ -1,7 +1,118 @@
+require "set"
+
 module Project::Importers
   extend ActiveSupport::Concern
 
+  AWESOME_LISTS = %w[
+    sacridini/Awesome-Geospatial
+    sshuair/awesome-gis
+    acgeospatial/awesome-earthobservation-code
+    softwareunderground/awesome-open-geoscience
+    aradfarahani/awesome-geophysics
+    schipp/awesome-seismology
+    kr-stn/awesome-sentinel
+    pangeo-data/awesome-open-climate-science
+    jonathansick/awesome-astronomy
+    wbierbower/awesome-physics
+    nerwanp/awesome-spectra
+    quentinwach/awesome-inverse-design
+    qosf/awesome-quantum-software
+    nschloe/awesome-scientific-computing
+    Mathepia/awesome-sciml
+    lockwo/awesome-jax
+    JuDFTteam/best-of-atomistic-machine-learning
+    tilde-lab/awesome-materials-informatics
+    lmmentel/awesome-python-chemistry
+    hsiaoyi0504/awesome-cheminformatics
+    ai4s-research/awesome-ai-for-science
+    seandavi/awesome-single-cell
+    danielecook/Awesome-Bioinformatics
+    RipollJ/awesome-bioinfo-tools
+    inoue0426/awesome-computational-biology
+    hallvaaw/awesome-biological-image-analysis
+    GoekeLab/awesome-nanopore
+    slowkow/awesome-vdj
+    voorloopnul/awesome-phages
+    dissipative/awesome-bio-go
+    tysoncung/awesome-biostatistics
+    servierhub/top-life-sciences
+    servierhub/top-pharma50
+    servierhub/top-pharma-fr
+    modenaxe/awesome-biomechanics
+    derikon/awesome-human-motion
+    analyticalmonk/awesome-neuroscience
+    realamirhe/awesome-computational-neuro-science
+    NPACore/awesome-neuroimaging
+    FCP-INDI/awesoMRI-QC
+    open-dicom/awesome-dicom
+    ahundt/awesome-robotics
+    utrechtuniversity/awesome-utrecht-university
+    FudanSELab/awesome-software-engineering-research
+  ].freeze
+
   class_methods do
+    def import_from_awesome_lists(lists: AWESOME_LISTS, max_pages: 100)
+      raise ArgumentError, "lists must be a subset of AWESOME_LISTS" unless lists.is_a?(Array) && (lists - AWESOME_LISTS).empty?
+      raise ArgumentError, "max_pages must be between 1 and 100" unless max_pages.is_a?(Integer) && max_pages.between?(1, 100)
+
+      stats = { created: 0, sync_requested: 0, failed_lists: 0, truncated_lists: 0 }
+      seen = Set.new(AWESOME_LISTS.map { |slug| "https://github.com/#{slug.downcase}" })
+      discovery = ExternalRepositoryDiscovery.new
+      lists.uniq.each do |slug|
+        (1..max_pages).each do |page|
+          url = "https://awesome.ecosyste.ms/api/v1/lists/#{slug}/projects?with_repository=true&not_list=true&per_page=100&page=#{page}"
+          response = ecosystem_http_get(url)
+          raise ArgumentError, "awesome list #{slug} returned HTTP #{response.status}" unless response.success?
+          entries = JSON.parse(response.body)
+          raise ArgumentError, "awesome list #{slug} returned an invalid page" unless entries.is_a?(Array) && entries.size <= 100
+          break if entries.empty?
+
+          import_awesome_list_page(entries, discovery, seen, stats)
+          link = response.headers["link"]
+          more = link.present? ? link.include?('rel="next"') : entries.size == 100
+          break unless more
+          stats[:truncated_lists] += 1 if page == max_pages
+        end
+      rescue Faraday::Error, JSON::ParserError, ArgumentError, ActiveRecord::ActiveRecordError => error
+        stats[:failed_lists] += 1
+        warn "Awesome list #{slug}: #{error.message}"
+      end
+      stats
+    end
+
+    def import_awesome_list_page(entries, discovery, seen, stats)
+      urls = entries.filter_map do |entry|
+        next unless entry.is_a?(Hash) && entry["repository"].is_a?(Hash)
+        value = entry["repository"]["html_url"]
+        next unless value.is_a?(String) && value.length.between?(1, 2000)
+        uri = RepositoryUrlNormalizer.parse(value)
+        url = RepositoryUrlNormalizer.normalize(value)
+        next unless uri && uri.userinfo.nil? && url && !discovery.unsupported_port?(value)
+        next unless discovery.supported_repository?(url) && !discovery.hidden_namespace?(url)
+        url if seen.add?(url)
+      end
+      return if urls.empty?
+
+      ProjectRepositoryLookup.call(urls).each do |entry|
+        url = entry.fetch(:normalized_url)
+        matches = entry.fetch(:matches).map { |match| match.fetch(:project).fetch("id") }.uniq
+        if matches.one?
+          project = Project.visible.find(matches.first)
+        elsif matches.empty? && !discovery.excluded_match?(url)
+          next if Project.new(url: url).hidden_owner?
+          project = Project.create_or_find_by!(url: url)
+          stats[:created] += 1 if project.previously_new_record?
+        else
+          next
+        end
+        next if project.hidden_owner? || project.science_score.to_f > 0
+        next if ExternalProjectSync.exists?(project_id: project.id)
+
+        ExternalProjectSync.request(project.id)
+        stats[:sync_requested] += 1
+      end
+    end
+
     def import_from_csv(url)
       conn = Faraday.new(url: url) do |faraday|
         faraday.request :instrumentation
