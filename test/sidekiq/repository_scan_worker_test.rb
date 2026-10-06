@@ -76,9 +76,9 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     assert_equal 1, clone_commands.size
   end
 
-  test "a zero-score registry match is queued scanned and scored through one checkout" do
+  test "a zero-score Wikidata match is queued scanned and scored through one checkout" do
     @project.update!(science_score: 0, joss_metadata: nil)
-    record = ExternalSoftwareRecord.create!(source: "ascl", identifier: "2601.001", status: "ok", retrieved_at: Time.current, next_refresh_at: Time.current)
+    record = ExternalSoftwareRecord.create!(source: "wikidata", identifier: "Q123", status: "ok", retrieved_at: Time.current, next_refresh_at: Time.current)
     ProjectExternalSoftwareRecord.create!(project: @project, external_software_record: record, relationship: "repository", match_status: "matched")
 
     assert_equal 1, BriefScanEnqueuer.new(limit: 1).enqueue

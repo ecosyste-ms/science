@@ -88,8 +88,8 @@ class BriefScanEnqueuerTest < ActiveSupport::TestCase
     assert_equal "SHARD must be between zero and SHARD_COUNT - 1", error.message
   end
 
-  test "enqueues retrieved research registry matches regardless of score or case" do
-    projects = %w[ASCL BioTools swMATH RRID].map do |source|
+  test "enqueues retrieved identifier matches regardless of score or case" do
+    projects = %w[ASCL BioTools swMATH RRID Wikidata DOI].map do |source|
       project = create_project(source, science_score: 0)
       record = ExternalSoftwareRecord.create!(source: source, identifier: source, status: "error", retrieved_at: Time.current, next_refresh_at: Time.current)
       record.update_column(:status, "Error")
@@ -97,7 +97,7 @@ class BriefScanEnqueuerTest < ActiveSupport::TestCase
       project
     end
 
-    assert_equal 4, BriefScanEnqueuer.new(limit: 10).enqueue
+    assert_equal 6, BriefScanEnqueuer.new(limit: 10).enqueue
     assert_equal projects.map(&:id).sort, RepositoryScanWorker.jobs.map { |job| job['args'].first }.sort
   end
 
@@ -106,7 +106,7 @@ class BriefScanEnqueuerTest < ActiveSupport::TestCase
       ["ambiguous", "ascl", "ambiguous", "ok", Time.current, nil],
       ["missing", "biotools", "matched", "missing", Time.current, nil],
       ["unretrieved", "rrid", "matched", "error", nil, nil],
-      ["wikidata", "wikidata", "matched", "ok", Time.current, nil],
+      ["unmatched-doi", "doi", "unmatched", "ok", Time.current, nil],
       ["scanned", "ascl", "matched", "ok", Time.current, { "dependencies" => [] }],
       ["failed", "swmath", "matched", "ok", Time.current, { "error" => "timeout" }],
       ["hidden", "ascl", "matched", "ok", Time.current, nil],

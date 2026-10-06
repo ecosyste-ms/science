@@ -2,13 +2,13 @@
 
 Science Score is a stored estimate of whether a repository contains research software. `ScienceScoreCalculator` returns a value from 0 to 100 with an evidence breakdown, and `Project#update_science_score` writes both values to `projects.science_score` and `projects.science_score_breakdown`.
 
-`Project.scientific` starts at 20 and `Project.highly_scientific` starts at 75. Projects with any positive score appear in the general project browser and search. The 20-point threshold controls OpenAlex field classification, metadata repository discovery, institutional owner pages, and several import paths. Brief scanning accepts visible projects with a positive score, publishers used directly by scientific projects, and confirmed ASCL, bio.tools, swMATH or RRID matches because a scan can add evidence and raise the score.
+`Project.scientific` starts at 20 and `Project.highly_scientific` starts at 75. Projects with any positive score appear in the general project browser and search. The 20-point threshold controls OpenAlex field classification, metadata repository discovery, institutional owner pages, and several import paths. Brief scanning accepts visible projects with a positive score, publishers used directly by scientific projects, and confirmed Wikidata, bio.tools, ASCL, swMATH, RRID or DOI matches because a scan can add evidence and raise the score.
 
 ## When scores change
 
 A normal project sync fetches repository, package, dependency, commit, README, issue, citation, CodeMeta, and Zenodo data before calculating the score. A successful Brief scan also recalculates it because detected languages and tools can add research-tooling evidence.
 
-Confirmed research-registry matches remain eligible for routine refresh at zero points. Their sync also queues a missing Brief scan. Eligibility requires a matched link and a previously retrieved record with status `ok` or `error`; source, status and match status comparisons are case-insensitive. Registry membership does not itself add score points. Completed scans and stored scan errors retain their existing retry rules.
+Confirmed ASCL, bio.tools, swMATH and RRID matches remain eligible for routine refresh at zero points. Their sync also queues a missing Brief scan. Eligibility requires a matched link and a previously retrieved record with status `ok` or `error`; source, status and match status comparisons are case-insensitive. Identifier membership does not itself add score points. Completed scans and stored scan errors retain their existing retry rules.
 
 Views and API responses read the saved breakdown. They do not calculate a new score during a request, so changed weights take effect only after the project is scored again.
 

@@ -146,9 +146,12 @@ class Project < ApplicationRecord
   scope :with_research_registry_match, -> {
     where(id: ProjectExternalSoftwareRecord.research_registry_matches.select(:project_id))
   }
+  scope :with_external_identifier, -> {
+    where(id: ProjectExternalSoftwareRecord.confirmed_identifier_matches.select(:project_id))
+  }
   scope :eligible_for_brief, -> {
     where('science_score > 0').or(where(id: Package.scientific_publishing_project_ids))
-      .or(with_research_registry_match)
+      .or(with_external_identifier)
   }
   scope :should_sync, -> {
     where('last_synced_at IS NULL OR science_score IS NULL OR science_score > 0')
