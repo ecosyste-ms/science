@@ -1,4 +1,5 @@
 require "tmpdir"
+require "shellwords"
 
 class ProjectRepositoryScanner
   def initialize(project, force_brief: false)
@@ -29,7 +30,7 @@ class ProjectRepositoryScanner
     origin = @project.repository["clone_url"].presence || @project.url
     Dir.mktmpdir("science-repository-") do |directory|
       checkout = File.join(directory, "repository")
-      command = ["git", "clone", "--depth", "1", "--no-tags", "--", origin, checkout]
+      command = ["git", *clone_credentials(origin), "clone", "--depth", "1", "--no-tags", "--", origin, checkout]
       begin
         RepositoryCommand.new.run(command)
       rescue RepositoryCommand::Error, SystemCallError => error
@@ -47,5 +48,16 @@ class ProjectRepositoryScanner
 
   def scientific?
     @project.science_score.to_f >= Project::SCIENCE_SCORE_THRESHOLD
+  end
+
+  def clone_credentials(origin)
+    uri = URI.parse(origin)
+    return [] unless ENV["GITHUB_TOKEN"].present? && uri.scheme == "https" &&
+      uri.host&.downcase == "github.com" && uri.port == 443 && uri.userinfo.nil?
+
+    helper = "!#{Shellwords.join([RbConfig.ruby, Rails.root.join('bin/git-credential-github').to_s])}"
+    ["-c", "credential.helper=", "-c", "credential.helper=#{helper}"]
+  rescue URI::InvalidURIError
+    []
   end
 end

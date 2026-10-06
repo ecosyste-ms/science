@@ -23,6 +23,8 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
       joss_metadata: { "title" => "Research software" }, repository: { "clone_url" => @source })
     @previous_trace = ENV["GIT_TRACE2_EVENT"]
     @previous_path = ENV["PATH"]
+    @previous_github_token = ENV["GITHUB_TOKEN"]
+    ENV.delete("GITHUB_TOKEN")
     @trace = File.join(@directory, "git-trace.jsonl")
     ENV["GIT_TRACE2_EVENT"] = @trace
   end
@@ -30,6 +32,7 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
   teardown do
     @previous_trace ? ENV["GIT_TRACE2_EVENT"] = @previous_trace : ENV.delete("GIT_TRACE2_EVENT")
     ENV["PATH"] = @previous_path
+    @previous_github_token ? ENV["GITHUB_TOKEN"] = @previous_github_token : ENV.delete("GITHUB_TOKEN")
     FileUtils.remove_entry(@directory)
   end
 
@@ -63,6 +66,32 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     assert_equal 1, clone_commands.size
     assert_equal "success", @project.reload.swhids["status"]
     assert @project.brief.key?("dependencies")
+  end
+
+  test "GitHub scans authenticate through Git without storing the token" do
+    ENV["GITHUB_TOKEN"] = "github-test-token"
+    @project.update!(repository: { "clone_url" => @project.url })
+    github_git
+
+    RepositoryScanWorker.new.perform(@project.id)
+
+    assert_equal "authenticated", File.read(File.join(@directory, "credentials-checked"))
+    assert @project.reload.brief.key?("dependencies")
+    assert_equal "success", @project.swhids["status"]
+    assert_equal "swh:1:rev:#{@commit}", @project.swhids.dig("revision", "swhid")
+    refute_includes @project.swhids.to_json, ENV["GITHUB_TOKEN"]
+    refute_includes @project.brief.to_json, ENV["GITHUB_TOKEN"]
+    refute_includes File.read(@trace), ENV["GITHUB_TOKEN"]
+    assert clone_commands.first.include?("credential.helper=")
+  end
+
+  test "a configured GitHub token does not add credentials to local clones" do
+    ENV["GITHUB_TOKEN"] = "github-test-token"
+
+    RepositoryScanWorker.new.perform(@project.id)
+
+    assert_equal "success", @project.reload.swhids["status"]
+    refute clone_commands.first.any? { |argument| argument.start_with?("credential.helper=") }
   end
 
   test "Brief can promote a project and calculate SWHIDs using the same checkout" do
@@ -242,6 +271,27 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     FileUtils.mkdir_p(directory)
     path = File.join(directory, name)
     File.write(path, "#!/bin/sh\necho 'analysis failed' >&2\nexit 1\n")
+    File.chmod(0755, path)
+    ENV["PATH"] = "#{directory}:#{@previous_path}"
+  end
+
+  def github_git
+    real_git = Open3.capture3("which", "git").first.strip
+    directory = File.join(@directory, "bin")
+    FileUtils.mkdir_p(directory)
+    path = File.join(directory, "git")
+    File.write(path, <<~RUBY)
+      #!#{RbConfig.ruby}
+      require "open3"
+      args = ARGV.dup
+      if position = args.index("clone")
+        output, _, status = Open3.capture3(#{real_git.inspect}, *args.take(position), "credential", "fill", stdin_data: "protocol=https\\nhost=github.com\\n\\n")
+        abort "GitHub credentials unavailable" unless status.success? && output.lines.include?("password=" + ENV.fetch("GITHUB_TOKEN") + "\\n")
+        File.write(#{File.join(@directory, 'credentials-checked').inspect}, "authenticated")
+        args[-2] = #{@source.inspect}
+      end
+      exec #{real_git.inspect}, *args
+    RUBY
     File.chmod(0755, path)
     ENV["PATH"] = "#{directory}:#{@previous_path}"
   end
