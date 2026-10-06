@@ -104,6 +104,52 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     assert_equal 1, clone_commands.size
   end
 
+  test "rescan refreshes completed Brief data and scores without replacing existing SWHIDs" do
+    original = { "status" => "success", "origin_archive" => { "status" => "archived" } }
+    @project.update!(science_score: 0, joss_metadata: nil, brief: { "dependencies" => [] }, swhids: original)
+    link_identifier
+
+    assert_equal 1, BriefScanEnqueuer.new(limit: 1, rescan: true).enqueue
+    RepositoryScanWorker.perform_one
+
+    assert @project.reload.brief.fetch("languages").any? { |language| language["name"] == "Fortran" }
+    assert_operator @project.science_score, :>=, Project::SCIENCE_SCORE_THRESHOLD
+    assert_equal original, @project.swhids
+    assert_equal 1, clone_commands.size
+  end
+
+  test "rescan retries a stored Brief error" do
+    @project.update!(science_score: 0, joss_metadata: nil, brief: { "error" => "timeout" })
+    link_identifier
+
+    RepositoryScanWorker.perform_async(@project.id, true)
+    RepositoryScanWorker.perform_one
+
+    refute @project.reload.brief.key?("error")
+    assert @project.brief.key?("dependencies")
+    assert_operator @project.science_score, :>=, Project::SCIENCE_SCORE_THRESHOLD
+  end
+
+  test "rescan rechecks the score and identifier after enqueueing" do
+    @project.update!(science_score: 0, joss_metadata: nil, brief: { "dependencies" => [] })
+    link = link_identifier
+    RepositoryScanWorker.perform_async(@project.id, true)
+    @project.update!(science_score: Project::SCIENCE_SCORE_THRESHOLD)
+    RepositoryScanWorker.perform_one
+    assert_empty clone_commands
+
+    @project.update!(science_score: 0)
+    RepositoryScanWorker.perform_async(@project.id, true)
+    link.update!(match_status: "ambiguous")
+    RepositoryScanWorker.perform_one
+    assert_empty clone_commands
+  end
+
+  def link_identifier
+    record = ExternalSoftwareRecord.create!(source: "wikidata", identifier: "Q456", status: "ok", retrieved_at: Time.current, next_refresh_at: Time.current)
+    ProjectExternalSoftwareRecord.create!(project: @project, external_software_record: record, relationship: "repository", match_status: "matched")
+  end
+
   test "a Brief command failure preserves successful SWHIDs and removes the checkout" do
     failing_binary("brief")
 

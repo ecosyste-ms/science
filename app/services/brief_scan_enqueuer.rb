@@ -1,13 +1,14 @@
 class BriefScanEnqueuer
   COHORTS = %w[all joss non_joss].freeze
 
-  attr_reader :limit, :cohort, :shard_count, :shard
+  attr_reader :limit, :cohort, :shard_count, :shard, :rescan
 
-  def initialize(limit: 100, cohort: "all", shard_count: 1, shard: 0)
+  def initialize(limit: 100, cohort: "all", shard_count: 1, shard: 0, rescan: false)
     @limit = integer(limit, "LIMIT")
     @cohort = cohort
     @shard_count = integer(shard_count, "SHARD_COUNT")
     @shard = integer(shard, "SHARD")
+    @rescan = rescan
 
     validate
   end
@@ -16,14 +17,20 @@ class BriefScanEnqueuer
     enqueued = 0
 
     projects.limit(limit).find_each(batch_size: 500) do |project|
-      enqueued += 1 if RepositoryScanWorker.perform_async(project.id)
+      args = rescan ? [project.id, true] : [project.id]
+      enqueued += 1 if RepositoryScanWorker.perform_async(*args)
     end
 
     enqueued
   end
 
   def projects
-    scope = Project.visible.with_repository.needing_brief_dependencies.eligible_for_brief
+    scope = Project.visible.with_repository
+    scope = if rescan
+      scope.with_external_identifier.where("science_score < ?", Project::SCIENCE_SCORE_THRESHOLD)
+    else
+      scope.needing_brief_dependencies.eligible_for_brief
+    end
     scope = scope.with_joss if cohort == "joss"
     scope = scope.where(joss_metadata: nil) if cohort == "non_joss"
     scope.where("projects.id % ? = ?", shard_count, shard)

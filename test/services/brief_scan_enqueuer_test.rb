@@ -88,6 +88,26 @@ class BriefScanEnqueuerTest < ActiveSupport::TestCase
     assert_equal "SHARD must be between zero and SHARD_COUNT - 1", error.message
   end
 
+  test "rescan includes completed and failed identifier projects only below the cutoff" do
+    eligible = []
+    [
+      ["complete", 0, { "dependencies" => [] }, true],
+      ["failed", 19.99, { "error" => "timeout" }, true],
+      ["threshold", 20, { "dependencies" => [] }, true],
+      ["unlinked", 1, { "dependencies" => [] }, false],
+    ].each do |name, score, brief, linked|
+      project = create_project(name, science_score: score, brief: brief)
+      if linked
+        record = ExternalSoftwareRecord.create!(source: "doi", identifier: name, status: "ok", retrieved_at: Time.current, next_refresh_at: Time.current)
+        ProjectExternalSoftwareRecord.create!(project: project, external_software_record: record, relationship: "repository", match_status: "matched")
+      end
+      eligible << project.id if linked && score < 20
+    end
+
+    assert_equal 2, BriefScanEnqueuer.new(limit: 10, rescan: true).enqueue
+    assert_equal eligible.map { |id| [id, true] }, RepositoryScanWorker.jobs.map { |job| job['args'] }
+  end
+
   test "enqueues retrieved identifier matches regardless of score or case" do
     projects = %w[ASCL BioTools swMATH RRID Wikidata DOI].map do |source|
       project = create_project(source, science_score: 0)

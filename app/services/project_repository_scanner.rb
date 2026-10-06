@@ -1,12 +1,13 @@
 require "tmpdir"
 
 class ProjectRepositoryScanner
-  def initialize(project)
+  def initialize(project, force_brief: false)
     @project = project
+    @force_brief = force_brief
   end
 
   def scan
-    brief_due = @project.brief_scan_due? && Project.eligible_for_brief.exists?(@project.id)
+    brief_due = (@force_brief || @project.brief_scan_due?) && Project.eligible_for_brief.exists?(@project.id)
     swhid_due = scientific? && @project.swhid_scan_due?
     return unless brief_due || swhid_due
 
@@ -32,7 +33,7 @@ class ProjectRepositoryScanner
       begin
         RepositoryCommand.new.run(command)
       rescue RepositoryCommand::Error, SystemCallError => error
-        @project.record_brief_error(error.message) if @project.brief_scan_due?
+        @project.record_brief_error(error.message) if @force_brief || @project.brief_scan_due?
         if scientific? && @project.swhid_scan_due?
           @project.store_swhids("status" => "error", "origin" => origin, "clone_command" => command,
             "attempted_at" => Time.current.iso8601, "error" => error.message.to_s.scrub[0, 500],

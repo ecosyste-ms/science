@@ -10,6 +10,8 @@ A normal project sync fetches repository, package, dependency, commit, README, i
 
 Confirmed ASCL, bio.tools, swMATH and RRID matches remain eligible for routine refresh at zero points. Their sync also queues a missing Brief scan. Eligibility requires a matched link and a previously retrieved record with status `ok` or `error`; source, status and match status comparisons are case-insensitive. Identifier membership does not itself add score points. Completed scans and stored scan errors retain their existing retry rules.
 
+`BriefScanEnqueuer.new(rescan: true)` selects confirmed identifier matches from all six sources with scores strictly below 20, including completed scans and stored errors. The worker rechecks the score and identifier after taking its project lock. These jobs rerun Brief and save a recalculated score; existing SWHIDs are retained. Normal scan jobs still skip completed scans and stored errors. A failed rescan records its error using the normal scan failure behavior.
+
 Views and API responses read the saved breakdown. They do not calculate a new score during a request, so changed weights take effect only after the project is scored again.
 
 ## Non-JOSS projects
