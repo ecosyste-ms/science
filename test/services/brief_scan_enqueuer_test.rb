@@ -88,6 +88,44 @@ class BriefScanEnqueuerTest < ActiveSupport::TestCase
     assert_equal "SHARD must be between zero and SHARD_COUNT - 1", error.message
   end
 
+  test "enqueues retrieved research registry matches regardless of score or case" do
+    projects = %w[ASCL BioTools swMATH RRID].map do |source|
+      project = create_project(source, science_score: 0)
+      record = ExternalSoftwareRecord.create!(source: source, identifier: source, status: "error", retrieved_at: Time.current, next_refresh_at: Time.current)
+      record.update_column(:status, "Error")
+      ProjectExternalSoftwareRecord.create!(project: project, external_software_record: record, relationship: "repository", match_status: "Matched")
+      project
+    end
+
+    assert_equal 4, BriefScanEnqueuer.new(limit: 10).enqueue
+    assert_equal projects.map(&:id).sort, RepositoryScanWorker.jobs.map { |job| job['args'].first }.sort
+  end
+
+  test "registry scan selection excludes unconfirmed records and hidden or completed projects" do
+    [
+      ["ambiguous", "ascl", "ambiguous", "ok", Time.current, nil],
+      ["missing", "biotools", "matched", "missing", Time.current, nil],
+      ["unretrieved", "rrid", "matched", "error", nil, nil],
+      ["wikidata", "wikidata", "matched", "ok", Time.current, nil],
+      ["scanned", "ascl", "matched", "ok", Time.current, { "dependencies" => [] }],
+      ["failed", "swmath", "matched", "ok", Time.current, { "error" => "timeout" }],
+      ["hidden", "ascl", "matched", "ok", Time.current, nil],
+    ].each do |name, source, match_status, status, retrieved_at, brief|
+      project = create_project(name, science_score: 0, brief: brief)
+      if name == "hidden"
+        host = Host.create!(name: "GitHub")
+        owner = Owner.create!(host: host, login: "hidden-registry")
+        project.update!(owner_record: owner)
+        owner.update!(hidden: true)
+      end
+      record = ExternalSoftwareRecord.create!(source: source, identifier: name, status: status, retrieved_at: retrieved_at, next_refresh_at: Time.current)
+      ProjectExternalSoftwareRecord.create!(project: project, external_software_record: record, relationship: "repository", match_status: match_status)
+    end
+
+    assert_equal 0, BriefScanEnqueuer.new(limit: 10).enqueue
+    assert_empty RepositoryScanWorker.jobs
+  end
+
   def create_project(name, joss: false, brief: nil, science_score: 20, repository: true)
     Project.create!(
       url: "https://github.com/test/brief-enqueuer-#{name}",

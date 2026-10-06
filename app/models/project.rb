@@ -143,7 +143,17 @@ class Project < ApplicationRecord
   scope :with_research_organization_owner, -> { joins(:owner_record).merge(Owner.institutional) }
   scope :scientific, -> { where('science_score >= ?', SCIENCE_SCORE_THRESHOLD) }
   scope :highly_scientific, -> { where('science_score >= ?', 75) }
-  scope :should_sync, -> { where('last_synced_at IS NULL OR science_score IS NULL OR science_score > 0') }
+  scope :with_research_registry_match, -> {
+    where(id: ProjectExternalSoftwareRecord.research_registry_matches.select(:project_id))
+  }
+  scope :eligible_for_brief, -> {
+    where('science_score > 0').or(where(id: Package.scientific_publishing_project_ids))
+      .or(with_research_registry_match)
+  }
+  scope :should_sync, -> {
+    where('last_synced_at IS NULL OR science_score IS NULL OR science_score > 0')
+      .or(with_research_registry_match)
+  }
 
   def self.for_owner(host, login)
     normalized_login = login.downcase

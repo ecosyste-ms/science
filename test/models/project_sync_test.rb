@@ -356,6 +356,33 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_equal '{"name":"y"}', p.reload.codemeta
   end
 
+  test "fallback CodeMeta content is credited when repository metadata omits the file" do
+    p = build_project(repository: repo_hash.deep_merge("metadata" => { "files" => { "codemeta" => nil } }))
+    content = { "@context" => "https://w3id.org/codemeta/3.0", "@type" => "SoftwareSourceCode", "name" => "WebWarp" }.to_json
+    stub_request(:get, p.raw_url("codemeta.json")).to_return(status: 200, body: content)
+
+    p.fetch_codemeta
+    p.update_science_score
+
+    assert_equal content, p.reload.codemeta
+    assert p.science_score_breakdown.dig(:breakdown, :has_codemeta, :present)
+  end
+
+  test "routine refresh includes previously synced zero-score registry matches" do
+    SyncProjectWorker.clear
+    matched = build_project(science_score: 0, last_synced_at: 2.days.ago)
+    unrelated = Project.create!(url: "https://example.test/unrelated", science_score: 0, last_synced_at: 2.days.ago)
+    record = ExternalSoftwareRecord.create!(source: "ascl", identifier: "2601.002", status: "ok", retrieved_at: Time.current, next_refresh_at: Time.current)
+    ProjectExternalSoftwareRecord.create!(project: matched, external_software_record: record, relationship: "repository", match_status: "matched")
+
+    Project.sync_least_recently_synced
+
+    assert_includes SyncProjectWorker.jobs.map { |job| job['args'].first }, matched.id
+    refute_includes SyncProjectWorker.jobs.map { |job| job['args'].first }, unrelated.id
+  ensure
+    SyncProjectWorker.clear
+  end
+
   test "fetch_works looks up each doi against openalex" do
     p = build_project(readme: "See https://doi.org/10.1234/x")
     p.stubs(:readme_doi_urls).returns(["https://doi.org/10.1234/x"])
@@ -574,6 +601,19 @@ class ProjectSyncTest < ActiveSupport::TestCase
     project.update!(swhids: { "status" => "error" })
     assert_nil project.fetch_swhids_async
     assert_empty FetchSwhidWorker.jobs
+  end
+
+  test "sync worker queues evidence collection for a zero-score registry match" do
+    project = build_project(science_score: 0)
+    record = ExternalSoftwareRecord.create!(source: "rrid", identifier: "SCR_000001", status: "ok", retrieved_at: Time.current, next_refresh_at: Time.current)
+    ProjectExternalSoftwareRecord.create!(project: project, external_software_record: record, relationship: "repository", match_status: "matched")
+    %i[check_url fetch_repository find_or_create_host fetch_owner find_or_create_owner fetch_dependencies fetch_packages import_mentions fetch_readme combine_keywords fetch_commits fetch_events fetch_issue_stats sync_issues fetch_citation_file fetch_codemeta fetch_zenodo_file sync_releases update_committers update_keywords_from_contributors update_score].each { |method| Project.any_instance.stubs(method) }
+    project.update!(repository: { "clone_url" => "https://example.test/research.git" })
+
+    SyncProjectWorker.new.perform(project.id)
+
+    assert_equal 0.0, project.reload.science_score
+    assert_equal [[project.id]], RepositoryScanWorker.jobs.map { |job| job['args'] }
   end
 
   test "fast sync timings are not logged" do

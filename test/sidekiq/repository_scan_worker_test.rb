@@ -76,6 +76,20 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     assert_equal 1, clone_commands.size
   end
 
+  test "a zero-score registry match is queued scanned and scored through one checkout" do
+    @project.update!(science_score: 0, joss_metadata: nil)
+    record = ExternalSoftwareRecord.create!(source: "ascl", identifier: "2601.001", status: "ok", retrieved_at: Time.current, next_refresh_at: Time.current)
+    ProjectExternalSoftwareRecord.create!(project: @project, external_software_record: record, relationship: "repository", match_status: "matched")
+
+    assert_equal 1, BriefScanEnqueuer.new(limit: 1).enqueue
+    RepositoryScanWorker.perform_one
+
+    assert_operator @project.reload.science_score, :>=, Project::SCIENCE_SCORE_THRESHOLD
+    assert @project.brief.fetch("languages").any? { |language| language["name"] == "Fortran" }
+    assert_equal "success", @project.swhids["status"]
+    assert_equal 1, clone_commands.size
+  end
+
   test "Brief runs without replacing stored SWHIDs or archival evidence" do
     original = { "status" => "success", "origin_archive" => { "status" => "archived" },
       "archival" => { "id" => 123, "status" => "completed" } }

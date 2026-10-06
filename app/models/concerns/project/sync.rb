@@ -589,7 +589,11 @@ module Project::Sync
 
   def fetch_swhids_async
     return unless persisted?
-    return unless Project.visible.scientific.with_repository.exists?(id: id)
+    scope = Project.visible.with_repository.where(id: id)
+    if brief_scan_due? && scope.with_research_registry_match.exists?
+      return RepositoryScanWorker.perform_async(id)
+    end
+    return unless scope.scientific.exists?
     return unless swhid_scan_due? || SwhidArchiveChecker.new(swhids).due? || SwhidArchiver.new(self).due?
 
     swhid_scan_due? ? RepositoryScanWorker.perform_async(id) : enqueue_swhid_check

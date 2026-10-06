@@ -2,6 +2,14 @@ class ProjectExternalSoftwareRecord < ApplicationRecord
   belongs_to :project
   belongs_to :external_software_record
 
+  scope :research_registry_matches, -> {
+    joins(:external_software_record)
+      .where("LOWER(project_external_software_records.match_status) = ?", "matched")
+      .where("LOWER(external_software_records.source) IN (?)", %w[ascl biotools swmath rrid])
+      .where("LOWER(external_software_records.status) IN (?)", %w[ok error])
+      .where.not(external_software_records: { retrieved_at: nil })
+  }
+
   def self.registry_references
     joins(:external_software_record).where(match_status: "matched")
       .where(external_software_records: { status: %w[ok error], source: %w[wikidata biotools ascl swmath rrid doi] })

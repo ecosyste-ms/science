@@ -498,7 +498,7 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     assert_match "language: fortran", result[:breakdown][:has_research_tooling][:details]
   end
 
-  test "calculate does not add Python maturity points without scientific vocabulary" do
+  test "calculate excludes Python development tooling from research evidence" do
     @project.citation_file = valid_cff
     @project.brief = {
       "languages" => [{ "name" => "Python" }],
@@ -515,12 +515,10 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     result = ScienceScoreCalculator.new(@project).calculate
 
     assert_equal 16.0, result[:score]
-    assert_equal 0.4, result[:breakdown][:has_research_tooling][:strength]
-    assert_equal 0.0, result[:breakdown][:has_research_tooling][:score]
-    assert_match "Python maturity", result[:breakdown][:has_research_tooling][:details]
+    refute result[:breakdown][:has_research_tooling][:present]
   end
 
-  test "calculate combines scientific vocabulary with mature Python tooling" do
+  test "calculate does not reward development tooling even with scientific vocabulary" do
     JossVocabularyModel.create!(
       term_weights: { "plasma" => 2.0, "simulation" => 1.5 },
       config: { "top_terms" => 3, "evidence_threshold" => 3.0 },
@@ -539,13 +537,12 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
 
     result = ScienceScoreCalculator.new(@project).calculate
 
-    assert_equal 21.0, result[:score]
+    assert_equal 13.0, result[:score]
     assert result[:breakdown][:joss_vocabulary_similarity][:present]
-    assert_equal 0.4, result[:breakdown][:has_research_tooling][:strength]
-    assert_equal 8.0, result[:breakdown][:has_research_tooling][:score]
+    refute result[:breakdown][:has_research_tooling][:present]
   end
 
-  test "check_research_tooling detects language-specific R and Julia combinations" do
+  test "calculate excludes R and Julia package development tooling" do
     @project.stubs(:joss_vocabulary_analysis).returns(score: 0, terms: [], model_id: nil)
     @project.brief = {
       "languages" => [{ "name" => "R" }],
@@ -554,22 +551,18 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
         "docs" => [{ "name" => "pkgdown" }, { "name" => "roxygen2" }],
       },
     }
-    r_result = ScienceScoreCalculator.new(@project).check_research_tooling
-
-    assert_equal 0.7, r_result[:strength]
-    assert_match "R tooling", r_result[:details]
-    assert_equal 14.0, ScienceScoreCalculator.new(@project).calculate[:score]
+    r_result = @project.calculate_science_score_breakdown
+    refute r_result[:breakdown][:has_research_tooling][:present]
+    assert_equal 0.0, r_result[:score]
 
     @project.brief = {
       "languages" => [{ "name" => "Julia" }],
       "package_managers" => [{ "name" => "Pkg" }],
       "tools" => { "docs" => [{ "name" => "Documenter.jl" }] },
     }
-    julia_result = ScienceScoreCalculator.new(@project).check_research_tooling
-
-    assert_equal 0.7, julia_result[:strength]
-    assert_match "Julia tooling", julia_result[:details]
-    assert_equal 14.0, ScienceScoreCalculator.new(@project).calculate[:score]
+    julia_result = @project.calculate_science_score_breakdown
+    refute julia_result[:breakdown][:has_research_tooling][:present]
+    assert_equal 0.0, julia_result[:score]
   end
 
   test "calculate requires vocabulary for standalone R authoring tools" do
@@ -600,7 +593,7 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     assert_equal 0.0, result[:breakdown][:has_research_tooling][:score]
   end
 
-  test "calculate requires vocabulary for Julia Pkg alone" do
+  test "calculate excludes Julia Pkg alone from research evidence" do
     @project.stubs(:joss_vocabulary_analysis).returns(score: 0, terms: [], model_id: nil)
     @project.brief = {
       "languages" => [{ "name" => "Julia" }],
@@ -611,8 +604,44 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     result = ScienceScoreCalculator.new(@project).calculate
 
     assert_equal 0.0, result[:score]
-    assert_equal 0.4, result[:breakdown][:has_research_tooling][:strength]
-    assert_equal 0.0, result[:breakdown][:has_research_tooling][:score]
+    refute result[:breakdown][:has_research_tooling][:present]
+  end
+
+  test "development tools cannot add research evidence through their taxonomy" do
+    @project.brief = { "tools" => { "build" => [{ "name" => "Fortitude", "taxonomy" => { "domain" => ["research"] } }], "test" => [{ "name" => "nf-test", "taxonomy" => { "domain" => ["bioinformatics"] } }] } }
+    result = @project.calculate_science_score_breakdown
+    refute result[:breakdown][:has_research_tooling][:present]
+  end
+
+  test "Jupyter still adds research tooling evidence alongside development tools" do
+    @project.brief = { "tools" => { "environment" => [{ "name" => "Jupyter" }], "coverage" => [{ "name" => "coverage.py" }] } }
+    @project.stubs(:joss_vocabulary_analysis).returns(score: 40, terms: ["simulation"], model_id: nil)
+    @project.update_science_score
+    assert_equal 21.0, @project.reload.science_score
+    assert_equal ["tool: jupyter"], @project.science_score_breakdown.dig(:breakdown, :has_research_tooling, :evidence)
+  end
+
+  test "scoring retains research evidence for forks with a bare awesome topic" do
+    @project.citation_file = valid_cff
+    @project.repository = { "full_name" => "research/analysis", "topics" => ["awesome"], "fork" => true, "source_name" => "upstream/analysis" }
+    @project.update_science_score
+    assert_equal 16.0, @project.reload.science_score
+    refute @project.science_score_breakdown.dig(:breakdown, :negative_indicators, :present)
+  end
+
+  test "scoring credits validated downloaded CodeMeta without a file listing" do
+    @project.codemeta = { "@type" => ["https://schema.org/SoftwareSourceCode"], "name" => "WebWarp" }.to_json
+    @project.update_science_score
+    assert_equal 13.0, @project.reload.science_score
+    assert @project.science_score_breakdown.dig(:breakdown, :has_codemeta, :present)
+  end
+
+  test "scoring ignores malformed or unrelated downloaded CodeMeta" do
+    ['<html>Not found</html>', '{}', '[]', 'null', '{"name":"Error"}', '{"@type":"Person","name":"Alice"}', '{"@type":"SoftwareSourceCode"}'].each do |content|
+      @project.codemeta = content
+      result = @project.calculate_science_score_breakdown
+      refute result[:breakdown][:has_codemeta][:present], content
+    end
   end
 
   test "check_research_tooling does not treat a generic C++ build as research" do

@@ -206,14 +206,14 @@ class ScienceScoreCalculator
   end
 
   def check_codemeta_file
-    has_codemeta = false
+    has_codemeta = valid_codemeta_content?
 
     if project.repository.present? &&
        project.repository['metadata'].present? &&
        project.repository['metadata']['files'].present?
 
       files = project.repository['metadata']['files']
-      has_codemeta = files.any? { |k, v| k.to_s.downcase.include?('codemeta') && v.present? }
+      has_codemeta ||= files.any? { |k, v| k.to_s.downcase.include?('codemeta') && v.present? }
     end
 
     {
@@ -221,6 +221,21 @@ class ScienceScoreCalculator
       description: "codemeta.json file",
       details: has_codemeta ? "Found codemeta.json file" : nil
     }
+  end
+
+  def valid_codemeta_content?
+    return false if project.codemeta.blank?
+
+    data = JSON.parse(project.codemeta)
+    return false unless data.is_a?(Hash) && data['name'].is_a?(String) && data['name'].present?
+
+    Array(data['@type']).any? do |type|
+      %w[SoftwareSourceCode SoftwareApplication].any? do |name|
+        [name, "http://schema.org/#{name}", "https://schema.org/#{name}"].include?(type)
+      end
+    end
+  rescue JSON::ParserError
+    false
   end
 
   def check_zenodo_file
@@ -349,29 +364,24 @@ class ScienceScoreCalculator
   RESEARCH_DOMAINS = %w[research bioinformatics scientific-computing high-performance-computing].freeze
 
   RESEARCH_TOOLS = {
-    strong: %w[snakemake nextflow nf-core nf-test multiqc dockstore],
-    high: %w[dvc asv fortitude],
-    moderate: ['quarto', 'r markdown', 'knitr', 'jupyter', 'myst-parser', 'benchmarktools.jl',
-               'documenter.jl', 'roxygen2', 'pkgdown', 'covr', 'testthat', 'renv', 'targets'],
+    strong: %w[snakemake nextflow nf-core multiqc dockstore],
+    high: %w[dvc],
+    moderate: ['quarto', 'r markdown', 'knitr', 'jupyter', 'renv', 'targets'],
   }.freeze
 
-  R_RESEARCH_TOOLS = %w[pkgdown testthat roxygen2 covr renv targets].freeze
-  JULIA_RESEARCH_TOOLS = %w[documenter.jl benchmarktools.jl].freeze
-  JULIA_PACKAGE_MANAGERS = %w[pkg].freeze
-  PYTHON_MATURITY_CATEGORIES = %w[docs test coverage lint typecheck].freeze
-  PYTHON_MATURITY_THRESHOLD = 3
+  DEVELOPMENT_TOOLS = %w[nf-test asv fortitude myst-parser benchmarktools.jl documenter.jl roxygen2 pkgdown covr testthat].freeze
 
   def check_research_tooling
     return { present: false, description: "Research tooling", details: nil } unless project.brief.present?
     return { present: false, description: "Research tooling", details: "scan error: #{project.brief['error']}" } if project.brief['error']
 
     tools_by_category = project.brief['tools'].is_a?(Hash) ? project.brief['tools'] : {}
-    tools = tools_by_category.values.flatten.select { |tool| tool.is_a?(Hash) }
+    tools = tools_by_category.reject { |category, _| %w[test coverage lint typecheck format].include?(category.downcase) }
+      .values.flatten.select { |tool| tool.is_a?(Hash) }
+      .reject { |tool| DEVELOPMENT_TOOLS.include?(tool['name']&.downcase) }
     names = tools.filter_map { |tool| tool['name']&.downcase }.uniq
     domains = tools.flat_map { |tool| Array(tool.dig('taxonomy', 'domain')) }.map(&:downcase).uniq
     languages = brief_names('languages')
-    package_managers = brief_names('package_managers')
-    categories = tools_by_category.keys.map(&:downcase)
     evidence = []
 
     domain_matches = domains & RESEARCH_DOMAINS
@@ -385,33 +395,12 @@ class ScienceScoreCalculator
       evidence << [1.0, "language: fortran"]
     end
 
-    r_matches = names & R_RESEARCH_TOOLS
-    if languages.include?('r') && r_matches.length >= 2
-      evidence << [0.7, "R tooling: #{r_matches.join(', ')}"]
-    elsif languages.include?('r') && r_matches.any?
-      evidence << [0.4, "R tooling: #{r_matches.join(', ')}"]
-    end
-
-    julia_matches = names & JULIA_RESEARCH_TOOLS
-    julia_package_matches = package_managers & JULIA_PACKAGE_MANAGERS
-    if languages.include?('julia') && julia_matches.any? && julia_package_matches.any?
-      matches = julia_matches + julia_package_matches
-      evidence << [0.7, "Julia tooling: #{matches.join(', ')}"]
-    elsif languages.include?('julia') && julia_package_matches.any?
-      evidence << [0.4, "Julia tooling: #{julia_package_matches.join(', ')}"]
-    end
-
     (names & RESEARCH_TOOLS[:high]).each do |name|
       evidence << [0.7, "tool: #{name}"]
     end
 
     (names & RESEARCH_TOOLS[:moderate]).each do |name|
       evidence << [0.4, "tool: #{name}"]
-    end
-
-    maturity_categories = categories & PYTHON_MATURITY_CATEGORIES
-    if languages.include?('python') && maturity_categories.length >= PYTHON_MATURITY_THRESHOLD
-      evidence << [0.4, "Python maturity: #{maturity_categories.join(', ')}"]
     end
 
     strength = evidence.map(&:first).max
@@ -434,7 +423,7 @@ class ScienceScoreCalculator
   end
 
   NEGATIVE_TOPICS_STRONG = %w[
-    awesome awesome-list dotfiles homework homework-assignments
+    awesome-list dotfiles homework homework-assignments
     interview interview-prep interview-questions interview-preparation
     cheatsheet cheatsheets roadmap
   ].freeze
@@ -464,7 +453,6 @@ class ScienceScoreCalculator
     matches << [:weak, 'name:-template'] if name.match?(/-template\b/)
     matches << [:weak, 'name:-example'] if name.match?(/-examples?\b/)
     matches << [:weak, 'desc:list-of'] if description.match?(/\b(curated )?list of\b/)
-    matches << [:weak, 'fork'] if project.repository&.dig('fork') && !project.repository&.dig('source_name').nil?
 
     tiers = matches.map(&:first)
     penalty = if tiers.include?(:strong)

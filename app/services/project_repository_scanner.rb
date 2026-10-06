@@ -6,8 +6,7 @@ class ProjectRepositoryScanner
   end
 
   def scan
-    brief_due = @project.brief_scan_due? && (@project.science_score.to_f.positive? ||
-      Project.where(id: Package.scientific_publishing_project_ids).exists?(@project.id))
+    brief_due = @project.brief_scan_due? && Project.eligible_for_brief.exists?(@project.id)
     swhid_due = scientific? && @project.swhid_scan_due?
     return unless brief_due || swhid_due
 
