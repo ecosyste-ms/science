@@ -20,8 +20,8 @@ class RepositoryScanWorker
       begin
         project.reload
         if rescan
-          return unless Project.visible.with_external_identifier
-            .where("science_score < ?", Project::SCIENCE_SCORE_THRESHOLD).exists?(project.id)
+          return unless project.science_score && project.science_score < Project::SCIENCE_SCORE_THRESHOLD
+          return unless Project.visible.exists?(project.id) && project.confirmed_external_identifier?
         end
         ProjectRepositoryScanner.new(project, force_brief: rescan).scan
         project.enqueue_swhid_check

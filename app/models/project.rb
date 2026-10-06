@@ -158,6 +158,17 @@ class Project < ApplicationRecord
       .or(with_research_registry_match)
   }
 
+  def confirmed_external_identifier?
+    project_external_software_records.confirmed_identifier_matches.exists?
+  end
+
+  def eligible_for_brief?
+    return true if science_score.to_f.positive? || confirmed_external_identifier?
+
+    Package.direct_scientific_dependencies
+      .where(package_id: published_package_records.select(:id)).exists?
+  end
+
   def self.for_owner(host, login)
     normalized_login = login.downcase
     owner_ids = host.owners.where('lower(login) = ?', normalized_login).select(:id)

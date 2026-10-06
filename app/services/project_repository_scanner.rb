@@ -7,7 +7,7 @@ class ProjectRepositoryScanner
   end
 
   def scan
-    brief_due = (@force_brief || @project.brief_scan_due?) && Project.eligible_for_brief.exists?(@project.id)
+    brief_due = (@force_brief || @project.brief_scan_due?) && @project.eligible_for_brief?
     swhid_due = scientific? && @project.swhid_scan_due?
     return unless brief_due || swhid_due
 

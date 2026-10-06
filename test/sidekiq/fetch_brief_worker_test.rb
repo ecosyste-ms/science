@@ -36,12 +36,41 @@ class FetchBriefWorkerTest < ActiveSupport::TestCase
     }.to_json
     RepositoryCommand.any_instance.expects(:run).with(["brief", "-json", "/tmp/checkout"]).returns(output)
 
+    Project.expects(:eligible_for_brief).never
+    Package.expects(:direct_scientific_dependencies).never
     FetchBriefWorker.new.perform(project.id)
 
     assert_equal "Fortran", project.reload.brief.dig("languages", 0, "name")
     assert_equal "pkg:pypi/numpy", project.brief.dig("dependencies", 0, "purl")
     assert_equal 20.0, project.science_score
     assert project.science_score_breakdown.dig(:breakdown, :has_research_tooling, :present)
+  end
+
+  test "zero-score publisher eligibility checks dependencies only for its own packages" do
+    project = Project.create!(url: "https://example.test/publisher", science_score: 0, repository: { "clone_url" => "https://example.test/publisher.git" }, swhids: { "status" => "success" })
+    unrelated = Project.create!(url: "https://example.test/unrelated-publisher", science_score: 0, repository: { "clone_url" => "https://example.test/unrelated.git" }, swhids: { "status" => "success" })
+    registry = PackageRegistry.create!(name: "scoped-brief.example", url: "https://scoped-brief.example", ecosystem: "pypi", purl_type: "pypi")
+    package = Package.create!(package_registry: registry, published_by_project: project, name: "research-input", purl: "pkg:pypi/research-input")
+    dependent = Project.create!(url: "https://example.test/scientific-dependent", science_score: 20)
+    ProjectDependency.create!(project: dependent, package: package, ecosystem: "pypi", package_name: package.name, direct: true)
+    output = { languages: [{ name: "Fortran" }], tools: {}, dependencies: [] }.to_json
+    RepositoryCommand.any_instance.expects(:run).with(["brief", "-json", "/tmp/checkout"]).once.returns(output)
+    Package.expects(:scientific_publishing_project_ids).never
+    dependency_queries = []
+    subscriber = ->(_name, _start, _finish, _id, payload) { dependency_queries << payload if payload[:sql].include?('FROM "project_dependencies"') }
+
+    ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") do
+      FetchBriefWorker.new.perform(unrelated.id)
+      FetchBriefWorker.new.perform(project.id)
+    end
+
+    assert_nil unrelated.reload.brief
+    assert_operator project.reload.science_score, :>=, Project::SCIENCE_SCORE_THRESHOLD
+    assert_equal 2, dependency_queries.size
+    dependency_queries.each do |query|
+      assert_includes query[:sql], '"packages"."published_by_project_id" ='
+      refute_includes query[:sql], 'DISTINCT'
+    end
   end
 
   test "does not score standalone R authoring tools without scientific vocabulary" do

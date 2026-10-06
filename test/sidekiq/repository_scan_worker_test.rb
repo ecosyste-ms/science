@@ -110,6 +110,9 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     link_identifier
 
     assert_equal 1, BriefScanEnqueuer.new(limit: 1, rescan: true).enqueue
+    Project.expects(:eligible_for_brief).never
+    Project.expects(:with_external_identifier).never
+    Package.expects(:direct_scientific_dependencies).never
     RepositoryScanWorker.perform_one
 
     assert @project.reload.brief.fetch("languages").any? { |language| language["name"] == "Fortran" }
