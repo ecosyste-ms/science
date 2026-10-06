@@ -70,6 +70,29 @@ class ResearchOrganizationsRakeTest < ActiveSupport::TestCase
     assert_empty owner.owner_research_organizations
   end
 
+  test "backfill resumes past owners without hosts and preserves domain matches" do
+    first = Owner.create!(host: @host, login: "first", kind: "organization", website: "https://jhu.edu")
+    domain_owner = Owner.create!(host: @host, login: "domain-only", kind: "organization", website: "https://jhu.edu")
+    unmatched = Owner.create!(host: @host, login: "no-host", kind: "organization")
+    last = Owner.create!(host: @host, login: "jhu", kind: "organization")
+    domain_owner.update_column(:host_id, nil)
+    unmatched.update_column(:host_id, nil)
+    import_records([record(JHU, links: [{ "type" => "website", "value" => "https://github.com/jhu" }])])
+
+    ENV["LIMIT"] = "1"
+    ENV["BATCHES"] = "1"
+    assert_equal first.id, run_task("backfill").fetch("owner_cursor")
+    ENV.delete("BATCHES")
+    result = run_task("backfill")
+
+    assert result.fetch("backfill_complete")
+    assert_equal({ "matched" => 3, "unmatched" => 1 }, result.fetch("owner_counts"))
+    assert_equal last.id, ResearchOrganizationImport.find_by!(current: true).owner_cursor
+    assert_equal "ror_domain", domain_owner.owner_research_organizations.confirmed.sole.match_method
+    assert_empty unmatched.owner_research_organizations
+    assert_equal "ror_forge_url", last.owner_research_organizations.confirmed.sole.match_method
+  end
+
   test "GitLab groups Codeberg accounts and self-hosted forge paths match the correct host" do
     gitlab = Host.create!(name: "GitLab", kind: "gitlab", url: "https://gitlab.com")
     codeberg = Host.create!(name: "codeberg.org", kind: "gitea", url: "https://codeberg.org")

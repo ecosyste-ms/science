@@ -29,6 +29,8 @@ class ResearchOrganizationForgeMatcher
   end
 
   def self.host_uri(host)
+    return unless host
+
     value = host.url.presence
     if value.nil?
       value = case host.name.downcase
