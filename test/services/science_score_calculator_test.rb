@@ -72,6 +72,66 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     assert_equal "bibtex", result[:breakdown][:has_citation_file][:format]
   end
 
+  test "detected CFF files earn full credit without valid downloaded content" do
+    ["citation.cff", ".github/CITATION.CFF"].each do |path|
+      [nil, "cff-version: 1.2.0\n message: Please cite this software\n", "Please cite this software."].each do |content|
+        @project.update!(repository: { "metadata" => { "files" => { "citation" => path } } }, citation_file: content)
+
+        assert @project.update_science_score
+        @project.reload
+
+        signal = @project.science_score_breakdown.dig(:breakdown, :has_citation_file)
+        assert_equal 16.0, @project.science_score
+        assert signal[:present]
+        assert_equal 1.0, signal[:strength]
+        assert_equal "Found CITATION.cff file", signal[:details]
+        refute @project.citation_content_classification.cff?
+      end
+    end
+  end
+
+  test "detected BibTeX and plain citation files earn half credit regardless of content validity" do
+    %w[citation.bib .github/CITATION.BIB CITATION docs/citation].each do |path|
+      [nil, "@software{example,", "Please cite this software."].each do |content|
+        @project.update!(repository: { "metadata" => { "files" => { "citation" => path } } }, citation_file: content)
+
+        assert @project.update_science_score
+        @project.reload
+
+        signal = @project.science_score_breakdown.dig(:breakdown, :has_citation_file)
+        assert_equal 8.0, @project.science_score
+        assert signal[:present]
+        assert_equal 0.5, signal[:strength]
+      end
+    end
+  end
+
+  test "valid CFF content in a plain citation file retains full credit" do
+    @project.update!(repository: { "metadata" => { "files" => { "citation" => "CITATION" } } }, citation_file: valid_cff)
+
+    assert @project.update_science_score
+    assert_equal 16.0, @project.reload.science_score
+    assert_equal 1.0, @project.science_score_breakdown.dig(:breakdown, :has_citation_file, :strength)
+  end
+
+  test "JOSS projects receive the half-strength bonus for detected plain citation files" do
+    @project.update!(repository: { "metadata" => { "files" => { "citation" => "CITATION" } } }, joss_metadata: { "title" => "Example Paper" })
+
+    assert @project.update_science_score
+    assert_equal 87.5, @project.reload.science_score
+    assert_equal 0.5, @project.science_score_breakdown.dig(:breakdown, :has_citation_file, :strength)
+  end
+
+  test "unfetched unrelated paths and citation backups do not earn citation credit" do
+    %w[README.md CITATION.bib.bak CITATION.cff.bak].each do |path|
+      @project.update!(repository: { "metadata" => { "files" => { "citation" => path } } })
+
+      assert @project.update_science_score
+      assert_equal 0.0, @project.reload.science_score
+      refute @project.science_score_breakdown.dig(:breakdown, :has_citation_file, :present)
+    end
+  end
+
   test "JOSS citation bonus gives half strength to BibTeX" do
     @project.joss_metadata = { "title" => "Example Paper" }
     @project.citation_file = <<~BIBTEX

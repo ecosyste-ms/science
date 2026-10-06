@@ -105,6 +105,24 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     assert_equal 1, clone_commands.size
   end
 
+  test "a scan credits detected CFF metadata even without downloaded citation content" do
+    File.write(File.join(@source, "CITATION.cff"), "cff-version: 1.2.0\n message: Please cite this software\n")
+    git("-C", @source, "add", "CITATION.cff")
+    git("-C", @source, "-c", "user.name=Test", "-c", "user.email=test@example.org",
+      "-c", "commit.gpgsign=false", "commit", "-m", "Add citation file")
+    @project.update!(science_score: 1, joss_metadata: nil,
+      repository: { "clone_url" => @source, "metadata" => { "files" => { "citation" => "CITATION.cff" } } })
+
+    RepositoryScanWorker.new.perform(@project.id)
+
+    @project.reload
+    assert @project.brief.key?("dependencies")
+    assert_nil @project.citation_file
+    assert @project.science_score_breakdown.dig(:breakdown, :has_citation_file, :present)
+    assert_equal 1.0, @project.science_score_breakdown.dig(:breakdown, :has_citation_file, :strength)
+    assert_operator @project.science_score, :>=, 36.0
+  end
+
   test "a zero-score Wikidata match is queued scanned and scored through one checkout" do
     @project.update!(science_score: 0, joss_metadata: nil)
     record = ExternalSoftwareRecord.create!(source: "wikidata", identifier: "Q123", status: "ok", retrieved_at: Time.current, next_refresh_at: Time.current)

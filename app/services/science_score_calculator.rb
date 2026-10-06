@@ -178,6 +178,23 @@ class ScienceScoreCalculator
       details: nil,
     }
 
+    file_name = File.basename(project.citation_file_name.to_s)
+    if file_name.casecmp?("CITATION.cff")
+      return signal.merge(
+        present: true,
+        strength: CITATION_STRENGTHS.fetch(:cff),
+        details: "Found CITATION.cff file"
+      )
+    end
+
+    if %w[citation.bib citation].include?(file_name.downcase) && !classification.cff?
+      return signal.merge(
+        present: true,
+        strength: CITATION_STRENGTHS.fetch(:bibtex),
+        details: "Found #{file_name} file"
+      )
+    end
+
     case classification.format
     when :cff
       signal.merge(
