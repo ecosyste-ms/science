@@ -18,7 +18,7 @@
     },
     {
       "command": "bundle exec rake projects:sync",
-      "schedule": "*/10 * * * *"
+      "schedule": "* * * * *"
     },
     {
       "command": "bundle exec rake projects:sync_author_identities",
@@ -66,7 +66,7 @@
     },
     {
       "command": "bundle exec rake projects:fetch_brief",
-      "schedule": "*/10 * * * *"
+      "schedule": "* * * * *"
     },
     {
       "command": "bundle exec rake homepage:refresh",
@@ -78,7 +78,7 @@
     },
     {
       "command": "bundle exec rake biotools:resume biotools:refresh",
-      "schedule": "*/10 * * * *"
+      "schedule": "1,11,21,31,41,51 * * * *"
     },
     {
       "command": "bundle exec rake external_software:discover",
@@ -86,15 +86,15 @@
     },
     {
       "command": "bundle exec rake ascl:resume ascl:refresh",
-      "schedule": "*/10 * * * *"
+      "schedule": "3,13,23,33,43,53 * * * *"
     },
     {
       "command": "bundle exec rake swmath:resume swmath:refresh",
-      "schedule": "*/10 * * * *"
+      "schedule": "5,15,25,35,45,55 * * * *"
     },
     {
       "command": "bundle exec rake rrid:resume rrid:refresh",
-      "schedule": "*/10 * * * *"
+      "schedule": "7,17,27,37,47,57 * * * *"
     },
     {
       "command": "bundle exec rake rrid:rescan",
@@ -102,7 +102,7 @@
     },
     {
       "command": "bundle exec rake software_dois:resume software_dois:refresh",
-      "schedule": "*/10 * * * *"
+      "schedule": "9,19,29,39,49,59 * * * *"
     },
     {
       "command": "bundle exec rake software_dois:rescan",

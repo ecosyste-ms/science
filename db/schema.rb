@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_05_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_07_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -660,6 +660,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_200000) do
     t.index ["contributors_index_version", "id"], name: "index_projects_on_contributor_version", where: "((science_score >= (20)::double precision) AND (((commits IS NOT NULL) AND (json_typeof((commits -> 'committers'::text)) = 'array'::text)) OR (contributors_source_digest IS NOT NULL)))"
     t.index ["host_id"], name: "index_projects_on_host_id"
     t.index ["id"], name: "index_projects_pending_author_identities", where: "((author_identities_indexed_at IS NULL) AND (author_identities_index_error IS NULL) AND ((science_score >= (20)::double precision) AND ((citation_authors_source_digest IS NOT NULL) OR (contributors_source_digest IS NOT NULL) OR (joss_publication_source_digest IS NOT NULL) OR (author_identities_source_digest IS NOT NULL))))"
+    t.index ["id"], name: "index_projects_pending_brief", where: "((repository IS NOT NULL) AND ((brief IS NULL) OR ((NOT (brief ? 'dependencies'::text)) AND (NOT (brief ? 'error'::text)))))"
     t.index ["id"], name: "index_projects_pending_citation_authors", where: "((citation_authors_indexed_at IS NULL) AND (citation_authors_index_error IS NULL) AND ((science_score >= (20)::double precision) AND ((citation_file ~ '^[[:space:]]*cff-version:'::text) OR ((NULLIF(citation_file, ''::text) IS NOT NULL) AND ((repository #>> '{metadata,files,citation}'::text[]) ~* '[.]cff$'::text)) OR (citation_authors_source_digest IS NOT NULL))))"
     t.index ["id"], name: "index_projects_pending_contributors", where: "((contributors_indexed_at IS NULL) AND (contributors_index_error IS NULL) AND ((science_score >= (20)::double precision) AND (((commits IS NOT NULL) AND (json_typeof((commits -> 'committers'::text)) = 'array'::text)) OR (contributors_source_digest IS NOT NULL))))"
     t.index ["id"], name: "index_projects_pending_dependency_index", where: "(((dependencies IS NOT NULL) OR (brief ? 'dependencies'::text)) AND (dependencies_indexed_at IS NULL) AND (dependencies_index_error IS NULL))"
@@ -667,6 +668,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_200000) do
     t.index ["id"], name: "index_projects_pending_repository_aliases", where: "((repository IS NOT NULL) AND (repository_aliases_indexed_at IS NULL))"
     t.index ["id"], name: "index_projects_with_doi_seeds", where: "(search_identifiers ? 'doi'::text)"
     t.index ["joss_publication_index_version", "id"], name: "index_projects_on_joss_publication_version", where: "((joss_metadata IS NOT NULL) OR (joss_publication_source_digest IS NOT NULL))"
+    t.index ["last_synced_at", "id"], name: "index_projects_on_sync_schedule", order: { last_synced_at: "NULLS FIRST" }
     t.index ["owner_id"], name: "index_projects_on_owner_id"
     t.index ["reviewed"], name: "index_projects_on_reviewed"
     t.index ["search_identifiers"], name: "index_projects_on_search_identifiers", opclass: :jsonb_path_ops, using: :gin

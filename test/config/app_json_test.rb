@@ -9,7 +9,7 @@ class AppJsonTest < ActiveSupport::TestCase
     end
   end
 
-  test "Brief scans are scheduled every ten minutes in bounded batches" do
+  test "Brief scans are scheduled every minute in bounded batches" do
     config = JSON.parse(Rails.root.join("app.json").read)
     brief_crons = config.fetch("cron").select do |cron|
       cron.fetch("command").include?("projects:fetch_brief")
@@ -18,7 +18,7 @@ class AppJsonTest < ActiveSupport::TestCase
     assert_equal [
       {
         "command" => "bundle exec rake projects:fetch_brief",
-        "schedule" => "*/10 * * * *",
+        "schedule" => "* * * * *",
       },
     ], brief_crons
   end

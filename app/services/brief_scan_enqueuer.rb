@@ -16,7 +16,7 @@ class BriefScanEnqueuer
   def enqueue
     enqueued = 0
 
-    projects.limit(limit).find_each(batch_size: 500) do |project|
+    projects.select(:id).limit(limit).find_each(batch_size: 500) do |project|
       args = rescan ? [project.id, true] : [project.id]
       enqueued += 1 if RepositoryScanWorker.perform_async(*args)
     end
@@ -33,7 +33,7 @@ class BriefScanEnqueuer
     end
     scope = scope.with_joss if cohort == "joss"
     scope = scope.where(joss_metadata: nil) if cohort == "non_joss"
-    scope.where("projects.id % ? = ?", shard_count, shard)
+    shard_count == 1 ? scope : scope.where("projects.id % ? = ?", shard_count, shard)
   end
 
   def integer(value, name)

@@ -189,10 +189,10 @@ namespace :projects do
     puts "Project repository aliases: #{result.inspect}"
   end
 
-  desc 'enqueue brief scans (LIMIT=50 COHORT=all SHARD_COUNT=1 SHARD=0)'
+  desc 'enqueue brief scans (LIMIT=5 COHORT=all SHARD_COUNT=1 SHARD=0)'
   task :fetch_brief => :environment do
     enqueuer = BriefScanEnqueuer.new(
-      limit: ENV.fetch('LIMIT', '50'),
+      limit: ENV.fetch('LIMIT', '5'),
       cohort: ENV.fetch('COHORT', 'all'),
       shard_count: ENV.fetch('SHARD_COUNT', '1'),
       shard: ENV.fetch('SHARD', '0')

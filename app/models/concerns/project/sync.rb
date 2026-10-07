@@ -8,8 +8,9 @@ module Project::Sync
 
   class_methods do
     def sync_least_recently_synced
-      Project.should_sync.where(last_synced_at: nil).or(Project.should_sync.where("last_synced_at < ?", 1.day.ago)).order('last_synced_at asc nulls first').limit(500).each do |project|
-        project.sync_async
+      Project.visible.should_sync.where("last_synced_at IS NULL OR last_synced_at < ?", 1.day.ago)
+        .order(Arel.sql('last_synced_at asc nulls first, id asc')).limit(50).pluck(:id).each do |id|
+        SyncProjectWorker.perform_async(id)
       end
     end
 

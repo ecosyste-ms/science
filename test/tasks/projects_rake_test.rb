@@ -19,6 +19,39 @@ class ProjectsRakeTest < ActiveSupport::TestCase
     ENV_KEYS.each { |key| ENV.delete(key) }
     RepositoryScanWorker.jobs.clear
     SyncProjectWorker.jobs.clear
+    SidekiqUniqueJobs::Digests.new.delete_by_pattern("#{SyncProjectWorker.get_sidekiq_options.fetch('lock_prefix')}:*")
+  end
+
+  test "sync selects 50 visible due projects in oldest first order without duplicate jobs" do
+    hidden = Project.create!(url: "https://github.com/hidden/sync", science_score: 20)
+    owner = Owner.create!(host: Host.create!(name: "GitHub"), login: "hidden")
+    hidden.update!(owner_record: owner)
+    owner.update!(hidden: true)
+    unsynced = create_project("unsynced")
+    due = 51.times.map do |index|
+      create_project("due-#{index}").tap { |project| project.update!(last_synced_at: (index + 2).days.ago) }
+    end
+    create_project("recent").update!(last_synced_at: 1.hour.ago)
+    create_project("zero").update!(science_score: 0, last_synced_at: 1.year.ago)
+
+    2.times { Rake::Task["projects:sync"].execute }
+
+    assert_equal [unsynced.id] + due.reverse.first(49).map(&:id),
+      SyncProjectWorker.jobs.map { |job| job["args"].first }
+  end
+
+  test "sync worker holds its unique lock during execution and releases it afterwards" do
+    project = create_project("sync-lock")
+    project.define_singleton_method(:sync) do
+      raise "Duplicate sync was accepted" if SyncProjectWorker.perform_async(id)
+    end
+    Project.stubs(:find_by_id).with(project.id).returns(project)
+
+    assert SyncProjectWorker.perform_async(project.id)
+    assert_nil SyncProjectWorker.perform_async(project.id)
+    SyncProjectWorker.perform_one
+    assert_empty SyncProjectWorker.jobs
+    assert SyncProjectWorker.perform_async(project.id)
   end
 
   test "sync_citation_authors indexes CodeMeta and Zenodo authors and updates changed sources" do
@@ -89,12 +122,12 @@ class ProjectsRakeTest < ActiveSupport::TestCase
     assert_includes output, "cohort=joss"
   end
 
-  test "fetch_brief defaults to a batch of 50" do
-    51.times { |index| create_project("default-limit-#{index}") }
+  test "fetch_brief defaults to a batch of 5" do
+    6.times { |index| create_project("default-limit-#{index}") }
 
     capture_io { Rake::Task["projects:fetch_brief"].execute }
 
-    assert_equal 50, RepositoryScanWorker.jobs.size
+    assert_equal 5, RepositoryScanWorker.jobs.size
   end
 
   test "fetch_brief rejects an invalid cohort" do

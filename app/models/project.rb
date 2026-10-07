@@ -150,7 +150,11 @@ class Project < ApplicationRecord
     where(id: ProjectExternalSoftwareRecord.confirmed_identifier_matches.select(:project_id))
   }
   scope :eligible_for_brief, -> {
-    where('science_score > 0').or(where(id: Package.scientific_publishing_project_ids))
+    dependency = Package.direct_scientific_dependencies
+      .where("project_dependencies.package_id = packages.id").arel.exists
+    publisher = Package.where("packages.published_by_project_id = projects.id")
+      .where(dependency).arel.exists
+    where('science_score > 0').or(where(publisher))
       .or(with_external_identifier)
   }
   scope :should_sync, -> {
