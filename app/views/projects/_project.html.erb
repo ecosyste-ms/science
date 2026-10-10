@@ -45,7 +45,7 @@
             <div>
               <% project.keywords.each do |keyword| %>
                 <span class="badge bg-light text-dark me-1 mb-2">
-                  <%= link_to keyword, url_for(keyword: keyword), class: 'text-reset text-decoration-none' %>
+                  <%= link_to keyword, project_filter_path(keyword: keyword), class: 'text-reset text-decoration-none' %>
                 </span>
               <% end %>
             </div>

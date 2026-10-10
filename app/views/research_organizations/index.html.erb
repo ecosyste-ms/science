@@ -1,7 +1,7 @@
 <% @meta_title = "Research Organizations" %>
 <div class="container-sm">
   <h1>Research Organizations</h1>
-  <p>Search institutions by name, alias or country. Results show institutions with confirmed forge account links unless you include the full ROR catalogue.</p>
+  <p>Search institutions by name, alias or country.</p>
   <%= form_with url: research_organizations_path, method: :get, class: "row g-3 mb-4" do |form| %>
     <div class="col-md-7">
       <%= form.label :q, "Name or alias", class: "form-label" %>
@@ -13,7 +13,7 @@
     </div>
     <div class="col-12">
       <%= form.check_box :include_unlinked, { checked: @index.include_unlinked, class: "form-check-input" }, "true", "false" %>
-      <%= form.label :include_unlinked, "Include institutions without confirmed account links", class: "form-check-label" %>
+      <%= form.label :include_unlinked, "Include institutions without linked repositories", class: "form-check-label" %>
     </div>
     <div class="col-12"><%= form.submit "Search", class: "btn btn-primary" %></div>
   <% end %>

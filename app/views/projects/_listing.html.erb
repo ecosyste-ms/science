@@ -1,17 +1,18 @@
 <% @meta_title = title %>
 <% @meta_description = description %>
+<% filters = active_project_filters %>
 
 <div class="container-md">
   <ul class="nav nav-tabs my-3">
     <li class="nav-item">
       <h2><%= title %></h2>
     </li>
-    <li class="nav-item ms-auto d-flex align-items-center gap-2">
+    <li class="nav-item ms-auto d-flex flex-wrap align-items-center gap-2">
       <% if local_assigns[:csv_path] %>
         <%= link_to "Export CSV", csv_path, class: "btn btn-outline-secondary" %>
       <% end %>
       <%= link_to "Research organizations",
-        url_for(research_organization: params[:research_organization].present? ? nil : 'true', page: nil),
+        project_filter_path(research_organization: params[:research_organization].present? ? nil : 'true'),
         class: "btn #{params[:research_organization].present? ? 'btn-primary' : 'btn-light'}",
         aria: { pressed: params[:research_organization].present? } %>
       <div class="dropdown">
@@ -19,14 +20,35 @@
           Sort
         </button>
         <ul class="dropdown-menu">
-          <li><a class="dropdown-item <%= 'active' if params[:sort] == 'last_synced_at' %>" href="<%= url_for(sort: 'last_synced_at', order: 'desc') %>">Recently synced</a></li>
-          <li><a class="dropdown-item <%= 'active' if params[:sort] == 'score' %>" href="<%= url_for(sort: 'score', order: 'desc') %>">Ranking</a></li>
-          <li><a class="dropdown-item <%= 'active' if params[:sort] == 'science_score' %>" href="<%= url_for(sort: 'science_score', order: 'desc') %>">Science Score</a></li>
+          <li><a class="dropdown-item <%= 'active' if params[:sort] == 'last_synced_at' %>" href="<%= project_filter_path(sort: 'last_synced_at', order: 'desc') %>">Recently synced</a></li>
+          <li><a class="dropdown-item <%= 'active' if params[:sort] == 'score' %>" href="<%= project_filter_path(sort: 'score', order: 'desc') %>">Ranking</a></li>
+          <li><a class="dropdown-item <%= 'active' if params[:sort] == 'science_score' %>" href="<%= project_filter_path(sort: 'science_score', order: 'desc') %>">Science Score</a></li>
         </ul>
       </div>
     </li>
   </ul>
 
-  <%= render @projects %>
+  <% if filters.any? %>
+    <nav aria-label="Active project filters" class="listing-controls p-3 mb-4 rounded">
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <span>Filtered by:</span>
+        <% filters.each do |key, label| %>
+          <%= link_to project_filter_path(key => nil),
+            class: "btn btn-sm btn-outline-secondary rounded-pill",
+            aria: { label: "Remove #{label} filter" } do %>
+            <%= label %>
+            <%= bootstrap_icon 'x', width: 16, height: 16 %>
+          <% end %>
+        <% end %>
+        <%= link_to "Clear filters", project_filter_path(filters.transform_values { nil }), class: "btn btn-link btn-sm" %>
+      </div>
+    </nav>
+  <% end %>
+
+  <% if @projects.any? %>
+    <%= render @projects %>
+  <% else %>
+    <p class="alert alert-info" role="status"><%= filters.any? ? "No projects match these filters." : "No projects found." %></p>
+  <% end %>
   <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
 </div>
