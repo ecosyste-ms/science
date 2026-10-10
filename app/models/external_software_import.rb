@@ -36,6 +36,23 @@ class ExternalSoftwareImport < ApplicationRecord
       .where("lease_expires_at IS NULL OR lease_expires_at <= ?", Time.current).first
   end
 
+  def self.resweep(source)
+    record = find_by(source: source)
+    return unless record
+
+    record.with_lock do
+      if record.completed_at
+        record = if source == "wikidata"
+          start_wikidata(page_size: record.page_size, restart: true)
+        else
+          start_catalogue(source: source, page_size: record.page_size, restart: true)
+        end
+      end
+    end
+    record.enqueue
+    record
+  end
+
   def self.start_biotools(page_size: nil, restart: false)
     start_catalogue(source: "biotools", page_size: page_size, restart: restart)
   end

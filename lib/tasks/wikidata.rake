@@ -1,4 +1,10 @@
 namespace :wikidata do
+  desc "Repeat an enabled Wikidata catalogue sweep, preserving unfinished progress"
+  task resweep: :environment do
+    record = ExternalSoftwareImport.resweep("wikidata")
+    puts JSON.generate(queued: record.present?)
+  end
+
   desc "Start or resume a background Wikidata sweep (optional: AFTER=QID LIMIT=100 RESTART=true)"
   task sweep: :environment do
     record = ExternalSoftwareImport.start_wikidata(after: ENV["AFTER"].presence,

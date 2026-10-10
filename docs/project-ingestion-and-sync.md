@@ -20,6 +20,13 @@ The regular discovery tasks are defined in `app.json`. Import and sync run as se
 | Every 10 minutes, offset by 7 minutes | `projects:sync_repository_aliases` | Previous repository names awaiting indexed aliases |
 | Every 10 minutes, offset by 8 minutes | `packages:sync_metadata` | Local packages awaiting packages.ecosyste.ms metadata |
 | Every 10 minutes, offset by 9 minutes | `packages:match_projects` | Package repository URLs awaiting project links |
+| Monday at 04:20 UTC | `wikidata:resweep` | Enabled Wikidata catalogue |
+| Tuesday at 04:20 UTC | `biotools:resweep` | Enabled bio.tools catalogue |
+| Wednesday at 04:20 UTC | `ascl:resweep` | Enabled ASCL catalogue |
+| Thursday at 04:20 UTC | `swmath:resweep` | Enabled swMATH catalogue |
+| Friday at 04:20 UTC | `rrid:resweep` | Enabled SciCrunch software catalogue |
+
+Weekly `resweep` tasks repeat catalogues that have already been started manually. A completed import restarts at the first page with its saved batch size; an unfinished import retains its cursor, saved page, lease and retry time. The restart decision uses a row lock so overlapping invocations cannot reset an active pass. Workers keep the existing bounded requests and continuation delays, and ten-minute recovery tasks can resume a pass if queue submission fails. RRID and DOI seed rescans remain daily, and record refresh schedules are unchanged.
 
 The JOSS importer stores the paper JSON in `joss_metadata`. Existing projects receive updated JOSS metadata, while new projects are queued for sync. The papers and registry importers currently accept GitHub repository URLs. The reviewed OST importer also limits its imports to GitHub.
 
@@ -110,7 +117,7 @@ The NumPy record includes claims sourced from Wikipedia, the Free Software Direc
 
 Only one sweep per source can run at a time. A ten-minute database lease prevents overlapping jobs, and an expired worker cannot update the replacement worker's progress. `wikidata:resume` runs every ten minutes to recover unfinished imports after interruptions, including failure to enqueue the next page. It does nothing before a sweep is started or after completion. Network requests happen outside the short transactions used to claim work and save progress.
 
-Use `AFTER` to start from a cursor returned by a manual import, and `LIMIT` to choose a page size between 1 and 100. Omit both when resuming an existing sweep. `wikidata:status` reports the cursor, completed page and item counts, unfinished items, retry time and last error. A completed sweep stays complete until `RESTART=true` explicitly starts another pass. Start that pass without `AFTER` to pick up newly linked older items.
+Use `AFTER` to start from a cursor returned by a manual import, and `LIMIT` to choose a page size between 1 and 100. Omit both when resuming an existing sweep. `wikidata:status` reports the cursor, completed page and item counts, unfinished items, retry time and last error. The weekly `wikidata:resweep` repeats completed imports from the beginning. To repeat one manually, use `RESTART=true` without `AFTER` to pick up newly linked older items.
 
 ```bash
 bundle exec rake wikidata:sweep
@@ -153,7 +160,7 @@ LIMIT=100 bundle exec rake biotools:refresh
 RESTART=true bundle exec rake biotools:sweep
 ```
 
-`LIMIT` on `biotools:sweep` sets a page size between 1 and 50; omit it when resuming. A completed sweep requires `RESTART=true` to begin another catalogue pass. Page-number pagination can shift when upstream records are removed, so later passes are needed to revisit the catalogue. `biotools:resume biotools:refresh` runs every ten minutes, recovering due unfinished sweeps and queuing up to 100 due source records. Recovery does not start a sweep or restart a completed one. Individual records have the same 30-day success, seven-day missing and one-hour failure intervals as Wikidata; rate limits share a separate bio.tools cooldown and honor `Retry-After`.
+`LIMIT` on `biotools:sweep` sets a page size between 1 and 50; omit it when resuming. Completed sweeps repeat through weekly `biotools:resweep`, or manually with `RESTART=true`. Page-number pagination can shift when upstream records are removed, so later passes are needed to revisit the catalogue. `biotools:resume biotools:refresh` runs every ten minutes, recovering due unfinished sweeps and queuing up to 100 due source records. Recovery does not start a sweep or restart a completed one. Individual records have the same 30-day success, seven-day missing and one-hour failure intervals as Wikidata; rate limits share a separate bio.tools cooldown and honor `Retry-After`.
 
 Project pages display an **Elsewhere** section linking confirmed Wikidata, bio.tools, ASCL, swMATH, RRID and software DOI identifiers, including projects whose repository sync has not finished. Ambiguous and missing records are omitted; an unsuccessful refresh retains the last confirmed reference. The paginated external-identifiers API exposes the full cached source record, match evidence and canonical `record_url`. Neither display path fetches source data or changes scores. The cached homepage source breakdown labels this source `bio.tools` and counts each scientific project once for it.
 
@@ -173,7 +180,7 @@ LIMIT=100 bundle exec rake ascl:refresh
 RESTART=true bundle exec rake ascl:sweep
 ```
 
-`ascl:sweep` stores each unfinished page before matching and continues after 15 seconds. `LIMIT` sets a page size between 1 and 50; omit it when resuming. Records are ordered by identifier. A completed sweep requires `RESTART=true` for another catalogue pass, including records added before the saved cursor. The scheduled `ascl:resume ascl:refresh` runs every ten minutes, recovering unfinished sweeps and queuing up to 100 due records. It does not start or restart a sweep. Successful records refresh after 30 days, missing records after seven days, and failed requests after an hour. Rate limits share an ASCL cooldown and honor `Retry-After`.
+`ascl:sweep` stores each unfinished page before matching and continues after 15 seconds. `LIMIT` sets a page size between 1 and 50; omit it when resuming. Records are ordered by identifier. Weekly `ascl:resweep` repeats completed imports, including records added before the saved cursor; `RESTART=true` also starts another pass manually. The scheduled `ascl:resume ascl:refresh` runs every ten minutes, recovering unfinished sweeps and queuing up to 100 due records. It does not start or restart a sweep. Successful records refresh after 30 days, missing records after seven days, and failed requests after an hour. Rate limits share an ASCL cooldown and honor `Retry-After`.
 
 Wikidata, bio.tools, ASCL and bulk repository lookup share GitHub Pages conversion. A project URL such as `https://dhubber.github.io/seren/seren.html` maps to `https://github.com/dhubber/seren`; nested documentation paths are discarded. Source evidence preserves the original URL and records `url_transformation: github_pages`. Direct links, converted links and known aliases resolve through the same lookup, so they can share one project relationship. Root Pages sites, custom domains and top-level HTML or PDF files are not converted.
 
@@ -193,7 +200,7 @@ LIMIT=100 bundle exec rake swmath:refresh
 RESTART=true bundle exec rake swmath:sweep
 ```
 
-Sweeps request up to 50 full records, validate ascending IDs and the returned cursor, and save each page before matching. Continuations wait 15 seconds. Retries reuse saved records; incomplete pages and unexpected missing responses leave progress unchanged. The scheduled `swmath:resume swmath:refresh` runs every ten minutes, recovering unfinished sweeps and queuing up to 100 due records. Completed sweeps require an explicit restart. Refresh intervals are 30 days after success, seven days for a confirmed missing record, and an hour after failure, with a shared cooldown for rate limits.
+Sweeps request up to 50 full records, validate ascending IDs and the returned cursor, and save each page before matching. Continuations wait 15 seconds. Retries reuse saved records; incomplete pages and unexpected missing responses leave progress unchanged. The scheduled `swmath:resume swmath:refresh` runs every ten minutes, recovering unfinished sweeps and queuing up to 100 due records. Weekly `swmath:resweep` repeats completed imports; manual repeats use `RESTART=true`. Refresh intervals are 30 days after success, seven days for a confirmed missing record, and an hour after failure, with a shared cooldown for rate limits.
 
 Project pages link to the record on zbMATH Open, and the API retains source metadata, repository evidence, the collection URL and `CC-BY-SA-4.0` attribution. The API withholds some descriptions and publication text because of conflicting licences; its placeholder text remains in the raw record. swMATH uses the existing source-record indexes and cached homepage counts, with no source requests during page rendering.
 
@@ -228,7 +235,7 @@ bundle exec rake rrid:sweep_status
 RESTART=true bundle exec rake rrid:sweep
 ```
 
-Each request sorts by `item.identifier.aggregate` and filters for IDs greater than the saved cursor, with at most 50 records per page. This avoids offset pagination's 10,000-result limit and does not retain an upstream scroll session. Pages must have complete shard results, ascending unique IDs, matching sort values and the expected number of records. A page is saved before matching; retries reuse it and preserve any newer resolver result. Continuations wait 15 seconds. A completed sweep requires an explicit restart, which also revisits records added or changed behind the cursor.
+Each request sorts by `item.identifier.aggregate` and filters for IDs greater than the saved cursor, with at most 50 records per page. This avoids offset pagination's 10,000-result limit and does not retain an upstream scroll session. Pages must have complete shard results, ascending unique IDs, matching sort values and the expected number of records. A page is saved before matching; retries reuse it and preserve any newer resolver result. Continuations wait 15 seconds. Weekly `rrid:resweep` repeats completed imports, revisiting records added or changed behind the cursor. Manual repeats use `RESTART=true`.
 
 Catalogue and resolver imports share one source record per RRID. The latest successful collection endpoint is stored separately from the raw metadata and included in matching evidence and the API response. Transient failures retain both. Cached RRID repository candidates participate in the existing discovery task; changing mention counts alone does not request another project sync. The published gateway limit is ten requests per second per user; it does not establish the public resolver's limit.
 

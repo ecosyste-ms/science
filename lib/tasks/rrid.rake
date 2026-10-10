@@ -1,4 +1,10 @@
 namespace :rrid do
+  desc "Repeat an enabled RRID catalogue sweep, preserving unfinished progress"
+  task resweep: :environment do
+    record = ExternalSoftwareImport.resweep("rrid")
+    puts JSON.generate(queued: record.present?)
+  end
+
   desc "Start or resume the SciCrunch software catalogue (LIMIT=50, RESTART=true)"
   task sweep: :environment do
     record = ExternalSoftwareImport.start_rrid(

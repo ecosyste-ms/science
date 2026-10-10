@@ -1,4 +1,10 @@
 namespace :swmath do
+  desc "Repeat an enabled swMATH catalogue sweep, preserving unfinished progress"
+  task resweep: :environment do
+    record = ExternalSoftwareImport.resweep("swmath")
+    puts JSON.generate(queued: record.present?)
+  end
+
   desc "Start or resume an swMATH sweep (LIMIT=50, RESTART=true for a completed sweep)"
   task sweep: :environment do
     record = ExternalSoftwareImport.start_swmath(

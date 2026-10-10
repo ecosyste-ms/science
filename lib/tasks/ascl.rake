@@ -1,4 +1,10 @@
 namespace :ascl do
+  desc "Repeat an enabled ASCL catalogue sweep, preserving unfinished progress"
+  task resweep: :environment do
+    record = ExternalSoftwareImport.resweep("ascl")
+    puts JSON.generate(queued: record.present?)
+  end
+
   desc "Start or resume an ASCL sweep (LIMIT=50, RESTART=true for a completed sweep)"
   task sweep: :environment do
     record = ExternalSoftwareImport.start_ascl(

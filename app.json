@@ -77,6 +77,26 @@
       "schedule": "*/10 * * * *"
     },
     {
+      "command": "bundle exec rake wikidata:resweep",
+      "schedule": "20 4 * * 1"
+    },
+    {
+      "command": "bundle exec rake biotools:resweep",
+      "schedule": "20 4 * * 2"
+    },
+    {
+      "command": "bundle exec rake ascl:resweep",
+      "schedule": "20 4 * * 3"
+    },
+    {
+      "command": "bundle exec rake swmath:resweep",
+      "schedule": "20 4 * * 4"
+    },
+    {
+      "command": "bundle exec rake rrid:resweep",
+      "schedule": "20 4 * * 5"
+    },
+    {
       "command": "bundle exec rake biotools:resume biotools:refresh",
       "schedule": "1,11,21,31,41,51 * * * *"
     },

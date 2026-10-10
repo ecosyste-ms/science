@@ -64,7 +64,7 @@ class WikidataRakeTest < ActiveSupport::TestCase
       .with(query: { action: "wbgetentities", ids: due.identifier, format: "json", maxlag: 5 })
       .to_return(body: { entities: { due.identifier => entity } }.to_json)
     cron = JSON.parse(Rails.root.join("app.json").read).fetch("cron")
-      .select { |entry| entry.fetch("command").include?("wikidata:") }.sole
+      .select { |entry| entry.fetch("command").include?("wikidata:refresh") }.sole
     assert_equal "*/10 * * * *", cron.fetch("schedule")
 
     output, = capture_io do

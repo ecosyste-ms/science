@@ -1,4 +1,10 @@
 namespace :biotools do
+  desc "Repeat an enabled bio.tools catalogue sweep, preserving unfinished progress"
+  task resweep: :environment do
+    record = ExternalSoftwareImport.resweep("biotools")
+    puts JSON.generate(queued: record.present?)
+  end
+
   desc "Start or resume a bio.tools sweep (optional: LIMIT=50 RESTART=true)"
   task sweep: :environment do
     record = ExternalSoftwareImport.start_biotools(
