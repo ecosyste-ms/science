@@ -41,6 +41,6 @@ module ApplicationHelper
 
   def render_markdown(str)
     return '' unless str.present?
-    GitHub::Markup.render('README.md', str)
+    Redcarpet::Markdown.new(Redcarpet::Render::HTML, fenced_code_blocks: true).render(str)
   end
 end

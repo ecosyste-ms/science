@@ -71,6 +71,37 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show preserves fenced code in markdown readmes" do
+    code = "import pooch\n\n# Download a file and save it locally\nfile_name = '<example>'\n"
+    @project.update!(
+      last_synced_at: Time.current,
+      repository: {
+        "host" => { "name" => "GitHub" },
+        "owner" => "tidyverse",
+        "html_url" => @project.url,
+        "default_branch" => "main",
+        "stargazers_count" => 10,
+        "forks_count" => 2,
+        "open_issues_count" => 1,
+        "topics" => [],
+        "created_at" => 1.year.ago.iso8601,
+        "metadata" => { "files" => { "readme" => "README.md" } }
+      },
+      readme: "# Usage\n\n```python\n#{code}```\n"
+    )
+
+    get project_url(@project)
+
+    assert_response :success
+    assert_select "#project-repository-readme" do
+      assert_select "h1", count: 1, text: "Usage"
+      assert_select "pre > code.python", count: 1 do |blocks|
+        assert_equal code, blocks.first.text
+        assert_empty blocks.first.element_children
+      end
+    end
+  end
+
   test "show displays wiki readmes as plain text" do
     %w[wiki mediawiki].each do |extension|
       @project.update!(

@@ -21,6 +21,25 @@ class ReleasesControllerTest < ActionDispatch::IntegrationTest
     assert_select "h1", "v2"
   end
 
+  test "web lists and details preserve fenced code in release notes" do
+    code = "# Install the package\npip install tool_name\necho '<example>'\n"
+    @release.update!(body: "## Installation\n\n```\n#{code}```\n")
+
+    [releases_url, project_releases_url(@project), project_release_url(@project, @release)].each do |url|
+      get url
+
+      assert_response :success
+      assert_select "#release_#{@release.id} .card-text" do
+        assert_select "h2", text: "Installation"
+        assert_select "h1", count: 0
+        assert_select "pre > code", count: 1 do |blocks|
+          assert_equal code, blocks.first.text
+          assert_empty blocks.first.element_children
+        end
+      end
+    end
+  end
+
   test "API lists and details preserve tag and forge fields" do
     get api_v1_project_releases_url(@project)
     assert_response :success
