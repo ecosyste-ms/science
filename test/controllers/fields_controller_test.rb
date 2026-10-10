@@ -120,7 +120,7 @@ class FieldsControllerTest < ActionDispatch::IntegrationTest
     assert_match "(2 projects)", response.body
   end
 
-  test "field and domain listings use the project URL when its name is missing" do
+  test "field and domain listings use the repository slug when the name is missing" do
     project = Project.create!(
       url: "https://github.com/test/unnamed-science-project",
       science_score: 60
@@ -134,12 +134,12 @@ class FieldsControllerTest < ActionDispatch::IntegrationTest
     get field_url(@computer_science)
 
     assert_response :success
-    assert_select "a[href='#{project_path(project)}']", text: project.url
+    assert_select "a[href='#{project_path(project)}']", text: "unnamed-science-project"
 
     get open_alex_domain_url("physical-sciences")
 
     assert_response :success
-    assert_select "a[href='#{project_path(project)}']", text: project.url
+    assert_select "a[href='#{project_path(project)}']", text: "unnamed-science-project"
   end
 
   test "domain lists its OpenAlex fields and each classified project once" do

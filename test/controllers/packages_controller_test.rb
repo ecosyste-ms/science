@@ -108,7 +108,7 @@ class PackagesControllerTest < ActionDispatch::IntegrationTest
     assert_match "85.0%", response.body
   end
 
-  test "published project labels use the repository URL when the name is missing" do
+  test "published project labels use the repository slug when the name is missing" do
     publisher = Project.create!(
       url: "https://github.com/test/unnamed-package-publisher",
       science_score: 60
@@ -118,7 +118,7 @@ class PackagesControllerTest < ActionDispatch::IntegrationTest
     get packages_url
 
     assert_response :success
-    assert_select "[data-package-id='#{@numpy.id}'] p a", text: publisher.url
+    assert_select "[data-package-id='#{@numpy.id}'] p a", text: "unnamed-package-publisher"
   end
 
   test "domain filter recalculates counts for projects in that domain" do

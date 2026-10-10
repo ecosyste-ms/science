@@ -500,7 +500,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_select ".list-group-item", minimum: 1
   end
 
-  test "listings and lookup use the repository URL when the name is missing" do
+  test "listings and lookup use the repository slug when the name is missing" do
     project = Project.create!(
       url: "https://github.com/test/unnamed-project-listing",
       science_score: 60
@@ -510,13 +510,42 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "h3 a[href='#{project_path(project)}']" do |links|
-      assert_includes links.first.text, project.url
+      assert_includes links.first.text, "unnamed-project-listing"
+      assert_not_includes links.first.text, project.url
     end
 
     get lookup_projects_url, params: { q: "unnamed-project-listing" }
 
     assert_response :success
-    assert_select "h6", text: project.url
+    assert_select "h6", text: "unnamed-project-listing"
+  end
+
+  test "listings lookup and project pages use the README heading when the name is missing" do
+    project = Project.create!(
+      url: "https://github.com/ssec-jhu/levseq-dash",
+      science_score: 67,
+      readme: "```python\n# Example code\n```\n\n# [LevSeq **Dashboard**](https://example.org) ![Build](badge.svg)\n"
+    )
+
+    get projects_url
+
+    assert_response :success
+    assert_select "h3 a[href='#{project_path(project)}']" do |links|
+      assert_includes links.first.text, "LevSeq Dashboard"
+      assert_not_includes links.first.text, project.url
+      assert_not_includes links.first.text, "Example code"
+    end
+
+    get lookup_projects_url, params: { q: "levseq-dash" }
+
+    assert_response :success
+    assert_select "h6", text: "LevSeq Dashboard"
+
+    get project_url(project)
+
+    assert_response :success
+    assert_select "h1.mb-3", text: "LevSeq Dashboard"
+    assert_nil project.reload.name
   end
 
   test "should show popular projects when no query" do

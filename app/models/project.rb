@@ -319,7 +319,19 @@ class Project < ApplicationRecord
   end
 
   def to_s
-    name.presence || url
+    name.presence || readme_name || repository_slug || url
+  end
+
+  def readme_name
+    return unless has_attribute?(:readme) && readme.present?
+
+    html = Redcarpet::Markdown.new(Redcarpet::Render::HTML, fenced_code_blocks: true).render(readme)
+    Nokogiri::HTML.fragment(html).at_css('h1')&.text&.squish.presence
+  end
+
+  def repository_slug
+    path = RepositoryUrlNormalizer.parse(repository_url)&.path
+    path.to_s.split('/').last&.delete_suffix('.git').presence
   end
 
   def repository_url

@@ -45,7 +45,7 @@ class ProjectSearch
   def exact_repo_matches(repo_name)
     projects = Project.where('science_score > 0')  # Include all projects with any science score
       .where("url ILIKE ?", "%/#{repo_name}")
-      .select(:id, :name, :url, :description, :science_score, :score, :repository, :packages)
+      .select(:id, :name, :url, :description, :science_score, :score, :repository, :packages, :readme)
     
     projects.filter_map do |project|
       repo_end = project.url.split('/').last
@@ -58,7 +58,7 @@ class ProjectSearch
   def exact_name_matches
     projects = Project.where('science_score > 0')
       .where('name ILIKE ?', query)
-      .select(:id, :name, :url, :description, :science_score, :score, :repository, :packages)
+      .select(:id, :name, :url, :description, :science_score, :score, :repository, :packages, :readme)
     
     projects.map do |project|
       build_result(project, calculate_confidence(project, 100), 'exact_name', project.name)
@@ -70,7 +70,7 @@ class ProjectSearch
     # We use json_array_elements to expand the array and search each element
     projects = Project.where('science_score > 0')
       .where("EXISTS (SELECT 1 FROM json_array_elements(packages) AS pkg WHERE LOWER(pkg->>'name') = ?)", query.downcase)
-      .select(:id, :name, :url, :description, :science_score, :score, :repository, :packages)
+      .select(:id, :name, :url, :description, :science_score, :score, :repository, :packages, :readme)
     
     projects.map do |project|
       # Find the matching package name for display
@@ -98,7 +98,7 @@ class ProjectSearch
       .where('name ILIKE ?', "#{query}%")
       .where.not(id: excluded_ids)
       .limit(limit - existing_results.size)
-      .select(:id, :name, :url, :description, :science_score, :score, :repository)
+      .select(:id, :name, :url, :description, :science_score, :score, :repository, :readme)
     
     projects.map do |project|
       build_result(project, calculate_confidence(project, 75), 'name_starts_with', project.name)
@@ -112,7 +112,7 @@ class ProjectSearch
       .where("url ILIKE ?", "%/#{repo_name}%")
       .where.not(id: excluded_ids)
       .limit(limit - existing_results.size)
-      .select(:id, :name, :url, :description, :science_score, :score, :repository)
+      .select(:id, :name, :url, :description, :science_score, :score, :repository, :readme)
     
     projects.filter_map do |project|
       repo_end = project.url.split('/').last
@@ -129,7 +129,7 @@ class ProjectSearch
       .where('name ILIKE ?', "%#{query}%")
       .where.not(id: excluded_ids)
       .limit(limit - existing_results.size)
-      .select(:id, :name, :url, :description, :science_score, :score, :repository)
+      .select(:id, :name, :url, :description, :science_score, :score, :repository, :readme)
     
     projects.map do |project|
       build_result(project, calculate_confidence(project, 50), 'name_contains', project.name)

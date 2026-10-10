@@ -12,6 +12,37 @@ class ProjectTest < ActiveSupport::TestCase
     ResearchOrganizationDomainMatcher.reset_cache!
   end
 
+  test "display name prefers the saved name over the README heading" do
+    project = Project.new(name: "Saved name", readme: "# README name", url: "https://github.com/lab/repo")
+
+    assert_equal "Saved name", project.to_s
+  end
+
+  test "readme_name extracts plain text from Markdown and HTML headings" do
+    ["# [Tool **name**](https://example.org) ![Build](badge.svg)",
+      "Tool name\n=========", "<h1>Tool <em>name</em></h1>"].each do |readme|
+      project = Project.new(name: " ", readme: readme, url: "https://github.com/lab/repo")
+
+      assert_equal "Tool name", project.readme_name
+      assert_equal "Tool name", project.to_s
+    end
+  end
+
+  test "display name falls back to the slug without a usable README heading" do
+    [nil, "", "## Installation", "```python\n# A comment\n```", "    # Indented code", "# ![Logo](logo.svg)"].each do |readme|
+      project = Project.new(readme: readme, url: "https://gitlab.example/lab/group/repo.git/?view=1#top")
+
+      assert_nil project.readme_name
+      assert_equal "repo", project.to_s
+    end
+  end
+
+  test "display name handles records loaded without the README" do
+    project = Project.create!(url: "https://github.com/lab/repo", readme: "# Tool name")
+
+    assert_equal "repo", Project.select(:id, :name, :url).find(project.id).to_s
+  end
+
   test "issue_associations handles missing sub-keys in issues_stats" do
     p = Project.new(url: "https://github.com/x/y", issues_stats: { 'issue_author_associations_count' => { 'OWNER' => 1 } })
     assert_equal ['OWNER'], p.issue_associations
