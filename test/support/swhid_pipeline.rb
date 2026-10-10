@@ -15,6 +15,10 @@ module SwhidPipeline
   end
 
   def clear_swhid_batch
+    [CheckSwhidHistoryWorker, CheckSwhidHistoryBatchWorker].each do |worker|
+      worker.clear
+      SidekiqUniqueJobs::Digests.new.delete_by_pattern("#{worker.get_sidekiq_options.fetch('lock_prefix')}:*")
+    end
     RepositoryScanWorker.clear
     CheckSwhidWorker.clear
     SidekiqUniqueJobs::Digests.new.delete_by_pattern("#{RepositoryScanWorker.get_sidekiq_options.fetch('lock_prefix')}:*")

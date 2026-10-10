@@ -572,7 +572,7 @@ paths:
       operationId: getProjectSwhids
       tags: [projects, swhids]
       description: >-
-        Read stored revision, directory and repository-origin coverage for a visible
+        Read stored revision, directory, ancestor and repository-origin coverage for a visible
         project. Each observation retains its own timestamp. Unchecked, missing and
         error states remain distinct. This endpoint performs no archive requests,
         cloning or job scheduling. Object presence does not verify byte retrieval.
@@ -596,6 +596,44 @@ paths:
                   observed_commit: {type: string, nullable: true}
                   attempted_at: {type: string, format: date-time, nullable: true}
                   objects: {type: array, items: {type: object}}
+                  history_archive:
+                    type: object
+                    description: Optional ancestor search pinned to starting_commit. Archived ancestors do not change current-commit coverage.
+                    properties:
+                      status: {type: string, enum: [unchecked, incomplete, complete, unsupported]}
+                      starting_commit: {type: string}
+                      complete:
+                        type: boolean
+                        description: All ancestors were enumerated and every enumerated revision has a successful archive lookup.
+                      history_complete:
+                        type: boolean
+                        description: Git history was exhausted without a shallow boundary or identifier limit; API lookups may still be pending.
+                      depth:
+                        type: integer
+                        description: Requested depth of the last successful fetch, including starting_commit. This is not a count of inspected ancestors.
+                      checked_count: {type: integer}
+                      attempted_at: {type: string, format: date-time}
+                      checked_at:
+                        type: string
+                        format: date-time
+                        description: Last saved progress update. Each revision retains its own lookup date.
+                      reason:
+                        type: string
+                        enum: [pending_checks, shallow_history, depth_limit, identifier_limit, fetch_failed, api_error, unsupported_object_format]
+                      revisions:
+                        type: array
+                        description: Inspected ancestors, excluding starting_commit. Missing entries do not establish absence from the archive.
+                        items:
+                          type: object
+                          properties:
+                            swhid: {type: string}
+                            archive:
+                              type: object
+                              properties:
+                                status: {type: string, enum: [unchecked, archived, not_found, error]}
+                                checked_at: {type: string, format: date-time}
+                                attempted_at: {type: string, format: date-time}
+                                retry_at: {type: string, format: date-time}
                   origin_archive:
                     type: object
                     properties:

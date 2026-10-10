@@ -62,6 +62,26 @@ Candidate changes retain observations for exact URL matches, drop removed candid
 
 The client sends `User-Agent: science.ecosyste.ms (+https://science.ecosyste.ms)`. Anonymous access works for coverage checks; set `SWH_API_TOKEN` to send an optional Software Heritage bearer token. Rate-limit exemptions depend on the account's permissions. Tokens are not stored in project results.
 
+Optional ancestor checks run separately from routine scans. Queue projects that already have successful current-revision and repository-origin lookups:
+
+```sh
+bundle exec rake swhids:check_history LIMIT=100 AFTER_ID=0
+```
+
+The task accepts up to 1,000 projects and prints `last_project_id` for the next page. It groups projects into jobs of at most ten so shared ancestor identifiers can be checked once per API batch. `CheckSwhidHistoryWorker` fetches history on the `swhid` queue; `CheckSwhidHistoryBatchWorker` checks identifiers on `swh_api` through the existing batch client and shared cooldown. Neither worker requests archival. To queue a single eligible project:
+
+```ruby
+puts "job_id: #{CheckSwhidHistoryWorker.perform_async([476]).inspect}"; nil
+```
+
+The first run pins the commit and origin recorded in `projects.swhids`. Each fetch requests that exact commit, even if the default branch advances. A bare temporary repository avoids a working-tree checkout and requests blob filtering. Ancestor revision SWHIDs use [Git's SHA-1 commit identifiers](https://docs.softwareheritage.org/devel/swh-model/persistent-identifiers.html); the current revision and directory scanner continues to use `swhid-go`. SHA-256 commits are recorded as unsupported.
+
+Each project starts with a fetch depth of 100, increasing by 100 on later runs up to 1,000. A search retains at most 1,000 distinct ancestors and checks at most 100 pending identifiers per API job. Git commands share a 120-second deadline per project. Temporary repository size is checked every 0.1 seconds against a 500 MB threshold; this is a monitored limit, so transfers can overshoot between checks. A server that ignores blob filtering is subject to the same limit. Temporary repositories are removed after success or failure.
+
+Progress is stored in `swhids.history_archive` and returned by `GET /api/v1/projects/:id/swhids`. It includes `starting_commit`, requested `depth`, inspected `revisions`, per-revision lookup dates, and `checked_count`. `history_complete` means Git ancestry was exhausted; `complete` also requires successful lookups for every ancestor. Thus a complete search with no archived ancestors differs from a truncated or failed search. For A-B-C, with B archived and C missing, B appears in the historical results while C's existing coverage stays missing. The API excludes temporary paths and Git error text.
+
+Queue the same project IDs again to resume. Pending identifiers are checked before fetching deeper history, and successful ancestor lookups retain their original dates. Rate limits schedule an API-only retry; other failures and unfinished batches require another explicit queue request. Depth and identifier caps leave the search incomplete. Completed and unsupported searches are skipped. Later repository scans preserve historical results with their original starting commit; to start a new search, remove only `history_archive` from the project's stored SWHID data before requeuing. Clearing all `swhids` removes every kind of archive evidence.
+
 Inspect a saved result in the Rails console:
 
 ```ruby

@@ -20,8 +20,21 @@ class ProjectSwhidEvidence
         }
       end,
       origin_archive: origin_evidence(data["origin_archive"]),
+      history_archive: history_evidence(data["history_archive"]),
       bytes_verified: false
     }
+  end
+
+  def history_evidence(history)
+    return { status: "unchecked" } unless history
+
+    history.slice("status", "starting_commit", "complete", "history_complete", "depth", "reason",
+      "attempted_at", "checked_at", "checked_count").merge(
+      "revisions" => Array(history["revisions"]).map do |object|
+        { "swhid" => object["swhid"], "archive" => (object["archive"] || { "status" => "unchecked" })
+          .slice("status", "checked_at", "attempted_at", "retry_at") }
+      end
+    )
   end
 
   def origin_evidence(coverage)

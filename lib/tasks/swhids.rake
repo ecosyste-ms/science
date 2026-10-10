@@ -1,4 +1,17 @@
 namespace :swhids do
+  desc "Queue optional ancestor checks after object and origin checks (LIMIT=100 AFTER_ID=0)"
+  task check_history: :environment do
+    limit = Integer(ENV.fetch("LIMIT", "100"), 10)
+    after_id = Integer(ENV.fetch("AFTER_ID", "0"), 10)
+    raise ArgumentError, "LIMIT must be 1..1000 and AFTER_ID nonnegative" unless limit.between?(1, 1_000) && after_id >= 0
+
+    ids = SwhidHistoryChecker.eligible.where("projects.id > ?", after_id).order(:id).limit(limit).pluck(:id)
+    queued = ids.each_slice(CheckSwhidHistoryWorker::BATCH_SIZE).sum do |batch|
+      CheckSwhidHistoryWorker.perform_async(batch) ? batch.size : 0
+    end
+    puts JSON.pretty_generate(selected: ids.size, queued: queued, last_project_id: ids.last || after_id)
+  end
+
   desc "Refresh SWHID stats stored in Redis"
   task refresh: :environment do
     stats = SwhidStats.refresh

@@ -9,6 +9,39 @@ class SwhidsRakeTest < ActiveSupport::TestCase
     Rake::Task["swhids:contributions"].reenable
     Rake::Task["swhids:coverage"].reenable
     Rake::Task["swhids:check_origins"].reenable
+    Rake::Task["swhids:check_history"].reenable
+  end
+
+  test "history task queues a bounded page after commit and origin checks" do
+    projects = 2.times.map do |i|
+      project = coverage_project("history-#{i}", "archived", nil, request_id: nil)
+      project.update!(swhids: project.swhids.merge("commit" => "a" * 40,
+        "revision" => { "archive" => { "status" => "not_found" } }))
+      project
+    end
+    coverage_project("no-commit", "archived", nil)
+    previous = ENV.to_h.slice("LIMIT", "AFTER_ID")
+    ENV.update("LIMIT" => "1", "AFTER_ID" => "0")
+    output, = capture_io { Rake::Task["swhids:check_history"].invoke }
+    assert_equal({ "selected" => 1, "queued" => 1, "last_project_id" => projects.first.id }, JSON.parse(output))
+    assert_equal [[[projects.first.id]]], CheckSwhidHistoryWorker.jobs.pluck("args")
+    CheckSwhidHistoryWorker.clear
+    ENV["AFTER_ID"] = projects.first.id.to_s
+    Rake::Task["swhids:check_history"].reenable
+    capture_io { Rake::Task["swhids:check_history"].invoke }
+    assert_equal [[[projects.last.id]]], CheckSwhidHistoryWorker.jobs.pluck("args")
+    assert_not_requested :any, /archive\.softwareheritage\.org/
+  ensure
+    %w[LIMIT AFTER_ID].each { |key| previous&.key?(key) ? ENV[key] = previous[key] : ENV.delete(key) }
+  end
+
+  test "history task rejects an unbounded page" do
+    previous = ENV["LIMIT"]
+    ENV["LIMIT"] = "1001"
+    assert_raises(ArgumentError) { Rake::Task["swhids:check_history"].invoke }
+    assert_empty CheckSwhidHistoryWorker.jobs
+  ensure
+    previous ? ENV["LIMIT"] = previous : ENV.delete("LIMIT")
   end
 
   test "contributions counts distinct identifiers from completed worker requests" do

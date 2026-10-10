@@ -622,7 +622,7 @@ module Project::Sync
   end
 
   def store_swhids(result)
-    with_lock { update!(swhids: (swhids || {}).slice("origin_archive").merge(result)) }
+    with_lock { update!(swhids: (swhids || {}).slice("origin_archive", "history_archive").merge(result)) }
     swhids
   end
 
