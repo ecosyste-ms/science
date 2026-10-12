@@ -47,6 +47,16 @@ class Package < ApplicationRecord
   has_many :project_dependencies, dependent: :nullify
   has_many :dependent_projects, through: :project_dependencies, source: :project
   has_many :package_versions, dependent: :delete_all
+  has_many :package_papers, dependent: :delete_all
+
+  def linked_papers
+    Paper.where(id: package_papers.select(:paper_id))
+  end
+
+  def linked_projects
+    paper_ids = package_papers.where(role: PackagePaper::MODEL_ROLES).select(:paper_id)
+    Project.where(id: ProjectPaper.where(paper_id: paper_ids).select(:project_id))
+  end
 
   scope :version_importable, -> {
     where(published_by_project_id: Project.visible.scientific.select(:id))

@@ -33,6 +33,7 @@ gem 'sidekiq-status'
 gem 'groupdate'
 gem 'simple_form'
 gem 'cff'
+gem 'bibtex-ruby', require: 'bibtex'
 gem 'identifiers', '~> 0.15', require: %w[identifiers/arxiv_id identifiers/doi identifiers/orcid]
 # gem 'tokenizers'
 gem 'csv'

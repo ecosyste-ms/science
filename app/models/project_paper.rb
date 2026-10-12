@@ -51,14 +51,6 @@ class ProjectPaper < ApplicationRecord
   end
 
   def self.paper_for_openalex_id!(value)
-    match = value.to_s.strip.match(%r{\A(?:https?://openalex\.org/)?(W\d+)\z}i)
-    raise ArgumentError, "Invalid OpenAlex Work ID: #{value.inspect}" unless match
-
-    id = match[1].downcase
-    papers = Paper.where("lower(openalex_id) IN (?)", [id, "https://openalex.org/#{id}"])
-      .limit(2).to_a
-    raise ArgumentError, "Expected one existing paper for #{id.upcase}, found #{papers.size}" unless papers.one?
-
-    papers.first
+    Paper.resolve_openalex_id!(value)
   end
 end
