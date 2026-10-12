@@ -38,16 +38,7 @@ class ProjectPaper < ApplicationRecord
   end
 
   def self.project_for_url!(value)
-    url = RepositoryUrlNormalizer.normalize(value)
-    raise ArgumentError, "Invalid repository URL: #{value.inspect}" unless url
-
-    variants = [url, "#{url}/", "#{url}.git", "#{url}.git/"]
-    projects = Project.where(url: variants).or(
-      Project.where(id: ProjectRepositoryAlias.where(url: variants).select(:project_id))
-    ).limit(2).to_a
-    raise ArgumentError, "Expected one existing project for #{url}, found #{projects.size}" unless projects.one?
-
-    projects.first
+    Project.resolve_repository_url!(value)
   end
 
   def self.paper_for_openalex_id!(value)

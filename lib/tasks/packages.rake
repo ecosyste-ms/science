@@ -1,4 +1,10 @@
 namespace :packages do
+  desc "Import reviewed package-project relationships from JSON (FILE=path; purl, repository_url, role, evidence)"
+  task import_project_pairs: :environment do
+    rows = JSON.parse(File.read(ENV.fetch("FILE")))
+    puts "Package-project relationships: #{PackageProject.import_verified!(rows).inspect}"
+  end
+
   desc "Sync package registries from packages.ecosyste.ms"
   task sync_registries: :environment do
     result = PackageRegistry.sync_from_ecosystems!

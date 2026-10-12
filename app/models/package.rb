@@ -48,6 +48,12 @@ class Package < ApplicationRecord
   has_many :dependent_projects, through: :project_dependencies, source: :project
   has_many :package_versions, dependent: :delete_all
   has_many :package_papers, dependent: :delete_all
+  has_many :package_projects, dependent: :delete_all
+
+  def self.resolve_purl!(value)
+    purl = Purl.parse(value).with(version: nil, subpath: nil).to_s
+    find_by(purl: purl) || raise(ArgumentError, "Expected an existing package for #{purl}")
+  end
 
   def linked_papers
     Paper.where(id: package_papers.select(:paper_id))
@@ -56,6 +62,7 @@ class Package < ApplicationRecord
   def linked_projects
     paper_ids = package_papers.where(role: PackagePaper::MODEL_ROLES).select(:paper_id)
     Project.where(id: ProjectPaper.where(paper_id: paper_ids).select(:project_id))
+      .or(Project.where(id: package_projects.where(role: PackageProject::CODE_ROLES).select(:project_id)))
   end
 
   scope :version_importable, -> {

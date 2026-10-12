@@ -67,6 +67,7 @@ class Project < ApplicationRecord
   has_many :mentions, dependent: :destroy
   has_many :papers, through: :mentions
   has_many :project_papers, dependent: :delete_all
+  has_many :package_projects, dependent: :delete_all
   has_many :linked_papers, through: :project_papers, source: :paper
   has_many :dependency_records, class_name: 'Dependency', dependent: :nullify
   has_many :project_dependencies, dependent: :delete_all
@@ -229,6 +230,19 @@ class Project < ApplicationRecord
 
   def self.extract_orcids(*values)
     Identifiers::ORCID.extract(values.compact.join("\n")).uniq
+  end
+
+  def self.resolve_repository_url!(value)
+    url = RepositoryUrlNormalizer.normalize(value)
+    raise ArgumentError, "Invalid repository URL: #{value.inspect}" unless url
+
+    variants = [url, "#{url}/", "#{url}.git", "#{url}.git/"]
+    projects = where(url: variants).or(
+      where(id: ProjectRepositoryAlias.where(url: variants).select(:project_id))
+    ).limit(2).to_a
+    raise ArgumentError, "Expected one existing project for #{url}, found #{projects.size}" unless projects.one?
+
+    projects.first
   end
 
   def self.owner_details_from_url(url)

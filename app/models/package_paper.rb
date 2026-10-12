@@ -43,7 +43,6 @@ class PackagePaper < ApplicationRecord
   end
 
   def self.package_for_purl!(value)
-    purl = Purl.parse(value).with(version: nil, subpath: nil).to_s
-    Package.find_by(purl: purl) || raise(ArgumentError, "Expected an existing package for #{purl}")
+    Package.resolve_purl!(value)
   end
 end

@@ -28,6 +28,7 @@ Rails.application.routes.draw do
       get "software/search", to: "software#search"
       resources :packages, only: [:index] do
         collection { post :bulk_lookup }
+        member { get :repositories }
         resources :versions, only: [:index, :show], controller: :package_versions
       end
       resources :issues do

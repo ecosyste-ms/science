@@ -68,6 +68,52 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     assert @project.brief.key?("dependencies")
   end
 
+  test "queued scan preserves citation file and README BibTeX with diagnostics" do
+    File.write(File.join(@source, "CITATION.bib"), <<~BIBTEX)
+      @article{paper,
+        title = {Research software},
+        author = {Smith, Alice},
+        doi = {10.1234/example}
+      }
+    BIBTEX
+    File.write(File.join(@source, "README.md"), <<~MARKDOWN)
+      # Research software
+
+      Please cite the model paper:
+
+      ```bibtex
+      @article{model,
+        author = {Smith, Alice}
+        title = {A model paper},
+        eprint = {2410.02073},
+        archivePrefix = {arXiv}
+      }
+      ```
+    MARKDOWN
+    git("-C", @source, "add", "CITATION.bib", "README.md")
+    git("-C", @source, "-c", "user.name=Test", "-c", "user.email=test@example.org",
+      "-c", "commit.gpgsign=false", "commit", "-m", "Add citations")
+
+    RepositoryScanWorker.perform_async(@project.id)
+    RepositoryScanWorker.perform_one
+
+    resources = @project.reload.brief.fetch("resources")
+    citation = resources.fetch("bibtex")
+    assert_equal "CITATION.bib", citation.fetch("path")
+    assert_equal "10.1234/example", citation.fetch("entries").sole.fetch("doi")
+    readme = resources.fetch("readme_bibtex")
+    assert_equal "README.md", readme.fetch("path")
+    assert_equal "parsed", readme.fetch("parse_status")
+    entry = readme.fetch("entries").sole
+    assert_equal "A model paper", entry.fetch("title")
+    assert_equal "2410.02073", entry.fetch("eprint")
+    assert_equal 6, entry.fetch("line")
+    assert_equal "Smith", entry.fetch("authors").sole.fetch("family_names")
+    assert_includes readme.fetch("diagnostics").map { |diagnostic| diagnostic.fetch("code") }, "missing_comma"
+    assert_equal 1, clone_commands.size
+    assert_empty @project.project_papers
+  end
+
   test "GitHub scans authenticate through Git without storing the token" do
     ENV["GITHUB_TOKEN"] = "github-test-token"
     @project.update!(repository: { "clone_url" => @project.url })

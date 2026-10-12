@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_12_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_12_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -348,6 +348,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_100000) do
     t.datetime "updated_at", null: false
     t.index ["package_id", "paper_id", "role"], name: "index_package_papers_on_package_id_and_paper_id_and_role", unique: true
     t.index ["paper_id"], name: "index_package_papers_on_paper_id"
+  end
+
+  create_table "package_projects", force: :cascade do |t|
+    t.bigint "package_id", null: false
+    t.bigint "project_id", null: false
+    t.string "role", null: false
+    t.jsonb "evidence", default: [], null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["package_id", "project_id", "role"], name: "index_package_projects_on_package_id_and_project_id_and_role", unique: true
+    t.index ["project_id"], name: "index_package_projects_on_project_id"
   end
 
   create_table "package_registries", force: :cascade do |t|
@@ -827,6 +838,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_100000) do
   add_foreign_key "owner_research_organizations", "research_organizations"
   add_foreign_key "package_papers", "packages"
   add_foreign_key "package_papers", "papers"
+  add_foreign_key "package_projects", "packages"
+  add_foreign_key "package_projects", "projects"
   add_foreign_key "package_versions", "packages", on_delete: :cascade
   add_foreign_key "package_versions", "releases", on_delete: :nullify
   add_foreign_key "packages", "package_registries"

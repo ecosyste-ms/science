@@ -355,6 +355,50 @@ paths:
                 $ref: "#/components/schemas/SoftwareResults"
         400:
           description: Invalid query, limit or cursor
+  /packages/{id}/repositories:
+    get:
+      operationId: getPackageRepositories
+      tags: [packages]
+      description: >-
+        Read-only reviewed repository relationships for a stored package, including
+        unranked models without repository_url. Resolve a PURL through bulk_lookup
+        to obtain the package ID. Each visible project appears once, in ID order,
+        with every reviewed direct role and model/model-family paper path.
+        supported_runtime indicates compatibility, not model authorship.
+        Base-model, method, training-data and evaluation citations do not create
+        repository paths. Paper paths preserve evidence for both joins and do not
+        establish exact checkpoint publication or weight identity. No remote
+        requests, imports or synchronization jobs are triggered.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer}
+        - name: page
+          in: query
+          description: Out-of-range pages return an empty array.
+          schema: {type: integer, minimum: 1, default: 1}
+        - name: per_page
+          in: query
+          description: Values greater than 100 are capped at 100.
+          schema: {type: integer, minimum: 1, maximum: 100, default: 100}
+      responses:
+        200:
+          description: Reviewed repositories, or an empty array when there are no visible matches
+          headers:
+            total-count:
+              schema: {type: integer}
+            page-items:
+              schema: {type: integer}
+            link:
+              schema: {type: string}
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/PackageRepository"}
+        404:
+          description: Package not found
   /packages/bulk_lookup:
     post:
       operationId: bulkLookupPackages
@@ -1608,6 +1652,56 @@ components:
                 type: array
                 items:
                   $ref: "#/components/schemas/SearchSeed"
+    ReviewedRelationshipEvidence:
+      type: array
+      items:
+        type: object
+        required: [source, url]
+        additionalProperties: true
+        description: Stored source evidence, including any reviewed passage, revision or line number.
+        properties:
+          source: {type: string}
+          url: {type: string}
+    PackageRepository:
+      type: object
+      required: [id, repository_url, relationships]
+      properties:
+        id: {type: integer, description: Project ID}
+        repository_url: {type: string}
+        relationships:
+          type: array
+          items:
+            oneOf:
+              - $ref: "#/components/schemas/DirectPackageRepositoryRelationship"
+              - $ref: "#/components/schemas/PaperPackageRepositoryRelationship"
+    DirectPackageRepositoryRelationship:
+      type: object
+      required: [type, role, evidence]
+      properties:
+        type: {type: string, enum: [direct]}
+        role:
+          type: string
+          enum: [model_implementation, inference_implementation, model_library, supported_runtime]
+        evidence:
+          $ref: "#/components/schemas/ReviewedRelationshipEvidence"
+    PaperPackageRepositoryRelationship:
+      type: object
+      required: [type, role, paper, package_evidence, project_evidence]
+      properties:
+        type: {type: string, enum: [paper]}
+        role: {type: string, enum: [model_paper, model_family_paper]}
+        paper:
+          type: object
+          required: [id, openalex_id, doi, title]
+          properties:
+            id: {type: integer}
+            openalex_id: {type: string, nullable: true}
+            doi: {type: string, nullable: true}
+            title: {type: string, nullable: true}
+        package_evidence:
+          $ref: "#/components/schemas/ReviewedRelationshipEvidence"
+        project_evidence:
+          $ref: "#/components/schemas/ReviewedRelationshipEvidence"
     Package:
       type: object
       properties:
@@ -1624,6 +1718,9 @@ components:
         repository_url:
           type: string
           nullable: true
+        repositories_url:
+          type: string
+          description: Read-only reviewed repository relationships and evidence
         description:
           type: string
           nullable: true
