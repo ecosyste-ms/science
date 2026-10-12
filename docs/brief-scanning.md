@@ -22,3 +22,11 @@ The rake task only enqueues jobs. The application worker process must be running
 Clone, timeout, and parse failures store an error and attempt time in `projects.brief`, which keeps repeated cohort runs from retrying the same failed repository. Queue uniqueness prevents duplicate waiting scans, and a per-project database lock prevents overlapping scans. Workers recheck saved results before cloning. Each analysis saves its own results; a Brief command failure still permits SWHID calculation. The checkout is removed after processing, including on failure.
 
 Brief results update the Science Score. If a project becomes scientifically eligible after Brief runs, SWHIDs are calculated from the same checkout. Direct dependencies from Brief are used by the dependency indexer when stored repos manifest data has no usable direct dependencies. `ProjectRepositoryScanner` owns the checkout and coordinates the analyses; additional repository analysis can use that path without another clone.
+
+To enqueue a bounded batch of completed scans from older Brief versions:
+
+```bash
+LIMIT=100 bundle exec rake projects:rescan_brief
+```
+
+The task reads `brief --version` and selects visible, eligible projects whose stored version is older than the installed executable. `LIMIT` defaults to 100, and `app.json` schedules that batch every ten minutes. JSON output lists the selected project IDs, URLs and stored versions, along with the number enqueued. Failed scans and scans without a known version are excluded. Workers recheck eligibility and their installed version under the repository lock, so an already refreshed project is skipped. Scans at the current version are left alone regardless of age.

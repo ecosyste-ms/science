@@ -7,7 +7,7 @@ class RepositoryScanWorker
   sidekiq_options queue: "swhid", retry: 3, lock: :until_executing,
     lock_prefix: "science:#{Rails.env}:repository-scan"
 
-  def perform(project_id, rescan = false)
+  def perform(project_id, rescan = false, version_rescan = false)
     Project.with_connection do |connection|
       project = Project.visible.with_repository.find_by(id: project_id)
       return unless project&.repository.present?
@@ -19,11 +19,13 @@ class RepositoryScanWorker
 
       begin
         project.reload
-        if rescan
+        if version_rescan
+          return unless BriefRescanEnqueuer.new.eligible?(project)
+        elsif rescan
           return unless project.science_score && project.science_score < Project::SCIENCE_SCORE_THRESHOLD
           return unless Project.visible.exists?(project.id) && project.confirmed_external_identifier?
         end
-        ProjectRepositoryScanner.new(project, force_brief: rescan).scan
+        ProjectRepositoryScanner.new(project, force_brief: rescan || version_rescan).scan
         project.enqueue_swhid_check
       ensure
         connection.execute("SELECT pg_advisory_unlock(#{LOCK_NAMESPACE}, #{project.id})")

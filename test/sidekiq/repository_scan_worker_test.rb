@@ -131,6 +131,36 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     assert clone_commands.first.include?("credential.helper=")
   end
 
+  test "version rescan task refreshes an older scan through a real checkout and skips it afterwards" do
+    require "rake"
+    Rails.application.load_tasks unless Rake::Task.task_defined?("projects:rescan_brief")
+    readme = "# Example\n```bibtex\n@article{example, title={Example paper}, year={2026}}\n```\n"
+    File.write(File.join(@source, "README.md"), readme)
+    git("-C", @source, "add", "README.md")
+    git("-C", @source, "-c", "user.name=Test", "-c", "user.email=test@example.org",
+      "-c", "commit.gpgsign=false", "commit", "-m", "Add README citation")
+    original = { "status" => "success", "origin_archive" => { "status" => "archived" } }
+    @project.update!(brief: { "version" => "0.14.0", "dependencies" => [] }, readme: readme, swhids: original)
+    previous_limit = ENV["LIMIT"]
+    ENV["LIMIT"] = "100"
+
+    output, = capture_io { Rake::Task["projects:rescan_brief"].execute }
+    assert_equal 1, JSON.parse(output).fetch("enqueued")
+    RepositoryScanWorker.perform_one
+
+    @project.reload
+    assert_equal "Example paper", @project.brief.dig("resources", "readme_bibtex", "entries").sole.fetch("title")
+    assert_equal BriefRescanEnqueuer.current_version.to_s, @project.brief.fetch("version")
+    assert_equal original, @project.swhids
+    assert_equal 1, clone_commands.size
+    assert_not File.exist?(clone_commands.first.last)
+    assert_empty @project.project_papers
+    output, = capture_io { Rake::Task["projects:rescan_brief"].execute }
+    assert_equal 0, JSON.parse(output).fetch("selected")
+  ensure
+    previous_limit ? ENV["LIMIT"] = previous_limit : ENV.delete("LIMIT")
+  end
+
   test "a configured GitHub token does not add credentials to local clones" do
     ENV["GITHUB_TOKEN"] = "github-test-token"
 

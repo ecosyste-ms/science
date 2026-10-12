@@ -204,6 +204,14 @@ namespace :projects do
     abort error.message
   end
 
+  desc 'enqueue completed scans from older Brief versions (LIMIT=100)'
+  task :rescan_brief => :environment do
+    result = BriefRescanEnqueuer.new(limit: ENV.fetch('LIMIT', '100')).enqueue
+    puts JSON.generate(result)
+  rescue ArgumentError => error
+    abort error.message
+  end
+
   desc 'import reviewed projects from OST (Open Sustainable Technology)'
   task :import_ost => :environment do
     Project.import_from_ost
