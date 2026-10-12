@@ -71,7 +71,15 @@ class PaperIdentityResolver
     if authors.empty?
       citation_authors = occurrences.filter_map do |item|
         value = item.dig("fields", "author")
-        BibTeX::Names.parse(value)&.map(&:to_s).presence if value.is_a?(String)
+        if value.is_a?(String)
+          BibTeX::Names.parse(value)&.map(&:to_s).presence
+        else
+          names = item.dig("brief_entry", "authors")
+          if names.is_a?(Array) && names.all? { |name| name.is_a?(Hash) }
+            parsed = names.map { |name| [name["given_names"], name["family_names"]].compact.join(" ") }
+            parsed.presence if parsed.all?(&:present?)
+          end
+        end
       end.uniq
       if citation_authors.one?
         authors = citation_authors.first

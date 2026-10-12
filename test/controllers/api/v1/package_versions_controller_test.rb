@@ -51,7 +51,7 @@ class Api::V1::PackageVersionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
-  test "packages without a visible publisher are excluded" do
+  test "packages with a hidden publisher are excluded" do
     owner = Owner.create!(host: Host.create!(name: "GitHub"), login: "science", hidden: true)
     @project.update_columns(owner_id: owner.id)
 
@@ -59,10 +59,47 @@ class Api::V1::PackageVersionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
     get api_v1_package_version_url(@package, @newer)
     assert_response :not_found
+  end
 
+  test "model versions are reachable through package lookup without a repository or publisher" do
+    registry = PackageRegistry.create!(name: "huggingface.co", url: "https://huggingface.co",
+      ecosystem: "huggingface", purl_type: "huggingface")
+    package = registry.packages.create!(name: "Qwen/Qwen2.5-7B-Instruct",
+      purl: "pkg:huggingface/Qwen/Qwen2.5-7B-Instruct")
+    revision = "a09a35458c702b33eeacc393d103063234e8bc28"
+    version = package.package_versions.create!(ecosystems_id: 245802722,
+      number: revision, purl: "#{package.purl}@#{revision}", fetched_at: Time.current,
+      metadata: { "revision" => revision })
+
+    post bulk_lookup_api_v1_packages_url, params: { purls: [version.purl] }, as: :json
+    assert_response :success
+    result = response.parsed_body.sole
+    assert_equal package.purl, result["purl"]
+    assert_nil result["repository_url"]
+    assert_nil result["published_by_project"]
+
+    get result.fetch("versions_url")
+    assert_response :success
+    result = response.parsed_body.sole
+    assert_equal revision, result["number"]
+    assert_equal version.purl, result["purl"]
+    assert_equal({ "revision" => revision }, result["metadata"])
+    assert_nil result["download_url"]
+    assert_nil result["release_id"]
+
+    get result.fetch("api_url")
+    assert_response :success
+    assert_equal version.purl, response.parsed_body["purl"]
+  end
+
+  test "an unlinked package without imported versions returns an empty list" do
     @package.update!(published_by_project: nil)
+    @package.package_versions.delete_all
+
     get api_v1_package_versions_url(@package)
-    assert_response :not_found
+
+    assert_response :success
+    assert_empty response.parsed_body
   end
 
   test "deleting a release preserves its package version without a dangling API match" do

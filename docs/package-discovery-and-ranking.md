@@ -22,6 +22,50 @@ Explicit registry qualifiers in a PURL take precedence. Otherwise, resolution us
 
 [Project ingestion and sync](project-ingestion-and-sync.md#dependency-indexing) describes source selection, collected empty results, retries, and the manual task options in more detail.
 
+## Explicit Hugging Face imports
+
+`packages:import_huggingface` imports an explicit JSON array of 1 to 500 model PURLs. Sync package registries first with `packages:sync_registries`. For example, `models.json` can contain:
+
+```json
+["pkg:huggingface/google-bert/bert-base-uncased"]
+```
+
+The task defaults to a dry run, which looks up new packages and prints a JSON report without writes. Set `DRY_RUN=false` to import:
+
+```sh
+FILE=models.json bundle exec rake packages:import_huggingface
+FILE=models.json DRY_RUN=false bundle exec rake packages:import_huggingface
+```
+
+Versions and subpaths are removed, duplicates are combined, and qualifiers are rejected. New models retain the Packages response even when `repository_url` is null. Existing packages are reported without refreshing metadata or changing relationships. Missing Packages records remain retry candidates in the report; no placeholder records are created. Lookup errors and identity conflicts are reported per PURL so successful imports can be reused when the batch is retried.
+
+This task imports package metadata only. Hub files, paper identities and reviewed repository links have separate collection and import steps. The task does not run on a schedule.
+
+Packages can sync versions without a linked publishing project. For an existing package, call `package.sync_versions` to enqueue the normal paginated import from its upstream `versions_url`. This applies to all registries. Packages with a publisher still require that project to be visible and scientific for version imports. Version sync retains its existing retry and refresh intervals.
+
+Hugging Face revisions use the existing `PackageVersion` records: the version number is the commit SHA and the version PURL identifies that revision. A download URL or repository release is not required. The package API advertises `versions_url` for packages without a publisher, and the versions endpoint returns an empty list until versions have been imported. Versions of packages with hidden publishers remain excluded.
+
+To collect intrinsic files for imported versions, put 1 to 25 exact version PURLs in a JSON array and run:
+
+```sh
+FILE=model-versions.json bundle exec rake packages:collect_huggingface > model-files.json
+```
+
+Each PURL must identify an existing package version with a full commit SHA. The collector uses the file list in Packages metadata when it describes that revision, otherwise it requests the Hub file list at the selected commit. It fetches only root-level `README.md`, `CITATION.cff`, `CITATION.bib`, `CITATION`, `CITATION.md`, `codemeta.json` and `config.json`, matching file names without regard to case. It limits metadata responses to 2 MB and individual files to 1 MB, and follows at most four redirects within HTTPS huggingface.co URLs.
+
+The JSON report includes package/version IDs, the version PURL, source URLs, retrieval timestamps, content checksums and UTF-8 file contents. Gated, missing and failed files have separate outcomes; successful files remain in the report. Missing revisions do not fall back to the latest revision. Collection makes no database writes, downloads no weights and performs no automatic retries. Rerunning the task fetches the selected versions again, so retain reports outside the application repository when needed for review.
+
+Extract candidates from a collection report, then resolve exact paper identities:
+
+```sh
+FILE=model-files.json OUTPUT=model-candidates.json bundle exec rake packages:extract_paper_candidates
+FILE=model-candidates.json OUTPUT=model-paper-review.json bundle exec rake papers:resolve_candidates
+```
+
+Extraction verifies the package version identity and file checksums before running Brief on the collected files in a temporary directory. Reports are limited to 25 MB and 25 versions. Candidate evidence retains the version PURL, package PURL, file URL, checksum, retrieval time, line range, heading context and source passage. Brief output and parser diagnostics are retained. The Ruby BibTeX parser supplies fields such as `archivePrefix` alongside Brief's parsed entries. Empty citation templates produce no candidates.
+
+DOIs and supported paper identifiers are extracted from citation files and READMEs. Publisher PDF links remain URL candidates instead of deriving a DOI from an arbitrary part of their path. References with only a title or an unsupported identifier stay in the report for review. Configuration files are not treated as citation sources. Neither task creates papers or relationships, and metadata agreement does not assign the model's relationship to the paper.
+
 ## Package browser and API
 
 `/packages` and `/api/v1/packages` use the same `PackageIndex` query. Both accept `ecosystem`, OpenAlex `domain`, and OpenAlex `field` filters. Domain and field filters limit the dependent project population before package counts are calculated. Each package count is the number of distinct visible scientific projects with a direct dependency on that package.

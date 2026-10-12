@@ -189,4 +189,19 @@ class PaperIdentityResolutionRakeTest < ActiveSupport::TestCase
     assert_equal "needs_review", candidate["assessment"]
     assert_nil candidate.dig("checks", "authors")
   end
+
+  test "uses structured Brief authors when raw BibTeX authors are unavailable" do
+    lookup("doi:10.1234/model", work(title: "Model paper", authors: ["Alice Smith"]))
+    row = @candidate.merge("identifier_kind" => "doi", "identifier" => "10.1234/model",
+      "occurrences" => [{ "title" => "Model paper", "brief_entry" => {
+        "authors" => [{ "given_names" => "Alice", "family_names" => "Smith" }] } }])
+
+    candidate = review([row])["candidates"].sole
+
+    assert_equal "metadata_agrees", candidate["assessment"]
+    assert_equal row, candidate["input"]
+
+    row["occurrences"].first["brief_entry"]["authors"] << { "literal" => "Research Group" }
+    assert_equal "needs_review", review([row])["candidates"].sole["assessment"]
+  end
 end

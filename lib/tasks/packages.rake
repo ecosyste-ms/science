@@ -1,4 +1,37 @@
 namespace :packages do
+  desc "Extract paper candidates from collected package files (FILE=collection.json OUTPUT=candidates.json)"
+  task extract_paper_candidates: :environment do
+    input_path = ENV.fetch("FILE")
+    output_path = ENV.fetch("OUTPUT")
+    raise ArgumentError, "Input and output must be different files" if File.expand_path(input_path) == File.expand_path(output_path)
+    input = File.read(input_path, 25.megabytes + 1)
+    raise ArgumentError, "Collection report must be at most 25 MB" if input.bytesize > 25.megabytes
+
+    report = PackageCitationCandidates.new.call(JSON.parse(input))
+    File.write(output_path, JSON.pretty_generate(report) + "\n")
+    puts "Package citation candidates: #{report.fetch('summary').inspect}"
+  end
+
+  desc "Collect small pinned Hub files as JSON (FILE=version PURL array; maximum 25)"
+  task collect_huggingface: :environment do
+    input = File.read(ENV.fetch("FILE"), 1.megabyte + 1)
+    raise ArgumentError, "Input file must be at most 1 MB" if input.bytesize > 1.megabyte
+
+    puts JSON.pretty_generate(HuggingFaceIntrinsicFiles.collect(JSON.parse(input)))
+  end
+
+  desc "Import explicit Hugging Face PURLs (FILE=JSON array, DRY_RUN=true; maximum 500)"
+  task import_huggingface: :environment do
+    dry_run = ENV.fetch("DRY_RUN", "true")
+    raise ArgumentError, "DRY_RUN must be true or false" unless %w[true false].include?(dry_run)
+    input = File.read(ENV.fetch("FILE"), 1.megabyte + 1)
+    raise ArgumentError, "Input file must be at most 1 MB" if input.bytesize > 1.megabyte
+    report = HuggingFacePackageImport.new(
+      purls: JSON.parse(input), dry_run: dry_run == "true"
+    ).call
+    puts JSON.pretty_generate(report)
+  end
+
   desc "Import reviewed package-project relationships from JSON (FILE=path; purl, repository_url, role, evidence)"
   task import_project_pairs: :environment do
     rows = JSON.parse(File.read(ENV.fetch("FILE")))

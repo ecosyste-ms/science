@@ -65,8 +65,14 @@ class Package < ApplicationRecord
       .or(Project.where(id: package_projects.where(role: PackageProject::CODE_ROLES).select(:project_id)))
   end
 
+  scope :visible, -> {
+    where(published_by_project_id: nil)
+      .or(where(published_by_project_id: Project.visible.select(:id)))
+  }
+
   scope :version_importable, -> {
-    where(published_by_project_id: Project.visible.scientific.select(:id))
+    where(published_by_project_id: nil)
+      .or(where(published_by_project_id: Project.visible.scientific.select(:id)))
       .where("NULLIF(packages.metadata->>'versions_url', '') IS NOT NULL")
   }
 

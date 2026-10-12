@@ -82,6 +82,59 @@ class SyncPackageVersionsWorkerTest < ActiveSupport::TestCase
     assert_equal scan_started_at, @package.version_sync_state["synced_through"]
   end
 
+  test "console entrypoint imports a model revision without a repository or publishing project" do
+    registry = PackageRegistry.create!(name: "huggingface.co", url: "https://huggingface.co",
+      ecosystem: "huggingface", purl_type: "huggingface")
+    @package = registry.packages.create!(name: "google-bert/bert-base-uncased", ecosystems_id: 15576184,
+      purl: "pkg:huggingface/google-bert/bert-base-uncased", metadata: {
+        "versions_url" => "https://packages.ecosyste.ms/api/v1/registries/huggingface.co/packages/google-bert%2Fbert-base-uncased/versions"
+      })
+    revision = "86b5e0934494bd15c9632b12f734a8a67f723594"
+    payload = {
+      "id" => 245802722, "number" => revision, "purl" => "#{@package.purl}@#{revision}",
+      "published_at" => "2024-02-19T11:06:12.000Z", "download_url" => nil,
+      "registry_url" => "https://huggingface.co/google-bert/bert-base-uncased/tree/#{revision}",
+      "related_tag" => nil, "metadata" => { "revision" => revision }
+    }
+    respond_with([payload])
+
+    @package.sync_versions
+    assert_equal [[@package.id]], SyncPackageVersionsWorker.jobs.map { |job| job["args"] }
+    SyncPackageVersionsWorker.drain
+
+    imported = @package.package_versions.sole
+    assert_equal payload["id"], imported.ecosystems_id
+    assert_equal revision, imported.number
+    assert_equal payload["purl"], imported.purl
+    assert_equal payload["metadata"], imported.metadata
+    assert_equal payload["registry_url"], imported.registry_url
+    assert_nil imported.download_url
+    assert_nil imported.release_id
+    assert_nil @package.reload.repository_url
+    assert_nil @package.published_by_project_id
+    assert @package.version_sync_state["completed_at"]
+
+    @package.sync_versions
+    assert_empty SyncPackageVersionsWorker.jobs
+    assert_equal 1, @package.package_versions.count
+  end
+
+  test "unlinked packages also use version sync but require an upstream versions URL" do
+    @package.update!(published_by_project: nil)
+    respond_with([version])
+    @package.sync_versions
+    SyncPackageVersionsWorker.drain
+    assert_equal "1.0", @package.package_versions.sole.number
+    assert_nil @package.package_versions.sole.release_id
+
+    @package.update!(metadata: {}, version_sync_state: {})
+    reset_executed_requests!
+    @package.sync_versions
+    perform
+    assert_empty SyncPackageVersionsWorker.jobs
+    assert_not_requested :get, /packages.ecosyste.ms/
+  end
+
   test "incremental refresh overlaps the previous scan and upserts numbers case insensitively" do
     respond_with([version.merge("number" => "1.0RC1", "immutable" => nil)])
     perform
