@@ -1390,6 +1390,20 @@ body {
 .seg-f { background: $color-green-darker; }
 .seg-g { background: $color-purple-light; }
 
+.completeness-progress {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 0.333rem;
+  border: 0;
+  background: $light;
+  color: $color-purple-dark;
+
+  &::-webkit-progress-bar { background: $light; }
+  &::-webkit-progress-value { background: $color-purple-dark; }
+  &::-moz-progress-bar { background: $color-purple-dark; }
+}
+
 .graph-key {
   display: flex;
   align-items: center;

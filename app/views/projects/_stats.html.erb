@@ -105,6 +105,14 @@
         <div class="stacked-bar bg-light mb-3">
           <div class="segment seg-e" style="--w: <%= (@stats[:projects_with_citation_file].to_f / @stats[:total_projects] * 100).round %>%"></div>
         </div>
+        <% if @stats.key?(:projects_with_bibtex) %>
+          <div class="d-flex justify-content-between mt-4 mb-1">
+            <span id="bibtex-completeness-label">With BibTeX</span>
+            <span><%= number_with_delimiter(@stats[:projects_with_bibtex]) %> / <%= number_with_delimiter(@stats[:total_projects]) %></span>
+          </div>
+          <progress class="completeness-progress mb-3" aria-labelledby="bibtex-completeness-label"
+                    value="<%= @stats[:projects_with_bibtex] %>" max="<%= [@stats[:total_projects], 1].max %>"></progress>
+        <% end %>
         <div class="d-flex justify-content-between mt-4 mb-1">
           <%= link_to codemeta_projects_path, class: 'd-flex justify-content-between w-100 text-decoration-none text-reset' do %>
             <span>With codemeta.json</span>

@@ -39,4 +39,24 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_select ".list-group-item", text: /ASCL\s+12/
     assert_select ".list-group-item", text: /swMATH\s+8/
   end
+
+  test "data completeness shows cached BibTeX coverage and tolerates older cached stats" do
+    stats = { total_projects: 100, top_languages: [["Ruby", 50]], projects_with_bibtex: 12 }
+    cache = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(cache)
+    cache.write("homepage_stats", stats)
+    Project.expects(:stats_summary).never
+
+    get root_url
+
+    assert_response :success
+    assert_select "#bibtex-completeness-label", text: "With BibTeX"
+    assert_select "progress[value='12'][max='100'][aria-labelledby='bibtex-completeness-label']"
+    assert_select "div", text: /With BibTeX\s+12 \/ 100/
+
+    cache.write("homepage_stats", stats.except(:projects_with_bibtex))
+    get root_url
+    assert_response :success
+    assert_select "#bibtex-completeness-label", count: 0
+  end
 end

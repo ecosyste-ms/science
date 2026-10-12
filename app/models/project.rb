@@ -664,6 +664,10 @@ class Project < ApplicationRecord
 
     # Citation and metadata file counts
     with_citation_count = scope.where.not(citation_file: nil).count
+    with_bibtex_count = scope.where(
+      "jsonb_typeof(brief #> '{resources,bibtex,entries,0}') = 'object' OR " \
+      "jsonb_typeof(brief #> '{resources,readme_bibtex,entries,0}') = 'object'"
+    ).count
     with_codemeta_count = scope.with_codemeta_file.count
     with_zenodo_count = scope.with_zenodo_file.count
 
@@ -693,6 +697,7 @@ class Project < ApplicationRecord
       projects_with_readme: with_readme_count,
       projects_with_packages: with_packages_count,
       projects_with_citation_file: with_citation_count,
+      projects_with_bibtex: with_bibtex_count,
       projects_with_codemeta: with_codemeta_count,
       projects_with_zenodo: with_zenodo_count,
       joss_projects: joss_count,

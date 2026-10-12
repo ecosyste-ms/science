@@ -50,4 +50,32 @@ class HomepageRakeTest < ActiveSupport::TestCase
 
     assert_equal [["wikidata", 2], ["other", 1]], cache.read("homepage_stats").fetch(:external_sources)
   end
+
+  test "refresh counts visible projects with parsed file or README BibTeX once" do
+    cache = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(cache)
+    file = { "path" => "citation.bib", "entries" => [{ "title" => "Tool paper" }] }
+    readme = { "path" => "README.md", "entries" => [{ "title" => "Model paper" }] }
+    resources = [
+      { "bibtex" => file },
+      { "readme_bibtex" => readme },
+      { "bibtex" => file, "readme_bibtex" => readme },
+      { "bibtex" => { "path" => "CITATION.bib", "entries" => [] } },
+      { "readme_bibtex" => { "parse_status" => "error" } },
+      { "bibtex" => nil },
+      { "readme_bibtex" => { "entries" => [nil] } },
+      { "citation" => "CITATION.cff" },
+      nil
+    ]
+    resources.each_with_index do |value, index|
+      Project.create!(url: "https://github.com/bibtex/example-#{index}", brief: value && { "resources" => value })
+    end
+    owner = Owner.create!(host: Host.create!(name: "BibTeX Coverage"), login: "hidden", hidden: true)
+    hidden = Project.create!(url: "https://github.com/bibtex/hidden", brief: { "resources" => { "bibtex" => file } })
+    hidden.update_columns(owner_id: owner.id)
+
+    capture_io { Rake::Task["homepage:refresh"].invoke }
+
+    assert_equal 3, cache.read("homepage_stats").fetch(:projects_with_bibtex)
+  end
 end
