@@ -1,10 +1,11 @@
-require "tmpdir"
-require "shellwords"
-
 class ProjectRepositoryScanner
-  def initialize(project, force_brief: false)
+  attr_reader :files
+
+  def initialize(project, force_brief: false, revision: nil)
     @project = project
     @force_brief = force_brief
+    @revision = revision || (project.repository&.dig("metadata", "revision") if project.model_project?)
+    @files = []
   end
 
   def scan
@@ -17,6 +18,13 @@ class ProjectRepositoryScanner
       if brief_due
         @project.fetch_brief(checkout: checkout)
         @project.reload
+        if @project.model_project? && !@project.brief&.key?("error")
+          @files = RepositoryResources.paths(@project.brief).map do |path|
+            url = "#{origin}/resolve/#{@revision}/#{ERB::Util.url_encode(path).gsub('%2F', '/')}"
+            RepositoryResources.read(checkout, path, url: url)
+          end
+          ModelProjectSync.new(@project).store_files(files, @revision)
+        end
         @project.update_science_score if @project.brief.present?
       end
       if !swhid_due && scientific? && @project.swhid_scan_due?
@@ -28,36 +36,23 @@ class ProjectRepositoryScanner
   def with_checkout
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     origin = @project.repository["clone_url"].presence || @project.url
-    Dir.mktmpdir("science-repository-") do |directory|
-      checkout = File.join(directory, "repository")
-      command = ["git", *clone_credentials(origin), "clone", "--depth", "1", "--no-tags", "--", origin, checkout]
-      begin
-        RepositoryCommand.new.run(command)
-      rescue RepositoryCommand::Error, SystemCallError => error
-        @project.record_brief_error(error.message) if @force_brief || @project.brief_scan_due?
-        if scientific? && @project.swhid_scan_due?
-          @project.store_swhids("status" => "error", "origin" => origin, "clone_command" => command,
-            "attempted_at" => Time.current.iso8601, "error" => error.message.to_s.scrub[0, 500],
-            "duration_ms" => ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round)
-        end
-        return
-      end
+    if @project.model_project? && !@revision.to_s.match?(/\A[0-9a-f]{40}\z/)
+      raise RepositoryCommand::Error, "Model checkout requires a full commit SHA"
+    end
+    repository = RepositoryCheckout.new(origin, revision: @revision, skip_lfs: @project.model_project?)
+    repository.open do |checkout, _, command|
       yield checkout, origin, command
+    end
+  rescue RepositoryCommand::Error, SystemCallError => error
+    @project.record_brief_error(error.message) if @force_brief || @project.brief_scan_due?
+    if scientific? && @project.swhid_scan_due?
+      @project.store_swhids("status" => "error", "origin" => origin, "clone_command" => repository&.command,
+        "attempted_at" => Time.current.iso8601, "error" => error.message.to_s.scrub[0, 500],
+        "duration_ms" => ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round)
     end
   end
 
   def scientific?
     @project.science_score.to_f >= Project::SCIENCE_SCORE_THRESHOLD
-  end
-
-  def clone_credentials(origin)
-    uri = URI.parse(origin)
-    return [] unless ENV["GITHUB_TOKEN"].present? && uri.scheme == "https" &&
-      uri.host&.downcase == "github.com" && uri.port == 443 && uri.userinfo.nil?
-
-    helper = "!#{Shellwords.join([RbConfig.ruby, Rails.root.join('bin/git-credential-github').to_s])}"
-    ["-c", "credential.helper=", "-c", "credential.helper=#{helper}"]
-  rescue URI::InvalidURIError
-    []
   end
 end

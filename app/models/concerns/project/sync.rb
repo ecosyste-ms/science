@@ -70,6 +70,7 @@ module Project::Sync
     stage_durations = {}
 
     return if hidden_owner?
+    return ModelProjectSync.new(self).sync if model_project?
 
     run_sync_stage(stage_durations, :check_url) { check_url }
     return unless self.persisted?
@@ -173,6 +174,7 @@ module Project::Sync
 
   def repos_url
     return unless repository.present?
+    return repository["html_url"] if model_project?
     "https://repos.ecosyste.ms/hosts/#{repository['host']['name']}/repositories/#{repository['full_name']}"
   end
 
@@ -580,11 +582,16 @@ module Project::Sync
 
   def blob_url(path)
     return unless repository.present?
-    "#{repository['html_url']}/blob/#{repository['default_branch']}/#{path}"
+    ref = model_project? ? brief&.dig("revision") || repository.dig("metadata", "revision") : repository['default_branch']
+    "#{repository['html_url']}/blob/#{ref}/#{path}"
   end 
 
   def raw_url(path)
     return unless repository.present?
+    if model_project?
+      ref = brief&.dig("revision") || repository.dig("metadata", "revision")
+      return "#{repository['html_url']}/resolve/#{ref}/#{path}"
+    end
     "#{repository['html_url']}/raw/#{repository['default_branch']}/#{path}"
   end 
 
@@ -639,8 +646,6 @@ module Project::Sync
     swhids
   end
 
-  BRIEF_TIMEOUT = 120
-
   def brief_scan_due?
     brief.nil? || (!brief.key?("dependencies") && !brief.key?("error"))
   end
@@ -648,19 +653,9 @@ module Project::Sync
   def fetch_brief(checkout:)
     return unless repository.present?
 
-    out = RepositoryCommand.new(timeout: BRIEF_TIMEOUT, output_limit: 10.megabytes).run(["brief", "-json", checkout])
-    data = JSON.parse(out)
+    data = RepositoryBriefScan.call(checkout)
     previous_brief_dependencies = brief.is_a?(Hash) ? brief['dependencies'] : nil
-    self.brief = {
-      'version' => data['version'],
-      'languages' => data['languages'],
-      'package_managers' => data['package_managers'],
-      'tools' => data['tools'],
-      'resources' => data['resources'],
-      'manifests' => data['manifests'],
-      'dependencies' => data['dependencies'],
-      'lines' => data['lines'],
-    }
+    self.brief = data
     if previous_brief_dependencies != data['dependencies']
       self.dependencies_indexed_at = nil
       self.dependencies_index_error = nil

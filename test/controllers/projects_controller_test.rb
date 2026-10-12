@@ -21,6 +21,20 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     ResearchOrganizationDomainMatcher.reset_cache!
   end
 
+  test "shows a model project without inventing repository timestamps or service links" do
+    registry = PackageRegistry.create!(name: "huggingface.co", url: "https://huggingface.co", ecosystem: "huggingface", purl_type: "huggingface")
+    package = registry.packages.create!(name: "example/model", purl: "pkg:huggingface/example/model",
+      metadata: { "name" => "example/model", "latest_release_number" => "a" * 40,
+        "dependent_packages_url" => "https://packages.ecosyste.ms/api/v1/registries/huggingface.co/packages/example%2Fmodel/dependent_packages" })
+    project = ModelProjectSync.link!(package)
+    project.update!(readme: "# Research model", brief: { "revision" => "a" * 40 }, last_synced_at: Time.current)
+    get project_path(project)
+    assert_response :success
+    assert_select "a[href='https://huggingface.co/example/model']", text: "Repository"
+    assert_not_includes response.body, "repos.ecosyste.ms/hosts/HuggingFace.co"
+    assert_equal "https://huggingface.co/example/model/resolve/#{'a' * 40}/README.md", project.raw_url("README.md")
+  end
+
   test "should get index" do
     get projects_url
     assert_response :success

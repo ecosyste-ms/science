@@ -152,17 +152,22 @@ class Project < ApplicationRecord
   scope :with_external_identifier, -> {
     where(id: ProjectExternalSoftwareRecord.confirmed_identifier_matches.select(:project_id))
   }
+  scope :model_projects, -> {
+    where(id: Package.where(package_registry_id: PackageRegistry.where("lower(purl_type) = ?", "huggingface").select(:id))
+      .where.not(published_by_project_id: nil).select(:published_by_project_id))
+      .where("repository->'metadata'->>'model_package_purl' IS NOT NULL")
+  }
   scope :eligible_for_brief, -> {
     dependency = Package.direct_scientific_dependencies
       .where("project_dependencies.package_id = packages.id").arel.exists
     publisher = Package.where("packages.published_by_project_id = projects.id")
       .where(dependency).arel.exists
     where('science_score > 0').or(where(publisher))
-      .or(with_external_identifier)
+      .or(with_external_identifier).or(model_projects)
   }
   scope :should_sync, -> {
     where('last_synced_at IS NULL OR science_score IS NULL OR science_score > 0')
-      .or(with_research_registry_match)
+      .or(with_research_registry_match).or(model_projects)
   }
 
   def confirmed_external_identifier?
@@ -170,10 +175,14 @@ class Project < ApplicationRecord
   end
 
   def eligible_for_brief?
-    return true if science_score.to_f.positive? || confirmed_external_identifier?
+    return true if model_project? || science_score.to_f.positive? || confirmed_external_identifier?
 
     Package.direct_scientific_dependencies
       .where(package_id: published_package_records.select(:id)).exists?
+  end
+
+  def model_project?
+    repository&.dig("metadata", "model_package_purl").present?
   end
 
   def self.for_owner(host, login)
@@ -727,7 +736,7 @@ class Project < ApplicationRecord
 
   def readme_url
     return unless repository.present?
-    "#{repository['html_url']}/blob/#{repository['default_branch']}/#{readme_file_name}"
+    blob_url(readme_file_name)
   end
 
   def commiter_domains

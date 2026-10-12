@@ -14,7 +14,9 @@ class RepositoryCommand
   def run(command, input: File::NULL)
     Tempfile.create("repository-stdout") do |stdout|
       Tempfile.create("repository-stderr") do |stderr|
-        pid = Process.spawn({ "GIT_TERMINAL_PROMPT" => "0" }, *command, in: input, out: stdout, err: stderr, pgroup: true)
+        environment = { "GIT_TERMINAL_PROMPT" => "0", "GIT_LFS_SKIP_SMUDGE" => "1",
+          "GIT_ASKPASS" => "false", "SSH_ASKPASS" => "false", "GIT_SSH_COMMAND" => "ssh -oBatchMode=yes" }
+        pid = Process.spawn(environment, *command, in: input, out: stdout, err: stderr, pgroup: true)
         begin
           _, status = Timeout.timeout(@timeout) do
             if @disk_limit

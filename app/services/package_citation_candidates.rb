@@ -1,9 +1,8 @@
 require "tmpdir"
 require "digest"
+require "fileutils"
 
 class PackageCitationCandidates
-  FILE_NAMES = %w[readme.md citation.cff citation.bib citation citation.md codemeta.json config.json].freeze
-
   def call(report)
     rows = report.is_a?(Hash) && report["versions"]
     unless rows.is_a?(Array) && rows.length.between?(1, 25)
@@ -19,16 +18,19 @@ class PackageCitationCandidates
   end
 
   def validate(row)
-    unless row.is_a?(Hash) && row["purl"].is_a?(String) && row["files"].is_a?(Array) && row["files"].length <= FILE_NAMES.length
+    unless row.is_a?(Hash) && row["purl"].is_a?(String) && row["files"].is_a?(Array) && row["files"].length <= 7
       raise ArgumentError, "Invalid package file collection"
     end
     version = PackageVersion.includes(:package).find_by(purl: row["purl"])
     unless version && row["package_version_id"] == version.id && row["package_id"] == version.package_id && row["revision"] == version.number
       raise ArgumentError, "Collection must identify an existing package version"
     end
+    if row.key?("brief") && (!row["brief"].is_a?(Hash) || (row["brief"]["resources"] && !row["brief"]["resources"].is_a?(Hash)))
+      raise ArgumentError, "Expected Brief resources in the collection report"
+    end
     paths = []
     row["files"].each do |file|
-      unless file.is_a?(Hash) && file["path"].is_a?(String) && FILE_NAMES.include?(file["path"].downcase) && !paths.include?(file["path"])
+      unless file.is_a?(Hash) && RepositoryResources.safe_path?(file["path"]) && !paths.include?(file["path"])
         raise ArgumentError, "Invalid or repeated collected file path"
       end
       paths << file["path"]
@@ -49,13 +51,18 @@ class PackageCitationCandidates
     return result if files.empty?
 
     Dir.mktmpdir("science-package-citations-") do |directory|
-      files.each { |file| File.write(File.join(directory, file.fetch("path")), file.fetch("content")) }
-      output = RepositoryCommand.new(timeout: 60, output_limit: 10.megabytes).run(["brief", "-json", directory])
-      brief = JSON.parse(output)
+      brief = row["brief"] || begin
+        files.each do |file|
+          path = File.join(directory, file.fetch("path"))
+          FileUtils.mkdir_p(File.dirname(path))
+          File.write(path, file.fetch("content"))
+        end
+        RepositoryBriefScan.call(directory)
+      end
       result["brief"] = brief.slice("version", "resources")
-      resources = brief.fetch("resources", {})
+      resources = brief["resources"] || {}
       result["diagnostics"] = []
-      files.reject { |file| file["path"].casecmp?("config.json") }.each do |file|
+      files.reject { |file| File.basename(file["path"]).casecmp?("config.json") }.each do |file|
         entries = %w[bibtex readme_bibtex].flat_map do |key|
           resource = resources[key]
           next [] unless resource.is_a?(Hash) && resource["path"] == file["path"]

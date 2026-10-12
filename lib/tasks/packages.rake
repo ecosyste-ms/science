@@ -12,12 +12,23 @@ namespace :packages do
     puts "Package citation candidates: #{report.fetch('summary').inspect}"
   end
 
-  desc "Collect small pinned Hub files as JSON (FILE=version PURL array; maximum 25)"
+  desc "Scan model Projects from pinned Hugging Face PURLs (FILE=JSON array, optional OUTPUT=report.json; maximum 25)"
   task collect_huggingface: :environment do
-    input = File.read(ENV.fetch("FILE"), 1.megabyte + 1)
+    input_path = ENV.fetch("FILE")
+    output_path = ENV["OUTPUT"].presence
+    if output_path && File.expand_path(input_path) == File.expand_path(output_path)
+      raise ArgumentError, "Input and output must be different files"
+    end
+    input = File.read(input_path, 1.megabyte + 1)
     raise ArgumentError, "Input file must be at most 1 MB" if input.bytesize > 1.megabyte
 
-    puts JSON.pretty_generate(HuggingFaceIntrinsicFiles.collect(JSON.parse(input)))
+    report = HuggingFacePackageScanner.collect(JSON.parse(input))
+    if output_path
+      File.write(output_path, JSON.pretty_generate(report) + "\n")
+      puts "Model project scans: #{report.fetch('counts').inspect}"
+    else
+      puts JSON.pretty_generate(report)
+    end
   end
 
   desc "Import explicit Hugging Face PURLs (FILE=JSON array, DRY_RUN=true; maximum 500)"

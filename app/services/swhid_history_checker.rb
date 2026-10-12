@@ -50,7 +50,7 @@ class SwhidHistoryChecker
       run(["git", "init", "--bare", "--object-format=sha1", checkout])
       depth = [data["depth"] + FETCH_STEP, MAX_DEPTH].min
       origin = data.fetch("origin")
-      credentials = ProjectRepositoryScanner.new(project).clone_credentials(origin)
+      credentials = RepositoryCheckout.credentials(origin)
       run(["git", *credentials, "-C", checkout, "-c", "gc.auto=0", "fetch", "--no-auto-maintenance",
         "--no-tags", "--filter=blob:none", "--depth=#{depth}", "--", origin, data.fetch("starting_commit")])
       commits = run(["git", "-C", checkout, "rev-list", "--topo-order", "--max-count=#{MAX_REVISIONS + 2}",

@@ -167,7 +167,7 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     RepositoryScanWorker.new.perform(@project.id)
 
     assert_equal "success", @project.reload.swhids["status"]
-    refute clone_commands.first.any? { |argument| argument.start_with?("credential.helper=") }
+    assert_equal ["credential.helper="], clone_commands.first.grep(/\Acredential.helper=/)
   end
 
   test "Brief can promote a project and calculate SWHIDs using the same checkout" do

@@ -45,7 +45,7 @@ class PackageCitationCandidatesTest < ActiveSupport::TestCase
     JSON.parse(File.read(@output.path))
   end
 
-  test "public tasks collect extract and resolve without approving or importing relationships" do
+  test "public tasks extract and resolve without approving or importing relationships" do
     readme = <<~MARKDOWN
       # Model
       ## Citation
@@ -57,10 +57,6 @@ class PackageCitationCandidatesTest < ActiveSupport::TestCase
       }
       ```
     MARKDOWN
-    File.write(@input.path, [@version.purl].to_json)
-    stub_request(:get, "https://huggingface.co/api/models/example/model/revision/#{@version.number}")
-      .to_return(body: { sha: @version.number, siblings: [{ rfilename: "README.md" }] }.to_json)
-    stub_request(:get, "#{@base_url}/README.md").to_return(body: readme)
     work = { "id" => "https://openalex.org/W123", "title" => "A research model",
       "authorships" => [{ "raw_author_name" => "Alice Smith" }, { "raw_author_name" => "Bob Jones" }],
       "locations" => [{ "landing_page_url" => "https://doi.org/10.1234/model" }] }
@@ -69,7 +65,7 @@ class PackageCitationCandidatesTest < ActiveSupport::TestCase
     attributes = [@package.attributes, @version.attributes]
 
     assert_no_difference ["Package.count", "PackageVersion.count", "Paper.count", "ProjectPaper.count", "PackagePaper.count", "PackageProject.count", "Mention.count"] do
-      report = extract(JSON.parse(run_task("packages:collect_huggingface")))
+      report = extract(collection([collected_file("README.md", readme)]))
       assert_equal 1, report["summary"]["candidates"]
       candidate = report["candidates"].sole
       assert_equal @version.purl, candidate["purl"]

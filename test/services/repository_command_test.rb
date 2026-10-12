@@ -2,6 +2,17 @@ require "test_helper"
 require "tmpdir"
 
 class RepositoryCommandTest < ActiveSupport::TestCase
+  test "disables LFS downloads for repository commands" do
+    output = RepositoryCommand.new.run([RbConfig.ruby, "-e", "puts ENV.fetch('GIT_LFS_SKIP_SMUDGE')"])
+    assert_equal "1\n", output
+  end
+
+  test "disables terminal askpass and SSH authentication prompts" do
+    names = %w[GIT_TERMINAL_PROMPT GIT_ASKPASS SSH_ASKPASS GIT_SSH_COMMAND]
+    output = RepositoryCommand.new.run([RbConfig.ruby, "-rjson", "-e", "puts ENV.values_at(*ARGV).to_json", *names])
+    assert_equal ["0", "false", "false", "ssh -oBatchMode=yes"], JSON.parse(output)
+  end
+
   test "timeout kills the command process while monitoring repository size" do
     Dir.mktmpdir do |directory|
       pid_file = File.join(directory, "pid")
