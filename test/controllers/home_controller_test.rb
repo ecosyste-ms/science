@@ -11,6 +11,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_nil assigns(:stats)
     assert_select "a[href='#{packages_path}']", text: "Packages"
+    assert_select "a[href='#{packages_path}'] + a[href='#{models_path}']", text: "Models"
   end
 
   test "index shows cached stats without calculating them" do

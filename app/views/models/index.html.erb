@@ -1,0 +1,42 @@
+<% @meta_title = "Models" %>
+<% @meta_description = "Browse models and their repositories." %>
+
+<div class="container-md">
+  <h1>Models</h1>
+  <p class="text-muted">Browse models and their repositories.</p>
+
+  <%= form_with url: models_path, method: :get, local: true, class: "card mb-4" do |form| %>
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+          <%= form.label :q, "Name or repository", class: "form-label" %>
+          <%= form.search_field :q, value: params[:q], class: "form-control" %>
+        </div>
+        <div class="col-md-3">
+          <%= form.label :keyword, "Keyword", class: "form-label" %>
+          <%= form.text_field :keyword, value: params[:keyword], class: "form-control" %>
+        </div>
+        <div class="col-md-2">
+          <%= form.label :owner, "Owner", class: "form-label" %>
+          <%= form.text_field :owner, value: params[:owner], class: "form-control" %>
+        </div>
+        <div class="col-md-3">
+          <%= form.label :sort, "Order by", class: "form-label" %>
+          <%= form.select :sort, options_for_select(ModelProjectIndex::SORT_OPTIONS, @index.selected_sort), {}, class: "form-select" %>
+        </div>
+        <div class="col-12 d-flex gap-2">
+          <%= form.submit "Apply filters", class: "btn btn-primary" %>
+          <%= link_to "Clear filters", models_path, class: "btn btn-outline-secondary" %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <h2 class="h4 mb-3"><%= number_with_delimiter @pagy.count %> <%= "model".pluralize(@pagy.count) %></h2>
+  <% if @projects.any? %>
+    <%= render @projects %>
+  <% else %>
+    <p class="alert alert-info" role="status">No models found.</p>
+  <% end %>
+  <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
+</div>

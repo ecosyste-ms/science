@@ -82,6 +82,8 @@ Rails.application.routes.draw do
 
   resources :packages, only: [:index]
 
+  resources :models, only: [:index]
+
   resources :issues, only: [:index]
 
   resources :authors, only: [:index, :show]

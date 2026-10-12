@@ -84,6 +84,42 @@ class ModelProjectScanTest < ActiveSupport::TestCase
     assert_not_requested :any, /.*/
   end
 
+  test "task preserves UTF-8 resource text through scanning and persistence" do
+    content = "# Modèle scientifique\nEmbeddings multilingues: 日本語\n"
+    update_readme(content)
+    use_local_model_checkout(@origin)
+
+    row = collect["versions"].sole
+
+    assert_equal "complete", row["status"]
+    file = row["files"].find { |resource| resource["path"] == "README.md" }
+    assert_equal content, file["content"]
+    project = @package.reload.published_by_project
+    assert_equal content, project.readme
+    assert_equal "Modèle scientifique", project.readme_name
+  end
+
+  test "task rejects invalid UTF-8 resources without storing their content" do
+    update_readme("# Model\nInvalid: \xFF\n".b)
+    use_local_model_checkout(@origin)
+
+    row = collect["versions"].sole
+
+    assert_equal "partial", row["status"]
+    file = row["files"].find { |resource| resource["path"] == "README.md" }
+    assert_equal "Expected UTF-8 text", file["error"]
+    assert_nil @package.reload.published_by_project.readme
+  end
+
+  def update_readme(content)
+    File.binwrite(File.join(@repository_directory, "README.md"), content)
+    git("-C", @repository_directory, "add", ".")
+    git("-C", @repository_directory, "-c", "user.name=Test", "-c", "user.email=test@example.org", "commit", "-m", "Update README")
+    @revision = git("-C", @repository_directory, "rev-parse", "HEAD").strip
+    @package.update!(metadata: @package.metadata.merge("latest_release_number" => @revision))
+    @version.update!(number: @revision, purl: "#{@package.purl}@#{@revision}")
+  end
+
   test "a new package revision refreshes existing Project scan data and invalidates old SWHIDs" do
     project = ModelProjectSync.link!(@package)
     use_local_model_checkout(@origin)
