@@ -1,4 +1,10 @@
 namespace :papers do
+  desc "Import verified project-paper pairs from JSON (FILE=path; repository_url, openalex_id, evidence with source and url)"
+  task import_project_pairs: :environment do
+    rows = JSON.parse(File.read(ENV.fetch("FILE")))
+    puts "Project-paper pairs: #{ProjectPaper.import_verified!(rows).inspect}"
+  end
+
   desc "export papers to markdown"
   task :export => :environment do
     markdown_string = ""

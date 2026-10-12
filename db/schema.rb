@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_07_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_12_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -457,6 +457,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_07_120000) do
     t.datetime "updated_at", null: false
     t.text "urls", default: [], array: true
     t.index "lower((doi)::text)", name: "index_papers_on_lower_doi", where: "(doi IS NOT NULL)"
+    t.index "lower((openalex_id)::text)", name: "index_papers_on_lower_openalex_id", where: "(openalex_id IS NOT NULL)"
     t.index ["doi"], name: "index_papers_on_doi"
   end
 
@@ -577,6 +578,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_07_120000) do
     t.index ["openalex_work_id"], name: "index_project_open_alex_topics_on_openalex_work_id"
     t.index ["project_id", "open_alex_topic_id", "source", "source_identifier"], name: "index_project_open_alex_topics_on_assignment", unique: true
     t.index ["project_id", "primary_topic"], name: "index_project_open_alex_topics_on_primary", where: "(primary_topic = true)"
+  end
+
+  create_table "project_papers", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.jsonb "evidence", default: [], null: false
+    t.bigint "paper_id", null: false
+    t.bigint "project_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["paper_id"], name: "index_project_papers_on_paper_id"
+    t.index ["project_id", "paper_id"], name: "index_project_papers_on_project_id_and_paper_id", unique: true
   end
 
   create_table "project_repository_aliases", force: :cascade do |t|
@@ -823,6 +834,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_07_120000) do
   add_foreign_key "project_fields", "projects"
   add_foreign_key "project_open_alex_topics", "open_alex_topics"
   add_foreign_key "project_open_alex_topics", "projects"
+  add_foreign_key "project_papers", "papers"
+  add_foreign_key "project_papers", "projects"
   add_foreign_key "project_repository_aliases", "projects"
   add_foreign_key "research_organization_relationships", "research_organization_imports"
   add_foreign_key "research_organizations", "research_organization_imports", column: "current_import_id"

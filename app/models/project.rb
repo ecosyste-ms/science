@@ -66,6 +66,8 @@ class Project < ApplicationRecord
   has_many :open_alex_topics, through: :project_open_alex_topics
   has_many :mentions, dependent: :destroy
   has_many :papers, through: :mentions
+  has_many :project_papers, dependent: :delete_all
+  has_many :linked_papers, through: :project_papers, source: :paper
   has_many :dependency_records, class_name: 'Dependency', dependent: :nullify
   has_many :project_dependencies, dependent: :delete_all
   has_many :direct_project_dependencies, -> { where(direct: true) }, class_name: "ProjectDependency"
