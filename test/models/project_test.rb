@@ -37,6 +37,31 @@ class ProjectTest < ActiveSupport::TestCase
     end
   end
 
+  test "readme names remove the model card prefix" do
+    ["# Model card for **Example**", "# MODEL CARD FOR: Example"].each do |readme|
+      assert_equal "Example", Project.new(readme: readme).readme_name
+    end
+    assert_nil Project.new(readme: "# Model card for").readme_name
+    assert_equal "A model card for Example", Project.new(readme: "# A model card for Example").readme_name
+  end
+
+  test "model card name accepts model-index names and handles missing or ambiguous names" do
+    purl = "pkg:huggingface/lab/model"
+    project = Project.new(url: "https://huggingface.co/lab/model", readme: "# README name",
+      repository: { "metadata" => { "model_package_purl" => purl } })
+    cards = [
+      [{ "model_name" => " Saved model ", "model-index" => [{ "name" => "Indexed model" }] }, "Saved model"],
+      [{ "model_name" => " ", "model-index" => [{ "name" => "Indexed model" }] }, "Indexed model"],
+      [{ "model-index" => [{ "name" => "First" }, { "name" => "Second" }] }, "README name"],
+      [{ "model_name" => [], "model-index" => [nil, { "name" => {} }] }, "README name"],
+      [nil, "README name"]
+    ]
+    cards.each do |card, expected|
+      project.packages = [{ "purl" => purl, "metadata" => { "card_data" => card } }]
+      assert_equal expected, project.to_s
+    end
+  end
+
   test "display name handles records loaded without the README" do
     project = Project.create!(url: "https://github.com/lab/repo", readme: "# Tool name")
 

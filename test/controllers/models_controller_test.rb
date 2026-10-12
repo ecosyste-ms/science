@@ -61,6 +61,35 @@ class ModelsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[role='status']", text: "No models found."
   end
 
+  test "uses card names ahead of cleaned README headings" do
+    package = @registry.packages.find_by!(published_by_project: @bert)
+    package.update!(metadata: package.metadata.merge("metadata" => { "card_data" => { "model_name" => "BERT classifier" } }))
+    ModelProjectSync.link!(package)
+    @bert.reload.update!(readme: "# Model card for BERT fallback")
+    @specter.update!(readme: "# Model card for SPECTER")
+
+    get models_url
+
+    assert_response :success
+    assert_select "#project_#{@bert.id} h3 a", text: /\ABERT classifier/
+    assert_select "#project_#{@specter.id} h3 a", text: /\ASPECTER/
+    assert_no_match "Model card for", response.body
+    assert_no_match "BERT fallback", response.body
+  end
+
+  test "does not list model-marked publishers from another registry or repeat shared publishers" do
+    other_registry = PackageRegistry.create!(name: "pypi.org", url: "https://pypi.org", ecosystem: "pypi", purl_type: "pypi")
+    unrelated = Project.create!(url: "https://github.com/example/other", repository: { "metadata" => { "model_package_purl" => "pkg:pypi/other" } })
+    other_registry.packages.create!(name: "other", purl: "pkg:pypi/other", published_by_project: unrelated)
+    @registry.packages.create!(name: "Google/BERT-alias", purl: "pkg:huggingface/Google/BERT-alias", published_by_project: @bert)
+
+    get models_url
+
+    assert_response :success
+    assert_project_order [@bert, @specter, @unscanned]
+    assert_select "h2", text: "3 models"
+  end
+
   test "sorts by science score or name and falls back for unknown sorts" do
     get models_url, params: { sort: "science_score" }
     assert_project_order [@specter, @bert, @unscanned]

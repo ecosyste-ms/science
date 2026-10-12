@@ -46,7 +46,7 @@ class ModelProjectSync
       "host" => { "name" => "HuggingFace.co", "url" => "https://huggingface.co", "kind" => "git" })
     repository["metadata"] = (repository["metadata"] || {}).merge("model_package_purl" => package.purl,
       "source" => "packages.ecosyste.ms", "revision" => data["latest_release_number"])
-    displayed_package = data.merge("name" => package.name, "registry_url" => data["registry_url"].presence || url,
+    displayed_package = data.merge("name" => package.name, "purl" => package.purl, "registry_url" => data["registry_url"].presence || url,
       "registry" => { "name" => package.package_registry.name, "url" => package.package_registry.url },
       "maintainers" => Array(data["maintainers"]), "advisories" => Array(data["advisories"]),
       "rankings" => data["rankings"] || {})

@@ -17,7 +17,12 @@ class ModelProjectIndex
   end
 
   def scope
-    projects = Project.visible.model_projects.includes(project_fields: :field)
+    # A registry ID lets PostgreSQL use its package count when planning.
+    registry_ids = PackageRegistry.where("lower(purl_type) = ?", "huggingface").pluck(:id)
+    publishers = Package.where(package_registry_id: registry_ids).where.not(published_by_project_id: nil)
+    projects = Project.visible.where(id: publishers.select(:published_by_project_id))
+      .where("repository->'metadata'->>'model_package_purl' IS NOT NULL")
+      .includes(project_fields: :field)
     if params[:q].present?
       query = "%#{Project.sanitize_sql_like(params[:q].strip)}%"
       projects = projects.where("projects.name ILIKE :query OR projects.url ILIKE :query", query: query)

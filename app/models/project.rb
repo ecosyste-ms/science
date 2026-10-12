@@ -344,14 +344,30 @@ class Project < ApplicationRecord
   end
 
   def to_s
-    name.presence || readme_name || repository_slug || url
+    name.presence || model_card_name || readme_name || repository_slug || url
+  end
+
+  def model_card_name
+    return unless has_attribute?(:repository) && has_attribute?(:packages) && model_project?
+
+    package = Array.wrap(packages).find { |entry| entry.is_a?(Hash) && entry["purl"] == repository.dig("metadata", "model_package_purl") }
+    metadata = package && package["metadata"]
+    card = metadata["card_data"] if metadata.is_a?(Hash)
+    return unless card.is_a?(Hash)
+    return card["model_name"].squish if card["model_name"].is_a?(String) && card["model_name"].present?
+
+    names = Array.wrap(card["model-index"]).filter_map do |entry|
+      entry["name"].squish.presence if entry.is_a?(Hash) && entry["name"].is_a?(String)
+    end.uniq
+    names.first if names.one?
   end
 
   def readme_name
     return unless has_attribute?(:readme) && readme.present?
 
     html = Redcarpet::Markdown.new(Redcarpet::Render::HTML, fenced_code_blocks: true).render(readme)
-    Nokogiri::HTML.fragment(html).at_css('h1')&.text&.squish.presence
+    heading = Nokogiri::HTML.fragment(html).at_css('h1')&.text&.squish
+    heading&.sub(/\AModel card for\b[:\s]*/i, '')&.presence
   end
 
   def repository_slug
