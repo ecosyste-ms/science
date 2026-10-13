@@ -9,6 +9,12 @@ class ProjectRepositoryScanner
   end
 
   def scan
+    if @project.gated?
+      @project.update!(brief: (@project.brief || {}).except("error").merge("status" => "gated"))
+      return
+    end
+
+    @force_brief ||= @project.brief&.[]("status") == "gated"
     brief_due = (@force_brief || @project.brief_scan_due?) && @project.eligible_for_brief?
     swhid_due = scientific? && @project.swhid_scan_due?
     return unless brief_due || swhid_due

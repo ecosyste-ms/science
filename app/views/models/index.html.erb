@@ -33,8 +33,8 @@
   <% end %>
 
   <h2 class="h4 mb-3"><%= number_with_delimiter @pagy.count %> <%= "model".pluralize(@pagy.count) %></h2>
-  <% if @projects.any? %>
-    <%= render @projects %>
+  <% if @projects.load.any? %>
+    <%= render @projects, minimum_keyword_length: 3 %>
   <% else %>
     <p class="alert alert-info" role="status">No models found.</p>
   <% end %>

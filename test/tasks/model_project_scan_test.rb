@@ -84,6 +84,52 @@ class ModelProjectScanTest < ActiveSupport::TestCase
     assert_not_requested :any, /.*/
   end
 
+  test "collection reports gated access without cloning or recording a scan failure" do
+    RepositoryCheckout.expects(:new).never
+    [true, "manual", "auto"].each do |gated|
+      @package.update!(metadata: @package.metadata.merge("metadata" => { "gated" => gated }))
+      row = collect["versions"].sole
+      assert_equal "gated", row["status"]
+      assert_equal gated, row["gated"]
+      assert_empty row["files"]
+      assert_nil row["error"]
+      project = @package.reload.published_by_project
+      assert_equal "gated", project.brief["status"]
+      refute Project.needing_brief_dependencies.exists?(project.id)
+    end
+    assert_not_requested :any, /.*/
+  end
+
+  test "sync replaces a gated clone error while retaining existing content" do
+    @package.update!(metadata: @package.metadata.merge("metadata" => { "gated" => "manual" }))
+    project = PackageRepository.link!(@package)
+    project.update!(brief: { "error" => "could not read Username" }, readme: "# Previously collected card")
+    RepositoryCheckout.expects(:new).never
+    RepositoryScanWorker.expects(:perform_async).never
+
+    SyncProjectWorker.new.perform(project.id)
+
+    assert_equal "gated", project.reload.brief["status"]
+    refute project.brief.key?("error")
+    assert_equal "# Previously collected card", project.readme
+    assert project.last_synced_at
+    assert_not_requested :any, /.*/
+  end
+
+  test "sync scans a previously gated model when access becomes public at the same revision" do
+    @package.update!(metadata: @package.metadata.merge("metadata" => { "gated" => false }))
+    project = PackageRepository.link!(@package)
+    project.update!(brief: { "status" => "gated", "revision" => @revision, "dependencies" => [] })
+    use_local_model_checkout(@origin)
+
+    SyncProjectWorker.new.perform(project.id)
+
+    refute project.reload.gated?
+    refute project.brief.key?("status")
+    assert_includes project.readme, "Research model"
+    assert_equal @revision, project.brief["revision"]
+  end
+
   test "collection maps card and Brief evidence into normal project fields" do
     @package.update!(metadata: @package.metadata.merge("downloads" => 100, "keywords_array" => ["research"],
       "metadata" => { "pipeline_tag" => "feature-extraction", "library_name" => "transformers",

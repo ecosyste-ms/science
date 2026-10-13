@@ -71,6 +71,7 @@ class PackageRepository
         strings.call(data["normalized_licenses"]).presence&.join(", ") ||
         strings.call(data["licenses"]).presence&.join(", ") || repository["license"],
       "homepage" => strings.call(data["homepage"]).first,
+      "gated" => hub["gated"],
       "created_at" => hub["created_at"], "pushed_at" => hub["last_modified"])
     details = {
       "supported_languages" => strings.call(card["language"]),

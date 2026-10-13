@@ -16,6 +16,10 @@
 
   <%= render "registry_references" %>
 
+  <% if @project.gated? %>
+    <p class="alert alert-info" role="status"><strong>Gated model.</strong> The publisher restricts repository access, so repository scanning is skipped. Available package metadata is shown below.</p>
+  <% end %>
+
   <% if @project.last_synced_at %>
     <div class="d-flex flex-wrap align-items-center gap-2 mb-4 text-muted">
       <small>

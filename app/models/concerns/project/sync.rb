@@ -619,6 +619,7 @@ module Project::Sync
 
   def fetch_swhids_async
     return unless persisted?
+    return if gated?
     scope = Project.visible.with_repository.where(id: id)
     if brief_scan_due? && scope.with_research_registry_match.exists?
       return RepositoryScanWorker.perform_async(id)
@@ -669,6 +670,9 @@ module Project::Sync
   end
 
   def brief_scan_due?
+    return false if gated?
+
+    return true if brief&.[]("status") == "gated"
     brief.nil? || (!brief.key?("dependencies") && !brief.key?("error"))
   end
 

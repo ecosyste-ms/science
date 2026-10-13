@@ -44,6 +44,8 @@ class HuggingFacePackageScanner
     scanner = ProjectRepositoryScanner.new(project, force_brief: true, revision: revision)
     scanner.scan
     brief = project.reload.brief
+    return result.merge("status" => "gated", "gated" => project.repository["gated"]) if project.gated?
+
     if brief.nil? || brief["error"]
       return result.merge("status" => "error", "error" => brief&.dig("error") || "Project scan did not complete")
     end

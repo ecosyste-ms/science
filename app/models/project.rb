@@ -129,6 +129,7 @@ class Project < ApplicationRecord
   scope :with_packages, -> { where.not(packages: [nil, []]) }
   scope :needing_brief_dependencies, -> {
     where("brief IS NULL OR (NOT (brief ? 'dependencies') AND NOT (brief ? 'error'))")
+      .where("brief->>'status' IS DISTINCT FROM 'gated'")
   }
   scope :needing_swhids, -> { where(swhids: nil) }
   scope :with_readme, -> { where.not(readme: nil) }
@@ -154,7 +155,7 @@ class Project < ApplicationRecord
   }
   scope :model_projects, -> {
     where(id: Package.where(package_registry_id: PackageRegistry.where("lower(purl_type) = ?", "huggingface").pluck(:id))
-      .where.not(published_by_project_id: nil).select(:published_by_project_id))
+      .where.not(published_by_project_id: nil).distinct.pluck(:published_by_project_id))
       .where("repository->'metadata'->>'model_package_purl' IS NOT NULL")
   }
   scope :eligible_for_brief, -> {
@@ -187,6 +188,10 @@ class Project < ApplicationRecord
 
   def repository_from_package?
     repository&.dig("metadata", "source") == "packages.ecosyste.ms"
+  end
+
+  def gated?
+    repository&.[]("gated").present?
   end
 
   def self.for_owner(host, login)

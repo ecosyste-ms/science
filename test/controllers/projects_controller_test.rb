@@ -62,6 +62,21 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#project-repository strong", text: "Stars:", count: 0
   end
 
+  test "shows gated access alongside available package metadata" do
+    registry = PackageRegistry.create!(name: "huggingface.co", url: "https://huggingface.co", ecosystem: "huggingface", purl_type: "huggingface")
+    package = registry.packages.create!(name: "example/gated", purl: "pkg:huggingface/example/gated",
+      metadata: { "description" => "A model with restricted access.", "metadata" => { "gated" => "manual" } })
+    project = PackageRepository.link!(package)
+    SyncProjectWorker.new.perform(project.id)
+
+    get project_path(project)
+
+    assert_response :success
+    assert_select "[role='status']", text: /Gated model.*repository scanning is skipped/m
+    assert_select ".lead", text: "A model with restricted access."
+    assert_equal "gated", project.reload.brief["status"]
+  end
+
   test "index results are sorted by combined science_score and ranking" do
     project_low = Project.create!(
       url: "https://github.com/test/project-low",

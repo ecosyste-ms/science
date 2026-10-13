@@ -50,6 +50,38 @@ class ModelsControllerTest < ActionDispatch::IntegrationTest
     assert_project_order [@specter]
   end
 
+  test "hides topics shorter than three characters without changing stored keywords" do
+    keywords = ["R", "en", "NLP", "text-classification"]
+    @bert.update!(keywords: keywords)
+
+    get models_url
+
+    assert_response :success
+    assert_select "#project_#{@bert.id} .badge a" do |links|
+      assert_equal ["NLP", "text-classification"], links.map(&:text)
+    end
+    assert_equal keywords, @bert.reload.keywords
+  end
+
+  test "loads publisher IDs before querying projects without an extra existence query" do
+    queries = []
+    ActiveSupport::Notifications.subscribed(->(*args) { queries << args.last[:sql] }, "sql.active_record") do
+      get models_url
+    end
+
+    assert_response :success
+    assert_project_order [@bert, @specter, @unscanned]
+    publisher_query = queries.index { |sql| sql.match?(/SELECT DISTINCT "packages"\."published_by_project_id" FROM "packages"/) }
+    assert publisher_query, "Expected a separate publisher ID lookup"
+    project_queries = queries.each_with_index.select { |sql, _| sql.include?('FROM "projects"') }
+    assert project_queries.any?
+    project_queries.each do |sql, index|
+      assert_operator index, :>, publisher_query
+      assert_no_match(/FROM "packages"/, sql)
+      assert_no_match(/SELECT 1 AS one/, sql)
+    end
+  end
+
   test "searches names and treats wildcard characters literally" do
     @bert.update!(name: "100%_BERT")
     get models_url, params: { q: "100%_bert" }
