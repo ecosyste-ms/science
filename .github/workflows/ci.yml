@@ -41,7 +41,7 @@ jobs:
           curl --fail --location https://github.com/andrew/swhid-go/releases/download/v0.1.0/swhid_0.1.0_linux_amd64.tar.gz | sudo tar -xz -C /usr/local/bin swhid
           swhid --version
       - name: Set up Node
-        uses: actions/setup-node@v7.0.0
+        uses: actions/setup-node@v7.1.0
         with:
           node-version: 15
       - name: Set up Ruby
