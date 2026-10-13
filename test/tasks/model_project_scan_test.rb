@@ -66,6 +66,21 @@ class ModelProjectScanTest < ActiveSupport::TestCase
     assert_not_requested :any, /.*/
   end
 
+  test "Project sync accepts an empty README from a pinned model checkout" do
+    update_readme("")
+    project = PackageRepository.link!(@package)
+    use_local_model_checkout(@origin)
+
+    SyncProjectWorker.new.perform(project.id)
+
+    assert_equal "", project.reload.readme
+    assert_equal @revision, project.brief["revision"]
+    assert_equal "README.md", project.readme_file_name
+    assert project.last_synced_at
+    refute project.brief.key?("error")
+    assert_equal "Example/Model", project.name
+  end
+
   test "Project sync refreshes model metadata without service lookups or rescanning the same revision" do
     project = PackageRepository.link!(@package)
     project.update!(dependencies_indexed_at: 1.day.ago, dependencies_index_error: "old")

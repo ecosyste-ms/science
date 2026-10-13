@@ -37,7 +37,7 @@ class RepositoryResources
     unless File.realpath(filename).start_with?(File.realpath(checkout) + "/") && File.file?(filename)
       raise ArgumentError, "Resource must be a file inside the checkout"
     end
-    content = File.binread(filename, 1.megabyte + 1).force_encoding(Encoding::UTF_8)
+    content = (File.binread(filename, 1.megabyte + 1) || String.new).force_encoding(Encoding::UTF_8)
     raise ArgumentError, "Resource exceeds 1 MB" if content.bytesize > 1.megabyte
     raise ArgumentError, "Expected UTF-8 text" unless content.valid_encoding? && !content.include?("\0")
     raise ArgumentError, "Resource is an LFS pointer" if content.start_with?("version https://git-lfs.github.com/spec/v1\n")
