@@ -1,4 +1,15 @@
 namespace :papers do
+  desc "Import and link papers from all stored model READMEs in the background"
+  task import_models: :environment do
+    raise "OPENALEX_API_KEY is required" if ENV["OPENALEX_API_KEY"].blank?
+    count = 0
+    Project.model_projects.select(:id).find_each do |project|
+      ImportProjectPapersWorker.perform_async(project.id)
+      count += 1
+    end
+    puts "Enqueued paper imports for #{count} model projects"
+  end
+
   desc "Import papers from citation candidates or a resolver report (FILE=input.json OUTPUT=report.json)"
   task import_candidates: :environment do
     input = ENV.fetch("FILE")

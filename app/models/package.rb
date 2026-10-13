@@ -61,7 +61,7 @@ class Package < ApplicationRecord
 
   def linked_projects
     paper_ids = package_papers.where(role: PackagePaper::MODEL_ROLES).select(:paper_id)
-    Project.where(id: ProjectPaper.where(paper_id: paper_ids).select(:project_id))
+    Project.where(id: ProjectPaper.where(paper_id: paper_ids, role: "implementation").select(:project_id))
       .or(Project.where(id: package_projects.where(role: PackageProject::CODE_ROLES).select(:project_id)))
   end
 

@@ -9,6 +9,8 @@ class PaperImportRakeTest < ActiveSupport::TestCase
     @input = Tempfile.new(["paper-import", ".json"])
     @output = Tempfile.new(["paper-results", ".json"])
     ENV.update("FILE" => @input.path, "OUTPUT" => @output.path, "OPENALEX_API_KEY" => "test-key")
+    registry = PackageRegistry.create!(name: "huggingface.co", ecosystem: "huggingface", purl_type: "huggingface", url: "https://huggingface.co")
+    @package = registry.packages.create!(name: "allenai/scibert_scivocab_uncased", purl: "pkg:huggingface/allenai/scibert_scivocab_uncased", repository_url: "https://huggingface.co/allenai/scibert_scivocab_uncased")
     @work = { "id" => "https://openalex.org/W2970771982", "doi" => "https://doi.org/10.18653/v1/D19-1371",
       "title" => "SciBERT: A Pretrained Language Model for Scientific Text", "publication_date" => "2019-11-01",
       "locations" => [{ "landing_page_url" => "https://aclanthology.org/D19-1371/", "pdf_url" => "https://aclanthology.org/D19-1371.pdf" }] }
@@ -33,7 +35,7 @@ class PaperImportRakeTest < ActiveSupport::TestCase
   def import(data)
     File.write(@input.path, data.to_json)
     Rake::Task["papers:import_candidates"].reenable
-    assert_no_difference ["ProjectPaper.count", "PackagePaper.count", "Mention.count"] do
+    assert_no_difference "Mention.count" do
       capture_io { Rake::Task["papers:import_candidates"].invoke }
     end
     JSON.parse(File.read(@output.path))
@@ -56,7 +58,7 @@ class PaperImportRakeTest < ActiveSupport::TestCase
 
   test "imports a unique title author and year match and caches repeated searches" do
     request = search_results([title_work, title_work.merge("id" => "https://openalex.org/W999", "title" => "A different paper")])
-    result = import([title_candidate, title_candidate.merge("purl" => "pkg:huggingface/example/other")])
+    result = import([title_candidate, title_candidate.merge("revision" => "another-revision")])
     assert_equal({ "created" => 1, "unchanged" => 1 }, result["import_summary"])
     assert_equal({ "title" => true, "authors" => true, "year" => true }, result["candidates"].first["checks"])
     assert_equal title_candidate, result["candidates"].first["input"]
@@ -228,5 +230,25 @@ class PaperImportRakeTest < ActiveSupport::TestCase
     data["candidates"] << data["candidates"].first.merge("lookup" => "W123")
     data["lookups"]["W123"] = { "status" => "found", "work" => { "id" => "bad" } }
     assert_equal({ "created" => 1, "error" => 1 }, import(data)["import_summary"])
+  end
+
+  test "search scores do not rewrite canonical paper metadata" do
+    data = report
+    data["lookups"].values.first["work"]["relevance_score"] = 123.4
+    result = import(data)
+    paper = Paper.find(result["candidates"].sole.dig("import", "paper_id"))
+    refute paper.openalex_data.key?("relevance_score")
+    before = paper.attributes
+    data["lookups"].values.first["work"].delete("relevance_score")
+    assert_equal({ "unchanged" => 1 }, import(data)["import_summary"])
+    assert_equal before, paper.reload.attributes
+  end
+
+  test "invalid citation targets roll back the paper import" do
+    data = report
+    data["candidates"].sole["input"]["package_purl"] = "pkg:huggingface/missing/package"
+    assert_no_difference ["Paper.count", "PackagePaper.count", "ProjectPaper.count"] do
+      assert_equal({ "error" => 1 }, import(data)["import_summary"])
+    end
   end
 end

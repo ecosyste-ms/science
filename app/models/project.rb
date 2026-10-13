@@ -69,6 +69,22 @@ class Project < ApplicationRecord
   has_many :project_papers, dependent: :delete_all
   has_many :package_projects, dependent: :delete_all
   has_many :linked_papers, through: :project_papers, source: :paper
+
+  def import_papers
+    return { "import_summary" => {}, "candidates" => [] } if readme.blank?
+
+    entries = Array(brief&.dig("resources", "readme_bibtex", "entries"))
+    candidates = FilePaperCandidates.new("content" => readme).extract(brief_entries: entries).map do |row|
+      row.merge("project_id" => id, "package_purl" => repository&.dig("metadata", "model_package_purl"),
+        "revision" => repository&.dig("metadata", "revision"), "readme_sha256" => Digest::SHA256.hexdigest(readme),
+        "source" => "stored_project_readme")
+    end
+    PaperCandidateImporter.new.call(candidates)
+  end
+
+  def related_paper_links
+    project_papers.includes(:paper).to_a + PackagePaper.where(package_id: published_package_records.select(:id)).includes(:paper, :package).to_a
+  end
   has_many :dependency_records, class_name: 'Dependency', dependent: :nullify
   has_many :project_dependencies, dependent: :delete_all
   has_many :direct_project_dependencies, -> { where(direct: true) }, class_name: "ProjectDependency"

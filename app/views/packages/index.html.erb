@@ -110,6 +110,13 @@
                     project_path(package.published_by_project) %>
                 </p>
               <% end %>
+              <% paper_links = package.package_papers.to_a + (package.published_by_project&.project_papers&.to_a || []) %>
+              <% if paper_links.any? %>
+                <div class="mt-3">
+                  <h4 class="h6">Related papers</h4>
+                  <%= render "papers/relationships", links: paper_links %>
+                </div>
+              <% end %>
             </div>
 
             <div class="text-end" data-dependent-projects-count="<%= count %>">

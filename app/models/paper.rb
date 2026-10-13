@@ -27,6 +27,7 @@ class Paper < ApplicationRecord
   end
 
   def self.import_openalex!(work)
+    work = work.except("relevance_score")
     id = work.fetch("id")
     raise ArgumentError, "Invalid OpenAlex Work ID" unless id.is_a?(String) && id.match?(%r{\Ahttps://openalex\.org/W\d+\z})
     raise ArgumentError, "Missing paper title" unless work["title"].is_a?(String) && work["title"].present?
@@ -64,5 +65,11 @@ class Paper < ApplicationRecord
       end
       { "status" => status, "paper_id" => paper.id }
     end
+  end
+
+  def external_url
+    return "https://doi.org/#{doi.sub(%r{\Ahttps?://(?:dx\.)?doi\.org/}i, '')}" if doi.present?
+    return "https://openalex.org/#{openalex_id.split('/').last}" if openalex_id.present?
+    urls.find { |url| url.match?(%r{\Ahttps?://}i) }
   end
 end

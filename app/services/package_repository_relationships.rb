@@ -13,7 +13,7 @@ class PackageRepositoryRelationships
     project_ids = projects.map(&:id)
     direct_links = @package.package_projects.where(project_id: project_ids).order(:id).group_by(&:project_id)
     package_links = @package.package_papers.where(role: PackagePaper::MODEL_ROLES)
-    project_links = ProjectPaper.where(project_id: project_ids, paper_id: package_links.select(:paper_id))
+    project_links = ProjectPaper.where(project_id: project_ids, paper_id: package_links.select(:paper_id), role: "implementation")
       .includes(:paper).order(:id).to_a
     package_links_by_paper = package_links.where(paper_id: project_links.map(&:paper_id)).order(:id).group_by(&:paper_id)
     project_links_by_project = project_links.group_by(&:project_id)

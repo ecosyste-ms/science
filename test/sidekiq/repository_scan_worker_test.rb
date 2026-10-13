@@ -68,6 +68,18 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     assert @project.brief.key?("dependencies")
   end
 
+  test "successful repository scans enqueue paper imports for stored READMEs" do
+    previous_key = ENV["OPENALEX_API_KEY"]
+    ENV["OPENALEX_API_KEY"] = "test-key"
+    @project.update!(readme: "# Research software\n\nhttps://doi.org/10.1234/example\n")
+    assert_difference "ImportProjectPapersWorker.jobs.size", 1 do
+      RepositoryScanWorker.new.perform(@project.id)
+    end
+    assert_equal [@project.id], ImportProjectPapersWorker.jobs.last["args"]
+  ensure
+    ENV["OPENALEX_API_KEY"] = previous_key
+  end
+
   test "queued scan preserves citation file and README BibTeX with diagnostics" do
     File.write(File.join(@source, "CITATION.bib"), <<~BIBTEX)
       @article{paper,

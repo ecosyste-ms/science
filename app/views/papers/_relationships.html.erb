@@ -1,0 +1,38 @@
+<% links.group_by(&:paper_id).each_value do |relationships| %>
+  <% paper = relationships.first.paper %>
+  <div class="mb-3" data-related-paper-id="<%= paper.id %>">
+    <% if paper.external_url.present? %>
+      <%= link_to paper.to_s, paper.external_url, class: "fw-semibold" %>
+    <% else %>
+      <span class="fw-semibold"><%= paper.to_s %></span>
+    <% end %>
+    <% if paper.publication_date.present? %>
+      <span class="text-muted">(<%= paper.publication_date.year %>)</span>
+    <% end %>
+    <div class="small text-muted">
+      <%= relationships.map { |relationship| relationship.role == "reference" ? "Referenced in README" : relationship.role.humanize }.uniq.join(" · ") %>
+    </div>
+    <% evidence = relationships.flat_map(&:evidence).uniq %>
+    <% if evidence.any? %>
+      <details class="small mt-1">
+        <summary>Citation sources</summary>
+        <ul class="mb-0">
+          <% evidence.each do |source| %>
+            <li>
+              <% if source["url"].to_s.match?(%r{\Ahttps?://}i) %>
+                <%= link_to source["source"].to_s.humanize, source["url"] %>
+              <% else %>
+                <%= source["source"].to_s.humanize %>
+              <% end %>
+              <% Array(source["occurrences"]).each do |occurrence| %>
+                <% if occurrence["raw"].present? %>
+                  <pre class="text-wrap"><%= occurrence["raw"] %></pre>
+                <% end %>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      </details>
+    <% end %>
+  </div>
+<% end %>

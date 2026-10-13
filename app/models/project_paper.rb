@@ -2,6 +2,8 @@ class ProjectPaper < ApplicationRecord
   belongs_to :project
   belongs_to :paper
 
+  validates :role, inclusion: { in: %w[implementation reference] }
+
   validates :paper_id, uniqueness: { scope: :project_id }
   validate :evidence_has_sources
 
@@ -28,6 +30,7 @@ class ProjectPaper < ApplicationRecord
         raise ActiveRecord::RecordInvalid, candidate if candidate.errors.any?
 
         pair = lock.find_or_initialize_by(project: project, paper: paper)
+        pair.role = "implementation"
         pair.evidence = (pair.evidence + evidence).uniq
         outcome = pair.new_record? ? :created : (pair.changed? ? :updated : :unchanged)
         pair.save! if pair.changed?

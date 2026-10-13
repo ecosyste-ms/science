@@ -44,6 +44,14 @@ class Api::V1::PackageRepositoriesTest < ActionDispatch::IntegrationTest
     assert_not_requested :any, /.*/
   end
 
+  test "a repository citation does not become an implementation relationship" do
+    citing_project = Project.create!(url: "https://github.com/example/citing-project")
+    ProjectPaper.create!(project: citing_project, paper: @paper, role: "reference", evidence: [@repo_evidence])
+    get repositories_api_v1_package_url(@package)
+    assert_response :success
+    refute_includes response.parsed_body.pluck("id"), citing_project.id
+  end
+
   test "groups direct roles and paper paths without duplicating repositories or leaking another package evidence" do
     %w[model_implementation inference_implementation model_library].each do |role|
       PackageProject.create!(package: @package, project: @project, role: role, evidence: [@repo_evidence])

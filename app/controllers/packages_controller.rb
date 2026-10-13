@@ -10,5 +10,6 @@ class PackagesController < ApplicationController
     @selected_sort = index.selected_sort
     @sort_options = index.sort_options
     @pagy, @packages = pagy(index.scope, limit: 20)
+    @packages = @packages.preload({ package_papers: :paper }, { published_by_project: { project_papers: :paper } })
   end
 end

@@ -1,6 +1,6 @@
 class PackagePaper < ApplicationRecord
   MODEL_ROLES = %w[model_paper model_family_paper].freeze
-  ROLES = (MODEL_ROLES + %w[base_model_paper method training_data evaluation]).freeze
+  ROLES = (MODEL_ROLES + %w[base_model_paper method training_data evaluation reference]).freeze
 
   belongs_to :package
   belongs_to :paper

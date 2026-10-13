@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_12_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_13_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -608,6 +608,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_130000) do
     t.bigint "paper_id", null: false
     t.bigint "project_id", null: false
     t.datetime "updated_at", null: false
+    t.string "role", default: "implementation", null: false
     t.index ["paper_id"], name: "index_project_papers_on_paper_id"
     t.index ["project_id", "paper_id"], name: "index_project_papers_on_project_id_and_paper_id", unique: true
   end

@@ -26,7 +26,7 @@
 
             <% if paper.openalex_id.present? %>
               <li class="mb-2">
-                <strong>OpenAlex ID:</strong> <%= link_to paper.openalex_id, "https://openalex.org/works/#{paper.openalex_id}", class: 'text-decoration-none', target: '_blank' %>
+                <strong>OpenAlex ID:</strong> <%= link_to paper.openalex_id, "https://openalex.org/#{paper.openalex_id.split('/').last}", class: 'text-decoration-none', target: '_blank' %>
               </li>
             <% end %>
 

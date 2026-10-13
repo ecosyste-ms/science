@@ -59,6 +59,17 @@ class PackagesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "index displays package papers and publisher references once per paper" do
+    paper = Paper.create!(title: "Array methods", openalex_id: "https://openalex.org/W1234")
+    evidence = [{ "source" => "readme", "url" => @computing_project.url }]
+    @numpy.package_papers.create!(paper: paper, role: "reference", evidence: evidence)
+    @computing_project.project_papers.create!(paper: paper, role: "reference", evidence: evidence)
+    get packages_url
+    assert_response :success
+    assert_select "[data-package-id='#{@numpy.id}'] [data-related-paper-id='#{paper.id}']", count: 1
+    assert_select "[data-package-id='#{@numpy.id}'] a[href='https://openalex.org/W1234']", text: "Array methods"
+  end
+
   test "ecosystem filter keeps packages from the selected ecosystem" do
     get packages_url, params: { ecosystem: "pypi" }
 

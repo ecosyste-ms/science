@@ -35,6 +35,9 @@ class ProjectRepositoryScanner
         end
         @project.refresh_display_name unless @project.brief&.key?("error")
         @project.update_science_score if @project.brief.present?
+        if !@project.brief&.key?("error") && @project.readme.present? && ENV["OPENALEX_API_KEY"].present?
+          ImportProjectPapersWorker.perform_async(@project.id)
+        end
       end
       if !swhid_due && scientific? && @project.swhid_scan_due?
         @project.fetch_swhids(checkout: checkout, origin: origin, clone_command: clone_command)

@@ -163,8 +163,8 @@
             {
               id: "papers",
               label: "Papers",
-              partial: "mentions",
-              visible: @project.mentions.any?,
+              partial: "papers",
+              visible: @related_paper_links.any? || @project.mentions.any?,
             },
           ] %>
       </div>
@@ -223,6 +223,9 @@
       </div>
     </div>
   <% else %>
+    <% if @related_paper_links.any? %>
+      <%= render "papers" %>
+    <% end %>
     <p>
       This project has not been synced yet. Check back in a few minutes.
       <meta http-equiv="refresh" content="10">
