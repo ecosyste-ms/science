@@ -18,6 +18,15 @@ class RepositoryMetadataTest < ActiveSupport::TestCase
     end
   end
 
+  test "ignores generic first headings and code comments when choosing names" do
+    metadata = RepositoryMetadata.new(readme: "# Model Overview\n\n# Usage", brief: {})
+    assert_nil metadata.name
+    metadata = RepositoryMetadata.new(readme: "Load the model.\n```python\n# Download from the Hub\n```", brief: {})
+    assert_nil metadata.name
+    metadata = RepositoryMetadata.new(readme: "## SPLADE CoCondenser SelfDistil", brief: {})
+    assert_equal "SPLADE CoCondenser SelfDistil", metadata.name
+  end
+
   test "human languages do not become source languages" do
     metadata = RepositoryMetadata.new(readme: "---\nlanguage: en\n---\n# Weights", brief: { "languages" => nil })
     assert_nil metadata.attributes["language"]

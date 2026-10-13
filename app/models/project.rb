@@ -374,9 +374,13 @@ class Project < ApplicationRecord
   def readme_name
     return unless has_attribute?(:readme) && readme.present?
 
-    html = Redcarpet::Markdown.new(Redcarpet::Render::HTML, fenced_code_blocks: true).render(readme)
-    heading = Nokogiri::HTML.fragment(html).at_css('h1')&.text&.squish
-    heading&.sub(/\AModel card for\b[:\s]*/i, '')&.presence
+    RepositoryMetadata.new(readme: readme, brief: nil).name
+  end
+
+  def readme_body
+    return readme unless model_project?
+
+    RepositoryMetadata.new(readme: readme, brief: nil).body
   end
 
   def repository_slug

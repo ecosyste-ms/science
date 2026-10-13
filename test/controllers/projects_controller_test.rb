@@ -62,6 +62,27 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#project-repository strong", text: "Stars:", count: 0
   end
 
+  test "renders model README body without YAML and keeps adjacent fenced code as code" do
+    registry = PackageRegistry.create!(name: "huggingface.co", url: "https://huggingface.co", ecosystem: "huggingface", purl_type: "huggingface")
+    package = registry.packages.create!(name: "example/model", purl: "pkg:huggingface/example/model", metadata: {})
+    project = PackageRepository.link!(package)
+    readme = "---\nlanguage: en\nwidget:\n  - text: hidden-widget-example\n---\n## SPLADE CoCondenser SelfDistil\n\nLoad this model.\n```python\n# Download from the Hub\nmodel = load_model()\n```\n\n---\n\nVisible body text."
+    project.update!(readme: readme, last_synced_at: Time.current,
+      repository: project.repository.deep_merge("metadata" => { "files" => { "readme" => "README.md" } }))
+    PackageRepository.link!(package)
+
+    get project_path(project)
+
+    assert_response :success
+    assert_select "h1", text: "SPLADE CoCondenser SelfDistil"
+    assert_select "pre code", text: /# Download from the Hub/
+    assert_select "h1", text: "Download from the Hub", count: 0
+    assert_select "p", text: "Visible body text."
+    assert_not_includes response.body, "hidden-widget-example"
+    assert_not_includes response.body, "language: en"
+    assert_equal readme, project.reload.readme
+  end
+
   test "shows gated access alongside available package metadata" do
     registry = PackageRegistry.create!(name: "huggingface.co", url: "https://huggingface.co", ecosystem: "huggingface", purl_type: "huggingface")
     package = registry.packages.create!(name: "example/gated", purl: "pkg:huggingface/example/gated",

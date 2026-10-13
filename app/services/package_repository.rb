@@ -64,7 +64,7 @@ class PackageRepository
       "host" => { "name" => "HuggingFace.co", "url" => "https://huggingface.co", "kind" => "git" })
     repository.merge!(metadata.attributes)
     repository.merge!(
-      "name" => display_name || metadata.name&.sub(/\AModel card for\b[:\s]*/i, "")&.presence,
+      "name" => display_name || metadata.name,
       "description" => strings.call(data["description"]).first || strings.call(card["description"]).first || metadata.description,
       "topics" => strings.call(data["keywords_array"]) | strings.call(data["keywords"]) | strings.call(card["tags"]),
       "license" => strings.call(card["license"]).presence&.join(", ") ||

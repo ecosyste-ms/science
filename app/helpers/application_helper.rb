@@ -41,6 +41,6 @@ module ApplicationHelper
 
   def render_markdown(str)
     return '' unless str.present?
-    Redcarpet::Markdown.new(Redcarpet::Render::HTML, fenced_code_blocks: true).render(str)
+    Redcarpet::Markdown.new(Redcarpet::Render::HTML, fenced_code_blocks: true, lax_spacing: true).render(str)
   end
 end

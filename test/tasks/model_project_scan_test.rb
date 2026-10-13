@@ -130,6 +130,24 @@ class ModelProjectScanTest < ActiveSupport::TestCase
     assert_equal @revision, project.brief["revision"]
   end
 
+  test "sync repairs derived names from section headings and code comments without rescanning" do
+    project = PackageRepository.link!(@package)
+    RepositoryCheckout.expects(:new).never
+    [
+      ["Model Overview", "# Model Overview\n\nA multilingual punctuation model.\n\n# Usage", "Example/Model"],
+      ["Download from the Hub", "## SPLADE CoCondenser SelfDistil\n\nLoad this model.\n```python\n# Download from the Hub\nmodel = load_model()\n```", "SPLADE CoCondenser SelfDistil"]
+    ].each do |old_name, readme, expected_name|
+      project.update!(name: old_name, readme: readme,
+        brief: { "revision" => @revision, "dependencies" => [] },
+        repository: project.repository.deep_merge("name" => old_name, "metadata" => { "derived_name" => old_name }))
+
+      SyncProjectWorker.new.perform(project.id)
+
+      assert_equal expected_name, project.reload.name
+      assert_equal expected_name, project.repository.dig("metadata", "derived_name")
+    end
+  end
+
   test "collection maps card and Brief evidence into normal project fields" do
     @package.update!(metadata: @package.metadata.merge("downloads" => 100, "keywords_array" => ["research"],
       "metadata" => { "pipeline_tag" => "feature-extraction", "library_name" => "transformers",

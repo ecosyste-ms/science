@@ -9,7 +9,7 @@
 
     <% if @project.readme_is_markdown? %>
       <div class="card border-0 shadow-sm p-3">
-        <%== render_markdown @project.readme %>
+        <%== render_markdown @project.readme_body %>
       </div>
     <% else %>
       <pre class="card border-0 shadow-sm p-3"><%== @project.readme %></pre>

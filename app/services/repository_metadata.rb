@@ -1,16 +1,16 @@
 require "yaml"
 
 class RepositoryMetadata
-  attr_reader :frontmatter, :document, :brief
+  attr_reader :frontmatter, :document, :brief, :body
 
   def initialize(readme:, brief:)
     @brief = brief || {}
     text = readme.to_s
     frontmatter = text.match(/\A---\s*\r?\n(.*?)\r?\n(?:---|\.\.\.)\s*(?:\r?\n|\z)/m)
     @frontmatter = parse_card(frontmatter&.[](1))
-    body = frontmatter ? text[frontmatter.end(0)..] : text
+    @body = frontmatter ? text[frontmatter.end(0)..] : text
     @document = Nokogiri::HTML.fragment(Redcarpet::Markdown.new(
-      Redcarpet::Render::HTML, fenced_code_blocks: true, tables: true
+      Redcarpet::Render::HTML, fenced_code_blocks: true, tables: true, lax_spacing: true
     ).render(body))
   end
 
@@ -26,7 +26,13 @@ class RepositoryMetadata
   end
 
   def name
-    strings(frontmatter["title"]).first || document.at_css("h1")&.text&.squish&.presence
+    title = strings(frontmatter["title"]).first
+    return title if title
+
+    heading = document.at_css("h1, h2")&.text&.squish&.sub(/\AModel card for\b[:\s]*/i, "")&.presence
+    return if heading&.match?(/\A(?:model (?:overview|card|details|description)|overview|introduction|usage|installation|getting started)\z/i)
+
+    heading
   end
 
   def description
