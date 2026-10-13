@@ -9,6 +9,7 @@ class PaperIdentityResolver
     end
     @lookups = {}
     @sources = {}
+    @searches = {}
   end
 
   def call(candidates)
@@ -17,7 +18,7 @@ class PaperIdentityResolver
     results = candidates.map { |row| resolve(row) }
     { "generated_at" => Time.current.iso8601,
       "summary" => results.group_by { |row| row.fetch("assessment") }.transform_values(&:size),
-      "candidates" => results, "lookups" => lookups, "sources" => sources }
+      "candidates" => results, "lookups" => lookups, "sources" => sources, "searches" => @searches }
   end
 
   def resolve(row)
@@ -27,6 +28,8 @@ class PaperIdentityResolver
     raise ArgumentError, "Expected a nonempty identifier" unless identifier.is_a?(String) && identifier.present?
 
     case kind
+    when "citation_title"
+      return resolve_title(row)
     when "arxiv"
       id = arxiv_id(identifier)
       result["source"] = "arxiv:#{id}"
@@ -59,26 +62,28 @@ class PaperIdentityResolver
     lookup = lookup_work(key)
     return result.merge("assessment" => lookup.fetch("status")) unless lookup["status"] == "found"
 
-    work = lookup.fetch("work")
+    result.merge(compare(row, lookup.fetch("work"), source: source, source_key: result["source"]))
+  rescue ArgumentError, KeyError => error
+    result.merge("assessment" => "invalid", "reason" => error.message)
+  end
+
+  def compare(row, work, source: nil, source_key: nil)
     titles = Array(source&.dig("metadata", "citation_title"))
-    title_source = titles.any? ? result["source"] : "citation"
+    title_source = titles.any? ? source_key : "citation"
     occurrences = row.fetch("occurrences", [])
     raise ArgumentError, "Expected an array of citation occurrences" unless occurrences.is_a?(Array) && occurrences.all? { |item| item.is_a?(Hash) }
     titles = occurrences.filter_map { |item| item["title"] if item["title"].is_a?(String) }.uniq if titles.empty?
     titles = titles.reject { |title| normalize_title(title).empty? }
     authors = Array(source&.dig("metadata", "citation_author"))
-    author_source = result["source"] if authors.any?
+    author_source = source_key if authors.any?
     if authors.empty?
       citation_authors = occurrences.filter_map do |item|
         value = item.dig("fields", "author")
-        if value.is_a?(String)
+        names = item.dig("brief_entry", "authors")
+        if names.is_a?(Array) && names.any? && names.all? { |name| name.is_a?(Hash) && name["family_names"].present? }
+          names.map { |name| [name["given_names"], name["family_names"]].compact.join(" ") }
+        elsif value.is_a?(String)
           BibTeX::Names.parse(value)&.map(&:to_s).presence
-        else
-          names = item.dig("brief_entry", "authors")
-          if names.is_a?(Array) && names.all? { |name| name.is_a?(Hash) }
-            parsed = names.map { |name| [name["given_names"], name["family_names"]].compact.join(" ") }
-            parsed.presence if parsed.all?(&:present?)
-          end
         end
       end.uniq
       if citation_authors.one?
@@ -92,7 +97,7 @@ class PaperIdentityResolver
     end
     checks = {
       "title" => titles.empty? ? nil : titles.any? { |title| normalize_title(title) == normalize_title(work["title"]) },
-      "authors" => authors.empty? || work_authors.empty? ? nil : normalize_authors(authors) == normalize_authors(work_authors)
+      "authors" => authors.empty? || work_authors.empty? ? nil : authors_match?(authors, work_authors)
     }
     assessment = if checks.values.include?(false)
       "metadata_conflict"
@@ -101,11 +106,64 @@ class PaperIdentityResolver
     else
       "needs_review"
     end
-    result.merge("assessment" => assessment, "checks" => checks,
+    { "assessment" => assessment, "checks" => checks,
       "comparison_sources" => { "title" => title_source, "authors" => author_source },
-      "compared_titles" => titles, "compared_authors" => authors)
-  rescue ArgumentError, KeyError => error
-    result.merge("assessment" => "invalid", "reason" => error.message)
+      "compared_titles" => titles, "compared_authors" => authors, "work_authors" => work_authors }
+  end
+
+  def resolve_title(row)
+    title = row.fetch("identifier")
+    result = { "input" => row, "search" => title }
+    occurrences = row.fetch("occurrences", [])
+    raise ArgumentError, "Expected an array of citation occurrences" unless occurrences.is_a?(Array) && occurrences.all? { |item| item.is_a?(Hash) }
+    years = occurrences.flat_map { |item| [item.dig("fields", "year"), item.dig("brief_entry", "year")] }
+      .compact.map(&:to_s).uniq
+    unless years.one? && years.first.match?(/\A\d{4}\z/)
+      return result.merge("assessment" => "needs_review", "reason" => "One citation year is required for title search")
+    end
+    search = search_title(title)
+    return result.merge("assessment" => search.fetch("status"), "reason" => search["reason"]) unless search["status"] == "found"
+
+    comparisons = search.fetch("works").map do |work|
+      comparison = compare(row.merge("occurrences" => occurrences + [{ "title" => title }]), work)
+      comparison["checks"]["title"] = normalize_title(title) == normalize_title(work["title"])
+      comparison["checks"]["year"] = work["publication_year"].to_s == years.first
+      comparison["assessment"] = "metadata_conflict" if comparison["checks"].values.include?(false)
+      comparison.merge("openalex_id" => work["id"])
+    end
+    result["matches"] = comparisons
+    matches = comparisons.select { |comparison| comparison["checks"].values.all?(true) }
+    unless matches.one?
+      return result.merge("assessment" => "needs_review", "reason" => matches.empty? ? "No title, author and year match" : "Multiple title, author and year matches")
+    end
+    work = search["works"].find { |item| item["id"] == matches.first["openalex_id"] }
+    key = work.fetch("id").split("/").last
+    lookups[key] ||= { "status" => "found", "retrieved_at" => search.fetch("retrieved_at"), "work" => work }
+    result.merge(matches.first.except("openalex_id"), "lookup" => key, "assessment" => "metadata_agrees")
+  end
+
+  def search_title(title)
+    @searches[title] ||= begin
+      query = LaTeX.decode(title).scan(/[\p{L}\p{N}]+/).join(" ")
+      raise ArgumentError, "Invalid citation title" if query.blank?
+      response = client.get("works", "search.title" => query, per_page: 100)
+      works = response["results"]
+      count = response.dig("meta", "count")
+      unless works.is_a?(Array) && count.is_a?(Integer) && count >= works.size && works.all? { |work| valid_work?(work) }
+        raise ArgumentError, "Invalid OpenAlex title search response"
+      end
+      if count > works.size
+        { "status" => "needs_review", "reason" => "Title search results are incomplete", "count" => count }
+      else
+        { "status" => "found", "retrieved_at" => Time.current.iso8601, "works" => works.uniq { |work| work["id"] } }
+      end
+    rescue OpenAlexApiClient::RequestError, ArgumentError => error
+      { "status" => "error", "reason" => error.message }
+    end
+  end
+
+  def valid_work?(work)
+    work.is_a?(Hash) && work["id"].to_s.match?(%r{\Ahttps://openalex\.org/W\d+\z}) && work["title"].is_a?(String) && work["title"].present?
   end
 
   def arxiv_id(value)
@@ -124,7 +182,7 @@ class PaperIdentityResolver
     lookups[key] ||= begin
       path = URI::DEFAULT_PARSER.escape(key, /[^a-zA-Z0-9._~:\/-]/)
       work = client.get("works/#{path}")
-      if work.is_a?(Hash) && work["id"].to_s.match?(%r{\Ahttps://openalex\.org/W\d+\z}) && work["title"].is_a?(String) && work["title"].present?
+      if valid_work?(work)
         { "status" => "found", "retrieved_at" => Time.current.iso8601, "work" => work }
       else
         { "status" => "error", "reason" => "Invalid OpenAlex Work response" }
@@ -158,7 +216,30 @@ class PaperIdentityResolver
     value.to_s.unicode_normalize(:nfkd).downcase.gsub(/[\p{M}\p{P}\p{Z}\s]/, "")
   end
 
-  def normalize_authors(values)
-    values.map { |value| value.to_s.unicode_normalize(:nfkd).downcase.gsub(/\p{M}/, "").scan(/[\p{L}\p{N}]+/).sort }.sort
+  def authors_match?(authors, work_authors)
+    left = normalize_authors(authors)
+    right = normalize_authors(work_authors)
+    return false unless left.size == right.size
+    return true if left.sort == right.sort
+
+    short_left = normalize_authors(authors, omit_middle_initials: true)
+    short_right = normalize_authors(work_authors, omit_middle_initials: true)
+    remaining = (0...right.size).to_a
+    left.each_with_index.all? do |name, index|
+      matches = remaining.select { |other| name == right[other] || short_left[index] == right[other] || name == short_right[other] }
+      matches.one? && remaining.delete(matches.first)
+    end
+  end
+
+  def normalize_authors(values, omit_middle_initials: false)
+    values.map do |value|
+      decoded = LaTeX.decode(value.to_s).unicode_normalize(:nfkd).gsub(/\p{M}/, "")
+      name = BibTeX::Names.parse(decoded)&.first
+      next decoded.downcase.scan(/[\p{L}\p{N}]+/).sort unless name
+
+      given = name.given.to_s.scan(/[\p{L}\p{N}]+/)
+      given = given.first(1) + given.drop(1).reject { |part| part.length == 1 } if omit_middle_initials
+      (given + [name.prefix, name.family, name.suffix].compact.join(" ").scan(/[\p{L}\p{N}]+/)).map(&:downcase).sort
+    end
   end
 end

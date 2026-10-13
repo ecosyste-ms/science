@@ -89,6 +89,33 @@ class PaperIdentityResolutionRakeTest < ActiveSupport::TestCase
     assert_equal({ "title" => true, "authors" => false }, row["checks"])
   end
 
+  test "accepts a missing middle initial while retaining both author lists" do
+    source("https://arxiv.org/abs/1810.04805", authors: ["Daniel S. Weld"])
+    lookup("doi:10.48550/arxiv.1810.04805", work(authors: ["Daniel Weld"]))
+    row = review([@candidate])["candidates"].sole
+    assert_equal "metadata_agrees", row["assessment"]
+    assert_equal ["Daniel S. Weld"], row["compared_authors"]
+    assert_equal ["Daniel Weld"], row["work_authors"]
+  end
+
+  test "does not treat different first names or initials as formatting differences" do
+    [["Kathleen McKeown", "Kathy McKeown"], ["Jianlv Chen", "Jianlyu Chen"],
+      ["Daniel S. Weld", "Daniel J. Weld"], ["John Smith", "James Smith"]].each do |left, right|
+      source("https://arxiv.org/abs/1810.04805", authors: [left])
+      lookup("doi:10.48550/arxiv.1810.04805", work(authors: [right]))
+      assert_equal "metadata_conflict", review([@candidate])["candidates"].sole["assessment"]
+    end
+  end
+
+  test "decodes BibTeX accents and prefers complete Brief author names" do
+    lookup("doi:10.1038/s41598-022-23052-9", work(authors: ["Ana Rita Magalhães"]))
+    row = @candidate.merge("identifier_kind" => "doi", "identifier" => "10.1038/s41598-022-23052-9",
+      "occurrences" => [{ "title" => @title, "fields" => { "author" => 'Magalh{\~a}es, Ana Rita' } }])
+    assert_equal "metadata_agrees", review([row])["candidates"].sole["assessment"]
+    row["occurrences"].sole["brief_entry"] = { "authors" => [{ "given_names" => "Ana Rita", "family_names" => "Magalhães" }] }
+    assert_equal ["Ana Rita Magalhães"], review([row])["candidates"].sole["compared_authors"]
+  end
+
   test "deduplicates exact lookups across models and versions without dropping occurrences" do
     source_stub = source("https://arxiv.org/abs/1810.04805")
     work_stub = lookup("doi:10.48550/arxiv.1810.04805")
@@ -125,7 +152,7 @@ class PaperIdentityResolutionRakeTest < ActiveSupport::TestCase
       @candidate.merge("identifier" => "1810.04805?query=bad"),
       @candidate.merge("identifier_kind" => "doi", "identifier" => "10.1234/../private")]
     report = review(rows)
-    assert_equal({ "unsupported" => 2, "invalid" => 2 }, report["summary"])
+    assert_equal({ "unsupported" => 1, "needs_review" => 1, "invalid" => 2 }, report["summary"])
     assert_equal rows, report["candidates"].map { |row| row["input"] }
     assert_empty report["lookups"]
   end
