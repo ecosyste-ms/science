@@ -139,6 +139,49 @@ class OpenAlexApiClientTest < ActiveSupport::TestCase
       client.normalize_doi("https://doi.org/10.21105%2Fjoss.01453")
   end
 
+  test "rejects long retry delays without sleeping or issuing another request" do
+    ["3600", 1.hour.from_now.httpdate].each do |retry_after|
+      request = stub_request(:get, "https://api.openalex.org/works")
+        .with(query: { "api_key" => "test-key" })
+        .to_return(status: 429, headers: { "Retry-After" => retry_after })
+      Faraday::Retry::Middleware.any_instance.expects(:sleep).never
+      Rails.logger.expects(:warn).with("OpenAlex request failed: status=429")
+
+      error = assert_raises(OpenAlexApiClient::RequestError) do
+        OpenAlexApiClient.new(api_key: "test-key").get("works")
+      end
+
+      assert_equal 429, error.status
+      assert_requested request, times: 1
+      WebMock.reset!
+    end
+  end
+
+  test "honors a short retry delay and logs only status and delay" do
+    request = stub_request(:get, "https://api.openalex.org/works")
+      .with(query: { "api_key" => "test-key" })
+      .to_return(status: 429, headers: { "Retry-After" => "2" })
+      .then.to_return(body: { results: [] }.to_json)
+    Faraday::Retry::Middleware.any_instance.expects(:sleep).with(2.0)
+    Rails.logger.expects(:warn).with("OpenAlex retry: status=429 delay_seconds=2.0")
+
+    assert_equal({ "results" => [] }, OpenAlexApiClient.new(api_key: "test-key").get("works"))
+    assert_requested request, times: 2
+  end
+
+  test "stops after two retries on persistent server errors" do
+    request = stub_request(:get, "https://api.openalex.org/works")
+      .with(query: { "api_key" => "test-key" }).to_return(status: 503)
+    Faraday::Retry::Middleware.any_instance.expects(:sleep).twice.with { |delay| delay <= 5 }
+
+    error = assert_raises(OpenAlexApiClient::RequestError) do
+      OpenAlexApiClient.new(api_key: "test-key").get("works")
+    end
+
+    assert_equal 503, error.status
+    assert_requested request, times: 3
+  end
+
   test "rejects README placeholders that are not DOIs" do
     client = OpenAlexApiClient.new(api_key: "test-key")
 

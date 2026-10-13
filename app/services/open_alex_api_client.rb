@@ -10,6 +10,7 @@ class OpenAlexApiClient
   }ix
   DOI_IMAGE_SUFFIX_PATTERN = /\.(?:gif|jpe?g|png|svg|webp)\z/i
   RETRY_STATUSES = [429, 500, 502, 503, 504].freeze
+  MAX_RETRY_INTERVAL = 5
 
   class RequestError < StandardError
     attr_reader :status
@@ -74,6 +75,7 @@ class OpenAlexApiClient
   def get(path, params = {})
     response = connection.get(path, params.merge(api_key: api_key))
     unless response.success?
+      Rails.logger.warn("OpenAlex request failed: status=#{response.status}")
       raise RequestError.new(
         "OpenAlex request failed with HTTP #{response.status}",
         status: response.status
@@ -118,10 +120,14 @@ class OpenAlexApiClient
       faraday.request :instrumentation
       faraday.request :retry,
         max: 2,
+        max_interval: MAX_RETRY_INTERVAL,
         interval: 0.5,
         interval_randomness: 0.5,
         backoff_factor: 2,
-        retry_statuses: RETRY_STATUSES
+        retry_statuses: RETRY_STATUSES,
+        retry_block: ->(env:, will_retry_in:, **) {
+          Rails.logger.warn("OpenAlex retry: status=#{env.status.inspect} delay_seconds=#{will_retry_in.round(3)}")
+        }
       faraday.response :follow_redirects
       faraday.adapter Faraday.default_adapter
     end

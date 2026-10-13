@@ -86,4 +86,18 @@ class ProjectPaperImportTest < ActionDispatch::IntegrationTest
     assert_raises(RuntimeError) { ImportProjectPapersWorker.new.perform(@project.id) }
     assert_empty @project.project_papers
   end
+
+  test "title search with a long retry delay fails the job without sleeping or creating links" do
+    @project.update!(readme: "```bibtex\n@article{mobilenet, title={Searching for MobileNetV3}, author={Howard, Andrew}, year={2019}}\n```\n")
+    request = stub_request(:get, "https://api.openalex.org/works")
+      .with(query: { "api_key" => "test-key", "search.title" => "Searching for MobileNetV3", "per_page" => "100" })
+      .to_return(status: 429, headers: { "Retry-After" => "3600" })
+    Faraday::Retry::Middleware.any_instance.expects(:sleep).never
+
+    assert_no_difference ["Paper.count", "ProjectPaper.count", "PackagePaper.count"] do
+      error = assert_raises(RuntimeError) { ImportProjectPapersWorker.new.perform(@project.id) }
+      assert_equal "Paper import failed for 1 candidates on project #{@project.id}", error.message
+    end
+    assert_requested request, times: 1
+  end
 end
