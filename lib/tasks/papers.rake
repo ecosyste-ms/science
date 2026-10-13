@@ -1,4 +1,14 @@
 namespace :papers do
+  desc "Import papers from citation candidates or a resolver report (FILE=input.json OUTPUT=report.json)"
+  task import_candidates: :environment do
+    input = ENV.fetch("FILE")
+    output = ENV.fetch("OUTPUT")
+    raise ArgumentError, "Input and output must be different files" if File.expand_path(input) == File.expand_path(output)
+    report = PaperCandidateImporter.new.call(JSON.parse(File.read(input)))
+    File.write(output, JSON.pretty_generate(report) + "\n")
+    puts "Paper imports: #{report.fetch('import_summary').inspect}"
+  end
+
   desc "Review citation identities against OpenAlex without importing (FILE=input.json OUTPUT=report.json)"
   task resolve_candidates: :environment do
     input = ENV.fetch("FILE")
