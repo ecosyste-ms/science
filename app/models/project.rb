@@ -79,7 +79,9 @@ class Project < ApplicationRecord
         "revision" => repository&.dig("metadata", "revision"), "readme_sha256" => Digest::SHA256.hexdigest(readme),
         "source" => "stored_project_readme")
     end
-    PaperCandidateImporter.new.call(candidates)
+    report = PaperCandidateImporter.new.call(candidates)
+    update_science_score
+    report
   end
 
   def related_paper_links

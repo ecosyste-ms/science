@@ -8,6 +8,8 @@ Science Score is a stored estimate of whether a repository contains research sof
 
 A normal project sync fetches repository, package, dependency, commit, README, issue, citation, CodeMeta, and Zenodo data before calculating the score. A successful Brief scan also recalculates it because detected languages and tools can add research-tooling evidence.
 
+Project paper imports recalculate the score after saving resolved references. Score changes queue a search-index update, so projects that reach 20 become eligible for software lookup, search and MCP context once indexing finishes.
+
 Confirmed ASCL, bio.tools, swMATH and RRID matches remain eligible for routine refresh at zero points. Their sync also queues a missing Brief scan. Eligibility requires a matched link and a previously retrieved record with status `ok` or `error`; source, status and match status comparisons are case-insensitive. Identifier membership does not itself add score points. Completed scans and stored scan errors retain their existing retry rules.
 
 `BriefScanEnqueuer.new(rescan: true)` selects confirmed identifier matches from all six sources with scores strictly below 20, including completed scans and stored errors. The worker rechecks the score and identifier after taking its project lock. These jobs rerun Brief and save a recalculated score; existing SWHIDs are retained. Normal scan jobs still skip completed scans and stored errors. A failed rescan records its error using the normal scan failure behavior.
@@ -34,7 +36,9 @@ base score = sum(signal points * signal strength)
 | Scientific registry | 7 | A package published through CRAN or Bioconductor |
 | JOSS vocabulary | 13 | Vocabulary score of at least 30 from the active JOSS model |
 
-The weights total 100 percent. CITATION evidence checks the downloaded file content. CodeMeta accepts a filename advertised by repository metadata or downloaded JSON containing a nonblank string `name` and a `SoftwareSourceCode` or `SoftwareApplication` type. Zenodo checks the advertised filename. DOI details separate common archive prefixes, including Zenodo and Figshare, from journal references, but both count as the same scoring signal.
+The weights total 100 percent. Citation evidence accepts detected citation filenames or downloaded content. Structured BibTeX in the README supplies the half-strength citation signal (8 points) when the separate citation content is unstructured or absent. CodeMeta accepts a filename advertised by repository metadata or downloaded JSON containing a nonblank string `name` and a `SoftwareSourceCode` or `SoftwareApplication` type. Zenodo checks the advertised filename. DOI details separate common archive prefixes, including Zenodo and Figshare, from journal references, but both count as the same scoring signal.
+
+A project with a resolved paper relationship receives a single 20-point publication contribution. This replaces DOI, academic-link and half-strength BibTeX contributions with one allowance, regardless of the number of papers. The saved breakdown retains those signals with `duplicate_of: has_resolved_paper`. Full-strength CFF software metadata and other independent signals still count. Existing penalties apply afterwards. The rule is shared by model and software projects; a reference does not establish implementation or authorship. JOSS scoring remains separate.
 
 Academic committer strength is the sum of matched organization strengths divided by the number of committers. An institutional owner uses the matched domain strength directly. ROR company records can identify an institution for owner browsing, but company domains are excluded from academic email evidence.
 

@@ -36,6 +36,14 @@ class ProjectPaperImportTest < ActionDispatch::IntegrationTest
     assert_equal @project.id, project_link.evidence.sole["project_id"]
     assert_includes project_link.evidence.sole["occurrences"].sole["raw"], "10.1234/method"
     assert_empty @package.linked_projects
+    assert_equal 20, @project.reload.science_score
+
+    IndexSoftwareSearchWorker.new.perform(@project.id)
+    get "/api/v1/software/lookup", params: { q: @package.purl, kind: "purl" }
+    assert_response :success
+    assert_equal [@project.id], response.parsed_body.fetch("projects").map { |row| row.fetch("project_id") }
+    get "/api/v1/projects/#{@project.id}/search_context"
+    assert_response :success
 
     get project_path(@project)
     assert_response :success
@@ -55,6 +63,7 @@ class ProjectPaperImportTest < ActionDispatch::IntegrationTest
     project = Project.create!(url: "https://github.com/example/tool", readme: @project.readme)
     ImportProjectPapersWorker.new.perform(project.id)
     assert_equal "reference", project.project_papers.sole.role
+    assert_equal 20, project.reload.science_score
     assert_empty @package.package_papers
     get project_path(project)
     assert_response :success

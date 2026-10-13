@@ -3,6 +3,7 @@ class ScienceScoreCalculator
 
   RESEARCH_TOOLING_BONUS = 0.20
   SCIENTIFIC_DEPENDENCY_BONUS = 0.08
+  RESOLVED_PAPER_SCORE = 20.0
   CITATION_STRENGTHS = {
     cff: 1.0,
     bibtex: 0.5,
@@ -52,6 +53,7 @@ class ScienceScoreCalculator
   def calculate
     @breakdown = {
       has_citation_file: check_citation_file,
+      has_resolved_paper: check_resolved_paper,
       has_codemeta: check_codemeta_file,
       has_zenodo: check_zenodo_file,
       has_doi_in_readme: check_doi_in_readme,
@@ -70,7 +72,31 @@ class ScienceScoreCalculator
     end
 
     suppress_duplicate_zenodo_academic_link
+    suppress_resolved_paper_duplicates
     calculate_score
+  end
+
+  def check_resolved_paper
+    present = project.project_papers.exists?
+    {
+      present: present,
+      description: "Resolved paper references",
+      details: present ? "Linked papers; publication evidence capped at 20 points" : nil
+    }
+  end
+
+  def suppress_resolved_paper_duplicates
+    return unless @breakdown[:has_resolved_paper][:present]
+    return if project.joss_metadata.present?
+
+    keys = %i[has_doi_in_readme has_academic_links]
+    keys << :has_citation_file if @breakdown[:has_citation_file][:strength] == CITATION_STRENGTHS[:bibtex]
+    keys.each do |key|
+      signal = @breakdown[key]
+      next unless signal[:present]
+
+      signal.merge!(present: false, duplicate_of: "has_resolved_paper")
+    end
   end
 
   def suppress_duplicate_zenodo_academic_link
@@ -137,6 +163,11 @@ class ScienceScoreCalculator
 
       final_score = (weighted_score / scoring_weights.values.sum) * 100
 
+      if @breakdown[:has_resolved_paper][:present]
+        @breakdown[:has_resolved_paper][:score] = RESOLVED_PAPER_SCORE
+        final_score += RESOLVED_PAPER_SCORE
+      end
+
       research_tooling = @breakdown[:has_research_tooling]
       if research_tooling[:present]
         strength = research_tooling[:strength] || 1.0
@@ -168,8 +199,12 @@ class ScienceScoreCalculator
 
   def check_citation_file
     classification = project.citation_content_classification
+    readme_classification = CitationContentClassifier.classify(project.readme) if classification.unstructured?
+    readme_bibtex = readme_classification&.bibtex?
+    classification = readme_classification if readme_bibtex
     format = project.citation_file.present? ?
       classification.format.to_s : "none"
+    format = "bibtex" if readme_bibtex
     signal = {
       present: false,
       strength: 0.0,
@@ -206,7 +241,7 @@ class ScienceScoreCalculator
       signal.merge(
         present: true,
         strength: CITATION_STRENGTHS.fetch(:bibtex),
-        details: "Found structured BibTeX citation metadata"
+        details: readme_bibtex ? "Found structured BibTeX in README" : "Found structured BibTeX citation metadata"
       )
     when :invalid
       error = classification.error

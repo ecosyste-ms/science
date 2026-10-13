@@ -44,6 +44,59 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     assert_equal 100, result[:max_score]
   end
 
+  test "resolved papers contribute twenty points regardless of reference count" do
+    2.times do |index|
+      paper = Paper.create!(title: "Method #{index}", openalex_id: "https://openalex.org/W#{900 + index}")
+      @project.project_papers.create!(paper: paper, role: "reference",
+        evidence: [{ "source" => "stored_project_readme", "url" => @project.url }])
+      @project.update_science_score
+      assert_equal 20, @project.reload.science_score
+    end
+  end
+
+  test "resolved papers share an allowance with DOI links academic links and README BibTeX" do
+    @project.update!(readme: "https://arxiv.org/abs/1810.04805\nhttps://doi.org/10.1234/method\n@article{method, title={A method}, doi={10.1234/method}}\n")
+    paper = Paper.create!(title: "A method", doi: "10.1234/method")
+    @project.project_papers.create!(paper: paper, role: "reference",
+      evidence: [{ "source" => "stored_project_readme", "url" => @project.url }])
+    @project.update_science_score
+    assert_equal 20, @project.reload.science_score
+    %w[has_doi_in_readme has_academic_links has_citation_file].each do |key|
+      signal = @project.science_score_breakdown.dig("breakdown", key)
+      assert_equal false, signal["present"]
+      assert_equal "has_resolved_paper", signal["duplicate_of"]
+    end
+  end
+
+  test "README BibTeX receives citation credit without a resolved paper" do
+    @project.update!(readme: "# Citation\n```bibtex\n@article{method, title={A method}}\n```\n")
+    @project.update_science_score
+    assert_equal 8, @project.reload.science_score
+    assert_equal "Found structured BibTeX in README", @project.science_score_breakdown.dig("breakdown", "has_citation_file", "details")
+  end
+
+  test "paper references retain independent CFF credit and existing penalties" do
+    @project.update!(citation_file: valid_cff)
+    paper = Paper.create!(title: "Method", openalex_id: "https://openalex.org/W900")
+    @project.project_papers.create!(paper: paper, role: "implementation",
+      evidence: [{ "source" => "verified", "url" => @project.url }])
+    @project.update_science_score
+    assert_equal 36, @project.reload.science_score
+    @project.update!(repository: { "full_name" => "test/homework" })
+    @project.update_science_score
+    assert_operator @project.reload.science_score, :<, 36
+    assert_equal 20, @project.science_score_breakdown.dig("breakdown", "has_resolved_paper", "score")
+  end
+
+  test "resolved references do not change the JOSS scoring path" do
+    @project.update!(joss_metadata: { "title" => "A method" }, readme: "https://doi.org/10.1234/method")
+    before = ScienceScoreCalculator.new(@project).calculate[:score]
+    paper = Paper.create!(title: "A method", doi: "10.1234/method")
+    @project.project_papers.create!(paper: paper, role: "reference",
+      evidence: [{ "source" => "stored_project_readme", "url" => @project.url }])
+    assert_equal before, ScienceScoreCalculator.new(@project).calculate[:score]
+  end
+
   test "check_citation_file gives full strength to validated CFF" do
     @project.citation_file = valid_cff
     calculator = ScienceScoreCalculator.new(@project)

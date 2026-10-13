@@ -1,5 +1,10 @@
 require 'faraday/typhoeus'
+require Rails.root.join("lib/filtered_http_logger")
 Faraday.default_adapter = :typhoeus
+
+Rails.application.config.after_initialize do
+  Ethon.logger = FilteredHttpLogger.new(Rails.logger, filters: Rails.application.config.filter_parameters)
+end
 
 Faraday.default_connection_options = {
   headers: {
