@@ -153,7 +153,7 @@ class Project < ApplicationRecord
     where(id: ProjectExternalSoftwareRecord.confirmed_identifier_matches.select(:project_id))
   }
   scope :model_projects, -> {
-    where(id: Package.where(package_registry_id: PackageRegistry.where("lower(purl_type) = ?", "huggingface").select(:id))
+    where(id: Package.where(package_registry_id: PackageRegistry.where("lower(purl_type) = ?", "huggingface").pluck(:id))
       .where.not(published_by_project_id: nil).select(:published_by_project_id))
       .where("repository->'metadata'->>'model_package_purl' IS NOT NULL")
   }
@@ -183,6 +183,10 @@ class Project < ApplicationRecord
 
   def model_project?
     repository&.dig("metadata", "model_package_purl").present?
+  end
+
+  def repository_from_package?
+    repository&.dig("metadata", "source") == "packages.ecosyste.ms"
   end
 
   def self.for_owner(host, login)
@@ -344,7 +348,7 @@ class Project < ApplicationRecord
   end
 
   def to_s
-    name.presence || model_card_name || readme_name || repository_slug || url
+    name.presence || (repository["name"].presence if has_attribute?(:repository) && repository) || model_card_name || readme_name || repository_slug || url
   end
 
   def model_card_name

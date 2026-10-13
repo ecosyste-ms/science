@@ -64,9 +64,10 @@ class ModelsControllerTest < ActionDispatch::IntegrationTest
   test "uses card names ahead of cleaned README headings" do
     package = @registry.packages.find_by!(published_by_project: @bert)
     package.update!(metadata: package.metadata.merge("metadata" => { "card_data" => { "model_name" => "BERT classifier" } }))
-    ModelProjectSync.link!(package)
+    PackageRepository.link!(package)
     @bert.reload.update!(readme: "# Model card for BERT fallback")
     @specter.update!(readme: "# Model card for SPECTER")
+    @specter.refresh_display_name
 
     get models_url
 
@@ -120,7 +121,7 @@ class ModelsControllerTest < ActionDispatch::IntegrationTest
 
   def create_model(name, keywords: [], **attributes)
     package = @registry.packages.create!(name: name, purl: "pkg:huggingface/#{name}", metadata: { "keywords" => keywords })
-    project = ModelProjectSync.link!(package)
+    project = PackageRepository.link!(package)
     project.update!(attributes) if attributes.any?
     project
   end

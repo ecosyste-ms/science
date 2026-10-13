@@ -39,7 +39,7 @@ class HuggingFacePackageScanner
     result = { "package_id" => package.id, "package_version_id" => version.id,
       "purl" => version.purl, "revision" => revision, "files" => [] }
     origin = "https://huggingface.co/#{model_path}"
-    project = ModelProjectSync.link!(package)
+    project = PackageRepository.link!(package)
     result["project_id"] = project.id
     scanner = ProjectRepositoryScanner.new(project, force_brief: true, revision: revision)
     scanner.scan

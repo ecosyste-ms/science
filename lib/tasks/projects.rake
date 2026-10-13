@@ -34,6 +34,11 @@ namespace :projects do
     Project.import_from_bioconductor
   end
 
+  desc 'Import Hugging Face projects from Packages (MAX_PAGES=1, maximum 10)'
+  task :import_huggingface => :environment do
+    Project.import_from_huggingface(max_pages: ENV.fetch('MAX_PAGES', 1))
+  end
+
   desc 'import projects from conda-forge with GitHub repositories'
   task :import_conda_forge => :environment do
     Project.import_from_conda_forge

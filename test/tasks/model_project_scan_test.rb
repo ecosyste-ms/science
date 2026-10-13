@@ -67,7 +67,7 @@ class ModelProjectScanTest < ActiveSupport::TestCase
   end
 
   test "Project sync refreshes model metadata without service lookups or rescanning the same revision" do
-    project = ModelProjectSync.link!(@package)
+    project = PackageRepository.link!(@package)
     project.update!(dependencies_indexed_at: 1.day.ago, dependencies_index_error: "old")
     use_local_model_checkout(@origin)
     SyncProjectWorker.new.perform(project.id)
@@ -84,6 +84,38 @@ class ModelProjectScanTest < ActiveSupport::TestCase
     assert_not_requested :any, /.*/
   end
 
+  test "collection maps card and Brief evidence into normal project fields" do
+    @package.update!(metadata: @package.metadata.merge("downloads" => 100, "keywords_array" => ["research"],
+      "metadata" => { "pipeline_tag" => "feature-extraction", "library_name" => "transformers",
+        "created_at" => "2024-01-01T00:00:00Z", "last_modified" => "2024-02-01T00:00:00Z" }))
+    File.write(File.join(@repository_directory, "model.py"), "import numpy\n")
+    update_readme("---\nlanguage: [en, fr]\nlicense: mit\ntags: [embeddings]\nmodel_name: Research encoder\n---\n# Model card for Encoder\n\nAn encoder for comparing scientific abstracts across multiple languages.\n")
+    use_local_model_checkout(@origin)
+
+    assert_no_difference ["Mention.count", "PackagePaper.count", "PackageProject.count"] do
+      assert_equal({ "complete" => 1 }, collect["counts"])
+    end
+    project = @package.reload.published_by_project
+    assert_equal "Research encoder", project.to_s
+    assert_equal "An encoder for comparing scientific abstracts across multiple languages.", project.description
+    assert_equal "Python", project.language
+    assert_equal "mit", project.repository_license
+    assert_equal ["research", "embeddings"], project.keywords
+    assert_equal ["en", "fr"], project.repository.dig("metadata", "details", "supported_languages")
+    assert_equal ["feature-extraction"], project.repository.dig("metadata", "details", "tasks")
+    assert_equal ["transformers"], project.repository.dig("metadata", "details", "libraries")
+    assert_equal "2024-01-01T00:00:00Z", project.repository["created_at"]
+    assert_in_delta Math.log(100), project.score
+
+    project.update!(name: "Curated name", description: "Curated description")
+    RepositoryCheckout.expects(:new).never
+    SyncProjectWorker.new.perform(project.id)
+    assert_equal "Curated name", project.reload.to_s
+    assert_equal "Curated description", project.description
+    assert_in_delta Math.log(100), project.score
+    assert_not_requested :any, /.*/
+  end
+
   test "task preserves UTF-8 resource text through scanning and persistence" do
     content = "# Modèle scientifique\nEmbeddings multilingues: 日本語\n"
     update_readme(content)
@@ -97,6 +129,23 @@ class ModelProjectScanTest < ActiveSupport::TestCase
     project = @package.reload.published_by_project
     assert_equal content, project.readme
     assert_equal "Modèle scientifique", project.readme_name
+  end
+
+  test "repository scan worker uses the same metadata extractor for ordinary projects" do
+    project = Project.create!(url: "https://github.com/example/library", science_score: 1,
+      repository: { "html_url" => "https://github.com/example/library", "topics" => [],
+        "host" => { "name" => "GitHub" }, "owner" => "example" },
+      readme: "# Scientific library\n\nA library for comparing measurements from independent scientific experiments.\n")
+    checkout = RepositoryCheckout.new(@local_origin)
+    RepositoryCheckout.expects(:new).with(project.url, revision: nil, skip_lfs: false).returns(checkout)
+
+    RepositoryScanWorker.new.perform(project.id)
+
+    assert_equal "A library for comparing measurements from independent scientific experiments.", project.reload.description
+    assert_equal "Scientific library", project.repository["name"]
+    assert_equal "Scientific library", project.name
+    assert project.brief["dependencies"].any?
+    assert_not_requested :any, /.*/
   end
 
   test "task rejects invalid UTF-8 resources without storing their content" do
@@ -121,7 +170,7 @@ class ModelProjectScanTest < ActiveSupport::TestCase
   end
 
   test "a new package revision refreshes existing Project scan data and invalidates old SWHIDs" do
-    project = ModelProjectSync.link!(@package)
+    project = PackageRepository.link!(@package)
     use_local_model_checkout(@origin)
     SyncProjectWorker.new.perform(project.id)
     project.reload.update!(swhids: { "commit" => @revision, "status" => "success", "history_archive" => { "complete" => true } })
@@ -141,15 +190,17 @@ class ModelProjectScanTest < ActiveSupport::TestCase
   end
 
   test "metadata refresh retains the model publisher and separate implementation relationship" do
-    project = ModelProjectSync.link!(@package)
+    project = PackageRepository.link!(@package)
     implementation = Project.create!(url: "https://github.com/example/code")
     link = PackageProject.create!(package: @package, project: implementation, role: "model_implementation",
       evidence: [{ "source" => "review", "url" => implementation.url }])
     attributes = link.attributes
-    @package.record_ecosystems_match!(@package.metadata)
+    @package.record_ecosystems_match!(@package.metadata.merge("description" => "Updated package description", "repository_url" => implementation.url))
     assert_equal project.id, @package.reload.published_by_project_id
     assert_equal attributes, link.reload.attributes
-    assert_nil @package.repository_url
+    assert_equal implementation.url, @package.repository_url
+    assert_equal "Updated package description", project.reload.description
+    assert_equal "Updated package description", project.packages.sole["description"]
   end
 
   test "does not replace an existing publishing project" do

@@ -70,33 +70,43 @@ module Project::Sync
     stage_durations = {}
 
     return if hidden_owner?
-    return ModelProjectSync.new(self).sync if model_project?
+    if repository_from_package?
+      run_sync_stage(stage_durations, :fetch_repository) do
+        source = PackageRepository.new(self)
+        source.refresh_metadata(source.package)
+      end
+      run_sync_stage(stage_durations, :scan_repository) do
+        revision = repository.dig("metadata", "revision")
+        ProjectRepositoryScanner.new(self, force_brief: brief&.dig("revision") != revision).scan
+      end
+    else
+      run_sync_stage(stage_durations, :check_url) { check_url }
+      return unless self.persisted?
+      run_sync_stage(stage_durations, :fetch_repository) { fetch_repository }
+      run_sync_stage(stage_durations, :find_or_create_host) { find_or_create_host }
+      run_sync_stage(stage_durations, :fetch_owner) { fetch_owner }
+      run_sync_stage(stage_durations, :find_or_create_owner) { find_or_create_owner }
+      return if hidden_owner?
 
-    run_sync_stage(stage_durations, :check_url) { check_url }
-    return unless self.persisted?
-    run_sync_stage(stage_durations, :fetch_repository) { fetch_repository }
-    run_sync_stage(stage_durations, :find_or_create_host) { find_or_create_host }
-    run_sync_stage(stage_durations, :fetch_owner) { fetch_owner }
-    run_sync_stage(stage_durations, :find_or_create_owner) { find_or_create_owner }
-    return if hidden_owner?
-
-    run_sync_stage(stage_durations, :fetch_dependencies) { fetch_dependencies }
-    run_sync_stage(stage_durations, :fetch_packages) { fetch_packages }
-    run_sync_stage(stage_durations, :import_mentions) { import_mentions }
-    run_sync_stage(stage_durations, :fetch_readme) { fetch_readme }
-    run_sync_stage(stage_durations, :combine_keywords) { combine_keywords }
-    run_sync_stage(stage_durations, :fetch_commits) { fetch_commits }
-    run_sync_stage(stage_durations, :fetch_events) { fetch_events }
-    run_sync_stage(stage_durations, :fetch_issue_stats) { fetch_issue_stats }
-    run_sync_stage(stage_durations, :sync_issues) { sync_issues }
-    run_sync_stage(stage_durations, :fetch_citation_file) { fetch_citation_file }
-    run_sync_stage(stage_durations, :fetch_codemeta) { fetch_codemeta }
-    run_sync_stage(stage_durations, :fetch_zenodo_file) { fetch_zenodo_file }
-    run_sync_stage(stage_durations, :sync_releases) { sync_releases }
-    run_sync_stage(stage_durations, :update_committers) { update_committers }
-    run_sync_stage(stage_durations, :update_keywords_from_contributors) do
-      update_keywords_from_contributors
+      run_sync_stage(stage_durations, :fetch_dependencies) { fetch_dependencies }
+      run_sync_stage(stage_durations, :fetch_packages) { fetch_packages }
+      run_sync_stage(stage_durations, :import_mentions) { import_mentions }
+      run_sync_stage(stage_durations, :fetch_readme) { fetch_readme }
+      run_sync_stage(stage_durations, :fetch_commits) { fetch_commits }
+      run_sync_stage(stage_durations, :fetch_events) { fetch_events }
+      run_sync_stage(stage_durations, :fetch_issue_stats) { fetch_issue_stats }
+      run_sync_stage(stage_durations, :sync_issues) { sync_issues }
+      run_sync_stage(stage_durations, :fetch_citation_file) { fetch_citation_file }
+      run_sync_stage(stage_durations, :fetch_codemeta) { fetch_codemeta }
+      run_sync_stage(stage_durations, :fetch_zenodo_file) { fetch_zenodo_file }
+      run_sync_stage(stage_durations, :sync_releases) { sync_releases }
+      run_sync_stage(stage_durations, :update_committers) { update_committers }
+      run_sync_stage(stage_durations, :update_keywords_from_contributors) do
+        update_keywords_from_contributors
+      end
     end
+    run_sync_stage(stage_durations, :combine_keywords) { combine_keywords }
+    run_sync_stage(stage_durations, :refresh_display_name) { refresh_display_name }
     run_sync_stage(stage_durations, :finalize) do
       update(last_synced_at: Time.now, matching_criteria: matching_criteria?)
     end
@@ -161,11 +171,23 @@ module Project::Sync
   def combine_keywords
     all_keywords = []
     all_keywords += repository["topics"] if repository.present?
-    all_keywords += packages.map{|p| p["keywords"]}.flatten if packages.present?
+    all_keywords += packages.flat_map { |p| Array(p["keywords_array"]) + Array(p["keywords"]) } if packages.present?
     self.keywords = all_keywords.reject(&:blank?).uniq { |keyword| keyword.downcase }.dup
     self.save
   rescue FrozenError
     puts "Error combining keywords for #{repository_url}"
+  end
+
+  def refresh_display_name
+    return unless repository.present?
+
+    metadata = repository["metadata"] || {}
+    return if name.present? && name != metadata["derived_name"]
+
+    value = repository["name"].presence || readme_name || repository["full_name"].presence || repository_slug
+    return if value.blank?
+
+    update!(name: value, repository: repository.merge("metadata" => metadata.merge("derived_name" => value)))
   end
 
   def repos_api_url
@@ -656,6 +678,10 @@ module Project::Sync
     data = RepositoryBriefScan.call(checkout)
     previous_brief_dependencies = brief.is_a?(Hash) ? brief['dependencies'] : nil
     self.brief = data
+    unless repository_from_package?
+      extracted = RepositoryMetadata.new(readme: readme, brief: data).attributes
+      self.repository = extracted.merge(repository.reject { |_, value| value.blank? })
+    end
     if previous_brief_dependencies != data['dependencies']
       self.dependencies_indexed_at = nil
       self.dependencies_index_error = nil

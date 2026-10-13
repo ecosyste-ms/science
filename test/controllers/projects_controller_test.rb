@@ -26,7 +26,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     package = registry.packages.create!(name: "example/model", purl: "pkg:huggingface/example/model",
       metadata: { "name" => "example/model", "latest_release_number" => "a" * 40,
         "dependent_packages_url" => "https://packages.ecosyste.ms/api/v1/registries/huggingface.co/packages/example%2Fmodel/dependent_packages" })
-    project = ModelProjectSync.link!(package)
+    project = PackageRepository.link!(package)
     project.update!(readme: "# Research model", brief: { "revision" => "a" * 40 }, last_synced_at: Time.current)
     get project_path(project)
     assert_response :success
@@ -38,6 +38,28 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
   test "should get index" do
     get projects_url
     assert_response :success
+  end
+
+  test "shows package and scanned repository metadata through the project page" do
+    registry = PackageRegistry.create!(name: "huggingface.co", url: "https://huggingface.co", ecosystem: "huggingface", purl_type: "huggingface")
+    package = registry.packages.create!(name: "example/model", purl: "pkg:huggingface/example/model",
+      metadata: { "licenses" => "apache-2.0", "metadata" => { "pipeline_tag" => "feature-extraction", "library_name" => "transformers" } })
+    project = PackageRepository.link!(package)
+    project.update!(readme: "---\nlanguage: [en, fr]\n---\n# Research encoder\n\nAn encoder for comparing scientific abstracts across several languages.\n",
+      brief: { "languages" => [{ "name" => "Python" }] }, last_synced_at: Time.current)
+    PackageRepository.link!(package)
+
+    get project_path(project)
+
+    assert_response :success
+    assert_select "h1", text: "Research encoder"
+    assert_select ".lead", text: "An encoder for comparing scientific abstracts across several languages."
+    assert_select "#project-repository", text: /Language: Python/
+    assert_select "#project-repository", text: /Supported languages: en, fr/
+    assert_select "#project-repository", text: /Tasks: feature-extraction/
+    assert_select "#project-repository", text: /Libraries: transformers/
+    assert_select "#project-repository", text: /License: apache-2.0/
+    assert_select "#project-repository strong", text: "Stars:", count: 0
   end
 
   test "index results are sorted by combined science_score and ranking" do

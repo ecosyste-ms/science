@@ -1,4 +1,4 @@
-class ModelProjectSync
+class PackageRepository
   attr_reader :project
 
   def initialize(project)
@@ -29,6 +29,19 @@ class ModelProjectSync
     end
   end
 
+  def self.import!(record, registry:)
+    Package.transaction do
+      package = registry.packages.find_or_initialize_by(purl: record.fetch("purl"))
+      package.name = record.fetch("name")
+      existing = Project.exists?(url: origin(package))
+      conflict = PackageMetadataSync.new.local_identity_conflict(package, record)
+      raise ArgumentError, conflict if conflict
+
+      package.record_ecosystems_match!(record)
+      [link!(package), !existing]
+    end
+  end
+
   def package
     project.published_package_records.find_by!(purl: project.repository.dig("metadata", "model_package_purl"))
   end
@@ -39,45 +52,44 @@ class ModelProjectSync
 
     data = package.metadata
     parsed = Purl.parse(package.purl)
+    metadata = RepositoryMetadata.new(readme: project.readme, brief: project.brief)
+    hub = data["metadata"].is_a?(Hash) ? data["metadata"] : {}
+    card = (hub["card_data"].is_a?(Hash) ? hub["card_data"] : {}).merge(metadata.frontmatter)
+    strings = metadata.method(:strings)
+    names = Array.wrap(card["model-index"]).filter_map { |entry| entry["name"] if entry.is_a?(Hash) }
+    display_name = strings.call(card["model_name"]).first || (strings.call(names).first if strings.call(names).one?)
     repository = (project.repository || {}).deep_dup
     repository.merge!("html_url" => url, "clone_url" => url, "full_name" => "#{parsed.namespace}/#{parsed.name}",
       "owner" => parsed.namespace, "default_branch" => "main",
-      "topics" => Array(data["keywords"]), "description" => data["description"],
       "host" => { "name" => "HuggingFace.co", "url" => "https://huggingface.co", "kind" => "git" })
+    repository.merge!(metadata.attributes)
+    repository.merge!(
+      "name" => display_name || metadata.name&.sub(/\AModel card for\b[:\s]*/i, "")&.presence,
+      "description" => strings.call(data["description"]).first || strings.call(card["description"]).first || metadata.description,
+      "topics" => strings.call(data["keywords_array"]) | strings.call(data["keywords"]) | strings.call(card["tags"]),
+      "license" => strings.call(card["license"]).presence&.join(", ") ||
+        strings.call(data["normalized_licenses"]).presence&.join(", ") ||
+        strings.call(data["licenses"]).presence&.join(", ") || repository["license"],
+      "homepage" => strings.call(data["homepage"]).first,
+      "created_at" => hub["created_at"], "pushed_at" => hub["last_modified"])
+    details = {
+      "supported_languages" => strings.call(card["language"]),
+      "tasks" => strings.call(card["pipeline_tag"].presence || hub["pipeline_tag"]),
+      "libraries" => strings.call(card["library_name"].presence || hub["library_name"]),
+      "base_models" => strings.call(card["base_model"]),
+      "datasets" => strings.call(card["datasets"])
+    }.reject { |_, value| value.empty? }
     repository["metadata"] = (repository["metadata"] || {}).merge("model_package_purl" => package.purl,
-      "source" => "packages.ecosyste.ms", "revision" => data["latest_release_number"])
+      "source" => "packages.ecosyste.ms", "revision" => data["latest_release_number"],
+      "details" => details)
     displayed_package = data.merge("name" => package.name, "purl" => package.purl, "registry_url" => data["registry_url"].presence || url,
       "registry" => { "name" => package.package_registry.name, "url" => package.package_registry.url },
       "maintainers" => Array(data["maintainers"]), "advisories" => Array(data["advisories"]),
       "rankings" => data["rankings"] || {})
     project.update!(repository: repository, packages: [displayed_package])
+    project.refresh_display_name
     project.find_or_create_host
     project.combine_keywords
-  end
-
-  def sync
-    refresh_metadata(package)
-    revision = project.repository.dig("metadata", "revision")
-    changed = project.brief&.dig("revision") != revision
-    ProjectRepositoryScanner.new(project, force_brief: changed).scan
-    project.update!(last_synced_at: Time.current)
-  end
-
-  def store_files(files, revision)
-    resources = project.brief.fetch("resources") || {}
-    paths = resources.slice("readme", "citation", "codemeta", "zenodo")
-    by_path = files.index_by { |file| file["path"] }
-    attributes = {}
-    { "readme" => :readme, "citation" => :citation_file, "codemeta" => :codemeta, "zenodo" => :zenodo }.each do |key, attribute|
-      file = by_path[paths[key]]
-      attributes[attribute] = file&.fetch("content", nil) if paths[key].nil? || file&.dig("status") == "ok"
-    end
-    repository = project.repository.deep_dup
-    repository["metadata"]["files"] = paths
-    if project.swhids && project.swhids["commit"] != revision
-      attributes[:swhids] = project.swhids.slice("origin_archive")
-    end
-    project.update!(**attributes, repository: repository, last_synced_at: Time.current,
-      brief: project.brief.merge("revision" => revision, "scanned_at" => Time.current.iso8601))
+    project.update_score
   end
 end

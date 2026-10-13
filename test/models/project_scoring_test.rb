@@ -1,6 +1,12 @@
 require "test_helper"
 
 class ProjectScoringTest < ActiveSupport::TestCase
+  test "missing activity and package inputs produce finite scores" do
+    project = Project.create!(url: "https://example.org/weights", repository: {}, commits: {}, packages: [{}])
+    project.update_score
+    assert_equal 0, project.reload.score
+  end
+
   test "repository_score is log of stars plus open issues" do
     p = Project.new(url: "https://x", repository: { "stargazers_count" => 90, "open_issues_count" => 10 })
     assert_in_delta Math.log(100), p.repository_score

@@ -122,7 +122,7 @@
                   <strong>Versions:</strong> <%= number_with_delimiter package['versions_count'] %>
                 </li>
                 <li class="mb-2">
-                  <strong>Dependent Packages:</strong> <%= link_to number_with_delimiter(package['dependent_packages_count']), package['dependent_packages_url'].gsub('/api/v1', ''), target: :_blank, class: 'text-decoration-none' %>
+                  <strong>Dependent Packages:</strong> <%= link_to_if package['dependent_packages_url'].present?, number_with_delimiter(package['dependent_packages_count']) || 'Unknown', package['dependent_packages_url']&.sub('/api/v1', ''), target: :_blank, class: 'text-decoration-none' %>
                 </li>
                 <li class="mb-2">
                   <strong>Dependent Repositories:</strong> <%= link_to number_with_delimiter(package['dependent_repos_count']), "https://repos.ecosyste.ms/usage/#{package['ecosystem']}/#{package['name']}", target: :_blank, class: 'text-decoration-none' %>

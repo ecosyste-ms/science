@@ -47,26 +47,38 @@
                     <strong>Size:</strong> <%= number_to_human_size @project.repository['size']*1000 %>
                   </li>
                 <% end %>
+                <% { "supported_languages" => "Supported languages", "tasks" => "Tasks", "libraries" => "Libraries", "base_models" => "Base models", "datasets" => "Datasets" }.each do |key, label| %>
+                  <% values = @project.repository.dig('metadata', 'details', key) %>
+                  <% if values.present? %>
+                    <li class="mb-2"><strong><%= label %>:</strong> <%= Array(values).join(', ') %></li>
+                  <% end %>
+                <% end %>
               </ul>
             </div>
 
             <div class="col-md-6">
               <h6 class="text-muted text-uppercase small mb-2">Statistics</h6>
               <ul class="list-unstyled mb-0">
+                <% unless @project.repository['stargazers_count'].nil? %>
                 <li class="mb-2">
                   <strong>Stars:</strong> <%= number_with_delimiter @project.repository['stargazers_count'] %>
                 </li>
+                <% end %>
                 <% if @project.repository['subscribers_count'] %>
                   <li class="mb-2">
                     <strong>Watchers:</strong> <%= number_with_delimiter @project.repository['subscribers_count'] %>
                   </li>
                 <% end %>
+                <% unless @project.repository['forks_count'].nil? %>
                 <li class="mb-2">
                   <strong>Forks:</strong> <%= number_with_delimiter @project.repository['forks_count'] %>
                 </li>
+                <% end %>
+                <% unless @project.repository['open_issues_count'].nil? %>
                 <li class="mb-2">
                   <strong>Open Issues:</strong> <%= number_with_delimiter @project.repository['open_issues_count'] %>
                 </li>
+                <% end %>
                 <li class="mb-2">
                   <strong>Releases:</strong> <%= link_to number_with_delimiter(@project.releases.count), project_releases_path(@project), class: 'text-decoration-none' %>
                 </li>

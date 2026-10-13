@@ -1,6 +1,24 @@
 require "digest"
 
 class RepositoryResources
+  def self.store(project, files, revision:)
+    resources = project.brief.fetch("resources") || {}
+    paths = resources.slice("readme", "citation", "codemeta", "zenodo")
+    by_path = files.index_by { |file| file["path"] }
+    attributes = {}
+    { "readme" => :readme, "citation" => :citation_file, "codemeta" => :codemeta, "zenodo" => :zenodo }.each do |key, attribute|
+      file = by_path[paths[key]]
+      attributes[attribute] = file&.fetch("content", nil) if paths[key].nil? || file&.dig("status") == "ok"
+    end
+    repository = project.repository.deep_dup
+    repository["metadata"]["files"] = paths
+    if project.swhids && project.swhids["commit"] != revision
+      attributes[:swhids] = project.swhids.slice("origin_archive")
+    end
+    project.update!(**attributes, repository: repository, last_synced_at: Time.current,
+      brief: project.brief.merge("revision" => revision, "scanned_at" => Time.current.iso8601))
+  end
+
   def self.safe_path?(path)
     path.is_a?(String) && path.present? && !path.include?("\0") && !path.include?("\\") &&
       path.split("/", -1).none? { |part| part.empty? || %w[. .. .git].include?(part.downcase) }

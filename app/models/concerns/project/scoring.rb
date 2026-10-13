@@ -211,29 +211,29 @@ module Project::Scoring
 
   def repository_score
     return 0 unless repository.present?
-    Math.log [
+    Math.log [[
       (repository['stargazers_count'] || 0),
       (repository['open_issues_count'] || 0)
-    ].sum
+    ].sum, 1].max
   end
 
   def packages_score
     return 0 unless packages.present?
-    Math.log [
+    Math.log [[
       packages.map{|p| p["downloads"] || 0 }.sum,
       packages.map{|p| p["dependent_packages_count"] || 0 }.sum,
       packages.map{|p| p["dependent_repos_count"] || 0 }.sum,
       packages.map{|p| p["docker_downloads_count"] || 0 }.sum,
       packages.map{|p| p["docker_dependents_count"] || 0 }.sum,
-      packages.map{|p| p['maintainers'].map{|m| m['uuid'] } }.flatten.uniq.length
-    ].sum
+      packages.flat_map { |p| Array(p['maintainers']).filter_map { |m| m['uuid'] } }.uniq.length
+    ].sum, 1].max
   end
 
   def commits_score
     return 0 unless commits.present?
-    Math.log [
+    Math.log [[
       (commits['total_committers'] || 0),
-    ].sum
+    ].sum, 1].max
   end
 
   def dependencies_score

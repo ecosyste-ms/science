@@ -22,7 +22,7 @@
         </div>
         <div class="col-md-3">
           <%= form.label :sort, "Order by", class: "form-label" %>
-          <%= form.select :sort, options_for_select(ModelProjectIndex::SORT_OPTIONS, @index.selected_sort), {}, class: "form-select" %>
+          <%= form.select :sort, options_for_select([["Recently synced", "recently_synced"], ["Science Score", "science_score"], ["Name", "name"]], @sort), {}, class: "form-select" %>
         </div>
         <div class="col-12 d-flex gap-2">
           <%= form.submit "Apply filters", class: "btn btn-primary" %>

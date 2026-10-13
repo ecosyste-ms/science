@@ -279,6 +279,7 @@ class Package < ApplicationRecord
   end
 
   def record_ecosystems_match!(record, now: Time.current)
+    publisher = published_by_project if published_by_project&.repository_from_package?
     attributes = {
       ecosystems_id: record.fetch("id"),
       namespace: record["namespace"],
@@ -297,13 +298,16 @@ class Package < ApplicationRecord
     if repository_url != remote_repository_url
       attributes.merge!(
         repository_url: remote_repository_url,
-        published_by_project_id: nil,
+        published_by_project_id: publisher&.id,
         repository_checked_at: nil,
         repository_match_error: nil
       )
     end
 
-    update!(attributes)
+    transaction do
+      update!(attributes)
+      PackageRepository.new(publisher).refresh_metadata(self) if publisher
+    end
     :matched
   end
 

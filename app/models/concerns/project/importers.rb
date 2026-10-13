@@ -270,6 +270,13 @@ module Project::Importers
       import_from_registry('bioconductor.org', 'Bioconductor')
     end
 
+    def import_from_huggingface(max_pages: 1)
+      limit = Integer(max_pages.to_s, 10)
+      raise ArgumentError, "MAX_PAGES must be between 1 and 10" unless limit.between?(1, 10)
+
+      import_from_registry('huggingface.co', 'Hugging Face', max_pages: limit)
+    end
+
     def import_from_conda_forge
       import_from_registry('conda-forge.org', 'conda-forge')
     end
@@ -753,8 +760,9 @@ module Project::Importers
       { created: total_created, existing: total_existing }
     end
 
-    def import_from_registry(registry, registry_name)
-      puts "Starting #{registry_name} import of GitHub projects..."
+    def import_from_registry(registry, registry_name, max_pages: nil)
+      puts "Starting #{registry_name} project import..."
+      package_registry = PackageRegistry.where("lower(name) = ?", registry.downcase).first! if registry.casecmp?('huggingface.co')
       page = 1
       total_created = 0
       total_existing = 0
@@ -778,6 +786,23 @@ module Project::Importers
         break if packages.empty?
 
         packages.each do |package|
+          if package_registry
+            topics = Array(package['keywords_array']) | Array(package['keywords'])
+            paper_reference = topics.any? { |topic| topic.is_a?(String) && topic.match?(%r{\A(?:arxiv:(?:\d{4}\.\d{4,5}|[a-z-]+(?:\.[A-Z]{2})?/\d{7})(?:v\d+)?|doi:10\.\d{4,9}/\S+)\z}i) }
+            if package['status'].present? || !paper_reference
+              total_skipped += 1
+              next
+            end
+
+            project, created = PackageRepository.import!(package, registry: package_registry)
+            if created
+              total_created += 1
+            else
+              total_existing += 1
+            end
+            project.sync_async if project.last_synced_at.nil?
+            next
+          end
           # Skip if no repository URL
           if package['repository_url'].blank?
             total_skipped += 1
@@ -810,13 +835,14 @@ module Project::Importers
 
         puts "Page #{page} processed - Created: #{total_created}, Existing: #{total_existing}, Skipped: #{total_skipped}"
         page += 1
+        break if max_pages && page > max_pages
       end
 
       puts "\n=== #{registry_name} Import Complete ==="
       puts "Total new projects created: #{total_created}"
       puts "Total existing projects found: #{total_existing}"
-      puts "Total packages skipped (no GitHub URL): #{total_skipped}"
-      puts "Grand total GitHub projects: #{total_created + total_existing}"
+      puts "Total packages skipped: #{total_skipped}"
+      puts "Grand total projects: #{total_created + total_existing}"
     end
 
     def import_from_joss

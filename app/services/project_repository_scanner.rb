@@ -4,7 +4,7 @@ class ProjectRepositoryScanner
   def initialize(project, force_brief: false, revision: nil)
     @project = project
     @force_brief = force_brief
-    @revision = revision || (project.repository&.dig("metadata", "revision") if project.model_project?)
+    @revision = revision || (project.repository&.dig("metadata", "revision") if project.repository_from_package?)
     @files = []
   end
 
@@ -18,13 +18,16 @@ class ProjectRepositoryScanner
       if brief_due
         @project.fetch_brief(checkout: checkout)
         @project.reload
-        if @project.model_project? && !@project.brief&.key?("error")
+        if @project.repository_from_package? && !@project.brief&.key?("error")
           @files = RepositoryResources.paths(@project.brief).map do |path|
             url = "#{origin}/resolve/#{@revision}/#{ERB::Util.url_encode(path).gsub('%2F', '/')}"
             RepositoryResources.read(checkout, path, url: url)
           end
-          ModelProjectSync.new(@project).store_files(files, @revision)
+          RepositoryResources.store(@project, files, revision: @revision)
+          source = PackageRepository.new(@project)
+          source.refresh_metadata(source.package)
         end
+        @project.refresh_display_name unless @project.brief&.key?("error")
         @project.update_science_score if @project.brief.present?
       end
       if !swhid_due && scientific? && @project.swhid_scan_due?
@@ -36,10 +39,10 @@ class ProjectRepositoryScanner
   def with_checkout
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     origin = @project.repository["clone_url"].presence || @project.url
-    if @project.model_project? && !@revision.to_s.match?(/\A[0-9a-f]{40}\z/)
+    if @project.repository_from_package? && !@revision.to_s.match?(/\A[0-9a-f]{40}\z/)
       raise RepositoryCommand::Error, "Model checkout requires a full commit SHA"
     end
-    repository = RepositoryCheckout.new(origin, revision: @revision, skip_lfs: @project.model_project?)
+    repository = RepositoryCheckout.new(origin, revision: @revision, skip_lfs: @project.repository_from_package?)
     repository.open do |checkout, _, command|
       yield checkout, origin, command
     end
