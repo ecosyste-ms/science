@@ -77,6 +77,56 @@ class Api::V1::ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes json_response, 'nonscience-pkg'
   end
 
+  test "GET names reads only names across batches without instantiating projects" do
+    rows = 1_005.times.map do |index|
+      { url: "https://huggingface.co/lab/model-#{index}", name: "Model #{index}", science_score: 8,
+        packages: [{ 'name' => "Lab/Model-#{index}", 'downloads' => index, 'description' => 'metadata ' * 100 }],
+        repository: { 'description' => 'repository data ' * 100 }, readme: 'readme ' * 100 }
+    end
+    rows.first[:packages] += [{ 'name' => 'LAB/MODEL-1004' }, { 'name' => nil }, { 'description' => 'No name' }]
+    rows.last[:name] = nil
+    Project.insert_all!(rows)
+    queries = []
+    instantiated = []
+    Rails.cache.clear
+    ActiveSupport::Notifications.subscribed(->(*args) { queries << args.last[:sql] }, 'sql.active_record') do
+      ActiveSupport::Notifications.subscribed(->(*args) { instantiated << args.last[:class_name] }, 'instantiation.active_record') do
+        get names_api_v1_projects_url
+      end
+    end
+
+    assert_response :success
+    expected = ((0...1_004).map { |i| "model #{i}" } + (0...1_005).map { |i| "lab/model-#{i}" }).sort
+    assert_equal expected, response.parsed_body
+    refute_includes instantiated, 'Project'
+    project_queries = queries.grep(/SELECT .*FROM "projects"/)
+    assert_operator project_queries.size, :>, 1
+    project_queries.each do |sql|
+      projection = sql.split('FROM "projects"').first
+      refute_match(/\*|"repository"|"readme"|"brief"|"projects"\."packages"/, projection.gsub("'$[*].name'", "''"))
+    end
+  end
+
+  test "GET names preserves visibility and package filters and caches the result" do
+    host = Host.create!(name: 'GitHub', url: 'https://github.com', kind: 'github')
+    owner = Owner.create!(host: host, login: 'hidden')
+    Project.create!(url: 'https://github.com/hidden/tool', owner_id: owner.id, name: 'Hidden', science_score: 30, packages: [{ 'name' => 'hidden-pkg' }])
+    owner.update!(hidden: true)
+    Project.create!(url: 'https://github.com/example/empty', name: 'Empty', science_score: 30, packages: [])
+    Project.create!(url: 'https://github.com/example/nil', name: 'Nil', science_score: 30)
+    Project.create!(url: 'https://github.com/example/visible', name: 'Visible', science_score: 1, packages: [{ 'name' => 'Homebrew' }])
+    store = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(store)
+    get names_api_v1_projects_url
+    assert_equal %w[empty homebrew visible], response.parsed_body
+    queries = []
+    ActiveSupport::Notifications.subscribed(->(*args) { queries << args.last[:sql] }, 'sql.active_record') do
+      get names_api_v1_projects_url
+    end
+    assert_equal %w[empty homebrew visible], response.parsed_body
+    assert_empty queries.grep(/FROM "projects"/)
+  end
+
   test "GET show includes a zero science score and its breakdown" do
     breakdown = {
       "score" => 0.0,

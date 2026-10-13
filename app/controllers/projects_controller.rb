@@ -59,7 +59,7 @@ class ProjectsController < ApplicationController
   end
 
   def packages
-    @projects = Project.packages_sorted
+    @pagy, @projects = pagy(Project.packages_sorted, limit: 20)
   end
 
   def joss

@@ -2,6 +2,7 @@ require 'csv'
 require 'matrix'
 require 'tf-idf-similarity'
 require 'stopwords'
+require 'set'
 require 'github/markup'
 
 class Project < ApplicationRecord
@@ -675,28 +676,23 @@ class Project < ApplicationRecord
     repository['fork']
   end
 
-  def self.packages_sorted_ids
-    Rails.cache.fetch('packages_projects_ids', expires_in: 2.hours) do
-      visible
-        .with_packages
-        .where('science_score > 0')
-        .sort_by { |p| p.packages.sum { |pkg| pkg['downloads'] || 0 } }
-        .reverse
-        .map(&:id)
-    end
-  end
-
   def self.packages_sorted
-    project_ids = packages_sorted_ids
-    Project.visible.where(id: project_ids).index_by(&:id).values_at(*project_ids).compact
+    visible.where('science_score > 0')
+      .where("jsonb_array_length(COALESCE(packages::jsonb, '[]'::jsonb)) > 0")
+      .order(Arel.sql("COALESCE((SELECT SUM((package->>'downloads')::numeric) FROM jsonb_array_elements(packages::jsonb) AS package), 0) DESC"), id: :desc)
   end
 
   def self.all_package_and_project_names
     Rails.cache.fetch('all_package_and_project_names', expires_in: 2.hours) do
-      projects = packages_sorted
-      package_names = projects.flat_map { |p| p.packages.map { |pkg| pkg['name'] } }.compact
-      project_names = projects.map(&:name).compact
-      (package_names + project_names).map(&:downcase).uniq.sort
+      names = Set.new
+      uncached do
+        visible.with_packages.where('science_score > 0').in_batches(of: 1_000) do |batch|
+          batch.pluck(:name, Arel.sql("jsonb_path_query_array(packages::jsonb, '$[*].name')")).each do |name, package_names|
+            ([name] + package_names).grep(String).each { |value| names << value.downcase }
+          end
+        end
+      end
+      names.to_a.sort
     end
   end
 

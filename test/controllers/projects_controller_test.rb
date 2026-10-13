@@ -631,6 +631,40 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "packages paginates download rankings before loading projects" do
+    rows = 25.times.map do |i|
+      { url: "https://github.com/test/packages-#{i}", name: "Package project #{i}", science_score: 8,
+        packages: [{ 'name' => "pkg-#{i}", 'downloads' => (i.zero? ? nil : 25 - i), 'registry' => { 'name' => 'npm' } },
+                   { 'name' => "extra-#{i}", 'downloads' => 3 * i, 'registry' => { 'name' => 'npm' } }] }
+    end
+    ids = Project.insert_all!(rows, returning: %w[id]).rows.flatten
+    @project.update_columns(packages: [])
+    @non_science_project.update_columns(packages: rows.last[:packages])
+    host = Host.create!(name: "GitHub")
+    owner = Owner.create!(host: host, login: "hidden-packages", hidden: true)
+    Project.insert_all!([{ url: "https://github.com/hidden/packages", owner_id: owner.id, science_score: 100,
+                          packages: [{ 'downloads' => 10000 }] }])
+
+    instantiated = 0
+    subscriber = lambda do |*args|
+      event = ActiveSupport::Notifications::Event.new(*args)
+      instantiated += event.payload[:record_count] if event.payload[:class_name] == 'Project'
+    end
+    ActiveSupport::Notifications.subscribed(subscriber, 'instantiation.active_record') do
+      get packages_projects_url
+    end
+    assert_response :success
+    assert_equal ids.reverse.first(20), assigns(:projects).map(&:id)
+    assert_equal 20, instantiated
+    assert_select '.card.project', count: 20
+    assert_select 'a[href*="page=2"]'
+
+    get packages_projects_url, params: { page: 2 }
+    assert_response :success
+    assert_equal ids.reverse.last(5), assigns(:projects).map(&:id)
+    assert_select '.card.project', count: 5
+  end
+
   test "index sorts by allowlisted column" do
     low = Project.create!(url: "https://github.com/test/low-score", science_score: 10)
     get projects_url, params: { sort: 'science_score', order: 'asc' }

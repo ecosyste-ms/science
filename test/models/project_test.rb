@@ -802,32 +802,6 @@ class ProjectTest < ActiveSupport::TestCase
     assert_equal 1, changes.length
   end
 
-  test "packages_sorted_ids returns cached sorted project ids" do
-    project1 = Project.create!(
-      url: 'https://github.com/test/project1',
-      science_score: 50,
-      packages: [{ 'name' => 'pkg1', 'downloads' => 1000 }]
-    )
-    project2 = Project.create!(
-      url: 'https://github.com/test/project2',
-      science_score: 75,
-      packages: [{ 'name' => 'pkg2', 'downloads' => 5000 }]
-    )
-    project3 = Project.create!(
-      url: 'https://github.com/test/project3',
-      science_score: 0,
-      packages: [{ 'name' => 'pkg3', 'downloads' => 10000 }]
-    )
-
-    Rails.cache.clear
-    ids = Project.packages_sorted_ids
-
-    assert_includes ids, project1.id
-    assert_includes ids, project2.id
-    assert_not_includes ids, project3.id
-    assert_equal project2.id, ids.first
-  end
-
   test "packages_sorted returns projects in correct order" do
     project1 = Project.create!(
       url: 'https://github.com/test/project1',
