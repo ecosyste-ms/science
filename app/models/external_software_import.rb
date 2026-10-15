@@ -61,6 +61,10 @@ class ExternalSoftwareImport < ApplicationRecord
     start_catalogue(source: "ascl", page_size: page_size, restart: restart)
   end
 
+  def self.start_mloss(page_size: nil, restart: false)
+    start_catalogue(source: "mloss", page_size: page_size, restart: restart)
+  end
+
   def self.start_swmath(page_size: nil, restart: false)
     start_catalogue(source: "swmath", page_size: page_size, restart: restart)
   end
@@ -78,8 +82,8 @@ class ExternalSoftwareImport < ApplicationRecord
   end
 
   def self.start_catalogue(source:, page_size: nil, restart: false)
-    initial_cursor = { "biotools" => "1", "ascl" => nil, "swmath" => nil, "rrid_seeds" => nil, "rrid" => nil, "doi_seeds" => nil }.fetch(source)
-    client = { "biotools" => BiotoolsClient, "ascl" => AsclClient, "swmath" => SwmathClient,
+    initial_cursor = { "biotools" => "1", "ascl" => nil, "mloss" => nil, "swmath" => nil, "rrid_seeds" => nil, "rrid" => nil, "doi_seeds" => nil }.fetch(source)
+    client = { "biotools" => BiotoolsClient, "ascl" => AsclClient, "mloss" => MlossClient, "swmath" => SwmathClient,
       "rrid_seeds" => RridClient, "rrid" => RridCatalogueClient, "doi_seeds" => SoftwareDoiClient }.fetch(source)
     max_page_size = client::PAGE_SIZE
     if page_size && (!page_size.is_a?(Integer) || !page_size.between?(1, max_page_size))
@@ -117,6 +121,11 @@ class ExternalSoftwareImport < ApplicationRecord
       .where("lease_expires_at IS NULL OR lease_expires_at <= ?", Time.current).first
   end
 
+  def self.resumable_mloss
+    where(source: "mloss", completed_at: nil).where("next_run_at <= ?", Time.current)
+      .where("lease_expires_at IS NULL OR lease_expires_at <= ?", Time.current).first
+  end
+
   def self.resumable_swmath
     where(source: "swmath", completed_at: nil).where("next_run_at <= ?", Time.current)
       .where("lease_expires_at IS NULL OR lease_expires_at <= ?", Time.current).first
@@ -139,7 +148,7 @@ class ExternalSoftwareImport < ApplicationRecord
 
   def enqueue
     return if completed_at
-    worker = { "biotools" => ImportBiotoolsWorker, "ascl" => ImportAsclWorker,
+    worker = { "biotools" => ImportBiotoolsWorker, "ascl" => ImportAsclWorker, "mloss" => ImportMlossWorker,
       "swmath" => ImportSwmathWorker, "wikidata" => ImportWikidataWorker,
       "rrid_seeds" => ImportRridSeedsWorker, "rrid" => ImportRridWorker,
       "doi_seeds" => ImportSoftwareDoiSeedsWorker }.fetch(source)
@@ -179,6 +188,7 @@ class ExternalSoftwareImport < ApplicationRecord
       ids = records.map do |record|
         case source
         when "ascl" then AsclClient.identifier(record["ascl_id"])
+        when "mloss" then MlossClient.identifier(record["id"])
         when "swmath" then SwmathClient.identifier(record["id"].to_s)
         when "rrid" then RridClient.identifier(record.dig("item", "identifier"))
         when "doi_seeds" then record.fetch("project_id").to_s

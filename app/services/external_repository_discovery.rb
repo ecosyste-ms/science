@@ -2,7 +2,7 @@ require "digest"
 
 class ExternalRepositoryDiscovery
   IMPORTERS = { "wikidata" => WikidataImporter, "biotools" => BiotoolsImporter,
-    "ascl" => AsclImporter, "swmath" => SwmathImporter, "rrid" => RridImporter }.freeze
+    "ascl" => AsclImporter, "mloss" => MlossImporter, "swmath" => SwmathImporter, "rrid" => RridImporter }.freeze
 
   def self.due
     ExternalSoftwareRecord.where(source: IMPORTERS.keys, status: "ok")

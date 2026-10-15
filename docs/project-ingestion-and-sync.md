@@ -260,9 +260,26 @@ Project pages group confirmed version families under one concept DOI, labeled Ze
 
 The wider DataCite software catalogue is outside this seed pass. [The sampling follow-up](https://github.com/ecosyste-ms/science/issues/256) will examine resource types, release duplication, repository coverage and import costs before wider discovery is enabled. Documented harvesting by other registries does not establish equivalent record or field coverage.
 
+## JMLR MLOSS catalogue
+
+MLOSS imports the dedicated JMLR software-track catalogue. Each cached record retains its article key, canonical article URL, title, bibliographic details and links labelled `code`. Article keys work without a DOI. Other links, such as the publisher's article-edit repository, do not establish software identity.
+
+```bash
+bundle exec rake mloss:sweep
+bundle exec rake mloss:status
+bundle exec rake mloss:resume mloss:refresh
+IDS=v27/26-0434,v9/fan08a bundle exec rake mloss:import
+bundle exec rake mloss:unresolved
+RESTART=true bundle exec rake mloss:sweep
+```
+
+Sweeps save pages of up to 50 records before matching and resume after interruption. `LIMIT` sets the page size; omit it when resuming. The catalogue is cached for six hours when its serialized snapshot fits within 512 KB. Failed or malformed requests preserve existing evidence, and requests for articles absent from the catalogue record an error rather than treating absence as a confirmed withdrawal. Rate limits share a cooldown and honor `Retry-After`. Successful records become due for refresh after 30 days. `mloss:resweep` repeats a completed import and leaves an unfinished import's progress intact; no recurring MLOSS schedule is configured.
+
+Explicit repository links use indexed URL and alias matching, including multiple repositories per article. Matched articles appear in project references and the external-identifiers API. Owner-only links, package pages and other homepages remain in source metadata. `mloss:unresolved` reports these links in bounded pages; pass its `next_after` value as `AFTER` to continue. Discovery outcomes for repository URLs are stored separately in `discovery_result`. MLOSS records do not change score weights or create normalized Paper records.
+
 ## Repository discovery from cached sources
 
-`external_software:discover` queues a separate worker that reads up to 100 due Wikidata, bio.tools, ASCL, swMATH or RRID records. It uses the stored repository statements, normalized URLs and indexed aliases to attach evidence to existing projects or create minimal projects. GitHub and GitLab hosts already recorded in `hosts` are supported for creation, with `gitlab.com` included by default. Nested GitLab namespaces are preserved. Other hosts remain in the discovery results as unsupported candidates. Hidden owners are excluded, and ambiguous matches retain all candidate projects without requesting enrichment.
+`external_software:discover` queues a separate worker that reads up to 100 due Wikidata, bio.tools, ASCL, MLOSS, swMATH or RRID records. It uses the stored repository statements, normalized URLs and indexed aliases to attach evidence to existing projects or create minimal projects. GitHub and GitLab hosts already recorded in `hosts` are supported for creation, with `gitlab.com` included by default. Nested GitLab namespaces are preserved. Other hosts remain in the discovery results as unsupported candidates. Hidden owners are excluded, and ambiguous matches retain all candidate projects without requesting enrichment.
 
 Run `bundle exec rake external_software:discover` to start a batch, or set `LIMIT=10` for a smaller batch. The task runs every ten minutes and also recovers pending project sync requests. `bundle exec rake external_software:discovery_status` reports due records by source, failed records and pending syncs. Each source record stores its latest candidate outcomes and the IDs it created in `discovery_result`; worker logs count created, existing, ambiguous, hidden and unsupported repository URLs by source. These are per-source counts, so overlapping sources can report the same project.
 
