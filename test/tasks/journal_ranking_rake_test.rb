@@ -107,6 +107,20 @@ class JournalRankingRakeTest < ActiveSupport::TestCase
     assert_empty report["journals"]
   end
 
+  test "packages with visible publishers are included with or without owner metadata" do
+    publication = paper
+    @package.update!(published_by_project: @project)
+    @package.package_papers.create!(paper: publication, role: "model_paper", evidence: @evidence)
+    assert_equal 1, rank["journals"].sole["model_pairs"]
+
+    host = Host.create!(name: "GitHub", url: "https://github.com", kind: "GitHub")
+    owner = Owner.create!(host: host, login: "example", hidden: false)
+    @project.update!(owner_record: owner)
+    assert_equal 1, rank["journals"].sole["model_pairs"]
+    owner.update!(hidden: nil)
+    assert_equal 1, rank["journals"].sole["model_pairs"]
+  end
+
   test "output limits retain population totals and direct pairs precede reference-only sources" do
     referenced = paper(source: "https://openalex.org/S100", issn: "1111-1111")
     described = paper(source: "https://openalex.org/S200", issn: "2222-2222")

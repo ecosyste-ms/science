@@ -2,7 +2,9 @@ class JournalRankingReport
   def call(limit: 100)
     raise ArgumentError, "limit must be between 1 and 1000" unless limit.is_a?(Integer) && limit.between?(1, 1000)
     projects = Project.visible.select(:id).to_sql
-    packages = Package.visible.select(:id).to_sql
+    packages = Package.left_joins(published_by_project: :owner_record)
+      .where("packages.published_by_project_id IS NULL OR (projects.id IS NOT NULL AND owners.hidden IS NOT TRUE)")
+      .select(:id).to_sql
     sql = <<~SQL
       WITH raw_links AS (
         SELECT paper_id, 'project' AS kind, project_id AS entity_id,
