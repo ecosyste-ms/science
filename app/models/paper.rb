@@ -68,17 +68,25 @@ class Paper < ApplicationRecord
     end
   end
 
-  def self.import_publication!(title:, url:)
+  def self.import_publication!(title:, url:, doi: nil, publication_date: nil)
     raise ArgumentError, "Missing publication title" unless title.is_a?(String) && title.present?
     identities = PaperIdentifier.from_urls([url])
     raise ArgumentError, "Unsupported publication URL" unless identities.one?
+    doi = doi&.downcase&.sub(%r{\Ahttps?://(?:dx\.)?doi\.org/}, "")
+    raise ArgumentError, "Invalid publication DOI" if doi && !doi.match?(%r{\A10\.\d{4,9}/\S+\z})
+    dois = doi ? [doi, "https://doi.org/#{doi}", "http://doi.org/#{doi}", "https://dx.doi.org/#{doi}", "http://dx.doi.org/#{doi}"] : []
 
     transaction do
-      lock_import_identifiers!(PaperIdentifier.lock_keys(identities))
-      papers = where(id: PaperIdentifier.paper_ids_for(identities)).limit(2).to_a
+      lock_import_identifiers!(PaperIdentifier.lock_keys(identities) + [doi].compact)
+      matches = where(id: PaperIdentifier.paper_ids_for(identities))
+      matches = matches.or(where("lower(doi) IN (?)", dois)) if doi
+      papers = matches.limit(2).to_a
       raise ArgumentError, "Multiple papers match #{url}" if papers.size > 1
       paper = papers.first || new
+      raise ArgumentError, "Publisher article has a different stored DOI" if doi && paper.doi.present? && !dois.include?(paper.doi.downcase)
+      paper.doi = doi if doi
       paper.title = title if paper.openalex_id.blank? || paper.title.blank?
+      paper.publication_date ||= Date.iso8601(publication_date) if publication_date.present?
       paper.urls = (Array(paper.urls) + [url]).uniq
       paper.save! if paper.changed?
       PaperIdentifier.attach!(paper, identities)

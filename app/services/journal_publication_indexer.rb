@@ -1,6 +1,13 @@
 class JournalPublicationIndexer
   def sync!(record, entity)
-    paper = Paper.import_publication!(title: entity.fetch("title"), url: entity.fetch("article_url"))
+    paper = if entity["eligible"] == false
+      identity = PaperIdentifier.from_urls([entity.fetch("article_url")]).sole
+      Paper.joins(:paper_identifiers).find_by(paper_identifiers: identity)
+    else
+      Paper.import_publication!(title: entity.fetch("title"), url: entity.fetch("article_url"),
+        doi: entity["doi"], publication_date: entity["publication_date"])
+    end
+    return unless paper
     marker = { "source" => record.source, "source_identifier" => record.identifier }
     existing = paper.project_papers.lock.index_by(&:project_id)
     record.project_external_software_records.where(match_status: "matched").find_each do |source_link|

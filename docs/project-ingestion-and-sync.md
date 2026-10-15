@@ -281,6 +281,20 @@ Each article also creates or reuses a `Paper`, identified by a unique JMLR artic
 
 OpenAlex imports reconcile JMLR article and PDF URLs with the publisher identifier, including papers previously imported with URLs but no publisher identifier. They enrich the existing paper in either import order. Conflicting paper identities produce an error instead of merging records. Software archive URLs remain source evidence and are not assigned as the article DOI. Journal imports preserve existing OpenAlex metadata, and paper matching does not use titles. Apply both publication-identity migrations before running these imports; the index on existing paper URLs is built concurrently.
 
+## JORS software metapapers
+
+JORS uses the publisher's paginated article listing and XML downloads. Only articles categorized as Software Metapapers supply software associations. The collector reads Software location and Code repository sections, including numbered headings. Plain-text GitHub identifiers require a matching full URL elsewhere in the article. Archive and package URLs remain separate from repository candidates in the stored metadata.
+
+```sh
+bundle exec rake jors:sweep
+bundle exec rake jors:status
+bundle exec rake jors:resume jors:refresh
+IDS=10.5334/jors.359,10.5334/jors.85 bundle exec rake jors:import
+RESTART=true bundle exec rake jors:sweep
+```
+
+Each worker handles up to five articles and saves parsed records before matching. Publisher pagination and offsets are retained for resumption. Article DOI, XML URL, category, date and software-section text are retained as evidence. Confirmed repositories use the same discovery and publication paths as MLOSS, including multiple projects per paper and exclusion from score bonuses. Reclassification removes that source's associations while retaining independent evidence. Invalid XML, mismatched DOIs and failed requests preserve the last successful snapshot. Imports and refreshes are manual; no recurring schedule is configured.
+
 ## Repository discovery from cached sources
 
 `external_software:discover` queues a separate worker that reads up to 100 due Wikidata, bio.tools, ASCL, MLOSS, swMATH or RRID records. It uses the stored repository statements, normalized URLs and indexed aliases to attach evidence to existing projects or create minimal projects. GitHub and GitLab hosts already recorded in `hosts` are supported for creation, with `gitlab.com` included by default. Nested GitLab namespaces are preserved. Other hosts remain in the discovery results as unsupported candidates. Hidden owners are excluded, and ambiguous matches retain all candidate projects without requesting enrichment.

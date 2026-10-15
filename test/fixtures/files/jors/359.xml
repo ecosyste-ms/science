@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.2 20120330//EN" "http://jats.nlm.nih.gov/publishing/1.2/JATS-journalpublishing1.dtd">
+<!--<?xml-stylesheet type="text/xsl" href="article.xsl"?>-->
+<article article-type="research-article" dtd-version="1.2" lang="en">
+<front>
+<journal-meta>
+<journal-id journal-id-type="issn">2049-9647</journal-id>
+<journal-title-group>
+<journal-title>Journal of Open Research Software</journal-title>
+</journal-title-group>
+<issn pub-type="epub">2049-9647</issn>
+<publisher>
+<publisher-name>Ubiquity Press</publisher-name>
+</publisher>
+</journal-meta>
+<article-meta>
+<article-id pub-id-type="doi">10.5334/jors.359</article-id>
+<article-categories>
+<subj-group>
+<subject>Software metapaper</subject>
+</subj-group>
+</article-categories>
+<title-group>
+<article-title>The Research Software Encyclopedia: A Community Framework to Define Research Software</article-title>
+</title-group>
+
+
+
+
+
+<pub-date publication-format="electronic" date-type="pub" iso-8601-date="2022-03-04">
+<day>04</day>
+<month>03</month>
+<year>2022</year>
+</pub-date>
+<pub-date pub-type="collection">
+<year>2022</year>
+</pub-date>
+<volume>10</volume>
+<elocation-id>2</elocation-id>
+<history>
+<date date-type="received" iso-8601-date="2020-12-01">
+<day>01</day>
+<month>12</month>
+<year>2020</year>
+</date>
+<date date-type="accepted" iso-8601-date="2022-02-25">
+<day>25</day>
+<month>02</month>
+<year>2022</year>
+</date>
+</history>
+<permissions>
+<copyright-statement>Copyright: © 2022 The Author(s)</copyright-statement>
+<copyright-year>2022</copyright-year>
+<license license-type="open-access" href="http://creativecommons.org/licenses/by/4.0/">
+<license-p>This is an open-access article distributed under the terms of the Creative Commons Attribution 4.0 International License (CC-BY 4.0), which permits unrestricted use, distribution, and reproduction in any medium, provided the original author and source are credited. See <uri href="http://creativecommons.org/licenses/by/4.0/">http://creativecommons.org/licenses/by/4.0/</uri>.</license-p>
+</license>
+</permissions>
+<self-uri href="http://openresearchsoftware.metajnl.com/articles/10.5334/jors.359/"/>
+
+<kwd-group>
+<kwd>research software engineering</kwd>
+<kwd>research software definition</kwd>
+<kwd>research software community</kwd>
+</kwd-group>
+</article-meta>
+</front>
+<body><sec>
+<title>Software location</title>
+<p><bold><italic>Name:</italic></bold> rse-0.0.34.tar.gz</p>
+<p><bold><italic>Persistent identifier:</italic></bold> <italic><ext-link ext-link-type="uri" href="https://zenodo.org/record/5546046#.YVi-uXtMFH4">https://zenodo.org/record/5546046#.YVi-uXtMFH4</ext-link></italic></p>
+<p><bold><italic>Package manager:</italic></bold> <italic><ext-link ext-link-type="uri" href="https://pypi.org/project/rse/0.0.34/">https://pypi.org/project/rse/0.0.34/</ext-link></italic></p>
+<p><bold><italic>License:</italic></bold> MPL 2.0</p>
+<p><bold><italic>Publisher:</italic></bold> Vanessa Sochat</p>
+<p><bold><italic>Version published:</italic></bold> 0.0.34</p>
+<p><bold><italic>Date published:</italic></bold> January 28, 2022</p>
+<p><bold>Criteria and Taxonomy Archive</bold> pypi is used as a package manager for releases.</p>
+<p><bold><italic>Name:</italic></bold> rseng-0.0.18.tar.gz</p>
+<p><bold><italic>Persistent identifier:</italic></bold> <italic><ext-link ext-link-type="uri" href="https://zenodo.org/record/5546052#.YVi-43tMFH4">https://zenodo.org/record/5546052#.YVi-43tMFH4</ext-link></italic></p>
+<p><bold><italic>Package manager:</italic></bold> <italic><ext-link ext-link-type="uri" href="https://pypi.org/project/rseng/0.0.18/">https://pypi.org/project/rseng/0.0.18/</ext-link></italic></p>
+<p><bold><italic>License:</italic></bold> MPL 2.0</p>
+<p><bold><italic>Publisher:</italic></bold> Vanessa Sochat</p>
+<p><bold><italic>Version published:</italic></bold> 0.0.18</p>
+<p><bold><italic>Date published:</italic></bold> December 6, 2020</p>
+<p><bold>Research Software Encyclopedia Code repository</bold> GitHub</p>
+<p><bold><italic>Name:</italic></bold> <italic><ext-link ext-link-type="uri" href="https://github.com/rseng/rse">https://github.com/rseng/rse</ext-link></italic></p>
+<p><bold><italic>Persistent identifier:</italic></bold> <italic><ext-link ext-link-type="uri" href="https://zenodo.org/record/5546054#.YVi_FHtMFH4">https://zenodo.org/record/5546054#.YVi_FHtMFH4</ext-link></italic></p>
+<p><bold><italic>License:</italic></bold> MPL 2.0</p>
+<p><bold><italic>Date published:</italic></bold> November 27, 2020</p>
+<p><bold>Taxonomy and Criteria Code repository</bold> GitHub</p>
+<p><bold><italic>Name:</italic></bold> <italic><ext-link ext-link-type="uri" href="https://github.com/rseng/rseng">https://github.com/rseng/rseng</ext-link></italic></p>
+<p><bold><italic>Persistent identifier:</italic></bold> <italic><ext-link ext-link-type="uri" href="https://github.com/rseng/rseng">https://github.com/rseng/rseng</ext-link></italic></p>
+<p><bold><italic>License:</italic></bold> MPL 2.0</p>
+<p><bold><italic>Date published:</italic></bold> September 28, 2020</p>
+</sec><ext-link ext-link-type="uri" href="https://github.com/rseng/rseng">rseng</ext-link><ext-link ext-link-type="uri" href="https://github.com/rseng/rseng/tree/gh-pages">GitHub Pages branch</ext-link><ext-link ext-link-type="uri" href="https://github.com/rseng/rse">https://github.com/rseng/rse</ext-link><ext-link ext-link-type="uri" href="https://github.com/singularityhub/singularity-hpc">https://github.com/singularityhub/singularity-hpc</ext-link><ext-link ext-link-type="uri" href="https://github.com/dask/dask">https://github.com/dask/dask</ext-link><ext-link ext-link-type="uri" href="https://github.com/rseng/software">https://github.com/rseng/software</ext-link><ext-link ext-link-type="uri" href="https://github.com/rseng/rse">https://github.com/rseng/rse</ext-link><ext-link ext-link-type="uri" href="https://github.com/rseng/rseng">https://github.com/rseng/rseng</ext-link><ext-link ext-link-type="uri" href="https://github.com/rseng/rseng">https://github.com/rseng/rseng</ext-link></body>
+
+</article>

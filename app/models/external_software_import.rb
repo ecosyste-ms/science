@@ -82,9 +82,9 @@ class ExternalSoftwareImport < ApplicationRecord
   end
 
   def self.start_catalogue(source:, page_size: nil, restart: false)
-    initial_cursor = { "biotools" => "1", "ascl" => nil, "mloss" => nil, "swmath" => nil, "rrid_seeds" => nil, "rrid" => nil, "doi_seeds" => nil }.fetch(source)
+    initial_cursor = { "biotools" => "1", "ascl" => nil, "mloss" => nil, "jors" => nil, "swmath" => nil, "rrid_seeds" => nil, "rrid" => nil, "doi_seeds" => nil }.fetch(source)
     client = { "biotools" => BiotoolsClient, "ascl" => AsclClient, "mloss" => MlossClient, "swmath" => SwmathClient,
-      "rrid_seeds" => RridClient, "rrid" => RridCatalogueClient, "doi_seeds" => SoftwareDoiClient }.fetch(source)
+      "rrid_seeds" => RridClient, "rrid" => RridCatalogueClient, "doi_seeds" => SoftwareDoiClient, "jors" => JorsClient }.fetch(source)
     max_page_size = client::PAGE_SIZE
     if page_size && (!page_size.is_a?(Integer) || !page_size.between?(1, max_page_size))
       raise ArgumentError, "page size must be between 1 and #{max_page_size}"
@@ -151,7 +151,7 @@ class ExternalSoftwareImport < ApplicationRecord
     worker = { "biotools" => ImportBiotoolsWorker, "ascl" => ImportAsclWorker, "mloss" => ImportMlossWorker,
       "swmath" => ImportSwmathWorker, "wikidata" => ImportWikidataWorker,
       "rrid_seeds" => ImportRridSeedsWorker, "rrid" => ImportRridWorker,
-      "doi_seeds" => ImportSoftwareDoiSeedsWorker }.fetch(source)
+      "doi_seeds" => ImportSoftwareDoiSeedsWorker, "jors" => ImportJournalWorker }.fetch(source)
     worker.perform_at([next_run_at, lease_expires_at, Time.current].compact.max, id)
   end
 
@@ -189,6 +189,7 @@ class ExternalSoftwareImport < ApplicationRecord
         case source
         when "ascl" then AsclClient.identifier(record["ascl_id"])
         when "mloss" then MlossClient.identifier(record["id"])
+        when "jors" then JorsClient.identifier(record["id"])
         when "swmath" then SwmathClient.identifier(record["id"].to_s)
         when "rrid" then RridClient.identifier(record.dig("item", "identifier"))
         when "doi_seeds" then record.fetch("project_id").to_s

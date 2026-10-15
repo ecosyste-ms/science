@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.3 20210610//EN" "https://jats.nlm.nih.gov/publishing/1.3/JATS-journalpublishing1-3.dtd">
+<!--<?xml-stylesheet type="text/xsl" href="article.xsl"?>-->
+<article article-type="research-article" dtd-version="1.3" lang="en">
+<front>
+<journal-meta>
+<journal-id journal-id-type="issn">2049-9647</journal-id>
+<journal-title-group>
+<journal-title>Journal of Open Research Software</journal-title>
+</journal-title-group>
+<issn publication-format="electronic">2049-9647</issn>
+<publisher>
+<publisher-name>Ubiquity Press</publisher-name>
+</publisher>
+</journal-meta>
+<article-meta>
+<article-id pub-id-type="doi">10.5334/jors.694</article-id>
+<article-version>VoR</article-version>
+<article-categories>
+<subj-group>
+<subject>Software metapapers</subject>
+</subj-group>
+</article-categories>
+<title-group>
+<article-title>BigVRSP: A Data-Driven Instance Generator for Long-Haul Vehicle Routing and Scheduling Problems</article-title>
+</title-group>
+
+
+
+
+
+
+<author-notes>
+<fn fn-type="coi-statement">
+<p>The authors have no competing interests to declare.</p></fn>
+</author-notes>
+<pub-date publication-format="electronic" date-type="pub" iso-8601-date="2026-09-23">
+<day>23</day>
+<month>09</month>
+<year>2026</year>
+</pub-date>
+<pub-date publication-format="electronic" date-type="collection">
+<year>2026</year>
+</pub-date>
+<volume>14</volume>
+<elocation-id>62</elocation-id>
+<history>
+<date date-type="received" iso-8601-date="2026-02-11">
+<day>11</day>
+<month>02</month>
+<year>2026</year>
+</date>
+<date date-type="accepted" iso-8601-date="2026-09-03">
+<day>03</day>
+<month>09</month>
+<year>2026</year>
+</date>
+</history>
+<permissions>
+<copyright-statement>Copyright: © 2026 The Author(s)</copyright-statement>
+<copyright-year>2026</copyright-year>
+<copyright-holder>The Author(s)</copyright-holder>
+<license license-type="open-access" href="https://creativecommons.org/licenses/by/4.0/">
+<license_ref>https://creativecommons.org/licenses/by/4.0/</license_ref>
+<license-p>This is an open-access article distributed under the terms of the Creative Commons Attribution 4.0 International License (CC-BY 4.0), which permits unrestricted use, distribution, and reproduction in any medium, provided the original author and source are credited. See <uri href="https://creativecommons.org/licenses/by/4.0/" title="Creative Commons Attribution 4.0 International License">Creative Commons Attribution 4.0 International License</uri>.</license-p>
+</license>
+</permissions>
+<self-uri href="https://openresearchsoftware.metajnl.com/articles/10.5334/jors.694/" title="Full text of the article"/>
+
+<kwd-group>
+<kwd>long-haul transportation</kwd>
+<kwd>instance generation</kwd>
+<kwd>logistics</kwd>
+<kwd>pickup and delivery</kwd>
+<kwd>truck assignment</kwd>
+</kwd-group>
+<funding-group specific-use="crossref">
+<award-group>
+<funding-source>
+<institution-wrap>
+<institution>AGEUNI</institution>
+</institution-wrap>
+</funding-source>
+<award-id>TC 43/2024</award-id>
+</award-group>
+<award-group>
+<funding-source id="gs1" country="BRA">
+<institution-wrap>
+<institution>SETI</institution>
+<institution-id institution-id-type="doi" vocab="open-funder-registry" vocab-identifier="10.13039/open_funder_registry">10.13039/501100004611</institution-id>
+</institution-wrap>
+</funding-source>
+<award-id>TC 43/2024</award-id>
+</award-group>
+<award-group>
+<funding-source>
+<institution-wrap>
+<institution>Fundo Paraná</institution>
+</institution-wrap>
+</funding-source>
+<award-id>TC 43/2024</award-id>
+</award-group>
+<award-group>
+<funding-source id="gs2" country="BRA">
+<institution-wrap>
+<institution>Fundação Araucária</institution>
+<institution-id institution-id-type="doi" vocab="open-funder-registry" vocab-identifier="10.13039/open_funder_registry">10.13039/501100004612</institution-id>
+</institution-wrap>
+</funding-source>
+<award-id>FA TC 1001/2025</award-id>
+</award-group>
+<award-group>
+<funding-source id="gs3" country="BRA">
+<institution-wrap>
+<institution>CNPq</institution>
+<institution-id institution-id-type="doi" vocab="open-funder-registry" vocab-identifier="10.13039/open_funder_registry">10.13039/501100003593</institution-id>
+</institution-wrap>
+</funding-source>
+<award-id>140935/2024-0</award-id>
+</award-group>
+<award-group>
+<funding-source id="gs4" country="BRA">
+<institution-wrap>
+<institution>FAPESP</institution>
+<institution-id institution-id-type="doi" vocab="open-funder-registry" vocab-identifier="10.13039/open_funder_registry">10.13039/501100001807</institution-id>
+</institution-wrap>
+</funding-source>
+<award-id>2025/19235-5</award-id>
+</award-group>
+<funding-statement>This work has been supported by the Brazilian research agencies AGEUNI/SETI/Fundo Paraná TC 43/2024, Fundação Araucária (Grants No. FA TC 1001/2025), CNPq (Grants No. 140935/2024-0), and FAPESP (Grants No. 2025/19235-5).</funding-statement>
+</funding-group>
+</article-meta>
+</front>
+<body><sec>
+<title>Software location</title>
+<p><bold>Archive</bold></p>
+<list list-type="simple">
+<list-item><p><bold><italic>Name:</italic></bold> Zenodo archive</p></list-item>
+<list-item><p><bold><italic>Persistent identifier:</italic></bold> <ext-link ext-link-type="uri" href="https://doi.org/10.5281/zenodo.21299722" title="BigVRSP: A data-driven instance generator for long-haul vehicle routing and scheduling problems">https://doi.org/10.5281/zenodo.21299722</ext-link></p></list-item>
+<list-item><p><bold><italic>Licence:</italic></bold> GNU General Public License v3.</p></list-item>
+<list-item><p><bold><italic>Publisher:</italic></bold> André Felipe Zanella</p></list-item>
+<list-item><p><bold><italic>Version published:</italic></bold> v1.0.0</p></list-item>
+</list>
+<p><bold>Code repository</bold></p>
+<list list-type="simple">
+<list-item><p><bold><italic>Name:</italic></bold> GitLab</p></list-item>
+<list-item><p><bold><italic>Persistent identifier:</italic></bold> <ext-link ext-link-type="uri" href="https://gitlab.com/dma-uem/bigvrsp/" title="BigVRSP">https://gitlab.com/dma-uem/bigvrsp/</ext-link></p></list-item>
+<list-item><p><bold><italic>Licence:</italic></bold> GNU General Public License v3.</p></list-item>
+<list-item><p><bold><italic>Date published:</italic></bold> 10/02/2026</p></list-item>
+</list>
+</sec></body>
+
+</article>

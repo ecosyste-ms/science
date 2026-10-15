@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.3 20210610//EN" "https://jats.nlm.nih.gov/publishing/1.3/JATS-journalpublishing1-3.dtd">
+<!--<?xml-stylesheet type="text/xsl" href="article.xsl"?>-->
+<article article-type="research-article" dtd-version="1.3" lang="en">
+<front>
+<journal-meta>
+<journal-id journal-id-type="issn">2049-9647</journal-id>
+<journal-title-group>
+<journal-title>Journal of Open Research Software</journal-title>
+</journal-title-group>
+<issn publication-format="electronic">2049-9647</issn>
+<publisher>
+<publisher-name>Ubiquity Press</publisher-name>
+</publisher>
+</journal-meta>
+<article-meta>
+<article-id pub-id-type="doi">10.5334/jors.736</article-id>
+<article-version>VoR</article-version>
+<article-categories>
+<subj-group>
+<subject>Software metapapers</subject>
+</subj-group>
+</article-categories>
+<title-group>
+<article-title>microTorch: A Software Package for Fast and Flexible Self-Supervised Diffusion MRI Model Fitting</article-title>
+</title-group>
+
+
+
+
+
+
+
+
+
+<author-notes>
+<fn fn-type="coi-statement">
+<p>The authors have no competing interests to declare.</p>
+</fn>
+</author-notes>
+<pub-date publication-format="electronic" date-type="pub" iso-8601-date="2026-08-31">
+<day>31</day>
+<month>08</month>
+<year>2026</year>
+</pub-date>
+<pub-date publication-format="electronic" date-type="collection">
+<year>2026</year>
+</pub-date>
+<volume>14</volume>
+<elocation-id>59</elocation-id>
+<history>
+<date date-type="received" iso-8601-date="2026-04-30">
+<day>30</day>
+<month>04</month>
+<year>2026</year>
+</date>
+<date date-type="accepted" iso-8601-date="2026-08-13">
+<day>13</day>
+<month>08</month>
+<year>2026</year>
+</date>
+</history>
+<permissions>
+<copyright-statement>Copyright: © 2026 The Author(s)</copyright-statement>
+<copyright-year>2026</copyright-year>
+<copyright-holder>The Author(s)</copyright-holder>
+<license license-type="open-access" href="https://creativecommons.org/licenses/by/4.0/">
+<license_ref>https://creativecommons.org/licenses/by/4.0/</license_ref>
+<license-p>This is an open-access article distributed under the terms of the Creative Commons Attribution 4.0 International License (CC-BY 4.0), which permits unrestricted use, distribution, and reproduction in any medium, provided the original author and source are credited. See <uri href="https://creativecommons.org/licenses/by/4.0/" title="Creative Commons Attribution 4.0 International License">Creative Commons Attribution 4.0 International License</uri>.</license-p>
+</license>
+</permissions>
+<self-uri href="https://openresearchsoftware.metajnl.com/articles/10.5334/jors.736/" title="Full text of the article"/>
+
+<kwd-group>
+<kwd>diffusion MRI</kwd>
+<kwd>self-supervised learning</kwd>
+<kwd>model fitting</kwd>
+<kwd>parameter estimation</kwd>
+<kwd>compartment models</kwd>
+</kwd-group>
+<funding-group specific-use="crossref">
+<award-group>
+<funding-source id="gs1" country="GBR">
+<institution-wrap>
+<institution>EPSRC-funded UCL Centre for Doctoral Training in Intelligent, Integrated Imaging in Healthcare (i4health)</institution>
+<institution-id institution-id-type="doi" vocab="open-funder-registry" vocab-identifier="10.13039/open_funder_registry">10.13039/501100013915</institution-id>
+</institution-wrap>
+</funding-source>
+<award-id>EP/S021930/1</award-id>
+</award-group>
+<award-group>
+<funding-source id="gs2" country="GBR">
+<institution-wrap>
+<institution>NIHR Biomedical Research Centre (BRC): UCLH</institution>
+<institution-id institution-id-type="doi" vocab="open-funder-registry" vocab-identifier="10.13039/open_funder_registry">10.13039/100014461</institution-id>
+</institution-wrap>
+</funding-source>
+</award-group>
+<award-group>
+<funding-source id="gs3" country="GBR">
+<institution-wrap>
+<institution>EPSRC</institution>
+<institution-id institution-id-type="doi" vocab="open-funder-registry" vocab-identifier="10.13039/open_funder_registry">10.13039/501100000266</institution-id>
+</institution-wrap>
+</funding-source>
+<award-id>EP/N021967/1</award-id>
+<award-id>EP/R006032/1</award-id>
+<award-id>EP/V034537/1</award-id>
+</award-group>
+<award-group>
+<funding-source id="gs4" country="GBR">
+<institution-wrap>
+<institution>MRC</institution>
+<institution-id institution-id-type="doi" vocab="open-funder-registry" vocab-identifier="10.13039/open_funder_registry">10.13039/501100000265</institution-id>
+</institution-wrap>
+</funding-source>
+<award-id>MR/T046473/1</award-id>
+</award-group>
+<award-group>
+<funding-source id="gs5" country="EUE">
+<institution-wrap>
+<institution>Eurostars 3 Project</institution>
+<institution-id institution-id-type="doi" vocab="open-funder-registry" vocab-identifier="10.13039/open_funder_registry">10.13039/100013297</institution-id>
+</institution-wrap>
+</funding-source>
+<award-id>3325</award-id>
+</award-group>
+<award-group>
+<funding-source id="gs6" country="GBR">
+<institution-wrap>
+<institution>UKRI Future Leaders Fellowship</institution>
+<institution-id institution-id-type="doi" vocab="open-funder-registry" vocab-identifier="10.13039/open_funder_registry">10.13039/100014013</institution-id>
+</institution-wrap>
+</funding-source>
+<award-id>MR/T020296/2</award-id>
+<award-id>UKRI1073</award-id>
+</award-group>
+<funding-statement>SS received funding from the EPSRC-funded UCL Centre for Doctoral Training in Intelligent, Integrated Imaging in Healthcare (i4health) (EP/S021930/1) and the NIHR Biomedical Research Centre (BRC): UCLH. EP is supported by EPSRC grants EP/N021967/1, EP/R006032/1. PS received funding from the EPSRC, grant number EP/V034537/1. CSP is funded by the MRC grant MR/T046473/1. GCA is funded by Eurostars 3 Project ID 3325. MP is funded by the UKRI Future Leaders Fellowship MR/T020296/2 and UKRI1073.</funding-statement>
+</funding-group>
+</article-meta>
+</front>
+<body><sec>
+<title>Software location</title>
+<p><bold>Code repository</bold> (e.g., SourceForge, GitHub etc.)</p>
+<list list-type="simple">
+<list-item><p><bold><italic>Name:</italic></bold> GitHub</p></list-item>
+<list-item><p><bold><italic>Identifier:</italic></bold> snigdha-sen/microtorch</p></list-item>
+<list-item><p><bold><italic>Licence:</italic></bold> MIT</p></list-item>
+<list-item><p><bold><italic>Date published:</italic></bold> 30/04/2026</p></list-item>
+<list-item><p><bold><italic>DOI:</italic></bold> <ext-link ext-link-type="uri" href="https://doi.org/10.5281/zenodo.19946704" title="snigdha-sen/microtorch: Initial Release">doi.org/10.5281/zenodo.19946704</ext-link></p></list-item>
+</list>
+</sec><ext-link ext-link-type="uri" href="https://github.com/snigdha-sen/microtorch" title="snigdha-sen/microtorch">https://github.com/snigdha-sen/microtorch</ext-link></body>
+
+</article>

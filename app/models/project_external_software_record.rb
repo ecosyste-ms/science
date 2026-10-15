@@ -16,7 +16,7 @@ class ProjectExternalSoftwareRecord < ApplicationRecord
 
   def self.registry_references
     joins(:external_software_record).where(match_status: "matched")
-      .where(external_software_records: { status: %w[ok error], source: %w[wikidata biotools ascl mloss swmath rrid doi] })
+      .where(external_software_records: { status: %w[ok error], source: %w[wikidata biotools ascl mloss jors swmath rrid doi] })
       .where.not(external_software_records: { retrieved_at: nil })
       .order("external_software_records.source", "external_software_records.identifier")
       .pluck("external_software_records.source", "external_software_records.identifier", "external_software_records.concept_identifier")

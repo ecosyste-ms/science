@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.3 20210610//EN" "https://jats.nlm.nih.gov/publishing/1.3/JATS-journalpublishing1-3.dtd">
+<!--<?xml-stylesheet type="text/xsl" href="article.xsl"?>-->
+<article article-type="research-article" dtd-version="1.3" lang="en">
+<front>
+<journal-meta>
+<journal-id journal-id-type="issn">2049-9647</journal-id>
+<journal-title-group>
+<journal-title>Journal of Open Research Software</journal-title>
+</journal-title-group>
+<issn publication-format="electronic">2049-9647</issn>
+<publisher>
+<publisher-name>Ubiquity Press</publisher-name>
+</publisher>
+</journal-meta>
+<article-meta>
+<article-id pub-id-type="doi">10.5334/jors.743</article-id>
+<article-version>VoR</article-version>
+<article-categories>
+<subj-group>
+<subject>Software metapapers</subject>
+</subj-group>
+</article-categories>
+<title-group>
+<article-title>GravDyn: A Python Framework for Gravitational Modeling of Irregular Celestial Bodies Using Polyhedral, Mascon, and Series Expansion Methods</article-title>
+</title-group>
+
+
+
+
+
+
+
+
+<author-notes>
+<fn fn-type="coi-statement">
+<p>The authors have no competing interests to declare.</p></fn>
+</author-notes>
+<pub-date publication-format="electronic" date-type="pub" iso-8601-date="2026-08-31">
+<day>31</day>
+<month>08</month>
+<year>2026</year>
+</pub-date>
+<pub-date publication-format="electronic" date-type="collection">
+<year>2026</year>
+</pub-date>
+<volume>14</volume>
+<elocation-id>60</elocation-id>
+<history>
+<date date-type="received" iso-8601-date="2026-05-14">
+<day>14</day>
+<month>05</month>
+<year>2026</year>
+</date>
+<date date-type="accepted" iso-8601-date="2026-08-05">
+<day>05</day>
+<month>08</month>
+<year>2026</year>
+</date>
+</history>
+<permissions>
+<copyright-statement>Copyright: © 2026 The Author(s)</copyright-statement>
+<copyright-year>2026</copyright-year>
+<copyright-holder>The Author(s)</copyright-holder>
+<license license-type="open-access" href="https://creativecommons.org/licenses/by/4.0/">
+<license_ref>https://creativecommons.org/licenses/by/4.0/</license_ref>
+<license-p>This is an open-access article distributed under the terms of the Creative Commons Attribution 4.0 International License (CC-BY 4.0), which permits unrestricted use, distribution, and reproduction in any medium, provided the original author and source are credited. See <uri href="https://creativecommons.org/licenses/by/4.0/" title="Creative Commons Attribution 4.0 International License">Creative Commons Attribution 4.0 International License</uri>.</license-p>
+</license>
+</permissions>
+<self-uri href="https://openresearchsoftware.metajnl.com/articles/10.5334/jors.743/" title="Full text of the article"/>
+
+<kwd-group>
+<kwd>celestial mechanics</kwd>
+<kwd>asteroid dynamics</kwd>
+<kwd>gravitational modeling</kwd>
+<kwd>polyhedral gravity</kwd>
+<kwd>mascon method</kwd>
+<kwd>potential series expansion</kwd>
+<kwd>celestial mechanics software</kwd>
+<kwd>small-body environments</kwd>
+</kwd-group>
+<funding-group>
+<funding-statement>This research received no specific grant from any funding agency in the public, commercial, or not-for-profit sectors.</funding-statement>
+</funding-group>
+</article-meta>
+</front>
+<body><sec>
+<title>2.6 Software location</title>
+<p><bold>Archive</bold></p>
+<list list-type="simple">
+<list-item><p><bold><italic>Name:</italic></bold> Zenodo.</p></list-item>
+<list-item><p><bold><italic>Persistent identifier:</italic></bold> <ext-link ext-link-type="uri" href="https://doi.org/10.5281/zenodo.20210316" title="GravDyn: A Python Framework for Gravitational Modeling of Irregular Celestial Bodies Using Polyhedral, Mascon, and Series Expansion Methods">https://doi.org/10.5281/zenodo.20210316</ext-link>.</p></list-item>
+<list-item><p><bold><italic>Licence:</italic></bold> MIT License.</p></list-item>
+<list-item><p><bold><italic>Publisher:</italic></bold> Zenodo.</p></list-item>
+<list-item><p><bold><italic>Version published:</italic></bold> v0.1.2.</p></list-item>
+<list-item><p><bold><italic>Date published:</italic></bold> 15-07-2026.</p></list-item>
+</list>
+<p><bold>Code repository</bold></p>
+<list list-type="simple">
+<list-item><p><bold><italic>Name:</italic> GravDyn</bold>.</p></list-item>
+<list-item><p><bold><italic>Identifier:</italic></bold> <ext-link ext-link-type="uri" href="https://github.com/safwanaljbaae/GravDyn.git" title="safwanaljbaae/GravDyn">https://github.com/safwanaljbaae/GravDyn.git</ext-link></p></list-item>
+<list-item><p><bold><italic>Licence:</italic></bold> MIT License.</p></list-item>
+<list-item><p><bold><italic>Date published:</italic></bold> 2026-04-20.</p></list-item>
+</list>
+<p><bold>Project website</bold></p>
+<p>The official <bold>GravDyn</bold> website is available at <ext-link ext-link-type="uri" href="https://gravdyn.linea.org.br" title="Gravdyn">https://gravdyn.linea.org.br</ext-link>. The website is hosted by the Laboratório Interinstitucional de e-Astronomia (LIneA).</p>
+<p><bold>Package distribution</bold></p>
+<p><bold>GravDyn</bold> is also distributed via the Python Package Index (PyPI) and can be installed using:</p>
+<disp-quote>
+<preformat><monospace>pip install gravdyn</monospace>
+</preformat>
+</disp-quote>
+</sec><ext-link ext-link-type="uri" href="https://github.com/safwanaljbaae/GravDyn.git" title="safwanaljbaae/GravDyn">https://github.com/safwanaljbaae/GravDyn.git</ext-link><ext-link ext-link-type="uri" href="https://github.com/esa/polyhedral-gravity-model" title="esa/polyhedral-gravity-model">https://github.com/esa/polyhedral-gravity-model</ext-link><ext-link ext-link-type="uri" href="https://github.com/a-amarante/minor-gravity/tree/v2.1" title="a-amarante/minor-gravity">https://github.com/a-amarante/minor-gravity/tree/v2.1</ext-link></body>
+
+</article>

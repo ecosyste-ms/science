@@ -20,7 +20,7 @@ class ExternalSoftwareRecord < ApplicationRecord
   end
 
   def self.source_name(source)
-    { "wikidata" => "Wikidata", "biotools" => "bio.tools", "ascl" => "ASCL", "mloss" => "JMLR MLOSS", "swmath" => "swMATH", "rrid" => "RRID", "doi" => "Software DOIs" }.fetch(source, source.humanize)
+    { "wikidata" => "Wikidata", "biotools" => "bio.tools", "ascl" => "ASCL", "mloss" => "JMLR MLOSS", "jors" => "JORS", "swmath" => "swMATH", "rrid" => "RRID", "doi" => "Software DOIs" }.fetch(source, source.humanize)
   end
 
   def record_url
@@ -33,6 +33,8 @@ class ExternalSoftwareRecord < ApplicationRecord
       "https://ascl.net/#{AsclClient.identifier(identifier)}"
     when "mloss"
       MlossClient.article_url(identifier)
+    when "jors"
+      JorsClient.article_url(identifier)
     when "swmath"
       "https://zbmath.org/software/#{SwmathClient.identifier(identifier)}"
     when "rrid"
