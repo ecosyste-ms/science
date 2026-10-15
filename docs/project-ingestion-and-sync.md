@@ -317,9 +317,12 @@ The R Journal's package lists include dependencies and comparison packages. `rjo
 ```sh
 REPOSITORY=/path/to/rjournal.github.io OUTPUT=rjournal-review.json LIMIT=20 bundle exec rake rjournal:review
 OUTPUT=journal-ranking.json LIMIT=100 bundle exec rake journals:rank
+OUTPUT=journal-associations.json LIMIT=50 bundle exec rake journals:audit
 ```
 
 R Journal reports accept `SLUGS` for selected articles or `AFTER` to continue in descending article order. The title rule produces candidates for review; it does not establish package ownership or a repository association.
+
+`journals:audit` reviews cached MLOSS, JORS and JSS records without network requests or database writes. Use `SOURCE` to select one collector and pass `next_after` as `AFTER` to continue. Each page reports matched projects, projects created by those source records, ambiguous or hidden candidates, unresolved code URLs and package attachment evidence. Counts apply only to the selected page and can overlap between pages. Hidden and ambiguous candidates do not count as matched projects. Review these reports before changing scores or scheduling recurring journal imports.
 
 `journals:rank` aggregates normalized papers associated with visible projects and packages, including JOSS mention provenance. It groups source IDs and ISSNs from OpenAlex primary locations, merges ISSN-only records into an unambiguous source ID, and keeps journals separate from repositories, proceedings and unknown source types. Counts distinguish software descriptions, implementations, model papers and reference-only pairs. Duplicate association paths count once per paper and software entity. Missing source metadata is reported separately. `LIMIT` bounds returned source groups; aggregation still covers all eligible associations, and the output indicates truncation. This task does not query the legacy project `works` field or fetch OpenAlex data.
 
