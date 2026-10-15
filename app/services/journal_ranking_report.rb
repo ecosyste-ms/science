@@ -22,8 +22,8 @@ class JournalRankingReport
         SELECT paper_id, kind, entity_id, bool_or(described) AS described,
           bool_or(implemented) AS implemented, bool_or(model) AS model, bool_or(referenced) AS referenced
         FROM raw_links GROUP BY paper_id, kind, entity_id
-      ), paper_sources AS (
-        SELECT id, openalex_id, openalex_data::jsonb->'primary_location'->'source' AS source
+      ), paper_sources AS MATERIALIZED (
+        SELECT id, openalex_id, openalex_data->'primary_location'->'source' AS source
         FROM papers WHERE id IN (SELECT paper_id FROM links)
       ), identifiers AS (
         SELECT id, openalex_id, source->>'display_name' AS name, nullif(lower(btrim(source->>'type')), '') AS source_type,

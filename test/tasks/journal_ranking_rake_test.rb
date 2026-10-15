@@ -63,6 +63,21 @@ class JournalRankingRakeTest < ActiveSupport::TestCase
     assert_equal 0, row["reference_only_pairs"]
   end
 
+  test "large OpenAlex records use the primary journal rather than other locations" do
+    publication = paper
+    metadata = publication.openalex_data.deep_dup
+    metadata["authorships"] = 200.times.map { |index| { "author" => { "id" => "A#{index}", "display_name" => "Author #{index}" }, "institutions" => [{ "display_name" => "Research institution #{index}" }] } }
+    metadata["locations"] = [{ "source" => { "id" => "https://openalex.org/S999", "display_name" => "Other archive", "type" => "repository" } }]
+    publication.update!(openalex_data: metadata)
+    @project.project_papers.create!(paper: publication, role: "reference", evidence: @evidence)
+
+    report = rank
+    assert_equal "https://openalex.org/S123", report["journals"].sole["source_id"]
+    assert_equal 1, report["journals"].sole["reference_only_pairs"]
+    assert_empty report["other_sources"]
+    assert_equal 1, report["summary"]["linked_papers"]
+  end
+
   test "repositories unknown source types and missing source metadata are reported separately" do
     repository = paper(source: "https://openalex.org/S456", issn: nil, type: "repository", name: "Example Archive")
     unknown = paper(source: nil, issn: "9999-123X", type: nil)
