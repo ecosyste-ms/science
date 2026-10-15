@@ -310,6 +310,19 @@ RESTART=true bundle exec rake jss:sweep
 
 Repository attribution requires a publisher-labelled R or Python package attachment and matching `Package` or `Name` metadata from its root `DESCRIPTION` or `PKG-INFO`. Only that package's URL fields supply repository candidates. Dependencies, README links and replication attachments do not establish subject software. Combined source/replication attachments and packages without matching root metadata remain unresolved in the stored source record. Archive metadata is read through `bsdtar` with output and execution limits, without extracting files or executing package code. No recurring harvest or score bonus is enabled.
 
+## Journal attribution reports
+
+The R Journal's package lists include dependencies and comparison packages. `rjournal:review` reads the checkout's `origin/published` commit and reports candidate subjects only when the package name agrees with the title prefix and the publisher's CRAN or Bioconductor metadata. Other package entries remain mentions, and drafts, future dates, malformed package names and titles without that agreement remain unresolved. The report records the commit and source path and does not import packages or papers. Fetch the publisher repository before running it.
+
+```sh
+REPOSITORY=/path/to/rjournal.github.io OUTPUT=rjournal-review.json LIMIT=20 bundle exec rake rjournal:review
+OUTPUT=journal-ranking.json LIMIT=100 bundle exec rake journals:rank
+```
+
+R Journal reports accept `SLUGS` for selected articles or `AFTER` to continue in descending article order. The title rule produces candidates for review; it does not establish package ownership or a repository association.
+
+`journals:rank` aggregates normalized papers associated with visible projects and packages, including JOSS mention provenance. It groups source IDs and ISSNs from OpenAlex primary locations, merges ISSN-only records into an unambiguous source ID, and keeps journals separate from repositories, proceedings and unknown source types. Counts distinguish software descriptions, implementations, model papers and reference-only pairs. Duplicate association paths count once per paper and software entity. Missing source metadata is reported separately. `LIMIT` bounds returned source groups; aggregation still covers all eligible associations, and the output indicates truncation. This task does not query the legacy project `works` field or fetch OpenAlex data.
+
 ## Repository discovery from cached sources
 
 `external_software:discover` queues a separate worker that reads up to 100 due Wikidata, bio.tools, ASCL, MLOSS, JORS, JSS, swMATH or RRID records. It uses the stored repository statements, normalized URLs and indexed aliases to attach evidence to existing projects or create minimal projects. GitHub and GitLab hosts already recorded in `hosts` are supported for creation, with `gitlab.com` included by default. Nested GitLab namespaces are preserved. Other hosts remain in the discovery results as unsupported candidates. Hidden owners are excluded, and ambiguous matches retain all candidate projects without requesting enrichment.

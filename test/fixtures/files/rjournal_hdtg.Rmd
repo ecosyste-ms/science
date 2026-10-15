@@ -1,0 +1,20 @@
+---
+title: 'hdtg: An R Package for High-Dimensional Truncated Normal Simulation'
+date: '2026-07-26'
+slug: RJ-2026-038
+packages:
+  cran:
+  - hdtg
+  - TruncatedNormal
+  - mgcv
+  - trialr
+  - coda
+  - ggplot2
+  - Rcpp
+  - RcppEigen
+  - RcppParallel
+  bioc: []
+draft: false
+---
+
+Published article excerpt.
