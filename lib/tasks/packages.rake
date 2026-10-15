@@ -1,4 +1,17 @@
 namespace :packages do
+  desc "Collect current CRAN citations for stored package versions (FILE=JSON array OUTPUT=report.json; maximum 25)"
+  task collect_cran: :environment do
+    input_path = ENV.fetch("FILE")
+    output_path = ENV.fetch("OUTPUT")
+    raise ArgumentError, "Input and output must be different files" if File.expand_path(input_path) == File.expand_path(output_path)
+    input = File.read(input_path, 1.megabyte + 1)
+    raise ArgumentError, "Input file must be at most 1 MB" if input.bytesize > 1.megabyte
+
+    report = CranCitationCollector.collect(JSON.parse(input))
+    File.write(output_path, JSON.pretty_generate(report) + "\n")
+    puts "CRAN citation collection: #{report.fetch('counts').inspect}"
+  end
+
   desc "Extract paper candidates from collected package files (FILE=collection.json OUTPUT=candidates.json)"
   task extract_paper_candidates: :environment do
     input_path = ENV.fetch("FILE")

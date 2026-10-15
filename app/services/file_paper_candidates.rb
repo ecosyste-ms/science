@@ -15,6 +15,10 @@ class FilePaperCandidates
   end
 
   def extract(brief_entries: [])
+    return extract_html if file["path"].to_s.match?(/\.html?\z/i)
+    return extract_cff if file["path"].to_s.match?(/\.cff\z/i) ||
+      (file["path"].blank? && text.match?(/\A(?:\uFEFF)?(?:---[\t ]*\r?\n)?cff-version:/))
+
     lines.each_with_index do |line, index|
       identifiers(line).each { |kind, identifier| add(kind, identifier, occurrence(index, index, "text")) }
     end
@@ -37,6 +41,7 @@ class FilePaperCandidates
       details = occurrence(entry[:first], entry[:last], "bibtex").merge(
         "title" => title, "fields" => fields, "brief_entry" => entry[:brief])
       refs = identifiers([fields["doi"], fields["url"], fields["eprint"], brief["doi"], brief["url"], brief["eprint"]].compact.join("\n"))
+      refs << ["pmid", fields["pmid"]] if fields["pmid"].to_s.match?(/\A[1-9]\d*\z/)
       if fields["archiveprefix"].to_s.casecmp?("arxiv") && fields["eprint"].to_s.match?(/\A#{ARXIV}\z/)
         refs << ["arxiv", normalize_arxiv(fields["eprint"])]
       end
@@ -44,6 +49,62 @@ class FilePaperCandidates
       refs.uniq.each { |kind, identifier| add(kind, identifier, details) }
     end
     candidates.values
+  end
+
+  def extract_html
+    text.to_enum(:scan, /<pre\b[^>]*>(.*?)<\/pre\s*>/im).each do
+      match = Regexp.last_match
+      content = Nokogiri::HTML.fragment(match[1]).text
+      next unless content.match?(/^[\t ]*@\w+\s*\{/)
+
+      first = text[0...match.begin(0)].count("\n")
+      last = first + match[0].count("\n")
+      extractor = self.class.new("content" => content)
+      extractor.extract.each do |candidate|
+        candidate["occurrences"].each do |item|
+          details = item.merge(occurrence(first, last, "html_bibtex"))
+          add(candidate["identifier_kind"], candidate["identifier"], details)
+        end
+      end
+      diagnostics.concat(extractor.diagnostics)
+    end
+    candidates.values
+  end
+
+  def extract_cff
+    document = Psych.parse(text)&.root
+    return [] unless document.is_a?(Psych::Nodes::Mapping)
+
+    data = YAML.safe_load(text, permitted_classes: [Date, Time])
+    nodes = document.children.each_slice(2).to_h { |key, value| [key.value, value] }
+    records = [[nodes["preferred-citation"], data["preferred-citation"]]]
+    references = nodes["references"]
+    records.concat(references.children.zip(Array(data["references"]))) if references.is_a?(Psych::Nodes::Sequence)
+    records.each do |node, record|
+      next unless node.is_a?(Psych::Nodes::Mapping) && record.is_a?(Hash)
+      next if %w[software dataset].include?(record["type"])
+
+      first = node.start_line
+      last = node.end_line - (node.end_column.zero? ? 1 : 0)
+      title = record["title"]
+      authors = Array(record["authors"]).filter_map do |author|
+        next unless author.is_a?(Hash) && author["family-names"].is_a?(String)
+
+        [author["family-names"], author["given-names"]].compact.join(", ")
+      end
+      details = occurrence(first, last, "cff").merge("title" => title,
+        "fields" => { "author" => authors.presence&.join(" and "), "year" => record["year"]&.to_s })
+      refs = identifiers([record["doi"], record["url"]].compact.join("\n"))
+      Array(record["identifiers"]).each do |identifier|
+        add_doi(refs, identifier["value"].to_s) if identifier.is_a?(Hash) && identifier["type"] == "doi"
+      end
+      refs << ["citation_title", title] if refs.empty? && title.is_a?(String) && title.present?
+      refs.uniq.each { |kind, identifier| add(kind, identifier, details) }
+    end
+    candidates.values
+  rescue Psych::Exception => error
+    diagnostics << error.message
+    []
   end
 
   def identifiers(value)
@@ -72,6 +133,11 @@ class FilePaperCandidates
         when "api.semanticscholar.org", "semanticscholar.org"
           id = path[%r{(?:\A|/)CorpusID:(\d+)\z}i, 1]
           refs << ["semantic_scholar_corpus_id", id] if id
+        when "pubmed.ncbi.nlm.nih.gov", "ncbi.nlm.nih.gov"
+          pattern = host == "pubmed.ncbi.nlm.nih.gov" ? %r{\A/([1-9]\d*)\z} : %r{\A/pubmed/([1-9]\d*)\z}i
+          id = path[pattern, 1]
+          refs << ["pmid", id] if id
+          refs << ["paper_url", url] if path.match?(/\.pdf\z/i)
         else
           refs << ["paper_url", url] if path.match?(/\.pdf\z/i)
         end
@@ -81,6 +147,7 @@ class FilePaperCandidates
       " "
     end
     remaining.scan(/\barxiv\s*:\s*(#{ARXIV})(?![\w.])/i) { |match| refs << ["arxiv", normalize_arxiv(match.first)] }
+    remaining.scan(/\bpmid\s*:\s*([1-9]\d*)(?![\w\/-])/i) { |match| refs << ["pmid", match.first] }
     remaining.scan(%r{(?<![\w.-])arxiv\.org/(?:abs|pdf|html)/(#{ARXIV})}i) { |match| refs << ["arxiv", normalize_arxiv(match.first)] }
     remaining.scan(%r{\b10\.\d{4,9}/[^\s<>"'{}\[\]`]+}i) { |doi| add_doi(refs, trim(doi)) }
     refs.uniq
@@ -107,18 +174,30 @@ class FilePaperCandidates
   end
 
   def bibtex_entries
-    bibliography = BibTeX.parse(text, strict: false, parse_names: false)
+    keyless = {}
+    prefix = "science-keyless-"
+    prefix += "x" while text.include?(prefix)
+    input = text.gsub(/^([\t ]*@\w+\s*\{)\s*,/) do
+      match = Regexp.last_match
+      key = "#{prefix}#{keyless.size}"
+      keyless[key] = text[0...match.begin(0)].count("\n")
+      "#{match[1]}#{key},"
+    end
+    bibliography = BibTeX::Bibliography.parse(input, strict: false, parse_names: false)
     diagnostics.concat(bibliography.errors.map(&:to_s))
     bibliography.replace.join
     positions = Hash.new(0)
     bibliography.select { |element| element.is_a?(BibTeX::Entry) }.filter_map do |entry|
       pattern = /^[\t ]*@#{Regexp.escape(entry.type.to_s)}\s*\{\s*#{Regexp.escape(entry.key)}\s*,/i
-      match = pattern.match(text, positions[entry.key])
-      next unless match
+      first = keyless[entry.key]
+      unless first
+        match = pattern.match(text, positions[entry.key])
+        next unless match
 
-      positions[entry.key] = match.end(0)
-      first = text[0...match.begin(0)].count("\n")
-      { first: first, last: entry_end(first), key: entry.key,
+        positions[entry.key] = match.end(0)
+        first = text[0...match.begin(0)].count("\n")
+      end
+      { first: first, last: entry_end(first), key: keyless.key?(entry.key) ? nil : entry.key,
         fields: entry.fields.transform_keys { |key| key.to_s.downcase }.transform_values(&:to_s) }
     end
   rescue BibTeX::ParseError => error

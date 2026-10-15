@@ -24,18 +24,23 @@ class ProjectRepositoryScanner
       if brief_due
         @project.fetch_brief(checkout: checkout)
         @project.reload
-        if @project.repository_from_package? && !@project.brief&.key?("error")
+        if !@project.brief&.key?("error") && @project.brief&.dig("resources").is_a?(Hash)
+          @revision ||= RepositoryCommand.new.run(["git", "-C", checkout, "rev-parse", "HEAD"]).strip
           @files = RepositoryResources.paths(@project.brief).map do |path|
-            url = "#{origin}/resolve/#{@revision}/#{ERB::Util.url_encode(path).gsub('%2F', '/')}"
+            base = @project.repository["html_url"].presence || @project.url
+            action = @project.repository_from_package? ? "resolve" : "blob"
+            url = "#{base}/#{action}/#{@revision}/#{ERB::Util.url_encode(path).gsub('%2F', '/')}"
             RepositoryResources.read(checkout, path, url: url)
           end
           RepositoryResources.store(@project, files, revision: @revision)
-          source = PackageRepository.new(@project)
-          source.refresh_metadata(source.package)
+          if @project.repository_from_package?
+            source = PackageRepository.new(@project)
+            source.refresh_metadata(source.package)
+          end
         end
         @project.refresh_display_name unless @project.brief&.key?("error")
         @project.update_science_score if @project.brief.present?
-        if !@project.brief&.key?("error") && @project.readme.present? && ENV["OPENALEX_API_KEY"].present?
+        if !@project.brief&.key?("error") && (@project.readme.present? || @project.citation_file.present?) && ENV["OPENALEX_API_KEY"].present?
           ImportProjectPapersWorker.perform_async(@project.id)
         end
       end

@@ -53,6 +53,9 @@ class PaperIdentityResolver
       match = identifier.match(%r{\A(?:https?://openalex\.org/)?(W\d+)\z}i)
       raise ArgumentError, "Invalid OpenAlex Work ID" unless match
       work_id = match[1].upcase
+    when "pmid"
+      raise ArgumentError, "Invalid PubMed identifier" unless identifier.match?(/\A[1-9]\d*\z/)
+      work_id = "pmid:#{identifier}"
     else
       return result.merge("assessment" => "unsupported", "reason" => "No exact identifier lookup for this reference type")
     end

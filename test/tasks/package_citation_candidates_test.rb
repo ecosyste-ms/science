@@ -153,6 +153,63 @@ class PackageCitationCandidatesTest < ActiveSupport::TestCase
     assert_not_empty report["versions"].sole["diagnostics"]
   end
 
+  test "keyless and named BibTeX entries retain separate original source locations" do
+    content = "@Article{,\n title={First paper},\n doi={10.1234/first}\n}\n\n@Article{,\n title={Second paper}\n}\n\n@Article{named,\n title={Named paper}\n}\n"
+    report = extract(collection([collected_file("CITATION.bib", content)]))
+    rows = report["candidates"]
+    assert_equal ["10.1234/first", "Second paper", "Named paper"], rows.map { |row| row["identifier"] }
+    details = rows.map { |row| row["occurrences"].find { |item| item["source"] == "bibtex" } }
+    assert_equal [1, 6, 10], details.map { |item| item["line_start"] }
+    details.each do |item|
+      assert_equal content.lines[(item["line_start"] - 1)..(item["line_end"] - 1)].join, item["raw"]
+      refute_includes item["raw"], "science-keyless-"
+    end
+  end
+
+  test "a CFF example in a README does not suppress its paper references" do
+    content = "# Citation format\n```yaml\ncff-version: 1.2.0\ntitle: Example\n```\nSee https://doi.org/10.1234/method\n"
+    rows = extract(collection([collected_file("README.md", content)]))["candidates"]
+    assert_equal ["10.1234/method"], rows.map { |row| row["identifier"] }
+  end
+
+  test "extracts PubMed references and BibTeX fields without mistaking other identifiers for PMIDs" do
+    text = <<~MARKDOWN
+      # Biomedical model
+      ## Background
+      [UniRef publication](http://www.ncbi.nlm.nih.gov/pubmed/17379688).
+      https://pubmed.ncbi.nlm.nih.gov/17379688/?from_term=UniRef
+      PMID: 19304878; pmid:1.
+      ```bibtex
+      @article{biopython,
+        title = {Biopython: freely available Python tools for computational molecular biology and bioinformatics},
+        author = {Cock, Peter},
+        pmid = {19304878}
+      }
+      ```
+      https://pubmed.ncbi.nlm.nih.gov.evil.invalid/99999999/
+      https://example.org/pubmed/99999999/
+      https://www.ncbi.nlm.nih.gov/gene/99999999
+      https://pubmed.ncbi.nlm.nih.gov/?term=99999999
+      https://pubmed.ncbi.nlm.nih.gov/99999999/other
+      PMID: 99999999abc; PMID: 0; PMID: 99999999/other
+      PMCID: PMC2682512; PMC270K; 99999999
+      https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2682512/pdf/btp163.pdf
+    MARKDOWN
+
+    rows = extract(collection([collected_file("README.md", text)]))["candidates"]
+
+    assert_equal [["pmid", "17379688"], ["pmid", "19304878"], ["pmid", "1"],
+      ["paper_url", "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2682512/pdf/btp163.pdf"]],
+      rows.map { |row| row.values_at("identifier_kind", "identifier") }
+    assert_equal 2, rows.first["occurrences"].size
+    assert_equal ["Biomedical model", "Background"], rows.first["occurrences"].first["section"]
+    assert_includes rows.first["occurrences"].first["raw"], "http://www.ncbi.nlm.nih.gov/pubmed/17379688"
+    bibtex = rows.second["occurrences"].find { |occurrence| occurrence["source"] == "bibtex" }
+    assert_equal "19304878", bibtex.dig("fields", "pmid")
+    assert_match(/Biopython/, bibtex["title"])
+    assert rows.all? { |row| row["relation"].nil? }
+  end
+
   test "empty citation templates produce no candidates and title-only references stay reviewable" do
     text = "```bibtex\n@article{empty, title={}, author={}}\n@article{title, title={A paper without an identifier}}\n```\n"
     report = extract(collection([collected_file("README.md", text)]))

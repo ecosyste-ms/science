@@ -51,7 +51,7 @@ To collect intrinsic files for imported versions, put 1 to 25 exact version PURL
 FILE=model-versions.json bundle exec rake packages:collect_huggingface > model-files.json
 ```
 
-Each PURL must identify an existing package version with a full commit SHA. The collector uses the file list in Packages metadata when it describes that revision, otherwise it requests the Hub file list at the selected commit. It fetches only root-level `README.md`, `CITATION.cff`, `CITATION.bib`, `CITATION`, `CITATION.md`, `codemeta.json` and `config.json`, matching file names without regard to case. It limits metadata responses to 2 MB and individual files to 1 MB, and follows at most four redirects within HTTPS huggingface.co URLs.
+Each PURL must identify an existing package version with a full commit SHA. The collector checks out that revision without downloading LFS objects and uses Brief to locate README, citation, CodeMeta and Zenodo files. Individual files are limited to 1 MB, must be UTF-8 text, and must resolve inside the checkout.
 
 The JSON report includes package/version IDs, the version PURL, source URLs, retrieval timestamps, content checksums and UTF-8 file contents. Gated, missing and failed files have separate outcomes; successful files remain in the report. Missing revisions do not fall back to the latest revision. Collection makes no database writes, downloads no weights and performs no automatic retries. Rerunning the task fetches the selected versions again, so retain reports outside the application repository when needed for review.
 
@@ -65,6 +65,18 @@ FILE=model-candidates.json OUTPUT=model-paper-review.json bundle exec rake paper
 Extraction verifies the package version identity and file checksums before running Brief on the collected files in a temporary directory. Reports are limited to 25 MB and 25 versions. Candidate evidence retains the version PURL, package PURL, file URL, checksum, retrieval time, line range, heading context and source passage. Brief output and parser diagnostics are retained. The Ruby BibTeX parser supplies fields such as `archivePrefix` alongside Brief's parsed entries. Empty citation templates produce no candidates.
 
 DOIs and supported paper identifiers are extracted from citation files and READMEs. Publisher PDF links remain URL candidates instead of deriving a DOI from an arbitrary part of their path. References with only a title or an unsupported identifier stay in the report for review. Configuration files are not treated as citation sources. Neither task creates papers or relationships, and metadata agreement does not assign the model's relationship to the paper.
+
+PubMed references are extracted from `pubmed.ncbi.nlm.nih.gov/<id>` and legacy `ncbi.nlm.nih.gov/pubmed/<id>` links, labelled `PMID:` values, and BibTeX `pmid` fields. Resolution uses an exact OpenAlex PMID lookup and retains any title or author conflicts. The project paper import worker uses the same extraction and resolution for stored READMEs and citation files, including repositories without a README, and saves these links with the `reference` role. CFF extraction reads preferred citations and references, excluding software and dataset entries and the root software DOI. R citation files are scanned for identifiers without executing R.
+
+To collect CRAN citation pages, supply a JSON array of 1 to 25 exact version PURLs for existing `PackageVersion` records:
+
+```sh
+FILE=cran-versions.json OUTPUT=cran-files.json bundle exec rake packages:collect_cran
+FILE=cran-files.json OUTPUT=cran-candidates.json bundle exec rake packages:extract_paper_candidates
+FILE=cran-candidates.json OUTPUT=cran-resolved.json bundle exec rake papers:resolve_candidates
+```
+
+The CRAN collector checks the published `DESCRIPTION` before and after fetching `citation.html`. It reports `version_mismatch` for versions other than the current release and rejects a collection if `DESCRIPTION` changes during the requests. Reports retain the original HTML, checksums, source URLs and retrieval timestamps. BibTeX extraction accepts missing citation keys, decodes HTML entities, and records evidence against the original `<pre>` block's line range. Collection and extraction do not write paper relationships; `papers:import_candidates` remains the explicit import step. CRAN collection is not scheduled.
 
 ## Package browser and API
 

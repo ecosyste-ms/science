@@ -10,7 +10,7 @@
       <span class="text-muted">(<%= paper.publication_date.year %>)</span>
     <% end %>
     <div class="small text-muted">
-      <%= relationships.map { |relationship| relationship.role == "reference" ? "Referenced in README" : relationship.role.humanize }.uniq.join(" · ") %>
+      <%= relationships.map { |relationship| relationship.role == "reference" ? "Referenced" : relationship.role.humanize }.uniq.join(" · ") %>
     </div>
     <% evidence = relationships.flat_map(&:evidence).uniq %>
     <% if evidence.any? %>

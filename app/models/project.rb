@@ -72,17 +72,38 @@ class Project < ApplicationRecord
   has_many :linked_papers, through: :project_papers, source: :paper
 
   def import_papers
-    return { "import_summary" => {}, "candidates" => [] } if readme.blank?
+    return { "import_summary" => {}, "candidates" => [] } if readme.blank? && citation_file.blank?
 
-    entries = Array(brief&.dig("resources", "readme_bibtex", "entries"))
-    candidates = FilePaperCandidates.new("content" => readme).extract(brief_entries: entries).map do |row|
-      row.merge("project_id" => id, "package_purl" => repository&.dig("metadata", "model_package_purl"),
-        "revision" => repository&.dig("metadata", "revision"), "readme_sha256" => Digest::SHA256.hexdigest(readme),
-        "source" => "stored_project_readme")
-    end
+    candidates = paper_file_candidates("readme", readme, "readme_bibtex") +
+      paper_file_candidates("citation", citation_file, "bibtex")
     report = PaperCandidateImporter.new.call(candidates)
     update_science_score
     report
+  end
+
+  def paper_file_candidates(kind, content, bibtex_key)
+    return [] if content.blank?
+
+    path = kind == "citation" ? citation_file_name : repository&.dig("metadata", "files", kind)
+    digest = Digest::SHA256.hexdigest(content)
+    collected = repository&.dig("metadata", "file_sources", kind)
+    collected = nil unless collected&.values_at("path", "sha256", "status") == [path, digest, "ok"]
+    resource = brief&.dig("resources", bibtex_key)
+    entries = resource.is_a?(Hash) && (path.nil? || resource["path"] == path) ? Array(resource["entries"]) : []
+    entries = [] if repository&.dig("metadata", "file_sources", kind) && !collected
+    entries = [] if collected && collected["revision"] != brief&.fetch("revision", nil)
+    evidence = {
+      "project_id" => id, "package_purl" => repository&.dig("metadata", "model_package_purl"),
+      "source" => "stored_project_#{kind}",
+      "file_path" => path, "file_sha256" => digest,
+      "file_url" => collected&.fetch("url", nil),
+      "file_retrieved_at" => collected&.fetch("retrieved_at", nil),
+      "revision" => collected&.fetch("revision", nil)
+    }.compact
+    evidence["readme_sha256"] = digest if kind == "readme"
+    FilePaperCandidates.new("path" => path, "content" => content).extract(brief_entries: entries).map do |row|
+      row.merge(evidence)
+    end
   end
 
   def related_paper_links

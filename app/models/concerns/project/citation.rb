@@ -24,10 +24,12 @@ module Project::Citation
   ].freeze
 
   def citation_file_name
-    return unless repository.present?
-    return unless repository['metadata'].present?
-    return unless repository['metadata']['files'].present?
-    repository['metadata']['files']['citation']
+    path = repository&.dig('metadata', 'files', 'citation')
+    return path if path.present?
+    return unless has_attribute?(:brief)
+
+    path = RepositoryResources.resource_paths(brief || {})["citation"]
+    path if RepositoryResources.safe_path?(path)
   end
 
   def codemeta_file_name

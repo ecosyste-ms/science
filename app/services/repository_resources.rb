@@ -2,21 +2,30 @@ require "digest"
 
 class RepositoryResources
   def self.store(project, files, revision:)
-    resources = project.brief.fetch("resources") || {}
-    paths = resources.slice("readme", "citation", "codemeta", "zenodo")
+    paths = resource_paths(project.brief)
     by_path = files.index_by { |file| file["path"] }
     attributes = {}
+    repository = project.repository.deep_dup
+    metadata = repository["metadata"] ||= {}
+    stored_paths = metadata.fetch("files", {}).dup
+    sources = metadata.fetch("file_sources", {}).dup
     { "readme" => :readme, "citation" => :citation_file, "codemeta" => :codemeta, "zenodo" => :zenodo }.each do |key, attribute|
       file = by_path[paths[key]]
-      attributes[attribute] = file&.fetch("content", nil) if paths[key].nil? || file&.dig("status") == "ok"
+      next if paths[key] && file&.dig("status") != "ok"
+
+      attributes[attribute] = file&.fetch("content", nil)
+      stored_paths[key] = paths[key]
+      sources[key] = file&.except("content")&.merge("revision" => revision)
     end
-    repository = project.repository.deep_dup
-    repository["metadata"]["files"] = paths
-    if project.swhids && project.swhids["commit"] != revision
+    metadata["files"] = stored_paths.compact
+    metadata["file_sources"] = sources.compact
+    if project.repository_from_package? && project.swhids && project.swhids["commit"] != revision
       attributes[:swhids] = project.swhids.slice("origin_archive")
     end
-    project.update!(**attributes, repository: repository, last_synced_at: Time.current,
-      brief: project.brief.merge("revision" => revision, "scanned_at" => Time.current.iso8601))
+    attributes[:last_synced_at] = Time.current if project.repository_from_package?
+    project.update!(**attributes, repository: repository,
+      brief: project.brief.merge("revision" => revision, "scanned_at" => Time.current.iso8601,
+        "collected_files" => files.map { |file| file.except("content") }))
   end
 
   def self.safe_path?(path)
@@ -25,8 +34,18 @@ class RepositoryResources
   end
 
   def self.paths(brief)
-    (brief["resources"] || {}).values_at("readme", "citation", "codemeta", "zenodo", "bibtex", "readme_bibtex")
-      .map { |resource| resource.is_a?(Hash) ? resource["path"] : resource }.compact.uniq.sort
+    resource_paths(brief).values.uniq.sort
+  end
+
+  def self.resource_paths(brief)
+    resources = brief["resources"] || {}
+    metadata = resources["metadata"] || {}
+    %w[readme citation codemeta zenodo bibtex readme_bibtex].filter_map do |key|
+      resource = metadata[key] || resources[key]
+      resource ||= resources["bibtex"] if key == "citation"
+      path = resource.is_a?(Hash) ? resource["path"] : resource
+      [key, path] if path.is_a?(String) && path.present?
+    end.to_h
   end
 
   def self.read(checkout, path, url:)

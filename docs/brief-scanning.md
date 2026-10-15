@@ -23,6 +23,8 @@ Clone, timeout, and parse failures store an error and attempt time in `projects.
 
 Brief results update the Science Score. If a project becomes scientifically eligible after Brief runs, SWHIDs are calculated from the same checkout. Direct dependencies from Brief are used by the dependency indexer when stored repos manifest data has no usable direct dependencies. `ProjectRepositoryScanner` owns the checkout and coordinates the analyses; additional repository analysis can use that path without another clone.
 
+Successful scans collect README, citation, CodeMeta and Zenodo files from the same checkout for ordinary repositories and model packages. Discovery accepts Brief's `resources.metadata` paths and parsed resource objects. Stored file evidence includes the commit, path, source URL, checksum and retrieval time. Failed reads retain the previous content and its provenance, with the read error recorded in `brief.collected_files`. When an OpenAlex API key is configured, a stored README or citation file is enough to enqueue paper import.
+
 To enqueue a bounded batch of completed scans from older Brief versions:
 
 ```bash

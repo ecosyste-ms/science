@@ -75,7 +75,7 @@ class PackageCitationCandidates
           candidate.merge("purl" => version.purl, "package_purl" => version.package.purl,
             "package_id" => version.package_id, "package_version_id" => version.id, "revision" => version.number,
             "file_path" => file["path"], "file_url" => file["url"], "file_sha256" => file["sha256"],
-            "file_retrieved_at" => file["retrieved_at"])
+            "file_retrieved_at" => file["retrieved_at"], "file_list_source" => row["file_list_source"])
         end)
         result["diagnostics"].concat(extractor.diagnostics.map { |item| { "path" => file["path"], "parser" => "bibtex-ruby", "diagnostic" => item } })
       end

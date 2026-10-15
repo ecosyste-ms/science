@@ -68,6 +68,34 @@ class PaperIdentityResolutionRakeTest < ActiveSupport::TestCase
     assert_equal false, report["candidates"].first.dig("checks", "title")
   end
 
+  test "resolves PMIDs through exact lookups and preserves metadata conflicts" do
+    paper = work(title: "UniRef: comprehensive and non-redundant UniProt reference clusters")
+    request = lookup("pmid:17379688", paper)
+    input = { "identifier_kind" => "pmid", "identifier" => "17379688", "occurrences" => [] }
+    conflict = input.merge("occurrences" => [{ "title" => "A different paper" }])
+
+    report = review([input, conflict])
+
+    assert_equal "needs_review", report["candidates"].first["assessment"]
+    assert_equal "metadata_conflict", report["candidates"].last["assessment"]
+    assert_equal ["pmid:17379688"], report["lookups"].keys
+    assert_equal paper, report.dig("lookups", "pmid:17379688", "work")
+    assert_requested request, times: 1
+  end
+
+  test "rejects malformed PMIDs before making requests and distinguishes missing records" do
+    inputs = ["0", "-1", "17379688abc", "17379688/other", "17379688?api_key=other", "PMC2682512"].map do |id|
+      { "identifier_kind" => "pmid", "identifier" => id }
+    end
+    missing = { "identifier_kind" => "pmid", "identifier" => "99999999" }
+    request = lookup("pmid:99999999", {}, status: 404)
+
+    report = review(inputs + [missing])
+
+    assert_equal({ "invalid" => 6, "not_found" => 1 }, report["summary"])
+    assert_requested request, times: 1
+  end
+
   test "uses current source metadata while retaining the earlier card title" do
     current_title = "C-Pack: Packed Resources For General Chinese Embeddings"
     original = @candidate.merge("identifier" => "2309.07597", "occurrences" => [{ "title" => "C-Pack: Packaged Resources To Advance General Chinese Embedding" }])

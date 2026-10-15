@@ -4,6 +4,7 @@ class FetchBriefWorkerTest < ActiveSupport::TestCase
   setup do
     FetchBriefWorker.jobs.clear
     ProjectRepositoryScanner.any_instance.stubs(:with_checkout).yields("/tmp/checkout", "https://github.com/test/repository", [])
+    RepositoryCommand.any_instance.stubs(:run).with(["git", "-C", "/tmp/checkout", "rev-parse", "HEAD"]).returns("a" * 40)
   end
 
   test "uses the dedicated brief queue" do

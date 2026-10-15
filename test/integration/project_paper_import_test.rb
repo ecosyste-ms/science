@@ -49,7 +49,7 @@ class ProjectPaperImportTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "#project-research-papers [data-related-paper-id='#{paper.id}']", count: 1
     assert_select "a[href='https://doi.org/10.1234/method']", text: "A training method"
-    assert_includes response.body, "Referenced in README"
+    assert_includes response.body, "Referenced"
     assert_includes response.body, "Citation sources"
 
     attributes = [paper.attributes, project_link.attributes, package_link.attributes]
@@ -68,6 +68,88 @@ class ProjectPaperImportTest < ActionDispatch::IntegrationTest
     get project_path(project)
     assert_response :success
     assert_select "[data-related-paper-id]", count: 1
+  end
+
+  test "CFF paper references exclude the software DOI and software references" do
+    @project.update!(readme: nil, citation_file: <<~CFF)
+      cff-version: 1.2.0
+      title: Example software
+      doi: 10.1234/software
+      preferred-citation:
+        type: article
+        title: A training method
+        doi: 10.1234/method
+      references:
+        - type: software
+          title: A software dependency
+          doi: 10.1234/dependency
+    CFF
+    ImportProjectPapersWorker.new.perform(@project.id)
+
+    evidence = @project.project_papers.sole.evidence.sole
+    assert_equal "10.1234/method", evidence["identifier"]
+    assert_equal "cff", evidence["occurrences"].sole["source"]
+    assert_equal "A training method", evidence["occurrences"].sole["title"]
+    occurrence = evidence["occurrences"].sole
+    assert_equal @project.citation_file.lines[(occurrence["line_start"] - 1)..(occurrence["line_end"] - 1)].join, occurrence["raw"]
+    assert_not_requested :get, "https://api.openalex.org/works/doi:10.1234/software", query: { "api_key" => "test-key" }
+    assert_not_requested :get, "https://api.openalex.org/works/doi:10.1234/dependency", query: { "api_key" => "test-key" }
+  end
+
+  test "repository-service metadata without a citation path uses the Brief discovery path" do
+    project = Project.create!(url: "https://github.com/example/r-package", readme: nil,
+      repository: { "metadata" => { "files" => {} } },
+      brief: { "resources" => { "metadata" => { "citation" => "inst/CITATION" } } },
+      citation_file: 'bibentry(doi = "10.1234/method")')
+
+    ImportProjectPapersWorker.new.perform(project.id)
+
+    assert_equal "inst/CITATION", project.project_papers.sole.evidence.sole["file_path"]
+    assert_equal "inst/CITATION", project.citation_file_name
+  end
+
+  test "stored content changed after collection does not reuse the scan's revision or parsed entries" do
+    @project.update!(readme: nil, citation_file: "https://doi.org/10.1234/method\n",
+      repository: @project.repository.deep_merge("metadata" => {
+        "files" => { "citation" => "CITATION.bib" },
+        "file_sources" => { "citation" => { "path" => "CITATION.bib", "status" => "ok", "sha256" => "outdated", "revision" => "a" * 40 } }
+      }),
+      brief: { "revision" => "a" * 40, "resources" => { "bibtex" => { "path" => "CITATION.bib",
+        "entries" => [{ "key" => "old", "line" => 1, "title" => "Old paper", "doi" => "10.1234/old" }] } } })
+
+    ImportProjectPapersWorker.new.perform(@project.id)
+
+    evidence = @project.project_papers.sole.evidence.sole
+    assert_equal "10.1234/method", evidence["identifier"]
+    assert_nil evidence["revision"]
+    assert_nil evidence["file_url"]
+    assert_not_requested :get, "https://api.openalex.org/works/doi:10.1234/old", query: { "api_key" => "test-key" }
+  end
+
+  test "PubMed references import through the worker for software and model packages" do
+    readme = "# References\n[UniRef publication](http://www.ncbi.nlm.nih.gov/pubmed/17379688).\n"
+    paper = { "id" => "https://openalex.org/W2076048958", "title" => "UniRef reference clusters",
+      "ids" => { "pmid" => "https://pubmed.ncbi.nlm.nih.gov/17379688" } }
+    request = stub_request(:get, "https://api.openalex.org/works/pmid:17379688")
+      .with(query: { "api_key" => "test-key" }).to_return(body: paper.to_json)
+    software = Project.create!(url: "https://github.com/example/biomedical-tool", readme: readme)
+    @project.update!(readme: readme)
+
+    assert_difference "Paper.count", 1 do
+      [software, @project].each { |project| ImportProjectPapersWorker.new.perform(project.id) }
+    end
+    [software.project_papers.sole, @project.project_papers.sole, @package.package_papers.sole].each do |link|
+      assert_equal "reference", link.role
+      assert_equal paper["id"], link.paper.openalex_id
+      assert_nil link.paper.doi
+      assert_equal "pmid", link.evidence.sole["identifier_kind"]
+      assert_equal "17379688", link.evidence.sole["identifier"]
+      assert_equal readme.lines.last, link.evidence.sole["occurrences"].sole["raw"]
+    end
+    assert_no_difference ["Paper.count", "ProjectPaper.count", "PackagePaper.count"] do
+      ImportProjectPapersWorker.new.perform(@project.id)
+    end
+    assert_requested request, times: 3
   end
 
   test "backfill links a paper imported earlier and preserves verified implementation roles" do

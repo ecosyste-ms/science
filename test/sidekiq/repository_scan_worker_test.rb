@@ -71,7 +71,9 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
   test "successful repository scans enqueue paper imports for stored READMEs" do
     previous_key = ENV["OPENALEX_API_KEY"]
     ENV["OPENALEX_API_KEY"] = "test-key"
-    @project.update!(readme: "# Research software\n\nhttps://doi.org/10.1234/example\n")
+    File.write(File.join(@source, "README.md"), "# Research software\n\nhttps://doi.org/10.1234/example\n")
+    git("-C", @source, "add", "README.md")
+    git("-C", @source, "-c", "user.name=Test", "-c", "user.email=test@example.org", "commit", "-m", "Add README")
     assert_difference "ImportProjectPapersWorker.jobs.size", 1 do
       RepositoryScanWorker.new.perform(@project.id)
     end
@@ -112,6 +114,8 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     resources = @project.reload.brief.fetch("resources")
     citation = resources.fetch("bibtex")
     assert_equal "CITATION.bib", citation.fetch("path")
+    assert_equal "CITATION.bib", @project.citation_file_name
+    assert_equal File.read(File.join(@source, "CITATION.bib")), @project.citation_file
     assert_equal "10.1234/example", citation.fetch("entries").sole.fetch("doi")
     readme = resources.fetch("readme_bibtex")
     assert_equal "README.md", readme.fetch("path")
@@ -193,8 +197,9 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     assert_equal 1, clone_commands.size
   end
 
-  test "a scan credits detected CFF metadata even without downloaded citation content" do
-    File.write(File.join(@source, "CITATION.cff"), "cff-version: 1.2.0\n message: Please cite this software\n")
+  test "a scan collects detected CFF metadata and credits the citation content" do
+    content = "cff-version: 1.2.0\nmessage: Please cite this software\ntitle: Research software\nauthors:\n  - family-names: Smith\n"
+    File.write(File.join(@source, "CITATION.cff"), content)
     git("-C", @source, "add", "CITATION.cff")
     git("-C", @source, "-c", "user.name=Test", "-c", "user.email=test@example.org",
       "-c", "commit.gpgsign=false", "commit", "-m", "Add citation file")
@@ -205,7 +210,7 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
 
     @project.reload
     assert @project.brief.key?("dependencies")
-    assert_nil @project.citation_file
+    assert_equal content, @project.citation_file
     assert @project.science_score_breakdown.dig(:breakdown, :has_citation_file, :present)
     assert_equal 1.0, @project.science_score_breakdown.dig(:breakdown, :has_citation_file, :strength)
     assert_operator @project.science_score, :>=, 36.0
