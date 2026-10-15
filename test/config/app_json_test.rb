@@ -1,6 +1,19 @@
 require "test_helper"
 
 class AppJsonTest < ActiveSupport::TestCase
+  test "journals have recurring harvests and staggered recovery and refresh schedules" do
+    crons = JSON.parse(Rails.root.join("app.json").read).fetch("cron")
+      .select { |entry| entry.fetch("command").match?(/\b(mloss|jors|jss):/) }
+    assert_equal [
+      { "command" => "bundle exec rake mloss:harvest", "schedule" => "20 4 * * 6" },
+      { "command" => "bundle exec rake jors:harvest", "schedule" => "20 4 * * 0" },
+      { "command" => "bundle exec rake jss:harvest", "schedule" => "50 4 * * *" },
+      { "command" => "bundle exec rake mloss:resume mloss:refresh", "schedule" => "6,16,26,36,46,56 * * * *" },
+      { "command" => "bundle exec rake jors:resume jors:refresh", "schedule" => "7,17,27,37,47,57 * * * *" },
+      { "command" => "bundle exec rake jss:resume jss:refresh", "schedule" => "8,18,28,38,48,58 * * * *" },
+    ], crons
+  end
+
   test "cron commands do not set environment variables" do
     config = JSON.parse(Rails.root.join("app.json").read)
 

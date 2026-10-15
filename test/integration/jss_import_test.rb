@@ -2,8 +2,11 @@ require "test_helper"
 require "rake"
 require "rubygems/package"
 require "zlib"
+require_relative "../support/journal_schedule"
 
 class JssImportTest < ActionDispatch::IntegrationTest
+  include JournalSchedule
+
   setup do
     Rails.application.load_tasks unless Rake::Task.task_defined?("jss:sweep")
     Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
@@ -83,7 +86,7 @@ class JssImportTest < ActionDispatch::IntegrationTest
 
   def list(rows, set: "jss:ART", token: nil, request_token: nil)
     query = request_token ? { verb: "ListRecords", resumptionToken: request_token } :
-      { verb: "ListRecords", metadataPrefix: "oai_dc", set: set, from: @from, until: @until }
+      { verb: "ListRecords", metadataPrefix: "oai_dc", set: set, from: @from, until: @until }.compact
     stub_request(:get, JssClient::CATALOGUE_URL).with(query: query).to_return(body: rows.empty? ? no_records : feed(rows, token: token))
   end
 
@@ -151,6 +154,47 @@ class JssImportTest < ActionDispatch::IntegrationTest
     task("jss:sweep", RESTART: true)
     assert_equal @until, JSON.parse(import.reload.cursor)["from"]
     assert_raises(ArgumentError) { task("jss:sweep", FROM: "2020-01-01") }
+  end
+
+  test "daily harvest discovers new articles and applies deletions after the saved checkpoint" do
+    project = Project.create!(url: "https://github.com/integrated-inferences/causalqueries")
+    @from = nil
+    causal_queries
+    list([row("v117i01")])
+    list([], set: "jss:CS")
+    travel_to Time.iso8601(@until) do
+      scheduled_journal_tasks("jss", "harvest")
+      ImportJournalWorker.perform_one
+    end
+    import = ExternalSoftwareImport.find_by!(source: "jss")
+    travel_to import.next_run_at + 1.second do
+      ImportJournalWorker.perform_one
+    end
+    assert import.reload.completed_at
+    paper = project.project_papers.sole.paper
+
+    @from = @until
+    @until = (Time.iso8601(@until) + 1.day).iso8601
+    deleted = row("v117i01")
+    deleted.at_xpath("./header")["status"] = "deleted"
+    deleted.at_xpath("./metadata").remove
+    article("v117i04")
+    list([deleted, row("v117i04")])
+    list([], set: "jss:CS")
+    travel_to Time.iso8601(@until) do
+      scheduled_journal_tasks("jss", "harvest")
+      ImportJournalWorker.perform_one
+    end
+    travel_to import.reload.next_run_at + 1.second do
+      ImportJournalWorker.perform_one
+    end
+    assert import.reload.completed_at
+    assert_equal @until, JSON.parse(import.cursor).fetch("until")
+    assert_equal "missing", ExternalSoftwareRecord.find_by!(identifier: id("v117i01")).status
+    assert_empty project.project_papers
+    assert Paper.exists?(paper.id)
+    assert_equal 2, Paper.count
+    assert_equal 2, ExternalSoftwareRecord.count
   end
 
   test "persistent deletion removes journal associations and preserves independent citations" do

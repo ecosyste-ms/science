@@ -1,3 +1,13 @@
+%w[mloss jors jss].each do |source|
+  namespace source do
+    desc "Start or repeat the #{source.upcase} harvest, preserving unfinished progress"
+    task harvest: :environment do
+      record = ExternalSoftwareImport.harvest_journal(source)
+      puts JSON.generate(record.progress)
+    end
+  end
+end
+
 %w[jors jss].each do |source|
   namespace source do
     desc "Start or resume a #{source.upcase} sweep (LIMIT=5, RESTART=true for completed sweeps)"

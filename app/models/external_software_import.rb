@@ -55,6 +55,17 @@ class ExternalSoftwareImport < ApplicationRecord
     record
   end
 
+  def self.harvest_journal(source)
+    raise ArgumentError, "unknown journal source" unless %w[mloss jors jss].include?(source)
+
+    if source == "jss"
+      start_jss
+    else
+      start_catalogue(source: source)
+    end
+    resweep(source)
+  end
+
   def self.start_biotools(page_size: nil, restart: false)
     start_catalogue(source: "biotools", page_size: page_size, restart: restart)
   end
