@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_13_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_15_130100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -467,6 +467,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_150000) do
     t.index ["paper_id", "source", "role", "position"], name: "index_paper_authors_on_snapshot_position", unique: true
   end
 
+  create_table "paper_identifiers", force: :cascade do |t|
+    t.bigint "paper_id", null: false
+    t.string "source", null: false
+    t.string "identifier", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["paper_id"], name: "index_paper_identifiers_on_paper_id"
+    t.index ["source", "identifier"], name: "index_paper_identifiers_on_source_and_identifier", unique: true
+  end
+
   create_table "papers", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "doi"
@@ -481,6 +491,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_150000) do
     t.index "lower((doi)::text)", name: "index_papers_on_lower_doi", where: "(doi IS NOT NULL)"
     t.index "lower((openalex_id)::text)", name: "index_papers_on_lower_openalex_id", where: "(openalex_id IS NOT NULL)"
     t.index ["doi"], name: "index_papers_on_doi"
+    t.index ["urls"], name: "index_papers_on_urls", using: :gin
   end
 
   create_table "project_authors", force: :cascade do |t|
@@ -847,6 +858,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_150000) do
   add_foreign_key "packages", "projects", column: "published_by_project_id", on_delete: :nullify
   add_foreign_key "paper_authors", "authors", on_delete: :nullify
   add_foreign_key "paper_authors", "papers", on_delete: :cascade
+  add_foreign_key "paper_identifiers", "papers"
   add_foreign_key "project_authors", "authors", on_delete: :nullify
   add_foreign_key "project_authors", "projects", on_delete: :cascade
   add_foreign_key "project_contributors", "authors", on_delete: :nullify

@@ -37,4 +37,9 @@ class MlossImporter < ExternalSoftwareImporter
         collection_url: MlossClient::CATALOGUE_URL }
     end.uniq
   end
+
+  def persist_links(record, entity, matches)
+    super
+    JournalPublicationIndexer.new.sync!(record, entity)
+  end
 end

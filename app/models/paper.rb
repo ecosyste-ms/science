@@ -5,6 +5,7 @@ class Paper < ApplicationRecord
   has_many :linked_projects, through: :project_papers, source: :project
   has_many :paper_authors, dependent: :delete_all
   has_many :package_papers, dependent: :delete_all
+  has_many :paper_identifiers, dependent: :delete_all
 
   def linked_packages
     Package.where(id: package_papers.select(:package_id))
@@ -36,24 +37,23 @@ class Paper < ApplicationRecord
     raise ArgumentError, "Invalid paper DOI" if doi && !doi.match?(%r{\A10\.\d{4,9}/\S+\z})
     ids = [id.downcase, id.sub("https:", "http:").downcase, id.split("/").last.downcase]
     dois = doi ? [doi, "https://doi.org/#{doi}", "http://doi.org/#{doi}", "https://dx.doi.org/#{doi}", "http://dx.doi.org/#{doi}"] : []
+    urls = Array(work["locations"]).flat_map { |location| [location["landing_page_url"], location["pdf_url"]] }.compact
+    identities = PaperIdentifier.from_urls(urls)
 
     transaction do
-      # Serialize imports sharing either identifier, including DOI-only papers.
-      ([id] + [doi].compact).sort.each do |key|
-        connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(#{connection.quote("paper:#{key}")}, 0))")
-      end
+      lock_import_identifiers!([id] + [doi].compact + PaperIdentifier.lock_keys(identities))
       matches = where("lower(openalex_id) IN (?)", ids)
       matches = matches.or(where("lower(doi) IN (?)", dois)) if doi
+      matches = matches.or(where(id: PaperIdentifier.paper_ids_for(identities))) if identities.any?
       papers = matches.limit(2).to_a
       raise ArgumentError, "Multiple papers match #{id}" if papers.size > 1
       paper = papers.first || new
       if paper.openalex_id.present? && !ids.include?(paper.openalex_id.downcase)
-        raise ArgumentError, "DOI belongs to another OpenAlex Work"
+        raise ArgumentError, "Paper identity belongs to another OpenAlex Work"
       end
       if doi && paper.doi.present? && !dois.include?(paper.doi.downcase)
         raise ArgumentError, "OpenAlex Work has a different stored DOI"
       end
-      urls = Array(work["locations"]).flat_map { |location| [location["landing_page_url"], location["pdf_url"]] }.compact
       paper.assign_attributes(openalex_id: id, title: work["title"], openalex_data: work,
         publication_date: work["publication_date"].presence && Date.iso8601(work["publication_date"]),
         urls: (Array(paper.urls) + urls).uniq)
@@ -63,7 +63,32 @@ class Paper < ApplicationRecord
         paper.last_synced_at = Time.current
         paper.save!
       end
+      PaperIdentifier.attach!(paper, identities)
       { "status" => status, "paper_id" => paper.id }
+    end
+  end
+
+  def self.import_publication!(title:, url:)
+    raise ArgumentError, "Missing publication title" unless title.is_a?(String) && title.present?
+    identities = PaperIdentifier.from_urls([url])
+    raise ArgumentError, "Unsupported publication URL" unless identities.one?
+
+    transaction do
+      lock_import_identifiers!(PaperIdentifier.lock_keys(identities))
+      papers = where(id: PaperIdentifier.paper_ids_for(identities)).limit(2).to_a
+      raise ArgumentError, "Multiple papers match #{url}" if papers.size > 1
+      paper = papers.first || new
+      paper.title = title if paper.openalex_id.blank? || paper.title.blank?
+      paper.urls = (Array(paper.urls) + [url]).uniq
+      paper.save! if paper.changed?
+      PaperIdentifier.attach!(paper, identities)
+      paper
+    end
+  end
+
+  def self.lock_import_identifiers!(keys)
+    keys.uniq.sort.each do |key|
+      connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(#{connection.quote("paper:#{key}")}, 0))")
     end
   end
 

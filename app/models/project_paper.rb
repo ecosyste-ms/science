@@ -2,7 +2,7 @@ class ProjectPaper < ApplicationRecord
   belongs_to :project
   belongs_to :paper
 
-  validates :role, inclusion: { in: %w[implementation reference] }
+  validates :role, inclusion: { in: %w[implementation reference software_description] }
 
   validates :paper_id, uniqueness: { scope: :project_id }
   validate :evidence_has_sources

@@ -45,7 +45,9 @@ class ImportMlossWorkerTest < ActiveSupport::TestCase
     assert_equal MlossClient::CATALOGUE_URL, record.collection_url
     assert ExternalSoftwareRecord.all.any? { |r| r.metadata["code_urls"] == ["https://github.com/pyt-team"] && r.projects.empty? }
     assert_equal 42, @project.reload.science_score
-    assert_empty Paper.all
+    assert_equal 5, Paper.count
+    assert_equal 5, PaperIdentifier.count
+    assert_nil @project.project_papers.sole.paper.doi
     assert_empty @project.project_external_software_records.confirmed_identifier_matches
     assert_requested request, times: 1
     assert_equal true, JSON.parse(invoke_task("mloss:status"))["complete"]
@@ -149,7 +151,7 @@ class ImportMlossWorkerTest < ActiveSupport::TestCase
     mloss_catalogue
     invoke_task("mloss:sweep")
     ImportMlossWorker.perform_one
-    Project.where(id: @project.id).delete_all
+    @project.destroy!
     result = nil
     assert_difference "Project.count", 1 do
       result = DiscoverExternalRepositoriesWorker.new.perform(10)
@@ -158,6 +160,7 @@ class ImportMlossWorkerTest < ActiveSupport::TestCase
     assert_equal 1, result[:sources]["mloss"]["hidden"]
     project = Project.find_by!(url: "https://github.com/neuraloperator/neuraloperator")
     assert_equal "v27/26-0434", project.external_software_records.sole.identifier
+    assert_equal "software_description", project.project_papers.sole.role
     assert ExternalProjectSync.exists?(project_id: project.id)
     assert_equal 0, project.science_score.to_f
     assert_empty Project.where(owner_id: hidden.id)

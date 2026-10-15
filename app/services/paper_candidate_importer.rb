@@ -49,7 +49,7 @@ class PaperCandidateImporter
     end
     if project
       link = project.project_papers.find_or_initialize_by(paper: paper)
-      link.role = "reference" if link.new_record?
+      link.role = "reference" if link.new_record? || link.role == "software_description"
       link.evidence = (Array(link.evidence) + [evidence]).uniq
       link.save! if link.changed?
       links << { "type" => "project", "id" => link.id }

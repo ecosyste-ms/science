@@ -77,7 +77,7 @@ class ScienceScoreCalculator
   end
 
   def check_resolved_paper
-    present = project.project_papers.exists?
+    present = project.project_papers.where(role: %w[implementation reference]).exists?
     {
       present: present,
       description: "Resolved paper references",

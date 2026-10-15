@@ -24,6 +24,12 @@ class SyncMlossWorkerTest < ActiveSupport::TestCase
     assert_equal "code_urls", evidence["source_field"]
     assert_equal MlossClient.article_url(record.identifier), evidence["article_url"]
     assert_equal 2, record.metadata["code_urls"].size
+    paper = Paper.sole
+    assert_equal [@project.id, other.id].sort, paper.linked_projects.pluck(:id).sort
+    assert_equal "software_description", @project.project_papers.sole.role
+    assert_equal "repository_alias", @project.project_papers.sole.evidence.sole["match_method"]
+    assert_empty Mention.all
+    assert_empty MentionSource.all
     assert_equal before, @project.reload.attributes
     SyncMlossWorker.new.perform(["v27/26-0434"])
     assert_requested request, times: 1
@@ -36,6 +42,7 @@ class SyncMlossWorkerTest < ActiveSupport::TestCase
     mloss_catalogue
     SyncMlossWorker.new.perform(["v27/26-0434"])
     assert_equal %w[ambiguous ambiguous], ProjectExternalSoftwareRecord.pluck(:match_status)
+    assert_empty ProjectPaper.all
     assert_empty @project.project_external_software_records.registry_references
     result = DiscoverExternalRepositoriesWorker.new.perform(10)
     assert_equal 1, result[:sources]["mloss"]["ambiguous"]
@@ -71,6 +78,8 @@ class SyncMlossWorkerTest < ActiveSupport::TestCase
     assert_empty ProjectExternalSoftwareRecord.all
     MlossImporter.new.sync_page([older], started_at: old_time)
     assert_empty ProjectExternalSoftwareRecord.all
+    assert_empty ProjectPaper.all
+    assert_equal 1, Paper.count
     assert_equal ["https://example.org/neuraloperator"], record.reload.metadata["code_urls"]
   end
 
