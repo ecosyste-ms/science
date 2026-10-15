@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="https://www.jstatsoft.org/lib/pkp/xml/oai2.xsl" ?>
+<OAI-PMH schemaLocation="http://www.openarchives.org/OAI/2.0/   http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+	<responseDate>2026-10-15T11:40:51Z</responseDate>
+	<request verb="ListRecords" metadataPrefix="oai_dc" set="jss:ART" from="2026-09-01T00:00:00Z">https://www.jstatsoft.org/index.php/jss/oai</request>
+	<ListRecords>
+		<record>
+			<header>
+				<identifier>oai:ojs.pkp.sfu.ca:article/5089</identifier>
+				<datestamp>2026-09-25T02:03:44Z</datestamp>
+				<setSpec>jss:ART</setSpec>
+			</header>
+			<metadata>
+<dc schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/  http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+	<title lang="en-US">BACE: A gretl Package for Model Averaging in Bounded Dependent Variable Models</title>
+	<creator>Błażejowski, Marcin</creator>
+	<creator>Kwiatkowski, Jacek</creator>
+	
+	<publisher lang="en-US">Foundation for Open Access Statistics</publisher>
+	<date>2026-09-25</date>
+	<type>info:eu-repo/semantics/article</type>
+	<type>info:eu-repo/semantics/publishedVersion</type>
+	<type lang="en-US">Peer-reviewed Article</type>
+	<format>application/pdf</format>
+	<format>application/zip</format>
+	<identifier>https://www.jstatsoft.org/index.php/jss/article/view/v117i04</identifier>
+	<identifier>10.18637/jss.v117.i04</identifier>
+	<source lang="en-US">Journal of Statistical Software; Vol. 117 (2026); 1 - 42</source>
+	<source>1548-7660</source>
+	<language>eng</language>
+	<relation>https://www.jstatsoft.org/index.php/jss/article/view/v117i04/4837</relation>
+	<relation>https://www.jstatsoft.org/index.php/jss/article/view/v117i04/4838</relation>
+	<rights lang="en-US">Copyright (c) 2026 Marcin Błażejowski, Jacek Kwiatkowski</rights>
+	<rights lang="en-US">https://creativecommons.org/licenses/by/4.0</rights>
+</dc>
+			</metadata>
+		</record>
+		<record>
+			<header>
+				<identifier>oai:ojs.pkp.sfu.ca:article/5537</identifier>
+				<datestamp>2026-09-25T02:03:44Z</datestamp>
+				<setSpec>jss:ART</setSpec>
+			</header>
+			<metadata>
+<dc schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/  http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+	<title lang="en-US">asgl: A Python Package for Penalized Quantile, Linear, and Logistic Regression</title>
+	<creator>Mendez-Civieta, Alvaro</creator>
+	<creator>Aguilera-Morillo, M. Carmen</creator>
+	<creator>Lillo, Rosa E.</creator>
+	
+	<publisher lang="en-US">Foundation for Open Access Statistics</publisher>
+	<date>2026-09-25</date>
+	<type>info:eu-repo/semantics/article</type>
+	<type>info:eu-repo/semantics/publishedVersion</type>
+	<type lang="en-US">Peer-reviewed Article</type>
+	<format>application/pdf</format>
+	<format>application/gzip</format>
+	<format>text/x-script.python</format>
+	<identifier>https://www.jstatsoft.org/index.php/jss/article/view/v117i03</identifier>
+	<identifier>10.18637/jss.v117.i03</identifier>
+	<source lang="en-US">Journal of Statistical Software; Vol. 117 (2026); 1 - 26</source>
+	<source>1548-7660</source>
+	<language>eng</language>
+	<relation>https://www.jstatsoft.org/index.php/jss/article/view/v117i03/4834</relation>
+	<relation>https://www.jstatsoft.org/index.php/jss/article/view/v117i03/4835</relation>
+	<relation>https://www.jstatsoft.org/index.php/jss/article/view/v117i03/4836</relation>
+	<rights lang="en-US">Copyright (c) 2026 Alvaro Mendez-Civieta, M. Carmen Aguilera-Morillo, Rosa E. Lillo</rights>
+	<rights lang="en-US">https://creativecommons.org/licenses/by/4.0</rights>
+</dc>
+			</metadata>
+		</record>
+		<record>
+			<header>
+				<identifier>oai:ojs.pkp.sfu.ca:article/5541</identifier>
+				<datestamp>2026-10-13T00:09:18Z</datestamp>
+				<setSpec>jss:ART</setSpec>
+			</header>
+			<metadata>
+<dc schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/  http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+	<title lang="en-US">LorenzRegression: An Implementation of the Lorenz and Penalized Lorenz Regressions in R</title>
+	<creator>Jacquemain, Alexandre</creator>
+	<creator>Heuchenne, Cédric</creator>
+	
+	<publisher lang="en-US">Foundation for Open Access Statistics</publisher>
+	<date>2026-10-13</date>
+	<type>info:eu-repo/semantics/article</type>
+	<type>info:eu-repo/semantics/publishedVersion</type>
+	<type lang="en-US">Peer-reviewed Article</type>
+	<format>application/pdf</format>
+	<format>application/gzip</format>
+	<format>text/plain</format>
+	<identifier>https://www.jstatsoft.org/index.php/jss/article/view/v117i06</identifier>
+	<identifier>10.18637/jss.v117.i06</identifier>
+	<source lang="en-US">Journal of Statistical Software; Vol. 117 (2026); 1 - 33</source>
+	<source>1548-7660</source>
+	<language>eng</language>
+	<relation>https://www.jstatsoft.org/index.php/jss/article/view/v117i06/4842</relation>
+	<relation>https://www.jstatsoft.org/index.php/jss/article/view/v117i06/4843</relation>
+	<relation>https://www.jstatsoft.org/index.php/jss/article/view/v117i06/4844</relation>
+	<rights lang="en-US">Copyright (c) 2026 Alexandre Jacquemain, Cédric Heuchenne</rights>
+	<rights lang="en-US">https://creativecommons.org/licenses/by/4.0</rights>
+</dc>
+			</metadata>
+		</record>
+		<record>
+			<header>
+				<identifier>oai:ojs.pkp.sfu.ca:article/5712</identifier>
+				<datestamp>2026-09-25T02:03:44Z</datestamp>
+				<setSpec>jss:ART</setSpec>
+			</header>
+			<metadata>
+<dc schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/  http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+	<title lang="en-US">Making, Updating, and Querying Causal Models with CausalQueries</title>
+	<creator>Tietz, Till</creator>
+	<creator>Medina, Lily</creator>
+	<creator>Syunyaev, Georgiy</creator>
+	<creator>Humphreys, Macartan</creator>
+	
+	<publisher lang="en-US">Foundation for Open Access Statistics</publisher>
+	<date>2026-09-25</date>
+	<type>info:eu-repo/semantics/article</type>
+	<type>info:eu-repo/semantics/publishedVersion</type>
+	<type lang="en-US">Peer-reviewed Article</type>
+	<format>application/pdf</format>
+	<format>application/gzip</format>
+	<format>text/plain</format>
+	<identifier>https://www.jstatsoft.org/index.php/jss/article/view/v117i01</identifier>
+	<identifier>10.18637/jss.v117.i01</identifier>
+	<source lang="en-US">Journal of Statistical Software; Vol. 117 (2026); 1 - 40</source>
+	<source>1548-7660</source>
+	<language>eng</language>
+	<relation>https://www.jstatsoft.org/index.php/jss/article/view/v117i01/4828</relation>
+	<relation>https://www.jstatsoft.org/index.php/jss/article/view/v117i01/4829</relation>
+	<relation>https://www.jstatsoft.org/index.php/jss/article/view/v117i01/4830</relation>
+	<rights lang="en-US">Copyright (c) 2026 Till Tietz, Lily Medina, Georgiy Syunyaev, Macartan Humphreys</rights>
+	<rights lang="en-US">https://creativecommons.org/licenses/by/4.0</rights>
+</dc>
+			</metadata>
+		</record>
+		<record>
+			<header>
+				<identifier>oai:ojs.pkp.sfu.ca:article/5728</identifier>
+				<datestamp>2026-09-25T02:03:44Z</datestamp>
+				<setSpec>jss:ART</setSpec>
+			</header>
+			<metadata>
+<dc schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/  http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+	<title lang="en-US">OGBoost: A Python Package for Ordinal Regression Gradient Boosting</title>
+	<creator>Sharabiani, Mansour T. A.</creator>
+	<creator>Bottle, Alex</creator>
+	<creator>Mahani, Alireza S.</creator>
+	
+	<publisher lang="en-US">Foundation for Open Access Statistics</publisher>
+	<date>2026-09-25</date>
+	<type>info:eu-repo/semantics/article</type>
+	<type>info:eu-repo/semantics/publishedVersion</type>
+	<type lang="en-US">Peer-reviewed Article</type>
+	<format>application/pdf</format>
+	<format>application/gzip</format>
+	<format>application/zip</format>
+	<identifier>https://www.jstatsoft.org/index.php/jss/article/view/v117i05</identifier>
+	<identifier>10.18637/jss.v117.i05</identifier>
+	<source lang="en-US">Journal of Statistical Software; Vol. 117 (2026); 1 - 38</source>
+	<source>1548-7660</source>
+	<language>eng</language>
+	<relation>https://www.jstatsoft.org/index.php/jss/article/view/v117i05/4839</relation>
+	<relation>https://www.jstatsoft.org/index.php/jss/article/view/v117i05/4840</relation>
+	<relation>https://www.jstatsoft.org/index.php/jss/article/view/v117i05/4841</relation>
+	<rights lang="en-US">Copyright (c) 2026 Mansour T. A. Sharabiani, Alex Bottle, Alireza S. Mahani</rights>
+	<rights lang="en-US">https://creativecommons.org/licenses/by/4.0</rights>
+</dc>
+			</metadata>
+		</record>
+		<record>
+			<header>
+				<identifier>oai:ojs.pkp.sfu.ca:article/5820</identifier>
+				<datestamp>2026-09-25T02:03:44Z</datestamp>
+				<setSpec>jss:ART</setSpec>
+			</header>
+			<metadata>
+<dc schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/  http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+	<title lang="en-US">nonprobsvy: An R Package for Modern Methods for Non-Probability Surveys</title>
+	<creator>Chrostowski, Łukasz</creator>
+	<creator>Chlebicki, Piotr</creator>
+	<creator>Beręsewicz, Maciej</creator>
+	
+	<publisher lang="en-US">Foundation for Open Access Statistics</publisher>
+	<date>2026-09-25</date>
+	<type>info:eu-repo/semantics/article</type>
+	<type>info:eu-repo/semantics/publishedVersion</type>
+	<type lang="en-US">Peer-reviewed Article</type>
+	<format>application/pdf</format>
+	<format>application/gzip</format>
+	<format>text/plain</format>
+	<identifier>https://www.jstatsoft.org/index.php/jss/article/view/v117i02</identifier>
+	<identifier>10.18637/jss.v117.i02</identifier>
+	<source lang="en-US">Journal of Statistical Software; Vol. 117 (2026); 1 - 37</source>
+	<source>1548-7660</source>
+	<language>eng</language>
+	<relation>https://www.jstatsoft.org/index.php/jss/article/view/v117i02/4831</relation>
+	<relation>https://www.jstatsoft.org/index.php/jss/article/view/v117i02/4832</relation>
+	<relation>https://www.jstatsoft.org/index.php/jss/article/view/v117i02/4833</relation>
+	<rights lang="en-US">Copyright (c) 2026 Łukasz Chrostowski, Piotr Chlebicki, Maciej Beręsewicz</rights>
+	<rights lang="en-US">https://creativecommons.org/licenses/by/4.0</rights>
+</dc>
+			</metadata>
+		</record>
+	</ListRecords>
+</OAI-PMH>

@@ -1,8 +1,8 @@
 class ImportJournalWorker
   include Sidekiq::Worker
 
-  CLIENTS = { "jors" => JorsClient }.freeze
-  IMPORTERS = { "jors" => JorsImporter }.freeze
+  CLIENTS = { "jors" => JorsClient, "jss" => JssClient }.freeze
+  IMPORTERS = { "jors" => JorsImporter, "jss" => JssImporter }.freeze
   sidekiq_options queue: "external_metadata", retry: 3
 
   def perform(import_id)

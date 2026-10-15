@@ -1,9 +1,13 @@
-%w[jors].each do |source|
+%w[jors jss].each do |source|
   namespace source do
     desc "Start or resume a #{source.upcase} sweep (LIMIT=5, RESTART=true for completed sweeps)"
     task sweep: :environment do
-      record = ExternalSoftwareImport.start_catalogue(source: source,
-        page_size: ENV["LIMIT"].present? ? Integer(ENV["LIMIT"], 10) : nil, restart: ENV["RESTART"] == "true")
+      options = { page_size: ENV["LIMIT"].present? ? Integer(ENV["LIMIT"], 10) : nil, restart: ENV["RESTART"] == "true" }
+      record = if source == "jss"
+        ExternalSoftwareImport.start_jss(**options, from: ENV["FROM"].presence, until_time: ENV["UNTIL"].presence)
+      else
+        ExternalSoftwareImport.start_catalogue(source: source, **options)
+      end
       record.enqueue
       puts JSON.generate(record.progress)
     end

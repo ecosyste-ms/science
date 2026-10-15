@@ -13,6 +13,10 @@ class PaperIdentifier < ApplicationRecord
         match = uri.path.match(%r{\A/(?:en/)?articles/(10\.5334/jors\.[a-z0-9]+)/?\z}i)
         next({ source: "jors", identifier: match[1].downcase }) if match
       end
+      if uri.host&.downcase == JssClient::HOST
+        match = uri.path.match(%r{\A/(?:index\.php/jss/)?article/view/(v\d+[icbs]\d+)/?\z}i)
+        next({ source: "jss", identifier: match[1].downcase }) if match
+      end
       next unless %w[jmlr.org www.jmlr.org].include?(uri.host&.downcase)
       match = uri.path.match(%r{\A/papers/v([1-9][0-9]*)/([a-zA-Z0-9_-]+)\.html\z}) ||
         uri.path.match(%r{\A/papers/(?:volume|v)([1-9][0-9]*)/([a-zA-Z0-9_-]+)/\2\.pdf\z})
@@ -23,6 +27,9 @@ class PaperIdentifier < ApplicationRecord
   end
 
   def self.urls_for(identity)
+    if identity.fetch(:source) == "jss"
+      return %w[https http].product(["article/view", "index.php/jss/article/view"]).map { |scheme, path| "#{scheme}://#{JssClient::HOST}/#{path}/#{identity.fetch(:identifier)}" }
+    end
     if identity.fetch(:source) == "jors"
       return %w[https http].product(["articles", "en/articles"]).map { |scheme, path| "#{scheme}://#{JorsClient::HOST}/#{path}/#{identity.fetch(:identifier)}" }
     end

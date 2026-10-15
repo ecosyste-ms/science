@@ -20,7 +20,7 @@ class ExternalSoftwareRecord < ApplicationRecord
   end
 
   def self.source_name(source)
-    { "wikidata" => "Wikidata", "biotools" => "bio.tools", "ascl" => "ASCL", "mloss" => "JMLR MLOSS", "jors" => "JORS", "swmath" => "swMATH", "rrid" => "RRID", "doi" => "Software DOIs" }.fetch(source, source.humanize)
+    { "wikidata" => "Wikidata", "biotools" => "bio.tools", "ascl" => "ASCL", "mloss" => "JMLR MLOSS", "jors" => "JORS", "jss" => "JSS", "swmath" => "swMATH", "rrid" => "RRID", "doi" => "Software DOIs" }.fetch(source, source.humanize)
   end
 
   def record_url
@@ -35,6 +35,9 @@ class ExternalSoftwareRecord < ApplicationRecord
       MlossClient.article_url(identifier)
     when "jors"
       JorsClient.article_url(identifier)
+    when "jss"
+      key = JssClient.new.article_key(metadata["article_url"].to_s)
+      JssClient.article_url(key) if key
     when "swmath"
       "https://zbmath.org/software/#{SwmathClient.identifier(identifier)}"
     when "rrid"

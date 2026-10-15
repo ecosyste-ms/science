@@ -44,6 +44,8 @@ class ExternalSoftwareImport < ApplicationRecord
       if record.completed_at
         record = if source == "wikidata"
           start_wikidata(page_size: record.page_size, restart: true)
+        elsif source == "jss"
+          start_jss(page_size: record.page_size, restart: true)
         else
           start_catalogue(source: source, page_size: record.page_size, restart: true)
         end
@@ -81,10 +83,24 @@ class ExternalSoftwareImport < ApplicationRecord
     start_catalogue(source: "doi_seeds", page_size: page_size, restart: restart)
   end
 
-  def self.start_catalogue(source:, page_size: nil, restart: false)
-    initial_cursor = { "biotools" => "1", "ascl" => nil, "mloss" => nil, "jors" => nil, "swmath" => nil, "rrid_seeds" => nil, "rrid" => nil, "doi_seeds" => nil }.fetch(source)
+  def self.start_jss(from: nil, until_time: nil, page_size: nil, restart: false)
+    previous = find_by(source: "jss")
+    if previous && !restart
+      state = JSON.parse(previous.cursor)
+      if (from && JssClient.timestamp(from) != state["from"]) || (until_time && JssClient.timestamp(until_time) != state["until"])
+        raise ArgumentError, "JSS date window is already saved; omit FROM and UNTIL to resume"
+      end
+      return start_catalogue(source: "jss", page_size: page_size)
+    end
+    from ||= JSON.parse(previous.cursor)["until"] if previous
+    start_catalogue(source: "jss", page_size: page_size, restart: restart,
+      initial_cursor: JssClient.initial_cursor(from: from, until_time: until_time))
+  end
+
+  def self.start_catalogue(source:, page_size: nil, restart: false, initial_cursor: nil)
+    initial_cursor ||= { "biotools" => "1", "ascl" => nil, "mloss" => nil, "jors" => nil, "jss" => nil, "swmath" => nil, "rrid_seeds" => nil, "rrid" => nil, "doi_seeds" => nil }.fetch(source)
     client = { "biotools" => BiotoolsClient, "ascl" => AsclClient, "mloss" => MlossClient, "swmath" => SwmathClient,
-      "rrid_seeds" => RridClient, "rrid" => RridCatalogueClient, "doi_seeds" => SoftwareDoiClient, "jors" => JorsClient }.fetch(source)
+      "rrid_seeds" => RridClient, "rrid" => RridCatalogueClient, "doi_seeds" => SoftwareDoiClient, "jors" => JorsClient, "jss" => JssClient }.fetch(source)
     max_page_size = client::PAGE_SIZE
     if page_size && (!page_size.is_a?(Integer) || !page_size.between?(1, max_page_size))
       raise ArgumentError, "page size must be between 1 and #{max_page_size}"
@@ -151,7 +167,7 @@ class ExternalSoftwareImport < ApplicationRecord
     worker = { "biotools" => ImportBiotoolsWorker, "ascl" => ImportAsclWorker, "mloss" => ImportMlossWorker,
       "swmath" => ImportSwmathWorker, "wikidata" => ImportWikidataWorker,
       "rrid_seeds" => ImportRridSeedsWorker, "rrid" => ImportRridWorker,
-      "doi_seeds" => ImportSoftwareDoiSeedsWorker, "jors" => ImportJournalWorker }.fetch(source)
+      "doi_seeds" => ImportSoftwareDoiSeedsWorker, "jors" => ImportJournalWorker, "jss" => ImportJournalWorker }.fetch(source)
     worker.perform_at([next_run_at, lease_expires_at, Time.current].compact.max, id)
   end
 
@@ -190,6 +206,7 @@ class ExternalSoftwareImport < ApplicationRecord
         when "ascl" then AsclClient.identifier(record["ascl_id"])
         when "mloss" then MlossClient.identifier(record["id"])
         when "jors" then JorsClient.identifier(record["id"])
+        when "jss" then JssClient.identifier(record["id"])
         when "swmath" then SwmathClient.identifier(record["id"].to_s)
         when "rrid" then RridClient.identifier(record.dig("item", "identifier"))
         when "doi_seeds" then record.fetch("project_id").to_s
@@ -204,7 +221,7 @@ class ExternalSoftwareImport < ApplicationRecord
     with_lock do
       return unless lease_token == token
       finished = pending_next_cursor.nil?
-      final_cursor = source == "biotools" ? cursor : (pending_ids.last || cursor)
+      final_cursor = %w[biotools jss].include?(source) ? cursor : (pending_ids.last || cursor)
       update!(cursor: pending_next_cursor || final_cursor, pages_processed: pages_processed + 1,
         items_processed: items_processed + pending_ids.size, pending_ids: [], pending_records: [],
         pending_next_cursor: nil, page_retrieved_at: nil, completed_at: finished ? Time.current : nil,

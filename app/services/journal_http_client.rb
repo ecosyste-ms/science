@@ -21,7 +21,7 @@ class JournalHttpClient
       request.options.timeout = 15
     end
     if [301, 302, 303, 307, 308].include?(response.status)
-      raise Error, "Too many journal redirects" if redirects.zero? || response.headers["location"].blank?
+      raise Error, "Too many journal redirects at #{uri.path}" if redirects.zero? || response.headers["location"].blank?
       return request(URI.join(url, response.headers["location"]).to_s, redirects: redirects - 1)
     end
     rate_limited!(response.headers["retry-after"]) if [429, 503].include?(response.status)
@@ -36,6 +36,16 @@ class JournalHttpClient
 
   def cooldown_key
     "journal-retry-at:#{self.class::HOST}"
+  end
+
+  def repository_url?(url)
+    uri = RepositoryUrlNormalizer.parse(url)
+    return false unless uri && %w[http https].include?(uri.scheme) && uri.userinfo.nil? && [80, 443].include?(uri.port)
+    return false if uri.path.split("/").any? { |part| %w[. ..].include?(part) }
+    return false if RepositoryUrlNormalizer.github_pages_repository(url)
+    normalized = RepositoryUrlNormalizer.normalize(url)
+    @repository_importer ||= ExternalSoftwareImporter.new
+    normalized && @repository_importer.repository_url?(normalized)
   end
 
   def rate_limited!(value)

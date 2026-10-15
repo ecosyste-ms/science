@@ -295,9 +295,24 @@ RESTART=true bundle exec rake jors:sweep
 
 Each worker handles up to five articles and saves parsed records before matching. Publisher pagination and offsets are retained for resumption. Article DOI, XML URL, category, date and software-section text are retained as evidence. Confirmed repositories use the same discovery and publication paths as MLOSS, including multiple projects per paper and exclusion from score bonuses. Reclassification removes that source's associations while retaining independent evidence. Invalid XML, mismatched DOIs and failed requests preserve the last successful snapshot. Imports and refreshes are manual; no recurring schedule is configured.
 
+## Journal of Statistical Software
+
+JSS harvests the OAI `jss:ART` and `jss:CS` sets. Book and software reviews are excluded. A sweep retains its date window, publisher continuation token and offset; an expired token restarts the same set and date window. Completed sweeps can restart from the previous `UNTIL` checkpoint, with overlap at that timestamp. Deleted records remove the JSS associations while retaining the paper and evidence from other sources.
+
+```sh
+FROM=2026-09-01 bundle exec rake jss:sweep
+bundle exec rake jss:status
+bundle exec rake jss:resume jss:refresh
+RESTART=true bundle exec rake jss:sweep
+```
+
+`FROM` and `UNTIL` accept dates or UTC timestamps. The first sweep without `FROM` requests the publisher's full history. Omit date options when resuming. Each worker processes at most five articles, and parsed pages are saved before matching. Manual imports accept up to five publisher OAI identifiers in `IDS`.
+
+Repository attribution requires a publisher-labelled R or Python package attachment and matching `Package` or `Name` metadata from its root `DESCRIPTION` or `PKG-INFO`. Only that package's URL fields supply repository candidates. Dependencies, README links and replication attachments do not establish subject software. Combined source/replication attachments and packages without matching root metadata remain unresolved in the stored source record. Archive metadata is read through `bsdtar` with output and execution limits, without extracting files or executing package code. No recurring harvest or score bonus is enabled.
+
 ## Repository discovery from cached sources
 
-`external_software:discover` queues a separate worker that reads up to 100 due Wikidata, bio.tools, ASCL, MLOSS, swMATH or RRID records. It uses the stored repository statements, normalized URLs and indexed aliases to attach evidence to existing projects or create minimal projects. GitHub and GitLab hosts already recorded in `hosts` are supported for creation, with `gitlab.com` included by default. Nested GitLab namespaces are preserved. Other hosts remain in the discovery results as unsupported candidates. Hidden owners are excluded, and ambiguous matches retain all candidate projects without requesting enrichment.
+`external_software:discover` queues a separate worker that reads up to 100 due Wikidata, bio.tools, ASCL, MLOSS, JORS, JSS, swMATH or RRID records. It uses the stored repository statements, normalized URLs and indexed aliases to attach evidence to existing projects or create minimal projects. GitHub and GitLab hosts already recorded in `hosts` are supported for creation, with `gitlab.com` included by default. Nested GitLab namespaces are preserved. Other hosts remain in the discovery results as unsupported candidates. Hidden owners are excluded, and ambiguous matches retain all candidate projects without requesting enrichment.
 
 Run `bundle exec rake external_software:discover` to start a batch, or set `LIMIT=10` for a smaller batch. The task runs every ten minutes and also recovers pending project sync requests. `bundle exec rake external_software:discovery_status` reports due records by source, failed records and pending syncs. Each source record stores its latest candidate outcomes and the IDs it created in `discovery_result`; worker logs count created, existing, ambiguous, hidden and unsupported repository URLs by source. These are per-source counts, so overlapping sources can report the same project.
 

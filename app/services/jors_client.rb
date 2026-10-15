@@ -114,13 +114,4 @@ class JorsClient < JournalHttpClient
       section.text.scan(%r{https?://[^\s<>"\[\]]+})).map { |url| url.sub(/[.,;)]+\z/, "") }.uniq
   end
 
-  def repository_url?(url)
-    uri = RepositoryUrlNormalizer.parse(url)
-    return false unless uri && %w[http https].include?(uri.scheme) && uri.userinfo.nil? && [80, 443].include?(uri.port)
-    return false if uri.path.split("/").any? { |part| %w[. ..].include?(part) }
-    return false if RepositoryUrlNormalizer.github_pages_repository(url)
-    normalized = RepositoryUrlNormalizer.normalize(url)
-    @repository_importer ||= ExternalSoftwareImporter.new
-    normalized && @repository_importer.repository_url?(normalized)
-  end
 end

@@ -16,13 +16,14 @@ class ProjectExternalSoftwareRecord < ApplicationRecord
 
   def self.registry_references
     joins(:external_software_record).where(match_status: "matched")
-      .where(external_software_records: { status: %w[ok error], source: %w[wikidata biotools ascl mloss jors swmath rrid doi] })
+      .where(external_software_records: { status: %w[ok error], source: %w[wikidata biotools ascl mloss jors jss swmath rrid doi] })
       .where.not(external_software_records: { retrieved_at: nil })
       .order("external_software_records.source", "external_software_records.identifier")
-      .pluck("external_software_records.source", "external_software_records.identifier", "external_software_records.concept_identifier")
-      .map { |source, identifier, concept| [source, source == "doi" ? (concept.presence || identifier) : identifier] }
-      .uniq.filter_map do |source, identifier|
-        url = ExternalSoftwareRecord.new(source: source, identifier: identifier).record_url
+      .pluck("external_software_records.source", "external_software_records.identifier", "external_software_records.concept_identifier",
+        Arel.sql("external_software_records.metadata->>'article_url'"))
+      .map { |source, identifier, concept, article_url| [source, source == "doi" ? (concept.presence || identifier) : identifier, article_url] }
+      .uniq.filter_map do |source, identifier, article_url|
+        url = ExternalSoftwareRecord.new(source: source, identifier: identifier, metadata: { "article_url" => article_url }).record_url
         label = source == "doi" ? (identifier.start_with?("10.5281/zenodo.") ? "Zenodo" : "DOI") : ExternalSoftwareRecord.source_name(source)
         { source: label, identifier: identifier, url: url } if url
       end
