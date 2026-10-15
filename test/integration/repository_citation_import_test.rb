@@ -29,6 +29,7 @@ class RepositoryCitationImportTest < ActionDispatch::IntegrationTest
   end
 
   test "ordinary repository scan imports a citation-only paper with commit provenance" do
+    RepositoryBriefScan.unstub(:call)
     project = Project.create!(url: "https://github.com/example/research", science_score: 20,
       repository: { "clone_url" => @local_origin, "metadata" => { "files" => { "license" => "LICENSE" } } },
       swhids: { "status" => "success" })
