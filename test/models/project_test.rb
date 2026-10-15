@@ -10,6 +10,7 @@ class ProjectTest < ActiveSupport::TestCase
 
   def teardown
     ResearchOrganizationDomainMatcher.reset_cache!
+    super
   end
 
   test "display name prefers the saved name over the README heading" do
