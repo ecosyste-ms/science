@@ -1,3 +1,18 @@
+namespace :journals do
+  desc "Queue due OpenAlex enrichment for journal papers (LIMIT=5, maximum 25)"
+  task enrich: :environment do
+    puts JSON.generate(JournalPaperEnrichment.enqueue(limit: ENV.fetch("LIMIT", JournalPaperEnrichment::DEFAULT_LIMIT)))
+  end
+
+  desc "Show journal paper OpenAlex enrichment status"
+  task enrichment_status: :environment do
+    puts JSON.generate(statuses: JournalPaperEnrichment.group(:status).count,
+      due: JournalPaperEnrichment.due.count, cooldown_until: JournalPaperEnrichment.cooldown_until,
+      untracked: PaperIdentifier.where(source: JournalPaperEnrichment::SOURCES)
+        .where.not(paper_id: JournalPaperEnrichment.select(:paper_id)).distinct.count(:paper_id))
+  end
+end
+
 %w[mloss jors jss].each do |source|
   namespace source do
     desc "Start or repeat the #{source.upcase} harvest, preserving unfinished progress"

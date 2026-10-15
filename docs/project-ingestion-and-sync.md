@@ -279,7 +279,16 @@ Explicit repository links use indexed URL and alias matching, including multiple
 
 Each article also creates or reuses a `Paper`, identified by a unique JMLR article key in `PaperIdentifier`. Confirmed repository matches create `ProjectPaper` links with the `software_description` role, or add evidence to an existing relationship without changing its role. New description links appear in related papers and do not contribute to the resolved-paper score. Refreshes replace only that article's MLOSS evidence; independent citation or implementation evidence is retained. Ambiguous repository matches do not create publication links.
 
-OpenAlex imports reconcile JMLR article and PDF URLs with the publisher identifier, including papers previously imported with URLs but no publisher identifier. They enrich the existing paper in either import order. Conflicting paper identities produce an error instead of merging records. Software archive URLs remain source evidence and are not assigned as the article DOI. Journal imports preserve existing OpenAlex metadata, and paper matching does not use titles. Publisher harvests do not fetch OpenAlex metadata; that enrichment requires a separate OpenAlex import. Apply both publication-identity migrations before running these imports; the index on existing paper URLs is built concurrently.
+OpenAlex imports reconcile JMLR article and PDF URLs with the publisher identifier, including papers previously imported with URLs but no publisher identifier. They enrich the existing paper in either import order. Conflicting paper identities produce an error instead of merging records. Software archive URLs remain source evidence and are not assigned as the article DOI. Journal imports preserve existing OpenAlex metadata, and paper matching does not use titles. Apply both publication-identity migrations before running these imports; the index on existing paper URLs is built concurrently.
+
+With `OPENALEX_API_KEY` configured, `journals:enrich` runs every ten minutes and queues up to five papers carrying JMLR, JORS or JSS publisher identifiers. It includes existing imports and enrolls new papers automatically. Successful lookups refresh after 30 days. The worker uses the saved OpenAlex ID, then the DOI when no OpenAlex ID is available. For papers without either identifier, title search supplies candidates, but only an exact publisher article identifier in an OpenAlex landing-page or PDF URL establishes a match.
+
+```sh
+bundle exec rake journals:enrichment_status
+bundle exec rake journals:enrich
+```
+
+The `journal_paper_enrichments` table stores check times, retry times and worker leases. Its migration creates an empty table; the scheduler enrolls papers in bounded batches. Missing works and identity conflicts retry after seven days. Other request failures retry after an hour, while authentication failures pause this queue for six hours. Rate limits pause this queue until the supplied retry or daily-reset time, with a one-hour fallback. Interrupted jobs become available again after their ten-minute lease expires. Failed lookups retain saved paper metadata, and enrichment preserves software associations and Science Score. `LIMIT` can override the queue batch size up to 25.
 
 ## JORS software metapapers
 

@@ -6,6 +6,7 @@ class Paper < ApplicationRecord
   has_many :paper_authors, dependent: :delete_all
   has_many :package_papers, dependent: :delete_all
   has_many :paper_identifiers, dependent: :delete_all
+  has_one :journal_paper_enrichment, dependent: :delete
 
   def linked_packages
     Package.where(id: package_papers.select(:package_id))
@@ -37,7 +38,7 @@ class Paper < ApplicationRecord
     raise ArgumentError, "Invalid paper DOI" if doi && !doi.match?(%r{\A10\.\d{4,9}/\S+\z})
     ids = [id.downcase, id.sub("https:", "http:").downcase, id.split("/").last.downcase]
     dois = doi ? [doi, "https://doi.org/#{doi}", "http://doi.org/#{doi}", "https://dx.doi.org/#{doi}", "http://dx.doi.org/#{doi}"] : []
-    urls = Array(work["locations"]).flat_map { |location| [location["landing_page_url"], location["pdf_url"]] }.compact
+    urls = openalex_urls(work)
     identities = PaperIdentifier.from_urls(urls)
 
     transaction do
@@ -66,6 +67,11 @@ class Paper < ApplicationRecord
       PaperIdentifier.attach!(paper, identities)
       { "status" => status, "paper_id" => paper.id }
     end
+  end
+
+  def self.openalex_urls(work)
+    [*work["locations"], work["primary_location"], work["best_oa_location"]].compact
+      .flat_map { |location| [location["landing_page_url"], location["pdf_url"]] }.compact.uniq
   end
 
   def self.import_publication!(title:, url:, doi: nil, publication_date: nil)

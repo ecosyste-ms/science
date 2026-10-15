@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_15_130100) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_15_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -246,6 +246,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_130100) do
     t.jsonb "term_weights", default: {}, null: false
     t.datetime "updated_at", null: false
     t.index ["created_at"], name: "index_joss_vocabulary_models_on_created_at"
+  end
+
+  create_table "journal_paper_enrichments", force: :cascade do |t|
+    t.bigint "paper_id", null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "checked_at"
+    t.datetime "next_attempt_at", null: false
+    t.string "lease_token"
+    t.datetime "lease_expires_at"
+    t.text "last_error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["next_attempt_at", "id"], name: "index_journal_paper_enrichments_on_next_attempt_at_and_id"
+    t.index ["paper_id"], name: "index_journal_paper_enrichments_on_paper_id", unique: true
+    t.index ["status", "next_attempt_at"], name: "index_journal_paper_enrichments_on_status_and_next_attempt_at"
   end
 
   create_table "mention_sources", force: :cascade do |t|
@@ -845,6 +860,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_130100) do
   add_foreign_key "developer_accounts", "hosts", on_delete: :cascade
   add_foreign_key "developer_accounts", "owners", on_delete: :nullify
   add_foreign_key "external_project_syncs", "projects", on_delete: :cascade
+  add_foreign_key "journal_paper_enrichments", "papers", on_delete: :cascade
   add_foreign_key "mention_sources", "mentions", on_delete: :cascade
   add_foreign_key "owner_research_organizations", "owners", on_delete: :cascade
   add_foreign_key "owner_research_organizations", "research_organizations"

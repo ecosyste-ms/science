@@ -152,9 +152,18 @@ class OpenAlexApiClientTest < ActiveSupport::TestCase
       end
 
       assert_equal 429, error.status
+      assert_in_delta 1.hour.from_now.to_f, error.retry_at.to_f, 2
       assert_requested request, times: 1
       WebMock.reset!
     end
+  end
+
+  test "retains the later daily-credit reset when a rate limit response exhausts the allowance" do
+    stub_request(:get, "https://api.openalex.org/works").with(query: { api_key: "test-key" })
+      .to_return(status: 429, headers: { "Retry-After" => "3600", "X-RateLimit-Remaining" => "0", "X-RateLimit-Reset" => "7200" })
+    Faraday::Retry::Middleware.any_instance.expects(:sleep).never
+    error = assert_raises(OpenAlexApiClient::RequestError) { OpenAlexApiClient.new(api_key: "test-key").get("works") }
+    assert_in_delta 2.hours.from_now.to_f, error.retry_at.to_f, 2
   end
 
   test "honors a short retry delay and logs only status and delay" do

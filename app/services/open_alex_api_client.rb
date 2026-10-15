@@ -13,10 +13,11 @@ class OpenAlexApiClient
   MAX_RETRY_INTERVAL = 5
 
   class RequestError < StandardError
-    attr_reader :status
+    attr_reader :status, :retry_at
 
-    def initialize(message, status: nil)
+    def initialize(message, status: nil, retry_at: nil)
       @status = status
+      @retry_at = retry_at
       super(message)
     end
   end
@@ -78,7 +79,7 @@ class OpenAlexApiClient
       Rails.logger.warn("OpenAlex request failed: status=#{response.status}")
       raise RequestError.new(
         "OpenAlex request failed with HTTP #{response.status}",
-        status: response.status
+        status: response.status, retry_at: retry_at(response)
       )
     end
 
@@ -87,6 +88,21 @@ class OpenAlexApiClient
     raise RequestError, "OpenAlex returned invalid JSON"
   rescue Faraday::Error => error
     raise RequestError, "OpenAlex request failed: #{error.class}"
+  end
+
+  def retry_at(response)
+    value = response.headers["retry-after"].to_s.strip
+    retry_after = if value.match?(/\A[0-9]{1,9}\z/)
+      Time.current + value.to_i
+    elsif value.present?
+      Time.httpdate(value) rescue nil
+    end
+    reset = response.headers["x-ratelimit-reset"].to_s
+    if response.status == 429 && response.headers["x-ratelimit-remaining"].to_s == "0" && reset.match?(/\A[0-9]{1,9}\z/)
+      [retry_after, Time.current + reset.to_i].compact.max
+    else
+      retry_after
+    end
   end
 
   def normalize_doi(value)

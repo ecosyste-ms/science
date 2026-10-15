@@ -1,6 +1,12 @@
 require "test_helper"
 
 class AppJsonTest < ActiveSupport::TestCase
+  test "journal papers are enriched through a bounded recurring queue" do
+    crons = JSON.parse(Rails.root.join("app.json").read).fetch("cron")
+      .select { |entry| entry.fetch("command").include?("journals:enrich") }
+    assert_equal [{ "command" => "bundle exec rake journals:enrich", "schedule" => "9,19,29,39,49,59 * * * *" }], crons
+  end
+
   test "journals have recurring harvests and staggered recovery and refresh schedules" do
     crons = JSON.parse(Rails.root.join("app.json").read).fetch("cron")
       .select { |entry| entry.fetch("command").match?(/\b(mloss|jors|jss):/) }
