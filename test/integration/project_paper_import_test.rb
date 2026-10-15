@@ -18,6 +18,18 @@ class ProjectPaperImportTest < ActionDispatch::IntegrationTest
     ENV["OPENALEX_API_KEY"] = @previous_key
   end
 
+  test "comment-only CFF files do not interrupt README paper imports" do
+    @project.update!(citation_file: "# Citation information\n# Add the preferred citation here.\n",
+      repository: @project.repository.deep_merge("metadata" => { "files" => { "citation" => "CITATION.cff" } }))
+
+    ImportProjectPapersWorker.new.perform(@project.id)
+
+    paper = Paper.find_by!(openalex_id: @work["id"])
+    assert_equal paper, @project.project_papers.sole.paper
+    assert_equal paper, @package.package_papers.sole.paper
+    assert_equal "stored_project_readme", @project.project_papers.sole.evidence.sole["source"]
+  end
+
   test "backfill job imports a paper and shows its model citation without implementation claims" do
     Rails.application.load_tasks unless Rake::Task.task_defined?("papers:import_models")
     Rake::Task["papers:import_models"].reenable

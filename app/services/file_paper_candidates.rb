@@ -72,7 +72,8 @@ class FilePaperCandidates
   end
 
   def extract_cff
-    document = Psych.parse(text)&.root
+    document = Psych.parse(text)
+    document = document.root if document
     return [] unless document.is_a?(Psych::Nodes::Mapping)
 
     data = YAML.safe_load(text, permitted_classes: [Date, Time])
