@@ -18,6 +18,8 @@ class PapersWithCodeImporter
     @seen = Set.new
     @planned_pairs = Set.new
     @planned_papers = Set.new
+    @planned_projects = Set.new
+    @discovery = ExternalRepositoryDiscovery.new
     counts = Hash.new(0)
     processed = 0
     summary = -> {
@@ -36,6 +38,8 @@ class PapersWithCodeImporter
           result = process(row, lookups)
           counts[result.fetch("status")] += 1
           counts["new_papers"] += 1 if result["new_paper"]
+          counts["new_projects"] += 1 if result["new_project"]
+          counts["sync_requests"] += 1 if result["sync_requested"]
           processed += 1
           ledger.puts JSON.generate(result.merge("line" => processed, "record" => row, "snapshot" => snapshot, "input_sha256" => sha256,
             "source" => SOURCE, "archive_url" => "#{DATASET}/tree/#{snapshot}", "license" => LICENSE,
@@ -66,11 +70,15 @@ class PapersWithCodeImporter
     end
     lookup = lookups[row["repo_url"]]
     return { "status" => "invalid_repository" } unless lookup
+    lookup = ProjectRepositoryLookup.call([row["repo_url"]]).sole if @apply && lookup.fetch(:matches).empty?
     projects = lookup.fetch(:matches).map { |match| match.fetch(:project).fetch("id") }.uniq
     result = { "normalized_repository" => lookup.fetch(:normalized_url), "project_ids" => projects,
       "repository_match_sources" => lookup.fetch(:matches).map { |match| match.fetch(:source) }.uniq }
-    return result.merge("status" => "repository_missing") if projects.empty?
-    return result.merge("status" => "repository_ambiguous") unless projects.one?
+    return result.merge("status" => "repository_ambiguous") if projects.size > 1
+    if projects.empty?
+      status = repository_creation_status(row, result.fetch("normalized_repository"))
+      return result.merge("status" => status) if status
+    end
     unless row["paper_url"].is_a?(String) && row["paper_url"].match?(%r{\Ahttps?://paperswithcode\.com/paper/[^\s]+\z})
       return result.merge("status" => "invalid_paper_url")
     end
@@ -94,10 +102,12 @@ class PapersWithCodeImporter
     if @apply
       import(row, projects.first, ids.first, arxiv, result)
     else
-      key = [projects.first, ids.first || "arxiv:#{arxiv}"]
-      existing = ids.first && ProjectPaper.exists?(project_id: projects.first, paper_id: ids.first)
+      key = [projects.first || result.fetch("normalized_repository"), ids.first || "arxiv:#{arxiv}"]
+      existing = projects.any? && ids.first && ProjectPaper.exists?(project_id: projects.first, paper_id: ids.first)
       status = existing ? "would_merge_evidence" : @planned_pairs.add?(key) ? "would_create" : "would_merge_evidence"
-      result.merge("status" => status, "new_paper" => ids.empty? && !!@planned_papers.add?(arxiv))
+      new_project = projects.empty? && !!@planned_projects.add?(result.fetch("normalized_repository"))
+      result.merge("status" => status, "new_paper" => ids.empty? && !!@planned_papers.add?(arxiv),
+        "new_project" => new_project, "sync_requested" => new_project)
     end
   rescue ArgumentError, ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => error
     (result || {}).merge("status" => "identity_conflict", "error" => error.message)
@@ -106,6 +116,9 @@ class PapersWithCodeImporter
   def import(row, project_id, paper_id, arxiv, result)
     paper = nil
     outcome = Paper.transaction(requires_new: true) do
+      project = project_id ? Project.find(project_id) : discover_project!(row, result)
+      project_id = project.id
+      new_project = project.previously_new_record?
       identities = arxiv ? [{ source: "arxiv", identifier: arxiv }] : []
       Paper.lock_import_identifiers!(PaperIdentifier.lock_keys(identities) + ["pwc-project:#{project_id}"])
       current_ids = (Array(paper_id) + PaperIdentifier.paper_ids_for(identities)).uniq
@@ -123,10 +136,34 @@ class PapersWithCodeImporter
       link.evidence = (link.evidence + [evidence]).uniq
       status = link.new_record? ? "created" : link.changed? ? "updated" : "unchanged"
       link.save! if link.changed?
-      result.merge("status" => status, "paper_ids" => [paper.id], "role" => link.role, "new_paper" => new_paper)
+      ExternalProjectSync.request(project_id) if new_project
+      result.merge("status" => status, "project_ids" => [project_id], "paper_ids" => [paper.id],
+        "role" => link.role, "new_paper" => new_paper, "new_project" => new_project, "sync_requested" => new_project)
     end
     @paper_index["arxiv:#{arxiv}"] = [paper.id] if arxiv
     outcome
+  end
+
+  def repository_creation_status(row, url)
+    return "repository_hidden" if @discovery.excluded_match?(url)
+    return "repository_unsupported" if @discovery.unsupported_port?(row["repo_url"]) || !@discovery.supported_repository?(url)
+    return "repository_hidden" if @discovery.hidden_namespace?(url) || Project.new(url: url).hidden_owner?
+  end
+
+  def discover_project!(row, result)
+    url = result.fetch("normalized_repository")
+    Paper.lock_import_identifiers!(["pwc-repository:#{url}"])
+    lookup = ProjectRepositoryLookup.call([row.fetch("repo_url")]).sole
+    matches = lookup.fetch(:matches).map { |match| match.fetch(:project).fetch("id") }.uniq
+    raise ArgumentError, "Multiple projects match the repository" if matches.size > 1
+    if matches.one?
+      result["repository_match_sources"] = lookup.fetch(:matches).map { |match| match.fetch(:source) }.uniq
+      return Project.find(matches.sole)
+    end
+    status = repository_creation_status(row, url)
+    raise ArgumentError, status if status
+
+    Project.create_or_find_by!(url: url)
   end
 
   def paper_index

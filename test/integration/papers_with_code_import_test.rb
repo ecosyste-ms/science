@@ -96,13 +96,13 @@ class PapersWithCodeImportTest < ActionDispatch::IntegrationTest
   end
 
   test "keeps unsupported missing and invalid rows without creating projects or papers" do
-    rows = [@row.merge("repo_url" => "https://github.com/unknown/project"),
+    rows = [@row.merge("repo_url" => "https://example.com/unknown/project"),
       @row.merge("paper_arxiv_id" => nil, "paper_url_abs" => "https://example.com/paper", "paper_url_pdf" => nil),
       @row.merge("paper_arxiv_id" => "not-an-id"), @row.merge("is_official" => "true"),
       @row.merge("repo_url" => "https://github.com/owner")]
     assert_no_difference ["Project.count", "Paper.count", "ProjectPaper.count"] do
       _, ledger = run_import(rows)
-      assert_equal %w[repository_missing paper_unresolved invalid_arxiv invalid_flags invalid_repository], ledger.map { |r| r["status"] }
+      assert_equal %w[repository_unsupported paper_unresolved invalid_arxiv invalid_flags invalid_repository], ledger.map { |r| r["status"] }
       assert_equal rows, ledger.map { |r| r["record"] }
     end
   end
@@ -201,6 +201,110 @@ class PapersWithCodeImportTest < ActionDispatch::IntegrationTest
       end
       assert_raises(ArgumentError) { run_import([@row], apply: "false") }
     end
+  end
+
+  test "discovers a missing project and requests sync once across normalized URLs and replay" do
+    rows = [@row.merge("repo_url" => "https://github.com/NewLab/Kerr.git/tree/main"),
+      @row.merge("repo_url" => "https://github.com/newlab/kerr", "is_official" => true)]
+    assert_no_difference ["Project.count", "Paper.count", "ProjectPaper.count", "ExternalProjectSync.count"] do
+      summary, ledger = run_import(rows, apply: false)
+      assert_equal 1, summary.dig("counts", "new_projects")
+      assert_equal 1, summary.dig("counts", "sync_requests")
+      assert_equal %w[would_create would_merge_evidence], ledger.map { |row| row["status"] }
+    end
+    assert_difference ["Project.count", "Paper.count", "ProjectPaper.count", "ExternalProjectSync.count"], 1 do
+      assert_no_difference ["SyncProjectWorker.jobs.size", "SyncExternalProjectWorker.jobs.size"] do
+        summary, ledger = run_import(rows)
+        assert_equal 1, summary.dig("counts", "new_projects")
+        assert_equal 1, summary.dig("counts", "sync_requests")
+        assert_equal %w[created updated], ledger.map { |row| row["status"] }
+      end
+    end
+    project = Project.find_by!(url: "https://github.com/newlab/kerr")
+    link = project.project_papers.sole
+    request = ExternalProjectSync.find_by!(project_id: project.id)
+    assert_equal "reference", link.role
+    assert_equal rows, link.evidence.map { |evidence| evidence["record"] }
+    assert_nil project.last_synced_at
+    assert_nil request.completed_at
+    token, requested = request.claim
+    request.finish(token, requested)
+    before = [project.reload.attributes, link.reload.attributes, request.reload.attributes]
+    travel 2.hours do
+      assert_no_difference ["Project.count", "Paper.count", "ProjectPaper.count", "ExternalProjectSync.count"] do
+        summary, = run_import(rows)
+        assert_equal 2, summary.dig("counts", "unchanged")
+        assert_equal 0, summary["counts"]["sync_requests"]
+      end
+    end
+    assert_equal before, [project.reload.attributes, link.reload.attributes, request.reload.attributes]
+    assert_empty ExternalProjectSync.pending
+  end
+
+  test "discovery respects hidden projects aliases namespaces and supported repository URLs" do
+    github = Host.find_or_create_by!(name: "GitHub")
+    hidden_owner = Owner.create!(host: github, login: "excluded", hidden: true)
+    Project.insert_all!([{ url: "https://github.com/excluded/tool", owner_id: hidden_owner.id,
+      created_at: Time.current, updated_at: Time.current }])
+    hidden = Project.find_by!(url: "https://github.com/excluded/tool")
+    ProjectRepositoryAlias.create!(project: hidden, url: "https://github.com/former/tool")
+    gitlab = Host.create!(name: "GitLab", url: "https://gitlab.com", kind: "gitlab")
+    Owner.create!(host: gitlab, login: "excluded", hidden: true)
+    urls = %w[https://github.com/excluded/tool https://github.com/former/tool
+      https://github.com/excluded/new https://gitlab.com/excluded/subgroup/new
+      https://github.com/topics/science https://example.org/lab/tool https://github.com/lab/tool:bad
+      https://github.com/lab/tool]
+    urls[-1] = "https://github.com:444/lab/tool"
+    [false, true].each do |apply|
+      assert_no_difference ["Project.count", "Paper.count", "ProjectPaper.count", "ExternalProjectSync.count"] do
+        _, ledger = run_import(urls.map { |url| @row.merge("repo_url" => url) }, apply: apply)
+        assert_equal ["repository_hidden"] * 4 + ["repository_unsupported"] * 4, ledger.map { |row| row["status"] }
+      end
+    end
+  end
+
+  test "discovery does not create a project for unresolved or conflicting publication identities" do
+    row = @row.merge("repo_url" => "https://github.com/newlab/kerr")
+    rows = [row.merge("paper_arxiv_id" => nil, "paper_url_abs" => "https://example.org/paper", "paper_url_pdf" => nil),
+      row.merge("paper_arxiv_id" => "1701.00001")]
+    assert_no_difference ["Project.count", "Paper.count", "ProjectPaper.count", "ExternalProjectSync.count"] do
+      _, ledger = run_import(rows)
+      assert_equal %w[paper_unresolved paper_identifier_conflict], ledger.map { |row| row["status"] }
+    end
+  end
+
+  test "paper identity failure rolls back project creation and its sync request" do
+    paper = Paper.create!(title: "Conflicting identifier", urls: [@row["paper_url_abs"]])
+    PaperIdentifier.create!(paper: paper, source: "arxiv", identifier: "1601.99999")
+    assert_no_difference ["Project.count", "Paper.count", "ProjectPaper.count", "ExternalProjectSync.count"] do
+      summary, = run_import([@row.merge("repo_url" => "https://github.com/newlab/kerr")])
+      assert_equal 1, summary.dig("counts", "identity_conflict")
+    end
+  end
+
+  test "discovered project enters the existing sync queue and gets scored" do
+    SyncExternalProjectWorker.clear
+    run_import([@row.merge("repo_url" => "https://github.com/newlab/kerr")])
+    project = Project.find_by!(url: "https://github.com/newlab/kerr")
+    request = ExternalProjectSync.find_by!(project_id: project.id)
+    repository = { full_name: "newlab/kerr", html_url: project.url, owner: "newlab",
+      host: { name: "GitHub", kind: "github", url: "https://github.com" }, metadata: { files: {} }, topics: [] }
+    stub_request(:get, project.url).to_return(status: 200)
+    stub_request(:get, project.repos_api_url).to_return(status: 200, body: repository.to_json)
+    %i[fetch_owner find_or_create_owner fetch_dependencies fetch_packages import_mentions
+      fetch_readme fetch_commits fetch_events fetch_issue_stats sync_issues fetch_citation_file
+      fetch_codemeta fetch_zenodo_file sync_releases update_committers update_keywords_from_contributors].each do |method|
+      Project.any_instance.stubs(method)
+    end
+    assert_equal 1, ExternalProjectSync.enqueue_pending(limit: 1)
+    SyncExternalProjectWorker.perform_one
+    assert_equal "newlab/kerr", project.reload.repository["full_name"]
+    assert project.last_synced_at > 1.minute.ago
+    assert_operator project.science_score, :>=, 20
+    assert project.science_score_breakdown.dig(:breakdown, :has_resolved_paper, :present)
+    assert_equal request.requested_at, request.reload.completed_at
+  ensure
+    SyncExternalProjectWorker.clear
   end
 
 end
