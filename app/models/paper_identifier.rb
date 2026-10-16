@@ -9,6 +9,8 @@ class PaperIdentifier < ApplicationRecord
       uri = URI.parse(url.to_s)
       next unless %w[http https].include?(uri.scheme)
       next unless uri.userinfo.nil? && [80, 443].include?(uri.port)
+      arxiv = arxiv_from_url(url)
+      next({ source: "arxiv", identifier: arxiv }) if arxiv
       if uri.host&.downcase == JorsClient::HOST
         match = uri.path.match(%r{\A/(?:en/)?articles/(10\.5334/jors\.[a-z0-9]+)/?\z}i)
         next({ source: "jors", identifier: match[1].downcase }) if match
@@ -27,6 +29,10 @@ class PaperIdentifier < ApplicationRecord
   end
 
   def self.urls_for(identity)
+    if identity.fetch(:source) == "arxiv"
+      id = identity.fetch(:identifier)
+      return %w[https http].product(%w[arxiv.org export.arxiv.org], ["abs/#{id}", "pdf/#{id}", "pdf/#{id}.pdf"]).map { |scheme, host, path| "#{scheme}://#{host}/#{path}" }
+    end
     if identity.fetch(:source) == "jss"
       return %w[https http].product(["article/view", "index.php/jss/article/view"]).map { |scheme, path| "#{scheme}://#{JssClient::HOST}/#{path}/#{identity.fetch(:identifier)}" }
     end
@@ -42,12 +48,32 @@ class PaperIdentifier < ApplicationRecord
 
   def self.paper_ids_for(identities)
     identities.flat_map do |identity|
-      where(identity).pluck(:paper_id) + Paper.where("urls && ARRAY[?]::text[]", urls_for(identity)).limit(2).pluck(:id)
+      # LIMIT can favour a table scan over the URL GIN index for rare identifiers.
+      where(identity).pluck(:paper_id) + Paper.where("urls && ARRAY[?]::text[]", urls_for(identity)).pluck(:id)
     end.uniq
   end
 
   def self.lock_keys(identities)
     identities.map { |identity| "#{identity.fetch(:source)}:#{identity.fetch(:identifier)}" }
+  end
+
+  def self.arxiv_identifier(value)
+    value = value.to_s.strip.downcase.sub(/v[1-9]\d*\z/, "")
+    value if value.match?(%r{\A(?:\d{4}\.\d{4,5}|[a-z][a-z.-]*/\d{7})\z})
+  end
+
+  def self.arxiv_from_url(value)
+    uri = URI.parse(value.to_s)
+    return unless %w[http https].include?(uri.scheme) && uri.userinfo.nil? && [80, 443].include?(uri.port)
+    path = uri.path
+    if %w[arxiv.org www.arxiv.org export.arxiv.org].include?(uri.host&.downcase)
+      return unless path.match?(%r{\A/(?:abs|pdf|html)/}i)
+      arxiv_identifier(path.sub(%r{\A/(?:abs|pdf|html)/}i, "").sub(/\.pdf\z/i, ""))
+    elsif %w[doi.org dx.doi.org].include?(uri.host&.downcase) && path.downcase.start_with?("/10.48550/arxiv.")
+      arxiv_identifier(path.delete_prefix("/").sub(/\A10\.48550\/arxiv\./i, ""))
+    end
+  rescue URI::InvalidURIError
+    nil
   end
 
   def self.attach!(paper, identities)
