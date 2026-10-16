@@ -1,9 +1,10 @@
 class PaperIdentityResolver
   attr_reader :client, :lookups, :sources
 
-  def initialize(client: nil)
-    @client = client || OpenAlexApiClient.new
-    unless client
+  def initialize(client: nil, local_only: false)
+    @local_only = local_only
+    @client = client || (OpenAlexApiClient.new unless local_only)
+    unless client || local_only
       @client.connection.options.open_timeout = 5
       @client.connection.options.timeout = 20
     end
@@ -22,6 +23,8 @@ class PaperIdentityResolver
   end
 
   def resolve(row)
+    return resolve_local(row) if @local_only
+
     result = { "input" => row }
     kind = row.fetch("identifier_kind")
     identifier = row.fetch("identifier")
@@ -68,6 +71,21 @@ class PaperIdentityResolver
     result.merge(compare(row, lookup.fetch("work"), source: source, source_key: result["source"]))
   rescue ArgumentError, KeyError => error
     result.merge("assessment" => "invalid", "reason" => error.message)
+  end
+
+  def resolve_local(row)
+    result = { "input" => row }
+    return result.merge("assessment" => "unsupported") unless row["identifier_kind"] == "arxiv"
+    id = PaperIdentifier.arxiv_identifier(row["identifier"])
+    return result.merge("assessment" => "invalid") unless id
+
+    ids = PaperIdentifier.where(source: "arxiv", identifier: id).pluck(:paper_id)
+    doi = "10.48550/arxiv.#{id}"
+    forms = [doi] + %w[https http].product(%w[doi.org dx.doi.org]).map { |scheme, host| "#{scheme}://#{host}/#{doi}" }
+    ids += Paper.where("lower(doi) IN (?)", forms).limit(2).pluck(:id)
+    ids.uniq!
+    assessment = ids.one? ? "local_identifier" : ids.empty? ? "not_found" : "ambiguous"
+    result.merge("assessment" => assessment, "paper_ids" => ids, "identifier" => id)
   end
 
   def compare(row, work, source: nil, source_key: nil)

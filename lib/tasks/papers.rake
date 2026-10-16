@@ -10,12 +10,12 @@ namespace :papers do
     puts "Enqueued paper imports for #{count} model projects"
   end
 
-  desc "Import papers from citation candidates or a resolver report (FILE=input.json OUTPUT=report.json)"
+  desc "Import citation candidates or a resolver report (FILE OUTPUT; LOCAL_ONLY=1 links exact stored arXiv identities without requests)"
   task import_candidates: :environment do
     input = ENV.fetch("FILE")
     output = ENV.fetch("OUTPUT")
     raise ArgumentError, "Input and output must be different files" if File.expand_path(input) == File.expand_path(output)
-    report = PaperCandidateImporter.new.call(JSON.parse(File.read(input)))
+    report = PaperCandidateImporter.new.call(JSON.parse(File.read(input)), local_only: ENV["LOCAL_ONLY"] == "1")
     File.write(output, JSON.pretty_generate(report) + "\n")
     puts "Paper imports: #{report.fetch('import_summary').inspect}"
   end
