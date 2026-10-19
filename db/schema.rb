@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_19_120100) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_19_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -736,6 +736,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_19_120100) do
     t.index ["last_synced_at", "id"], name: "index_projects_on_sync_schedule", order: { last_synced_at: "NULLS FIRST" }
     t.index ["owner_id"], name: "index_projects_on_owner_id"
     t.index ["reviewed"], name: "index_projects_on_reviewed"
+    t.index ["science_score"], name: "index_projects_on_science_score"
     t.index ["search_identifiers"], name: "index_projects_on_search_identifiers", opclass: :jsonb_path_ops, using: :gin
     t.index ["search_names"], name: "index_projects_on_search_names", opclass: :gin_trgm_ops, using: :gin
     t.index ["url"], name: "index_projects_on_url", unique: true

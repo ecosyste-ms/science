@@ -98,7 +98,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "gated", project.reload.brief["status"]
   end
 
-  test "index results are sorted by combined science_score and ranking" do
+  test "index results are sorted by science_score then ranking" do
     project_low = Project.create!(
       url: "https://github.com/test/project-low",
       name: "project-low",
@@ -125,17 +125,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
 
     projects = assigns(:projects)
 
-    # project_high: 60 + 60 = 120 (should be first)
-    # @project from setup: 85 + 0 = 85
-    # project_medium: 30 + 60 = 90 (should be second)
-    # project_low: 40 + 10 = 50
-    # Find the positions of our test projects
-    high_index = projects.index { |p| p.id == project_high.id }
-    medium_index = projects.index { |p| p.id == project_medium.id }
-    low_index = projects.index { |p| p.id == project_low.id }
-
-    assert high_index < medium_index
-    assert medium_index < low_index
+    assert_equal [@project, project_high, project_low, project_medium].map(&:id), projects.map(&:id)
   end
 
   test "should get show" do
@@ -666,7 +656,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "index sorts by allowlisted column" do
-    low = Project.create!(url: "https://github.com/test/low-score", science_score: 10)
+    low = Project.create!(url: "https://github.com/test/low-score", science_score: 25)
     get projects_url, params: { sort: 'science_score', order: 'asc' }
     assert_response :success
     projects = assigns(:projects)

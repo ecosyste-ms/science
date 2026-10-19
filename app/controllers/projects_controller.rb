@@ -29,7 +29,7 @@ class ProjectsController < ApplicationController
   end
 
   def index
-    scope = Project.visible.includes(project_fields: :field).where('science_score > 0')
+    scope = Project.visible.includes(project_fields: :field).scientific
     filtered_project_list(scope)
   end
 
@@ -119,7 +119,7 @@ class ProjectsController < ApplicationController
       sort = sanitize_sort(Project.sortable_columns, default: 'science_score')
       scope.order(sort.public_send(sanitize_order).nulls_last)
     else
-      scope.order(Arel.sql('(science_score + COALESCE(score, 0)) DESC'))
+      scope.order(science_score: :desc, score: :desc)
     end
   end
 
