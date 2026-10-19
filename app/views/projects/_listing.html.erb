@@ -50,5 +50,5 @@
   <% else %>
     <p class="alert alert-info" role="status"><%= filters.any? ? "No projects match these filters." : "No projects found." %></p>
   <% end %>
-  <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
+  <%== pagy_bootstrap_nav(@pagy) if @pagy.prev || @pagy.next %>
 </div>

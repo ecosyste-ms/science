@@ -135,4 +135,9 @@ class PackagesControllerTest < ActionDispatch::IntegrationTest
       direct: true
     )
   end
+
+  test "index renders a page past the last package" do
+    get packages_url, params: { page: 99 }
+    assert_response :success
+  end
 end

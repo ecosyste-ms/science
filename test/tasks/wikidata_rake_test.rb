@@ -65,7 +65,7 @@ class WikidataRakeTest < ActiveSupport::TestCase
       .to_return(body: { entities: { due.identifier => entity } }.to_json)
     cron = JSON.parse(Rails.root.join("app.json").read).fetch("cron")
       .select { |entry| entry.fetch("command").include?("wikidata:refresh") }.sole
-    assert_equal "*/10 * * * *", cron.fetch("schedule")
+    assert_equal "55 * * * *", cron.fetch("schedule")
 
     output, = capture_io do
       Shellwords.split(cron.fetch("command")).drop(3).each { |name| Rake::Task[name].invoke }

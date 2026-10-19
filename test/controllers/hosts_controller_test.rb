@@ -47,4 +47,10 @@ class HostsControllerTest < ActionDispatch::IntegrationTest
     assert_match 'ORDER BY science_score DESC NULLS LAST', sql
     assert_no_match 'pg_sleep', sql
   end
+
+  test "show renders a page past the last project" do
+    host = Host.create!(name: "GitHub", url: "https://github.com")
+    get host_url(host.name), params: { page: 99 }
+    assert_response :success
+  end
 end

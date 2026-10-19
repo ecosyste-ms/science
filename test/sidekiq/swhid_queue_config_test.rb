@@ -10,7 +10,7 @@ class SwhidQueueConfigTest < ActiveSupport::TestCase
     cli.config = Sidekiq::Config.new
     cli.parse(["-C", Rails.root.join("config/sidekiq.yml").to_s, "-e", "test"])
 
-    assert_equal 10, cli.config.total_concurrency
+    assert_equal 14, cli.config.total_concurrency
     assert_equal 8, cli.config.default_capsule.concurrency
     assert_equal({ "default" => 5, "brief" => 1, "swhid" => 1 }, cli.config.default_capsule.weights)
     api = cli.config.capsules.fetch("swh_api")
@@ -19,6 +19,9 @@ class SwhidQueueConfigTest < ActiveSupport::TestCase
     metadata = cli.config.capsules.fetch("external_metadata")
     assert_equal 1, metadata.concurrency
     assert_equal ["external_metadata"], metadata.queues
+    openalex = cli.config.capsules.fetch("openalex")
+    assert_equal 4, openalex.concurrency
+    assert_equal ["openalex"], openalex.queues
   end
 
   test "API jobs enqueue separately from repository scans" do

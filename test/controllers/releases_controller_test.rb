@@ -77,4 +77,9 @@ class ReleasesControllerTest < ActionDispatch::IntegrationTest
     get api_v1_project_release_url(@project, @tag)
     assert_response :not_found
   end
+
+  test "index renders a page past the last release" do
+    get releases_url, params: { page: 99 }
+    assert_response :success
+  end
 end

@@ -13,6 +13,8 @@ class ProjectFiltersTest < ActionDispatch::IntegrationTest
       owner_record: owner,
       keywords: %w[science biology],
       citation_file: "cff-version: 1.2.0",
+      codemeta: "{}",
+      zenodo: "{}",
       joss_metadata: { "doi" => "10.21105/joss.00001" },
       repository: {
         "owner" => "lab", "language" => "Python",

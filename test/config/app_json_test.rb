@@ -4,7 +4,7 @@ class AppJsonTest < ActiveSupport::TestCase
   test "journal papers are enriched through a bounded recurring queue" do
     crons = JSON.parse(Rails.root.join("app.json").read).fetch("cron")
       .select { |entry| entry.fetch("command").include?("journals:enrich") }
-    assert_equal [{ "command" => "bundle exec rake journals:enrich", "schedule" => "9,19,29,39,49,59 * * * *" }], crons
+    assert_equal [{ "command" => "bundle exec rake journals:enrich", "schedule" => "45 * * * *" }], crons
   end
 
   test "journals have recurring harvests and staggered recovery and refresh schedules" do
@@ -14,9 +14,9 @@ class AppJsonTest < ActiveSupport::TestCase
       { "command" => "bundle exec rake mloss:harvest", "schedule" => "20 4 * * 6" },
       { "command" => "bundle exec rake jors:harvest", "schedule" => "20 4 * * 0" },
       { "command" => "bundle exec rake jss:harvest", "schedule" => "50 4 * * *" },
-      { "command" => "bundle exec rake mloss:resume mloss:refresh", "schedule" => "6,16,26,36,46,56 * * * *" },
-      { "command" => "bundle exec rake jors:resume jors:refresh", "schedule" => "7,17,27,37,47,57 * * * *" },
-      { "command" => "bundle exec rake jss:resume jss:refresh", "schedule" => "8,18,28,38,48,58 * * * *" },
+      { "command" => "bundle exec rake mloss:resume mloss:refresh", "schedule" => "28 * * * *" },
+      { "command" => "bundle exec rake jors:resume jors:refresh", "schedule" => "33 * * * *" },
+      { "command" => "bundle exec rake jss:resume jss:refresh", "schedule" => "40 * * * *" },
     ], crons
   end
 
@@ -28,7 +28,7 @@ class AppJsonTest < ActiveSupport::TestCase
     end
   end
 
-  test "Brief scans run every minute and version rescans every ten minutes" do
+  test "Brief scans run every ten minutes and version rescans hourly" do
     config = JSON.parse(Rails.root.join("app.json").read)
     brief_crons = config.fetch("cron").select do |cron|
       cron.fetch("command").match?(/projects:(fetch|rescan)_brief\b/)
@@ -37,16 +37,16 @@ class AppJsonTest < ActiveSupport::TestCase
     assert_equal [
       {
         "command" => "bundle exec rake projects:fetch_brief",
-        "schedule" => "* * * * *",
+        "schedule" => "5,15,25,35,45,55 * * * *",
       },
       {
         "command" => "bundle exec rake projects:rescan_brief",
-        "schedule" => "*/10 * * * *",
+        "schedule" => "52 * * * *",
       },
     ], brief_crons
   end
 
-  test "project dependencies are indexed every ten minutes in bounded batches" do
+  test "project dependencies are indexed hourly in bounded batches" do
     config = JSON.parse(Rails.root.join("app.json").read)
     dependency_crons = config.fetch("cron").select do |cron|
       cron.fetch("command").include?("projects:sync_dependencies")
@@ -55,12 +55,12 @@ class AppJsonTest < ActiveSupport::TestCase
     assert_equal [
       {
         "command" => "bundle exec rake projects:sync_dependencies",
-        "schedule" => "3,13,23,33,43,53 * * * *",
+        "schedule" => "12 * * * *",
       },
     ], dependency_crons
   end
 
-  test "CFF authors are indexed every ten minutes in bounded batches" do
+  test "CFF authors are indexed hourly in bounded batches" do
     config = JSON.parse(Rails.root.join("app.json").read)
     crons = config.fetch("cron").select do |cron|
       cron.fetch("command").include?("projects:sync_citation_authors")
@@ -69,12 +69,12 @@ class AppJsonTest < ActiveSupport::TestCase
     assert_equal [
       {
         "command" => "bundle exec rake projects:sync_citation_authors",
-        "schedule" => "1,11,21,31,41,51 * * * *",
+        "schedule" => "2 * * * *",
       },
     ], crons
   end
 
-  test "JOSS publications are indexed every ten minutes in bounded batches" do
+  test "JOSS publications are indexed hourly in bounded batches" do
     config = JSON.parse(Rails.root.join("app.json").read)
     crons = config.fetch("cron").select do |cron|
       cron.fetch("command").include?("projects:sync_joss_publications")
@@ -83,12 +83,12 @@ class AppJsonTest < ActiveSupport::TestCase
     assert_equal [
       {
         "command" => "bundle exec rake projects:sync_joss_publications",
-        "schedule" => "2,12,22,32,42,52 * * * *",
+        "schedule" => "7 * * * *",
       },
     ], crons
   end
 
-  test "project contributors are indexed every ten minutes in bounded batches" do
+  test "project contributors are indexed hourly in bounded batches" do
     config = JSON.parse(Rails.root.join("app.json").read)
     crons = config.fetch("cron").select do |cron|
       cron.fetch("command").include?("projects:sync_contributors")
@@ -97,12 +97,12 @@ class AppJsonTest < ActiveSupport::TestCase
     assert_equal [
       {
         "command" => "bundle exec rake projects:sync_contributors",
-        "schedule" => "5,15,25,35,45,55 * * * *",
+        "schedule" => "19 * * * *",
       },
     ], crons
   end
 
-  test "author identities are linked every ten minutes in bounded batches" do
+  test "author identities are linked hourly in bounded batches" do
     config = JSON.parse(Rails.root.join("app.json").read)
     crons = config.fetch("cron").select do |cron|
       cron.fetch("command").include?("projects:sync_author_identities")
@@ -111,7 +111,7 @@ class AppJsonTest < ActiveSupport::TestCase
     assert_equal [
       {
         "command" => "bundle exec rake projects:sync_author_identities",
-        "schedule" => "0,10,20,30,40,50 * * * *",
+        "schedule" => "0 * * * *",
       },
     ], crons
   end
@@ -125,7 +125,7 @@ class AppJsonTest < ActiveSupport::TestCase
     assert_equal [
       {
         "command" => "bundle exec rake packages:refresh_projects",
-        "schedule" => "2,12,22,32,42,52 * * * *",
+        "schedule" => "9 * * * *",
       },
     ], crons
   end
@@ -139,12 +139,12 @@ class AppJsonTest < ActiveSupport::TestCase
     assert_equal [
       {
         "command" => "bundle exec rake packages:resolve_dependencies",
-        "schedule" => "6,16,26,36,46,56 * * * *",
+        "schedule" => "26 * * * *",
       },
     ], resolution_crons
   end
 
-  test "package rankings are normalized every ten minutes in bounded batches" do
+  test "package rankings are normalized hourly in bounded batches" do
     config = JSON.parse(Rails.root.join("app.json").read)
     crons = config.fetch("cron").select do |cron|
       cron.fetch("command").include?("packages:normalize_rankings")
@@ -153,7 +153,7 @@ class AppJsonTest < ActiveSupport::TestCase
     assert_equal [
       {
         "command" => "bundle exec rake packages:normalize_rankings",
-        "schedule" => "4,14,24,34,44,54 * * * *",
+        "schedule" => "16 * * * *",
       },
     ], crons
   end
@@ -195,7 +195,7 @@ class AppJsonTest < ActiveSupport::TestCase
     assert_equal [
       {
         "command" => "bundle exec rake homepage:refresh",
-        "schedule" => "5 * * * *",
+        "schedule" => "21 * * * *",
       },
     ], crons
   end
@@ -216,7 +216,7 @@ class AppJsonTest < ActiveSupport::TestCase
     assert_equal [
       {
         "command" => "bundle exec rake owners:check_ror_repositories",
-        "schedule" => "15 * * * *",
+        "schedule" => "50 * * * *",
       },
     ], crons
   end
