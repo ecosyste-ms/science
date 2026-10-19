@@ -32,9 +32,10 @@ class Api::V1::PackagesControllerTest < ActionDispatch::IntegrationTest
     create_dependency(@physics_project, @numpy)
     create_dependency(@medicine_project, @sf)
     @numpy.update!(published_by_project: @physics_project)
+    @sf.update!(published_by_project: @medicine_project)
   end
 
-  test "index returns package usage and upstream ranking data" do
+  test "index returns packages from scientific publishers with upstream ranking data" do
     get api_v1_packages_url
 
     assert_response :success
@@ -46,30 +47,14 @@ class Api::V1::PackagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal api_v1_package_versions_url(@numpy), numpy.fetch("versions_url")
     assert_equal api_v1_package_versions_url(@sf), packages.last.fetch("versions_url")
     assert_equal "pypi", numpy.dig("registry", "ecosystem")
-    assert_equal 2, numpy.fetch("scientific_projects_count")
     assert_equal 1_000, numpy.fetch("dependent_repositories_count")
     assert_in_delta 0.05, numpy.fetch("dependent_repositories_top_percentage")
     assert_in_delta 1.05, numpy.fetch("average_top_percentage")
-    assert_in_delta 1.05, numpy.fetch("science_relevance_top_percentage")
-    assert_in_delta 70.0, numpy.fetch("repository_science_score")
-    assert_in_delta 0.4046, numpy.fetch("science_relevance_score")
-    assert_in_delta 0.2, numpy.fetch("science_usage_percentage")
+    assert_not numpy.key?("scientific_projects_count")
     assert_equal @physics_project.id, numpy.dig("published_by_project", "id")
     assert_equal api_v1_project_url(@physics_project),
       numpy.dig("published_by_project", "api_url")
     assert_equal "2", response.headers.fetch("total-count")
-  end
-
-  test "index applies ecosystem and field filters" do
-    get api_v1_packages_url, params: {
-      ecosystem: "cran",
-      field: @medicine.to_param,
-    }
-
-    assert_response :success
-    packages = JSON.parse(response.body)
-    assert_equal [@sf.id], packages.map { |package| package.fetch("id") }
-    assert_equal 1, packages.first.fetch("scientific_projects_count")
   end
 
   test "index accepts the API page size" do
@@ -102,67 +87,14 @@ class Api::V1::PackagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "2", response.headers.fetch("total-count")
   end
 
-  test "science relevance puts repository score ahead of dependency volume" do
-    @sf.update!(
-      metadata: @sf.metadata.deep_merge(
-        "rankings" => { "average" => 5.0 }
-      ),
-      published_by_project: Project.create!(
-        url: "https://github.com/test/weak-signal-package",
-        science_score: 7
-      )
-    )
-    create_dependency(@physics_project, @sf)
-    third_project = Project.create!(
-      url: "https://github.com/test/third-scientific-dependent",
-      science_score: 70
-    )
-    create_dependency(third_project, @sf)
-
-    get api_v1_packages_url, params: { sort: "science_relevance" }
-
-    assert_response :success
-    packages = JSON.parse(response.body)
-    assert_equal [@numpy.id, @sf.id],
-      packages.map { |package| package.fetch("id") }
-    assert_equal 2, packages.first.fetch("scientific_projects_count")
-    assert_equal 3, packages.second.fetch("scientific_projects_count")
-    assert_in_delta 0.4046, packages.first.fetch("science_relevance_score")
-    assert_in_delta 0.21, packages.second.fetch("science_relevance_score")
-  end
-
-  test "index orders by linked repository science score when requested" do
+  test "index orders by the publishing project's science score" do
     @medicine_project.update!(science_score: 85)
-    @sf.update!(published_by_project: @medicine_project)
 
-    get api_v1_packages_url, params: { sort: "science_score" }
+    get api_v1_packages_url
 
     assert_response :success
-    packages = JSON.parse(response.body)
     assert_equal [@sf.id, @numpy.id],
-      packages.map { |package| package.fetch("id") }
-    assert_in_delta 85.0, packages.first.fetch("repository_science_score")
-    assert_in_delta 70.0, packages.second.fetch("repository_science_score")
-  end
-
-  test "index ignores an unknown package ordering" do
-    get api_v1_packages_url, params: { sort: "science_relevance DESC" }
-
-    assert_response :success
-    packages = JSON.parse(response.body)
-    assert_equal [@numpy.id, @sf.id],
-      packages.map { |package| package.fetch("id") }
-  end
-
-  test "index applies domain filters and recalculates project counts" do
-    get api_v1_packages_url, params: { domain: "health-sciences" }
-
-    assert_response :success
-    packages = JSON.parse(response.body)
-    assert_equal [@numpy.id, @sf.id], packages.map { |package| package.fetch("id") }
-    assert packages.all? do |package|
-      package.fetch("scientific_projects_count") == 1
-    end
+      JSON.parse(response.body).map { |package| package.fetch("id") }
   end
 
   test "bulk lookup includes unranked packages and has no write or job side effects" do

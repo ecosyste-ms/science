@@ -175,6 +175,13 @@ class Package < ApplicationRecord
     raise ArgumentError, error.message
   end
 
+  def self.by_publisher_science_score
+    joins(:published_by_project)
+      .merge(Project.visible.scientific)
+      .order("projects.science_score DESC", :id)
+      .preload(:package_registry, :published_by_project)
+  end
+
   def self.direct_scientific_dependencies
     ProjectDependency.joins(:project)
       .merge(Project.visible)
@@ -219,13 +226,15 @@ class Package < ApplicationRecord
   end
 
   def self.scientific_dependency_ecosystems
-    ProjectDependency.joins(:project, package: :package_registry)
-      .merge(Project.visible)
-      .merge(Project.scientific)
-      .where(direct: true)
-      .distinct
-      .order("package_registries.ecosystem")
-      .pluck("package_registries.ecosystem")
+    Rails.cache.fetch("scientific_dependency_ecosystems", expires_in: 2.hours) do
+      ProjectDependency.joins(:project, package: :package_registry)
+        .merge(Project.visible)
+        .merge(Project.scientific)
+        .where(direct: true)
+        .distinct
+        .order("package_registries.ecosystem")
+        .pluck("package_registries.ecosystem")
+    end
   end
 
   def normalize_purl

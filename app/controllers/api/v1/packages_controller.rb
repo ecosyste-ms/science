@@ -13,7 +13,6 @@ class Api::V1::PackagesController < Api::V1::ApplicationController
   end
 
   def index
-    index = PackageIndex.new(params)
-    @pagy, @packages = pagy(index.scope)
+    @pagy, @packages = pagy(Package.by_publisher_science_score)
   end
 end

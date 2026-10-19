@@ -12,14 +12,16 @@ json.array! @packages do |package|
     json.name package.package_registry.name
     json.ecosystem package.package_registry.ecosystem
   end
-  json.scientific_projects_count package.scientific_dependents_count.to_i
   json.dependent_repositories_count package.general_dependent_repositories_count&.to_i
   json.dependent_repositories_top_percentage package.dependent_repositories_top_percentage&.to_f
   json.average_top_percentage package.average_top_percentage&.to_f
-  json.science_relevance_top_percentage package.science_relevance_top_percentage&.to_f
-  json.repository_science_score package.repository_science_score&.to_f
-  json.science_relevance_score package.science_relevance_score&.to_f
-  json.science_usage_percentage package.science_usage_percentage&.to_f
+  if package.has_attribute?(:scientific_dependents_count)
+    json.scientific_projects_count package.scientific_dependents_count.to_i
+    json.science_relevance_top_percentage package.science_relevance_top_percentage&.to_f
+    json.repository_science_score package.repository_science_score&.to_f
+    json.science_relevance_score package.science_relevance_score&.to_f
+    json.science_usage_percentage package.science_usage_percentage&.to_f
+  end
   json.rankings package.metadata["rankings"] || {}
   if package.published_by_project
     json.published_by_project do
