@@ -1,5 +1,7 @@
 class PaperIdentityResolver
   PREFETCH_BATCH = 50
+  ARXIV_BATCH = 100
+  ARXIV_API_URL = "https://export.arxiv.org/api/query"
 
   attr_reader :client, :lookups, :sources
 
@@ -18,7 +20,10 @@ class PaperIdentityResolver
   def call(candidates)
     raise ArgumentError, "Expected an array of citation candidates" unless candidates.is_a?(Array) && candidates.all? { |row| row.is_a?(Hash) }
 
-    prefetch_dois(candidates) unless @local_only
+    unless @local_only
+      prefetch_dois(candidates)
+      prefetch_arxiv(candidates)
+    end
     results = candidates.map { |row| resolve(row) }
     { "generated_at" => Time.current.iso8601,
       "summary" => results.group_by { |row| row.fetch("assessment") }.transform_values(&:size),
@@ -219,6 +224,48 @@ class PaperIdentityResolver
     rescue OpenAlexApiClient::RequestError
       next
     end
+  end
+
+  # Fills arXiv titles and authors from the batch API; anything else falls back to source_metadata.
+  def prefetch_arxiv(candidates)
+    ids = candidates.filter_map { |row| candidate_arxiv_id(row) }.uniq
+    ids.each_slice(ARXIV_BATCH) do |batch|
+      response = Faraday.get(ARXIV_API_URL, id_list: batch.join(","), max_results: batch.size) do |request|
+        request.headers["User-Agent"] = "science.ecosyste.ms"
+        request.options.open_timeout = 5
+        request.options.timeout = 20
+      end
+      next unless response.status == 200
+
+      requested = batch.index_by(&:downcase)
+      retrieved_at = Time.current.iso8601
+      feed = Nokogiri::XML(response.body)
+      feed.remove_namespaces!
+      feed.css("feed > entry").each do |entry|
+        id = requested[entry.at_css("id")&.text.to_s.sub(%r{\Ahttps?://arxiv\.org/abs/}i, "").sub(/v\d+\z/i, "").downcase]
+        title = entry.at_css("title")&.text.to_s.squish
+        next unless id && title.present?
+
+        sources["arxiv:#{id}"] = { "url" => "https://arxiv.org/abs/#{id}", "http_status" => 200, "retrieved_at" => retrieved_at,
+          "metadata" => { "citation_title" => [title], "citation_author" => entry.css("author > name").map { |name| name.text.squish } } }
+      end
+    rescue Faraday::Error, Nokogiri::XML::SyntaxError
+      next
+    end
+  end
+
+  def candidate_arxiv_id(row)
+    identifier = row["identifier"]
+    return unless identifier.is_a?(String) && identifier.present?
+
+    case row["identifier_kind"]
+    when "arxiv" then arxiv_id(identifier)
+    when "doi"
+      doi = normalize_doi(identifier)
+      arxiv_id(doi.delete_prefix("10.48550/arxiv.")) if doi.start_with?("10.48550/arxiv.")
+    end
+  rescue ArgumentError
+    nil
   end
 
   # Merged works keep the canonical DOI in "doi" and others, such as arXiv preprints, in locations.

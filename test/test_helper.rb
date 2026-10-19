@@ -19,11 +19,13 @@ class ActiveSupport::TestCase
     ENV["TMPDIR"] = Dir.mktmpdir("science-test-#{worker}-")
   end
 
-  # Batched DOI lookups find nothing unless a test stubs them, so lookups fall back to per-DOI requests.
+  # Batched DOI and arXiv lookups find nothing unless a test stubs them, so lookups fall back to per-item requests.
   setup do
     stub_request(:get, "https://api.openalex.org/works")
       .with(query: hash_including("filter" => /\Adoi:/))
       .to_return(headers: { "Content-Type" => "application/json" }, body: { results: [] }.to_json)
+    stub_request(:get, PaperIdentityResolver::ARXIV_API_URL).with(query: hash_including({}))
+      .to_return(body: '<feed xmlns="http://www.w3.org/2005/Atom"></feed>')
   end
 
   # Make sure Shoulda Matchers are configured correctly

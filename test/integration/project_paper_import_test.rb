@@ -245,4 +245,29 @@ class ProjectPaperImportTest < ActionDispatch::IntegrationTest
     assert_not_requested :get, %r{api\.openalex\.org/works/doi:}
     assert_equal @work["id"], @project.project_papers.sole.paper.openalex_id
   end
+
+  test "arXiv titles and authors come from one batched API request" do
+    @project.update!(readme: "# Example model\n\narXiv:2304.14767\n")
+    work = @work.merge("doi" => "https://doi.org/10.48550/arxiv.2304.14767", "title" => "Dissecting Recall of Factual Associations",
+      "authorships" => [{ "raw_author_name" => "Mor Geva" }])
+    stub_request(:get, "https://api.openalex.org/works/doi:10.48550/arxiv.2304.14767").with(query: { "api_key" => "test-key" }).to_return(body: work.to_json)
+    feed = <<~XML
+      <feed xmlns="http://www.w3.org/2005/Atom">
+        <entry>
+          <id>http://arxiv.org/abs/2304.14767v3</id>
+          <title>Dissecting Recall of
+            Factual Associations</title>
+          <author><name>Mor Geva</name></author>
+        </entry>
+      </feed>
+    XML
+    batch = stub_request(:get, PaperIdentityResolver::ARXIV_API_URL)
+      .with(query: { "id_list" => "2304.14767", "max_results" => "1" }).to_return(body: feed)
+
+    ImportProjectPapersWorker.new.perform(@project.id)
+
+    assert_requested batch, times: 1
+    assert_not_requested :get, %r{arxiv\.org/abs/}
+    assert_equal work["id"], @project.project_papers.sole.paper.openalex_id
+  end
 end
