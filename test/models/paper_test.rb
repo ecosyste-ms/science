@@ -1,6 +1,15 @@
 require "test_helper"
 
 class PaperTest < ActiveSupport::TestCase
+  test "identifier lookup indexes are non-partial so the planner can use their statistics" do
+    indexes = Paper.connection.indexes(:papers).index_by(&:name)
+
+    %w[index_papers_on_lower_doi index_papers_on_lower_openalex_id].each do |name|
+      assert indexes.key?(name), "missing #{name}"
+      assert_nil indexes[name].where, "#{name} should not be partial"
+    end
+  end
+
   test "creates paper with valid attributes" do
     paper = Paper.create!(
       doi: "10.1234/example",

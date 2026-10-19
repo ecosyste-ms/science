@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_15_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_19_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -503,8 +503,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_160000) do
     t.string "title"
     t.datetime "updated_at", null: false
     t.text "urls", default: [], array: true
-    t.index "lower((doi)::text)", name: "index_papers_on_lower_doi", where: "(doi IS NOT NULL)"
-    t.index "lower((openalex_id)::text)", name: "index_papers_on_lower_openalex_id", where: "(openalex_id IS NOT NULL)"
+    t.index "lower((doi)::text)", name: "index_papers_on_lower_doi"
+    t.index "lower((openalex_id)::text)", name: "index_papers_on_lower_openalex_id"
     t.index ["doi"], name: "index_papers_on_doi"
     t.index ["urls"], name: "index_papers_on_urls", using: :gin
   end
