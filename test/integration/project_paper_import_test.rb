@@ -270,4 +270,20 @@ class ProjectPaperImportTest < ActionDispatch::IntegrationTest
     assert_not_requested :get, %r{arxiv\.org/abs/}
     assert_equal work["id"], @project.project_papers.sole.paper.openalex_id
   end
+
+  test "ACL Anthology DOIs join the batched OpenAlex lookup" do
+    @project.update!(readme: "# Example model\n\nhttps://aclanthology.org/N19-1423/\n")
+    stub_request(:get, "https://aclanthology.org/N19-1423/").to_return(status: 200,
+      body: %(<html><head><meta name="citation_title" content="A training method"><meta name="citation_doi" content="10.18653/v1/N19-1423"></head></html>))
+    work = @work.merge("doi" => "https://doi.org/10.18653/v1/n19-1423")
+    batch = stub_request(:get, "https://api.openalex.org/works")
+      .with(query: hash_including("filter" => "doi:10.18653/v1/n19-1423"))
+      .to_return(headers: { "Content-Type" => "application/json" }, body: { results: [work] }.to_json)
+
+    ImportProjectPapersWorker.new.perform(@project.id)
+
+    assert_requested batch, times: 1
+    assert_not_requested :get, %r{api\.openalex\.org/works/doi:}
+    assert_equal work["id"], @project.project_papers.sole.paper.openalex_id
+  end
 end

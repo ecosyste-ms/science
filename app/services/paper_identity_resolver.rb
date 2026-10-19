@@ -2,6 +2,7 @@ class PaperIdentityResolver
   PREFETCH_BATCH = 50
   ARXIV_BATCH = 100
   ARXIV_API_URL = "https://export.arxiv.org/api/query"
+  ACL_ID_PATTERN = /\A(?:[A-Z]\d{2}-\d+|\d{4}\.[\w-]+\.\d+)\z/i
 
   attr_reader :client, :lookups, :sources
 
@@ -47,7 +48,7 @@ class PaperIdentityResolver
       source = source_metadata("arxiv", id)
       doi = "10.48550/arxiv.#{id.downcase}"
     when "acl_id"
-      raise ArgumentError, "Invalid ACL identifier" unless identifier.match?(/\A(?:[A-Z]\d{2}-\d+|\d{4}\.[\w-]+\.\d+)\z/i)
+      raise ArgumentError, "Invalid ACL identifier" unless identifier.match?(ACL_ID_PATTERN)
       result["source"] = "acl_id:#{identifier}"
       source = source_metadata(kind, identifier)
       doi = source.dig("metadata", "citation_doi")&.first
@@ -281,8 +282,10 @@ class PaperIdentityResolver
     doi = case row["identifier_kind"]
     when "arxiv" then "10.48550/arxiv.#{arxiv_id(identifier)}"
     when "doi" then normalize_doi(identifier)
+    when "acl_id"
+      source_metadata("acl_id", identifier).dig("metadata", "citation_doi")&.first if identifier.match?(ACL_ID_PATTERN)
     end
-    return unless doi
+    return unless doi.present?
     if doi.start_with?("10.48550/arxiv.")
       doi = "10.48550/arxiv.#{arxiv_id(doi.delete_prefix('10.48550/arxiv.')).downcase}"
     end
