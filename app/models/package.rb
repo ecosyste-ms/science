@@ -66,8 +66,8 @@ class Package < ApplicationRecord
   end
 
   scope :visible, -> {
-    where(published_by_project_id: nil)
-      .or(where(published_by_project_id: Project.visible.select(:id)))
+    publisher = Project.visible.where("projects.id = packages.published_by_project_id").arel.exists
+    where(published_by_project_id: nil).or(where(publisher))
   }
 
   scope :version_importable, -> {

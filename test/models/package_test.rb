@@ -11,6 +11,20 @@ class PackageTest < ActiveSupport::TestCase
     )
   end
 
+  test "visible keeps unpublished packages and those from visible publishers" do
+    host = Host.create!(name: "GitHub", url: "https://github.com")
+    owner = Owner.create!(host: host, login: "hidden-owner")
+    hidden_project = Project.create!(host: host, owner_record: owner, url: "https://github.com/hidden-owner/tool")
+    shown_project = Project.create!(url: "https://github.com/someone/tool")
+    unpublished = @registry.packages.create!(name: "unpublished")
+    shown = @registry.packages.create!(name: "shown", published_by_project: shown_project)
+    hidden = @registry.packages.create!(name: "hidden", published_by_project: hidden_project)
+    owner.update!(hidden: true)
+
+    assert_equal [unpublished, shown].sort_by(&:id), Package.visible.order(:id).to_a
+    assert_not_includes Package.visible, hidden
+  end
+
   test "stores a canonical package-level purl" do
     package = Package.create!(
       package_registry: @registry,
