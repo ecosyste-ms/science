@@ -30,9 +30,11 @@ class BriefRescanEnqueuer
   end
 
   def projects
-    versions = candidates.reorder(nil).distinct.pluck(Arel.sql("brief->>'version'"))
-      .select { |version| older_version?(version) }
-    candidates.where("brief->>'version' IN (?)", versions).reorder(:id).limit(@limit)
+    # Compares versions in SQL so selection can stop at the limit instead of reading every scan.
+    candidates
+      .where("brief->>'version' ~ '^[0-9]{1,9}(\\.[0-9]{1,9})*$'")
+      .where("string_to_array(brief->>'version', '.')::int[] < ARRAY[?]::int[]", version.release.segments)
+      .reorder(:id).limit(@limit)
   end
 
   def enqueue
