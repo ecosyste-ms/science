@@ -210,13 +210,21 @@ class PaperIdentityResolver
       next if works.size >= OpenAlexApiClient::PER_PAGE
 
       retrieved_at = Time.current.iso8601
-      works.select { |work| valid_work?(work) }.group_by { |work| client.normalize_doi(work["doi"]) }.each do |doi, matches|
-        next unless batch.include?(doi) && matches.one?
-        lookups["doi:#{doi}"] = { "status" => "found", "retrieved_at" => retrieved_at, "work" => matches.first }
+      works = works.select { |work| valid_work?(work) }.map { |work| [work, work_dois(work)] }
+      batch.each do |doi|
+        matches = works.select { |_, dois| dois.include?(doi) }
+        next unless matches.one?
+        lookups["doi:#{doi}"] = { "status" => "found", "retrieved_at" => retrieved_at, "work" => matches.first.first }
       end
     rescue OpenAlexApiClient::RequestError
       next
     end
+  end
+
+  # Merged works keep the canonical DOI in "doi" and others, such as arXiv preprints, in locations.
+  def work_dois(work)
+    urls = [work["doi"]] + Array(work["locations"]).filter_map { |location| location["landing_page_url"] if location.is_a?(Hash) }
+    urls.filter_map { |url| client.normalize_doi(url) if url.to_s.match?(%r{\Ahttps?://(?:dx\.)?doi\.org/}i) }.uniq
   end
 
   def candidate_doi(row)

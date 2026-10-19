@@ -227,4 +227,22 @@ class ProjectPaperImportTest < ActionDispatch::IntegrationTest
     assert_nothing_raised { ImportProjectPapersWorker.new.perform(@project.id) }
     assert_empty @project.project_papers
   end
+
+  test "batched lookups match arXiv DOIs merged into a published work" do
+    @project.update!(readme: "# Example model\n\nhttps://doi.org/10.48550/arxiv.2304.14767\n")
+    merged = @work.merge("locations" => [
+      { "landing_page_url" => "https://doi.org/10.1234/method" },
+      { "landing_page_url" => "http://arxiv.org/abs/2304.14767" },
+      { "landing_page_url" => "https://doi.org/10.48550/arxiv.2304.14767" }
+    ])
+    stub_request(:get, "https://api.openalex.org/works")
+      .with(query: hash_including("filter" => "doi:10.48550/arxiv.2304.14767"))
+      .to_return(headers: { "Content-Type" => "application/json" }, body: { results: [merged] }.to_json)
+    stub_request(:get, "https://arxiv.org/abs/2304.14767").to_return(status: 404)
+
+    ImportProjectPapersWorker.new.perform(@project.id)
+
+    assert_not_requested :get, %r{api\.openalex\.org/works/doi:}
+    assert_equal @work["id"], @project.project_papers.sole.paper.openalex_id
+  end
 end
