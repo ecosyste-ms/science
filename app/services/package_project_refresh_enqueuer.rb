@@ -21,21 +21,16 @@ class PackageProjectRefreshEnqueuer
   end
 
   def projects
-    usage = Package.scientific_publishing_project_counts
+    dependency = Package.direct_scientific_dependencies
+      .where("project_dependencies.package_id = packages.id").arel.exists
+    publisher = Package.where("packages.published_by_project_id = projects.id")
+      .where(dependency).arel.exists
 
     Project.visible
-      .joins(
-        "INNER JOIN (#{usage.to_sql}) scientific_package_usage " \
-        "ON scientific_package_usage.project_id = projects.id"
-      )
+      .where(publisher)
       .where("projects.science_score <= 0")
       .where("projects.last_synced_at < ?", now - REFRESH_AFTER)
-      .order(
-        Arel.sql(
-          "scientific_package_usage.scientific_dependents_count DESC, " \
-          "projects.last_synced_at ASC, projects.id ASC"
-        )
-      )
+      .order(:last_synced_at, :id)
   end
 
   def integer(value)

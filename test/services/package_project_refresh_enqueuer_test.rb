@@ -17,26 +17,27 @@ class PackageProjectRefreshEnqueuerTest < ActiveSupport::TestCase
     SyncProjectWorker.jobs.clear
   end
 
-  test "enqueues stale zero-score publishers by direct scientific use" do
-    stale_at = @now - 8.days
-    lower_use = create_publisher("lower-use", score: 0, synced_at: stale_at)
-    higher_use = create_publisher("higher-use", score: 0, synced_at: stale_at)
+  test "enqueues the stalest zero-score publishers with direct scientific use" do
+    stalest = create_publisher("stalest", score: 0, synced_at: @now - 20.days)
+    stale = create_publisher("stale", score: 0, synced_at: @now - 10.days)
+    least_stale = create_publisher("least-stale", score: 0, synced_at: @now - 8.days)
     fresh = create_publisher("fresh", score: 0, synced_at: @now - 1.day)
-    positive = create_publisher("positive", score: 5, synced_at: stale_at)
+    positive = create_publisher("positive", score: 5, synced_at: @now - 30.days)
 
-    link_scientific_dependency(lower_use, "lower-1")
-    link_scientific_dependency(higher_use, "higher-1")
-    link_scientific_dependency(higher_use, "higher-2")
+    link_scientific_dependency(stalest, "stalest-1")
+    link_scientific_dependency(stale, "stale-1")
+    link_scientific_dependency(stale, "stale-2")
+    link_scientific_dependency(least_stale, "least-stale-1")
     link_scientific_dependency(fresh, "fresh-1")
     link_scientific_dependency(positive, "positive-1")
     link_non_scientific_dependency(
-      create_publisher("non-scientific", score: 0, synced_at: stale_at)
+      create_publisher("non-scientific", score: 0, synced_at: @now - 30.days)
     )
 
     count = PackageProjectRefreshEnqueuer.new(limit: 2, now: @now).enqueue
 
     assert_equal 2, count
-    assert_equal [[higher_use.id], [lower_use.id]],
+    assert_equal [[stalest.id], [stale.id]],
       SyncProjectWorker.jobs.map { |job| job["args"] }
   end
 
