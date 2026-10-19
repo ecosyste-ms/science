@@ -18,67 +18,67 @@
     },
     {
       "command": "bundle exec rake projects:sync",
-      "schedule": "* * * * *"
-    },
-    {
-      "command": "bundle exec rake projects:sync_author_identities",
       "schedule": "0,10,20,30,40,50 * * * *"
     },
     {
+      "command": "bundle exec rake projects:sync_author_identities",
+      "schedule": "0 * * * *"
+    },
+    {
       "command": "bundle exec rake projects:sync_citation_authors",
-      "schedule": "1,11,21,31,41,51 * * * *"
+      "schedule": "2 * * * *"
     },
     {
       "command": "bundle exec rake projects:sync_joss_publications",
-      "schedule": "2,12,22,32,42,52 * * * *"
+      "schedule": "7 * * * *"
     },
     {
       "command": "bundle exec rake packages:refresh_projects",
-      "schedule": "2,12,22,32,42,52 * * * *"
+      "schedule": "9 * * * *"
     },
     {
       "command": "bundle exec rake projects:sync_dependencies",
-      "schedule": "3,13,23,33,43,53 * * * *"
+      "schedule": "12 * * * *"
     },
     {
       "command": "bundle exec rake packages:normalize_rankings",
-      "schedule": "4,14,24,34,44,54 * * * *"
+      "schedule": "16 * * * *"
     },
     {
       "command": "bundle exec rake projects:sync_contributors",
-      "schedule": "5,15,25,35,45,55 * * * *"
+      "schedule": "19 * * * *"
     },
     {
       "command": "bundle exec rake packages:resolve_dependencies",
-      "schedule": "6,16,26,36,46,56 * * * *"
+      "schedule": "26 * * * *"
     },
     {
       "command": "bundle exec rake projects:sync_repository_aliases",
-      "schedule": "7,17,27,37,47,57 * * * *"
+      "schedule": "31 * * * *"
     },
     {
       "command": "bundle exec rake packages:sync_metadata",
-      "schedule": "8,18,28,38,48,58 * * * *"
+      "schedule": "38 * * * *"
     },
     {
       "command": "bundle exec rake packages:match_projects",
-      "schedule": "9,19,29,39,49,59 * * * *"
+      "schedule": "43 * * * *"
     },
     {
       "command": "bundle exec rake projects:fetch_brief",
-      "schedule": "* * * * *"
+      "schedule": "5,15,25,35,45,55 * * * *"
     },
     {
       "command": "bundle exec rake projects:rescan_brief",
-      "schedule": "*/10 * * * *"
+      "schedule": "52 * * * *"
     },
     {
       "command": "bundle exec rake homepage:refresh",
-      "schedule": "5 * * * *"
+      "schedule": "21 * * * *"
     },
     {
       "command": "bundle exec rake wikidata:resume wikidata:refresh",
-      "schedule": "*/10 * * * *"
+      "schedule": "55 * * * *"
     },
     {
       "command": "bundle exec rake wikidata:resweep",
@@ -114,39 +114,39 @@
     },
     {
       "command": "bundle exec rake mloss:resume mloss:refresh",
-      "schedule": "6,16,26,36,46,56 * * * *"
+      "schedule": "28 * * * *"
     },
     {
       "command": "bundle exec rake jors:resume jors:refresh",
-      "schedule": "7,17,27,37,47,57 * * * *"
+      "schedule": "33 * * * *"
     },
     {
       "command": "bundle exec rake jss:resume jss:refresh",
-      "schedule": "8,18,28,38,48,58 * * * *"
+      "schedule": "40 * * * *"
     },
     {
       "command": "bundle exec rake journals:enrich",
-      "schedule": "9,19,29,39,49,59 * * * *"
+      "schedule": "45 * * * *"
     },
     {
       "command": "bundle exec rake biotools:resume biotools:refresh",
-      "schedule": "1,11,21,31,41,51 * * * *"
+      "schedule": "4 * * * *"
     },
     {
       "command": "bundle exec rake external_software:discover",
-      "schedule": "*/10 * * * *"
+      "schedule": "57 * * * *"
     },
     {
       "command": "bundle exec rake ascl:resume ascl:refresh",
-      "schedule": "3,13,23,33,43,53 * * * *"
+      "schedule": "14 * * * *"
     },
     {
       "command": "bundle exec rake swmath:resume swmath:refresh",
-      "schedule": "5,15,25,35,45,55 * * * *"
+      "schedule": "24 * * * *"
     },
     {
       "command": "bundle exec rake rrid:resume rrid:refresh",
-      "schedule": "7,17,27,37,47,57 * * * *"
+      "schedule": "36 * * * *"
     },
     {
       "command": "bundle exec rake rrid:rescan",
@@ -154,7 +154,7 @@
     },
     {
       "command": "bundle exec rake software_dois:resume software_dois:refresh",
-      "schedule": "9,19,29,39,49,59 * * * *"
+      "schedule": "48 * * * *"
     },
     {
       "command": "bundle exec rake software_dois:rescan",
@@ -166,7 +166,7 @@
     },
     {
       "command": "bundle exec rake owners:check_ror_repositories",
-      "schedule": "15 * * * *"
+      "schedule": "50 * * * *"
     },
     {
       "command": "bundle exec rake joss_vocabulary:rebuild",
