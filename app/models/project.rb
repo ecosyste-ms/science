@@ -150,8 +150,16 @@ class Project < ApplicationRecord
 
   has_many :good_first_issues, -> { good_first_issue }, class_name: 'Issue'
 
+  # NOT EXISTS probes owners by primary key; NOT IN (subquery) scans every owner per query.
   scope :visible, -> {
-    where(owner_id: nil).or(where.not(owner_id: Owner.hidden.select(:id)))
+    where(<<~SQL.squish)
+      projects.owner_id IS NULL OR NOT EXISTS (
+        SELECT 1
+        FROM owners
+        WHERE owners.id = projects.owner_id
+          AND owners.hidden = TRUE
+      )
+    SQL
   }
   scope :active, -> { where("(repository ->> 'archived') = ?", 'false') }
   scope :archived, -> { where("(repository ->> 'archived') = ?", 'true') }

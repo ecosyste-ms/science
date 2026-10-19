@@ -729,6 +729,32 @@ class ProjectTest < ActiveSupport::TestCase
     assert_includes Project.visible, project
   end
 
+  test "visible includes projects whose owner is not hidden" do
+    host = Host.create!(name: "GitHub", url: "https://github.com")
+    shown = Owner.create!(host: host, login: "shown-owner", hidden: false)
+    unset = Owner.create!(host: host, login: "unset-owner", hidden: nil)
+    shown_project = Project.create!(host: host, owner_record: shown, url: "https://github.com/shown-owner/project")
+    unset_project = Project.create!(host: host, owner_record: unset, url: "https://github.com/unset-owner/project")
+
+    assert_includes Project.visible, shown_project
+    assert_includes Project.visible, unset_project
+  end
+
+  test "visible filters hidden owners when merged into a joined relation" do
+    host = Host.create!(name: "GitHub", url: "https://github.com")
+    owner = Owner.create!(host: host, login: "hidden-owner")
+    hidden_project = Project.create!(host: host, owner_record: owner, url: "https://github.com/hidden-owner/project")
+    shown_project = Project.create!(url: "https://github.com/someone/project")
+    hidden_dependency = ProjectDependency.create!(project: hidden_project, ecosystem: "pypi", package_name: "numpy")
+    shown_dependency = ProjectDependency.create!(project: shown_project, ecosystem: "pypi", package_name: "numpy")
+    owner.update!(hidden: true)
+
+    dependencies = ProjectDependency.joins(:project).merge(Project.visible).where(ecosystem: "pypi")
+
+    assert_equal [shown_dependency], dependencies.to_a
+    assert_not_includes dependencies, hidden_dependency
+  end
+
   test "does not enqueue or sync projects belonging to hidden owners" do
     host = Host.create!(name: "GitHub", url: "https://github.com")
     owner = Owner.create!(host: host, login: "hidden-owner")
