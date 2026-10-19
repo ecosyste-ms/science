@@ -137,6 +137,8 @@ class Project < ApplicationRecord
 
   before_save :reset_repository_alias_index,
     if: :will_save_change_to_repository?
+  before_save :copy_repository_facts,
+    if: :will_save_change_to_repository?
   before_save :reset_citation_author_index,
     if: -> { will_save_change_to_citation_file? || will_save_change_to_codemeta? || will_save_change_to_zenodo? }
   before_save :reset_contributor_index,
@@ -161,10 +163,10 @@ class Project < ApplicationRecord
       )
     SQL
   }
-  scope :active, -> { where("(repository ->> 'archived') = ?", 'false') }
-  scope :archived, -> { where("(repository ->> 'archived') = ?", 'true') }
+  scope :active, -> { where(archived: false) }
+  scope :archived, -> { where(archived: true) }
 
-  scope :language, ->(language) { where("(repository ->> 'language') = ?", language) }
+  scope :language, ->(language) { where(language: language) }
   scope :owner, ->(owner) { where("(repository ->> 'owner') = ?", owner) }
   scope :keyword, ->(keyword) { where("keywords @> ARRAY[?]::varchar[]", keyword) }
   scope :matching_criteria, -> { where(matching_criteria: true) }
@@ -201,11 +203,7 @@ class Project < ApplicationRecord
   scope :with_external_identifier, -> {
     where(id: ProjectExternalSoftwareRecord.confirmed_identifier_matches.select(:project_id))
   }
-  scope :model_projects, -> {
-    where(id: Package.where(package_registry_id: PackageRegistry.where("lower(purl_type) = ?", "huggingface").pluck(:id))
-      .where.not(published_by_project_id: nil).distinct.pluck(:published_by_project_id))
-      .where("repository->'metadata'->>'model_package_purl' IS NOT NULL")
-  }
+  scope :model_projects, -> { where(model: true) }
   scope :eligible_for_brief, -> {
     dependency = Package.direct_scientific_dependencies
       .where("project_dependencies.package_id = packages.id").arel.exists
@@ -231,7 +229,7 @@ class Project < ApplicationRecord
   end
 
   def model_project?
-    repository&.dig("metadata", "model_package_purl").present?
+    model?
   end
 
   def repository_from_package?
@@ -405,7 +403,7 @@ class Project < ApplicationRecord
   end
 
   def model_card_name
-    return unless has_attribute?(:repository) && has_attribute?(:packages) && model_project?
+    return unless has_attribute?(:repository) && has_attribute?(:packages) && has_attribute?(:model) && model_project?
 
     package = Array.wrap(packages).find { |entry| entry.is_a?(Hash) && entry["purl"] == repository.dig("metadata", "model_package_purl") }
     metadata = package && package["metadata"]
@@ -445,6 +443,12 @@ class Project < ApplicationRecord
   def reset_repository_alias_index
     self.repository_aliases_indexed_at = nil
     self.repository_aliases_index_error = nil
+  end
+
+  def copy_repository_facts
+    facts = repository.is_a?(Hash) ? repository : {}
+    self.language = facts["language"].presence
+    self.archived = facts["archived"]
   end
 
   def reset_joss_publication_index
@@ -544,11 +548,6 @@ class Project < ApplicationRecord
   def dependency_ecosystems
     return [] unless dependencies.present?
     dependencies.map{|d| d["dependencies"]}.flatten.select{|d| d['direct'] }.reject{|d| ignored_ecosystems.include?(d['ecosystem']) }.map{|d| d['ecosystem']}.uniq
-  end
-
-  def language
-    return unless repository.present?
-    repository['language']
   end
 
   def language_with_default
@@ -688,11 +687,6 @@ class Project < ApplicationRecord
     return false unless issues_stats.present?
     return false unless issues_stats['past_year_pull_requests_count'].present?
     (issues_stats['past_year_pull_requests_count'] - (issues_stats['past_year_bot_pull_requests_count'] || 0)) > 0
-  end
-
-  def archived?
-    return false unless repository.present?
-    repository['archived']
   end
 
   def active?

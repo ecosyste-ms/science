@@ -87,7 +87,7 @@ class PackageRepository
       "registry" => { "name" => package.package_registry.name, "url" => package.package_registry.url },
       "maintainers" => Array(data["maintainers"]), "advisories" => Array(data["advisories"]),
       "rankings" => data["rankings"] || {})
-    project.update!(repository: repository, packages: [displayed_package])
+    project.update!(repository: repository, packages: [displayed_package], model: true)
     project.refresh_display_name
     project.find_or_create_host
     project.combine_keywords

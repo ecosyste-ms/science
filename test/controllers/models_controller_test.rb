@@ -63,7 +63,7 @@ class ModelsControllerTest < ActionDispatch::IntegrationTest
     assert_equal keywords, @bert.reload.keywords
   end
 
-  test "loads publisher IDs before querying projects without an extra existence query" do
+  test "lists models from the model column without querying packages or repository json" do
     queries = []
     ActiveSupport::Notifications.subscribed(->(*args) { queries << args.last[:sql] }, "sql.active_record") do
       get models_url
@@ -71,13 +71,12 @@ class ModelsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_project_order [@bert, @specter, @unscanned]
-    publisher_query = queries.index { |sql| sql.match?(/SELECT DISTINCT "packages"\."published_by_project_id" FROM "packages"/) }
-    assert publisher_query, "Expected a separate publisher ID lookup"
-    project_queries = queries.each_with_index.select { |sql, _| sql.include?('FROM "projects"') }
+    project_queries = queries.select { |sql| sql.include?('FROM "projects"') }
     assert project_queries.any?
-    project_queries.each do |sql, index|
-      assert_operator index, :>, publisher_query
-      assert_no_match(/FROM "packages"/, sql)
+    assert_empty queries.grep(/FROM "packages"|FROM "package_registries"/)
+    project_queries.each do |sql|
+      assert_match(/"projects"\."model" = (TRUE|\$\d+)/, sql)
+      assert_no_match(/repository/, sql)
       assert_no_match(/SELECT 1 AS one/, sql)
     end
   end

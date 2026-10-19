@@ -48,7 +48,7 @@ class ProjectTest < ActiveSupport::TestCase
 
   test "model card name accepts model-index names and handles missing or ambiguous names" do
     purl = "pkg:huggingface/lab/model"
-    project = Project.new(url: "https://huggingface.co/lab/model", readme: "# README name",
+    project = Project.new(url: "https://huggingface.co/lab/model", readme: "# README name", model: true,
       repository: { "metadata" => { "model_package_purl" => purl } })
     cards = [
       [{ "model_name" => " Saved model ", "model-index" => [{ "name" => "Indexed model" }] }, "Saved model"],
@@ -721,6 +721,36 @@ class ProjectTest < ActiveSupport::TestCase
     owner.update!(hidden: true)
 
     assert_not_includes Project.visible, project
+  end
+
+  test "copies language and archived out of repository when it changes" do
+    project = Project.create!(url: "https://github.com/example/tool", repository: { "language" => "Python", "archived" => false })
+
+    assert_equal "Python", project.language
+    assert_equal false, project.archived
+
+    project.update!(repository: { "language" => "", "archived" => true })
+
+    assert_nil project.language
+    assert_equal true, project.archived
+
+    project.update!(repository: [])
+
+    assert_nil project.language
+    assert_nil project.archived
+  end
+
+  test "model, language and archived scopes read the columns" do
+    model = Project.create!(url: "https://huggingface.co/example/model", model: true,
+      repository: { "language" => "Python", "archived" => false })
+    archived = Project.create!(url: "https://github.com/example/old", repository: { "language" => "R", "archived" => true })
+    unsynced = Project.create!(url: "https://github.com/example/unsynced")
+
+    assert_equal [model], Project.model_projects.to_a
+    assert_equal [model], Project.language("Python").to_a
+    assert_equal [model], Project.active.to_a
+    assert_equal [archived], Project.archived.to_a
+    assert_not_includes Project.active, unsynced
   end
 
   test "visible includes projects without an owner record" do
