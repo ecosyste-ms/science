@@ -909,6 +909,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       url: "https://github.com/test/codemeta-project",
       name: "codemeta-project",
       science_score: 85,
+      codemeta: "{}",
       repository: { "metadata" => { "files" => { "codemeta" => "codemeta.json" } } }
     )
 
@@ -934,6 +935,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       name: "codemeta-low",
       science_score: 85,
       score: 5,
+      codemeta: "{}",
       repository: { "metadata" => { "files" => { "codemeta" => "codemeta.json" } } }
     )
 
@@ -942,6 +944,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       name: "codemeta-high",
       science_score: 85,
       score: 50,
+      codemeta: "{}",
       repository: { "metadata" => { "files" => { "codemeta" => "codemeta.json" } } }
     )
 
@@ -1029,6 +1032,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       url: "https://github.com/test/csv-codemeta",
       name: "csv-codemeta",
       science_score: 85,
+      codemeta: "{}",
       repository: { "metadata" => { "files" => { "codemeta" => "codemeta.json" } } }
     )
 
@@ -1043,6 +1047,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       url: "https://github.com/test/csv-codemeta-check",
       name: "csv-codemeta-check",
       science_score: 85,
+      codemeta: "{}",
       repository: { "full_name" => "test/csv-codemeta-check", "metadata" => { "files" => { "codemeta" => "codemeta.json" } } }
     )
 
@@ -1106,6 +1111,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       url: "https://github.com/test/zenodo-project",
       name: "zenodo-project",
       science_score: 85,
+      zenodo: "{}",
       repository: { "metadata" => { "files" => { "zenodo" => ".zenodo.json" } } }
     )
 
@@ -1131,6 +1137,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       name: "zenodo-low",
       science_score: 85,
       score: 5,
+      zenodo: "{}",
       repository: { "metadata" => { "files" => { "zenodo" => ".zenodo.json" } } }
     )
 
@@ -1139,6 +1146,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       name: "zenodo-high",
       science_score: 85,
       score: 50,
+      zenodo: "{}",
       repository: { "metadata" => { "files" => { "zenodo" => ".zenodo.json" } } }
     )
 
@@ -1156,6 +1164,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       url: "https://github.com/test/csv-zenodo",
       name: "csv-zenodo",
       science_score: 85,
+      zenodo: "{}",
       repository: { "metadata" => { "files" => { "zenodo" => ".zenodo.json" } } }
     )
 
@@ -1170,6 +1179,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
       url: "https://github.com/test/csv-zenodo-check",
       name: "csv-zenodo-check",
       science_score: 85,
+      zenodo: "{}",
       repository: { "full_name" => "test/csv-zenodo-check", "metadata" => { "files" => { "zenodo" => ".zenodo.json" } } }
     )
 

@@ -184,10 +184,10 @@ class Project < ApplicationRecord
   scope :needing_swhids, -> { where(swhids: nil) }
   scope :with_readme, -> { where.not(readme: nil) }
   scope :without_readme, -> { where(readme: nil) }
-  scope :with_codemeta_file, -> { where("repository IS NOT NULL").where("(repository::jsonb->'metadata'->'files'->>'codemeta') IS NOT NULL") }
+  scope :with_codemeta_file, -> { where.not(codemeta: nil) }
   scope :with_codemeta, -> { where.not(codemeta: nil) }
   scope :with_citation_file, -> { where.not(citation_file: nil) }
-  scope :with_zenodo_file, -> { where("repository IS NOT NULL").where("(repository::jsonb->'metadata'->'files'->>'zenodo') IS NOT NULL") }
+  scope :with_zenodo_file, -> { where.not(zenodo: nil) }
   scope :with_zenodo, -> { where.not(zenodo: nil) }
 
   scope :with_keywords_from_contributors, -> { where.not(keywords_from_contributors: []) }
