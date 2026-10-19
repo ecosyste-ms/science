@@ -336,7 +336,7 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
   test "a project lock prevents legacy and new workers from overlapping scans" do
     options = Project.connection.raw_connection.conninfo_hash.slice(:host, :port, :dbname, :user, :password)
     connection = PG.connect(options)
-    assert_equal "science_test", connection.db
+    assert_equal Project.connection.current_database, connection.db
     key = "#{RepositoryScanWorker::LOCK_NAMESPACE}, #{@project.id}"
     connection.exec("SELECT pg_advisory_lock(#{key})")
 

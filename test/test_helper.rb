@@ -9,6 +9,16 @@ require 'sidekiq_unique_jobs/testing'
 Sidekiq.testing!(:fake)
 
 class ActiveSupport::TestCase
+  parallelize(workers: :number_of_processors)
+
+  # Unique-job locks and SWHID state live in Redis, so workers need separate databases.
+  parallelize_setup do |worker|
+    # Not configure_client: it is skipped once a test loads sidekiq/cli.
+    Sidekiq.default_configuration.redis = { url: "redis://localhost:6379/#{worker + 1}" }
+    Sidekiq.redis { |redis| redis.call("FLUSHDB") }
+    ENV["TMPDIR"] = Dir.mktmpdir("science-test-#{worker}-")
+  end
+
   # Make sure Shoulda Matchers are configured correctly
   Shoulda::Matchers.configure do |config|
     config.integrate do |with|

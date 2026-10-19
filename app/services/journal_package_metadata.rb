@@ -59,13 +59,15 @@ class JournalPackageMetadata
           output
         end
       ensure
-        Process.kill("KILL", thread.pid) if thread.alive?
+        begin
+          Process.kill("KILL", thread.pid) if thread.alive?
+        rescue Errno::ESRCH
+          # Exited between the check and the kill.
+        end
         thread.join
         error_reader.join
         stderr.close unless stderr.closed?
       end
     end
-  rescue Errno::ESRCH
-    raise ArgumentError, "package archive reader exited unexpectedly"
   end
 end
