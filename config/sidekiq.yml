@@ -13,3 +13,7 @@
     :concurrency: 1
     :queues:
       - swh_api
+  openalex:
+    :concurrency: 4
+    :queues:
+      - openalex

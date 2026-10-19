@@ -1,7 +1,7 @@
 class ImportProjectPapersWorker
   include Sidekiq::Worker
 
-  sidekiq_options queue: :external_metadata, lock: :until_executed, lock_ttl: 1.hour.to_i
+  sidekiq_options queue: :openalex, lock: :until_executed, lock_ttl: 1.hour.to_i
 
   def perform(project_id)
     project = Project.find_by(id: project_id)

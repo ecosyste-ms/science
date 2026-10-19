@@ -1,7 +1,7 @@
 class EnrichJournalPaperWorker
   include Sidekiq::Worker
 
-  sidekiq_options queue: "external_metadata", retry: 3, lock: :until_executing, lock_ttl: 10.minutes.to_i,
+  sidekiq_options queue: "openalex", retry: 3, lock: :until_executing, lock_ttl: 10.minutes.to_i,
     lock_prefix: "science:#{Rails.env}:journal-paper-enrichment"
 
   def perform(id)
