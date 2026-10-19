@@ -43,21 +43,21 @@ class OpenAlexApiClient
     end
   end
 
-  def works_by_dois(dois)
+  TOPIC_FIELDS = "id,doi,display_name,type,primary_topic,topics"
+
+  def works_by_dois(dois, select: TOPIC_FIELDS)
     normalized = dois.filter_map { |doi| normalize_doi(doi) }.uniq
     return [] if normalized.empty?
 
     normalized.each_slice(DOIS_PER_REQUEST).flat_map do |batch|
-      works_for_doi_batch(batch)
+      works_for_doi_batch(batch, select: select)
     end
   end
 
-  def works_for_doi_batch(batch)
+  def works_for_doi_batch(batch, select: TOPIC_FIELDS)
     get(
       "works",
-      filter: "doi:#{batch.join('|').gsub(',', '%2C')}",
-      per_page: PER_PAGE,
-      select: "id,doi,display_name,type,primary_topic,topics"
+      { filter: "doi:#{batch.join('|').gsub(',', '%2C')}", per_page: PER_PAGE, select: select }.compact
     ).fetch("results")
   rescue RequestError => error
     raise unless error.status == 400
@@ -69,8 +69,8 @@ class OpenAlexApiClient
 
     warn "OpenAlex rejected a batch of #{batch.length} DOIs; splitting the batch"
     midpoint = batch.length / 2
-    works_for_doi_batch(batch.first(midpoint)) +
-      works_for_doi_batch(batch.drop(midpoint))
+    works_for_doi_batch(batch.first(midpoint), select: select) +
+      works_for_doi_batch(batch.drop(midpoint), select: select)
   end
 
   def get(path, params = {})

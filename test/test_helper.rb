@@ -19,6 +19,13 @@ class ActiveSupport::TestCase
     ENV["TMPDIR"] = Dir.mktmpdir("science-test-#{worker}-")
   end
 
+  # Batched DOI lookups find nothing unless a test stubs them, so lookups fall back to per-DOI requests.
+  setup do
+    stub_request(:get, "https://api.openalex.org/works")
+      .with(query: hash_including("filter" => /\Adoi:/))
+      .to_return(headers: { "Content-Type" => "application/json" }, body: { results: [] }.to_json)
+  end
+
   # Make sure Shoulda Matchers are configured correctly
   Shoulda::Matchers.configure do |config|
     config.integrate do |with|

@@ -1,4 +1,6 @@
 class PaperIdentityResolver
+  PREFETCH_BATCH = 50
+
   attr_reader :client, :lookups, :sources
 
   def initialize(client: nil, local_only: false)
@@ -16,6 +18,7 @@ class PaperIdentityResolver
   def call(candidates)
     raise ArgumentError, "Expected an array of citation candidates" unless candidates.is_a?(Array) && candidates.all? { |row| row.is_a?(Hash) }
 
+    prefetch_dois(candidates) unless @local_only
     results = candidates.map { |row| resolve(row) }
     { "generated_at" => Time.current.iso8601,
       "summary" => results.group_by { |row| row.fetch("assessment") }.transform_values(&:size),
@@ -197,6 +200,40 @@ class PaperIdentityResolver
     doi = client.normalize_doi(value)
     raise ArgumentError, "Invalid DOI" unless doi && doi.split("/").none? { |part| %w[. ..].include?(part) }
     doi
+  end
+
+  # Fills unambiguous DOI matches in batches; anything else falls back to lookup_work.
+  def prefetch_dois(candidates)
+    dois = candidates.filter_map { |row| candidate_doi(row) }.uniq
+    dois.each_slice(PREFETCH_BATCH) do |batch|
+      works = client.works_by_dois(batch, select: nil)
+      next if works.size >= OpenAlexApiClient::PER_PAGE
+
+      retrieved_at = Time.current.iso8601
+      works.select { |work| valid_work?(work) }.group_by { |work| client.normalize_doi(work["doi"]) }.each do |doi, matches|
+        next unless batch.include?(doi) && matches.one?
+        lookups["doi:#{doi}"] = { "status" => "found", "retrieved_at" => retrieved_at, "work" => matches.first }
+      end
+    rescue OpenAlexApiClient::RequestError
+      next
+    end
+  end
+
+  def candidate_doi(row)
+    identifier = row["identifier"]
+    return unless identifier.is_a?(String) && identifier.present?
+
+    doi = case row["identifier_kind"]
+    when "arxiv" then "10.48550/arxiv.#{arxiv_id(identifier)}"
+    when "doi" then normalize_doi(identifier)
+    end
+    return unless doi
+    if doi.start_with?("10.48550/arxiv.")
+      doi = "10.48550/arxiv.#{arxiv_id(doi.delete_prefix('10.48550/arxiv.')).downcase}"
+    end
+    normalize_doi(doi)
+  rescue ArgumentError
+    nil
   end
 
   def lookup_work(key)

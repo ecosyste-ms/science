@@ -194,4 +194,37 @@ class ProjectPaperImportTest < ActionDispatch::IntegrationTest
     end
     assert_requested request, times: 1
   end
+
+  test "batched DOI lookups import references without per-DOI requests" do
+    second = { "id" => "https://openalex.org/W654321", "title" => "A second method", "doi" => "https://doi.org/10.1234/second", "publication_date" => "2021-01-01" }
+    @project.update!(readme: "# Example model\n\nhttps://doi.org/10.1234/method\nhttps://doi.org/10.1234/second\n")
+    batch = stub_request(:get, "https://api.openalex.org/works")
+      .with(query: hash_including("filter" => "doi:10.1234/method|10.1234/second", "api_key" => "test-key"))
+      .to_return(headers: { "Content-Type" => "application/json" }, body: { results: [@work, second] }.to_json)
+
+    ImportProjectPapersWorker.new.perform(@project.id)
+
+    assert_requested batch, times: 1
+    assert_not_requested :get, %r{api\.openalex\.org/works/doi:}
+    assert_equal [@work["id"], second["id"]].sort, @project.project_papers.map { |link| link.paper.openalex_id }.sort
+  end
+
+  test "a DOI shared by several batched works falls back to its own lookup" do
+    duplicate = @work.merge("id" => "https://openalex.org/W999999")
+    stub_request(:get, "https://api.openalex.org/works")
+      .with(query: hash_including("filter" => "doi:10.1234/method"))
+      .to_return(headers: { "Content-Type" => "application/json" }, body: { results: [duplicate, @work] }.to_json)
+
+    ImportProjectPapersWorker.new.perform(@project.id)
+
+    assert_requested :get, "https://api.openalex.org/works/doi:10.1234/method", query: { "api_key" => "test-key" }, times: 1
+    assert_equal @work["id"], @project.project_papers.sole.paper.openalex_id
+  end
+
+  test "identity conflicts are logged without failing the job" do
+    Paper.create!(openalex_id: "https://openalex.org/W777777", title: "Stored paper", doi: "10.1234/method")
+
+    assert_nothing_raised { ImportProjectPapersWorker.new.perform(@project.id) }
+    assert_empty @project.project_papers
+  end
 end
