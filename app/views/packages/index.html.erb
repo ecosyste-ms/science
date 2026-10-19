@@ -12,13 +12,7 @@
     <%= link_to "View All Projects", projects_path, class: "btn btn-outline-primary" %>
   </div>
 
-
-  <h2 class="h4 mb-3">
-    <%= number_with_delimiter @pagy.count %>
-    <%= "package".pluralize(@pagy.count) %>
-  </h2>
-
-  <% if @packages.load.any? %>
+  <% if @packages.any? %>
     <% @packages.each do |package| %>
       <div class="card mb-3" data-package-id="<%= package.id %>">
         <div class="card-body">

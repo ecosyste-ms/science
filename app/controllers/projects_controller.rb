@@ -97,7 +97,7 @@ class ProjectsController < ApplicationController
     scope = scope.language(params[:language]) if params[:language].present?
     scope = scope.with_research_organization_owner if params[:research_organization].present?
     @scope = apply_project_sort(scope)
-    @pagy, @projects = pagy(@scope)
+    @pagy, @projects = pagy_countless(@scope)
   end
 
   def send_project_csv(scope, name, file_column)
