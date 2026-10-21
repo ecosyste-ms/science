@@ -1,4 +1,5 @@
 production:
+  sidekiq_report_errors: discard
   ignore_errors:
     - ActiveRecord::RecordNotFound
     - ActionController::RoutingError
