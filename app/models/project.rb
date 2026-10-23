@@ -7,6 +7,8 @@ require 'github/markup'
 
 class Project < ApplicationRecord
   SCIENCE_SCORE_THRESHOLD = 20
+  BRIEF_RETRY_LIMIT = 3
+  BRIEF_RETRY_COOLDOWN = 7.days
   DOI_IMAGE_SUFFIX_PATTERN = /\.(?:gif|jpe?g|png|svg|webp)(?:[?#]\S*)?\z/i
   ENCODED_DOI_SEPARATOR_PATTERN = /(10\.\d{4,9})%2f/i
   DOI_MARKDOWN_LINK_BOUNDARY_PATTERN = /\]\s*\(/
@@ -179,6 +181,11 @@ class Project < ApplicationRecord
   scope :with_packages, -> { where.not(packages: [nil, []]) }
   scope :needing_brief_dependencies, -> {
     where("brief IS NULL OR (NOT (brief ? 'dependencies') AND NOT (brief ? 'error'))")
+      .or(where(
+        "brief ? 'error' AND NOT (brief ? 'dependencies') AND COALESCE((brief->>'attempts')::int, 1) < :limit AND " \
+        "COALESCE((brief->>'attempted_at')::timestamptz, '-infinity') <= CAST(:now AS timestamptz) - make_interval(secs => :cooldown) * COALESCE((brief->>'attempts')::int, 1)",
+        limit: BRIEF_RETRY_LIMIT, cooldown: BRIEF_RETRY_COOLDOWN.to_i, now: Time.current
+      ))
       .where("brief->>'status' IS DISTINCT FROM 'gated'")
   }
   scope :needing_swhids, -> { where(swhids: nil) }

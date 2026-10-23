@@ -128,7 +128,7 @@ class BriefScanEnqueuerTest < ActiveSupport::TestCase
       ["unretrieved", "rrid", "matched", "error", nil, nil],
       ["unmatched-doi", "doi", "unmatched", "ok", Time.current, nil],
       ["scanned", "ascl", "matched", "ok", Time.current, { "dependencies" => [] }],
-      ["failed", "swmath", "matched", "ok", Time.current, { "error" => "timeout" }],
+      ["failed", "swmath", "matched", "ok", Time.current, { "error" => "timeout", "attempted_at" => Time.current.iso8601 }],
       ["hidden", "ascl", "matched", "ok", Time.current, nil],
     ].each do |name, source, match_status, status, retrieved_at, brief|
       project = create_project(name, science_score: 0, brief: brief)

@@ -220,6 +220,39 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     previous_limit ? ENV["LIMIT"] = previous_limit : ENV.delete("LIMIT")
   end
 
+  test "failed first scans are retried after a growing cooldown until the retry limit" do
+    @project.update!(repository: { "clone_url" => File.join(@directory, "missing") })
+    scan = -> { BriefScanEnqueuer.new(limit: 10).enqueue.tap { RepositoryScanWorker.drain } }
+
+    assert_equal 1, scan.call
+    assert_equal 1, @project.reload.brief["attempts"]
+    assert_equal 0, scan.call
+    travel 8.days
+    assert_equal 1, scan.call
+    assert_equal 2, @project.reload.brief["attempts"]
+    travel 8.days
+    assert_equal 0, scan.call
+    travel 7.days
+    assert_equal 1, scan.call
+    assert_equal 3, @project.reload.brief["attempts"]
+    travel 365.days
+    assert_equal 0, scan.call
+    assert_not @project.reload.brief_scan_due?
+  end
+
+  test "a retried first scan replaces the stored failure with evidence" do
+    @project.update_columns(brief: { "error" => "fatal: expected flush after ref listing", "attempted_at" => 8.days.ago.iso8601, "attempts" => 1 })
+
+    assert_equal 1, BriefScanEnqueuer.new(limit: 10).enqueue
+    RepositoryScanWorker.drain
+
+    @project.reload
+    assert @project.brief.key?("dependencies")
+    assert_not @project.brief.key?("error")
+    assert @project.science_score_breakdown.dig("breakdown", "has_research_tooling", "present")
+    assert_equal 0, BriefScanEnqueuer.new(limit: 10).enqueue
+  end
+
   test "a configured GitHub token does not add credentials to local clones" do
     ENV["GITHUB_TOKEN"] = "github-test-token"
 

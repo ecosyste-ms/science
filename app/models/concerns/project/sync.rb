@@ -673,7 +673,15 @@ module Project::Sync
     return false if gated?
 
     return true if brief&.[]("status") == "gated"
-    brief.nil? || (!brief.key?("dependencies") && !brief.key?("error"))
+    brief.nil? || (!brief.key?("dependencies") && !brief.key?("error")) || brief_retry_due?
+  end
+
+  def brief_retry_due?
+    return false unless brief.is_a?(Hash) && brief.key?("error") && !brief.key?("dependencies")
+
+    attempts = brief.fetch("attempts", 1).to_i
+    attempted_at = Time.zone.parse(brief["attempted_at"].to_s)
+    attempts < Project::BRIEF_RETRY_LIMIT && (attempted_at.nil? || attempted_at <= (Project::BRIEF_RETRY_COOLDOWN * attempts).ago)
   end
 
   def fetch_brief(checkout:)
@@ -704,7 +712,8 @@ module Project::Sync
     if brief.is_a?(Hash) && brief.key?('dependencies') && !brief.key?('error')
       update_column(:brief, brief.merge('last_error' => failure))
     else
-      update_column(:brief, failure)
+      attempts = brief.is_a?(Hash) && brief.key?('error') ? brief.fetch('attempts', 1).to_i : 0
+      update_column(:brief, failure.merge('attempts' => attempts + 1))
     end
   end
 
