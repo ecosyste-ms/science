@@ -33,6 +33,7 @@ class ProjectSearchSeeds
     seeds = [
       seed("name", project.name, "project.name"),
       seed("repository_url", project.repository_url, "project.url"),
+      seed("name", project.repository_slug, "project.url"),
       seed("homepage_url", repository["homepage"], "repository.homepage"),
     ]
     seeds.concat(repository_alias_seeds(repository))

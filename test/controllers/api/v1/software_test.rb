@@ -52,6 +52,19 @@ class Api::V1::SoftwareTest < ActionDispatch::IntegrationTest
     assert_empty response.parsed_body.fetch("projects")
   end
 
+  test "looks up projects by their current repository name" do
+    titled = create_project(url: "https://github.com/biobakery/MetaPhlAn2", name: "MetaPhlAn 2: Metagenomic Phylogenetic Analysis")
+    unnamed = create_project(url: "https://github.com/cran/randomForest", name: nil)
+    IndexSoftwareSearchWorker.drain
+
+    assert_lookup "metaphlan2", [titled.id]
+    assert_lookup "MetaPhlAn 2: Metagenomic Phylogenetic Analysis", [titled.id]
+    get "/api/v1/software/lookup", params: { q: "randomForest", kind: "name" }
+    result = response.parsed_body.fetch("projects").sole
+    assert_equal unnamed.id, result.fetch("project_id")
+    assert_equal [["randomForest", "project.url"]], result.fetch("seeds").map { |seed| seed.values_at("value", "source") }
+  end
+
   test "searches names literally and paginates by project" do
     first = create_project(name: "SuperStats")
     second = create_project(name: "StatsTools")

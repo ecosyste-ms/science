@@ -161,7 +161,7 @@ class Api::V1::SearchSeedsTest < ActionDispatch::IntegrationTest
     assert_response :success
     record = response.parsed_body.sole
     assert_seed record.fetch("seeds"), "name", "r++", "project.name", "software", value: "R++"
-    assert_equal %w[name repository_url], record.fetch("seeds").pluck("type")
+    assert_equal %w[name repository_url name], record.fetch("seeds").pluck("type")
     assert_nil record.fetch("packages").sole.fetch("purl")
     assert_equal ["name"], record.fetch("packages").sole.fetch("seeds").pluck("type")
     assert_equal project.id, record.fetch("project_id")
