@@ -342,11 +342,35 @@ module Project::Sync
     response = conn.get
     return unless response.success?
     package_records = JSON.parse(response.body)
+    package_records, duplicates = without_case_duplicate_go_modules(package_records)
     self.packages = package_records
     self.save
     link_published_packages(package_records)
+    unlink_published_packages(duplicates)
   rescue
     puts "Error fetching packages for #{repository_url}"
+  end
+
+  # proxy.golang.org lists each capitalisation of a GitHub path anyone requested as its own module.
+  def without_case_duplicate_go_modules(records)
+    full_name = repository["full_name"].presence if repository.is_a?(Hash)
+    go = records.select { |record| record.is_a?(Hash) && record["ecosystem"] == "go" && record["name"].is_a?(String) }
+    kept = go.group_by { |record| record["name"].downcase }.values.map do |group|
+      group.find { |record| full_name && record["name"].end_with?("/#{full_name}") } || group.first
+    end
+    duplicates = go - kept
+    [records - duplicates, duplicates]
+  end
+
+  def unlink_published_packages(records)
+    purls = records.filter_map do |record|
+      Purl.parse(record["purl"]).with(version: nil, subpath: nil).to_s if record["purl"].present?
+    rescue Purl::Error
+      nil
+    end
+    return if purls.empty?
+
+    Package.where(purl: purls, published_by_project_id: id).update_all(published_by_project_id: nil, updated_at: Time.current)
   end
 
   def link_published_packages(records)

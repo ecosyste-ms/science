@@ -131,6 +131,23 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_equal p, package.reload.published_by_project
   end
 
+  test "fetch_packages keeps one spelling of case-variant Go modules" do
+    p = build_project(url: "https://github.com/s-andrews/FastQC", repository: repo_hash.merge("full_name" => "s-andrews/FastQC"))
+    registry = PackageRegistry.create!(name: "proxy.golang.org", url: "https://proxy.golang.org", ecosystem: "go", purl_type: "golang")
+    lowercase = Package.create!(package_registry: registry, name: "github.com/s-andrews/fastqc", purl: "pkg:golang/github.com/s-andrews/fastqc", published_by_project: p)
+    canonical = Package.create!(package_registry: registry, name: "github.com/s-andrews/FastQC", purl: "pkg:golang/github.com/s-andrews/FastQC")
+    records = %w[github.com/s-andrews/fastqc github.com/s-andrews/FastQC github.com/S-andrews/FastQC].map do |name|
+      package_record(name: name, purl: "pkg:golang/#{name}@v0.12.1", registry: registry).merge("ecosystem" => "go")
+    end
+    stub_request(:get, p.packages_url).to_return(status: 200, body: records.to_json)
+
+    p.fetch_packages
+
+    assert_equal ["github.com/s-andrews/FastQC"], p.reload.packages.pluck("name")
+    assert_equal p, canonical.reload.published_by_project
+    assert_nil lowercase.reload.published_by_project
+  end
+
   test "fetch_packages does not create missing packages or change existing links" do
     p = build_project
     other_project = Project.create!(url: "https://github.com/scipy/scipy")
