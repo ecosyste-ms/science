@@ -1,10 +1,13 @@
 require "yaml"
 
 class RepositoryMetadata
-  attr_reader :frontmatter, :document, :brief, :body
+  attr_reader :frontmatter, :document, :brief, :body, :slug
 
-  def initialize(readme:, brief:)
+  GENERIC_HEADING = /\A(?:model (?:overview|card|details|description)|overview|introduction|usage|installation|getting started)\z/i
+
+  def initialize(readme:, brief:, slug: nil)
     @brief = brief || {}
+    @slug = slug
     text = readme.to_s
     frontmatter = text.match(/\A---\s*\r?\n(.*?)\r?\n(?:---|\.\.\.)\s*(?:\r?\n|\z)/m)
     @frontmatter = parse_card(frontmatter&.[](1))
@@ -29,10 +32,20 @@ class RepositoryMetadata
     title = strings(frontmatter["title"]).first
     return title if title
 
-    heading = document.at_css("h1, h2")&.text&.squish&.sub(/\AModel card for\b[:\s]*/i, "")&.presence
-    return if heading&.match?(/\A(?:model (?:overview|card|details|description)|overview|introduction|usage|installation|getting started)\z/i)
+    headings = document.css("h1, h2").filter_map { |node| node.text.squish.sub(/\AModel card for\b[:\s]*/i, "").presence }
+    # Notices and section titles often come first, so only trust a heading that resembles the repository name.
+    return headings.find { |heading| !heading.match?(GENERIC_HEADING) && matches_slug?(heading) } if slug.present?
 
-    heading
+    headings.first unless headings.first&.match?(GENERIC_HEADING)
+  end
+
+  def matches_slug?(heading)
+    text = heading.downcase.gsub(/[^a-z0-9]/, "")
+    target = slug.downcase.gsub(/[^a-z0-9]/, "")
+    return false if text.length < 3 || target.length < 3
+
+    text.include?(target) || target.include?(text) ||
+      DidYouMean::Levenshtein.distance(text, target) <= target.length / 5
   end
 
   def description

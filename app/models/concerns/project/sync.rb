@@ -683,7 +683,7 @@ module Project::Sync
     previous_brief_dependencies = brief.is_a?(Hash) ? brief['dependencies'] : nil
     self.brief = data
     unless repository_from_package?
-      extracted = RepositoryMetadata.new(readme: readme, brief: data).attributes
+      extracted = RepositoryMetadata.new(readme: readme, brief: data, slug: (repository_slug unless model_project?)).attributes
       self.repository = extracted.merge(repository.reject { |_, value| value.blank? })
     end
     if previous_brief_dependencies != data['dependencies']

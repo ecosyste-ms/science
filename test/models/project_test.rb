@@ -22,7 +22,7 @@ class ProjectTest < ActiveSupport::TestCase
   test "readme_name extracts plain text from Markdown and HTML headings" do
     ["# [Tool **name**](https://example.org) ![Build](badge.svg)",
       "Tool name\n=========", "<h1>Tool <em>name</em></h1>"].each do |readme|
-      project = Project.new(name: " ", readme: readme, url: "https://github.com/lab/repo")
+      project = Project.new(name: " ", readme: readme, url: "https://github.com/lab/tool-name")
 
       assert_equal "Tool name", project.readme_name
       assert_equal "Tool name", project.to_s

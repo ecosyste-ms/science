@@ -68,6 +68,18 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     assert @project.brief.key?("dependencies")
   end
 
+  test "a scan names the project from the README heading that matches the repository" do
+    readme = "# ***ATTENTION***\n\nPlease direct questions to the support forum.\n\n# Shared Checkout User Manual\n"
+    File.write(File.join(@source, "README.md"), readme)
+    git("-C", @source, "add", "README.md")
+    git("-C", @source, "-c", "user.name=Test", "-c", "user.email=test@example.org",
+      "-c", "commit.gpgsign=false", "commit", "-m", "Add README")
+
+    RepositoryScanWorker.new.perform(@project.id)
+
+    assert_equal "Shared Checkout User Manual", @project.reload.name
+  end
+
   test "successful repository scans enqueue paper imports for stored READMEs" do
     previous_key = ENV["OPENALEX_API_KEY"]
     ENV["OPENALEX_API_KEY"] = "test-key"

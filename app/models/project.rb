@@ -420,7 +420,7 @@ class Project < ApplicationRecord
   def readme_name
     return unless has_attribute?(:readme) && readme.present?
 
-    RepositoryMetadata.new(readme: readme, brief: nil).name
+    RepositoryMetadata.new(readme: readme, brief: nil, slug: (repository_slug if has_attribute?(:model) && !model_project?)).name
   end
 
   def readme_body
