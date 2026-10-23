@@ -90,7 +90,6 @@ module Project::Sync
 
       run_sync_stage(stage_durations, :fetch_dependencies) { fetch_dependencies }
       run_sync_stage(stage_durations, :fetch_packages) { fetch_packages }
-      run_sync_stage(stage_durations, :import_mentions) { import_mentions }
       run_sync_stage(stage_durations, :fetch_readme) { fetch_readme }
       run_sync_stage(stage_durations, :fetch_commits) { fetch_commits }
       run_sync_stage(stage_durations, :fetch_events) { fetch_events }

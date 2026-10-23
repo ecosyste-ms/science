@@ -560,7 +560,7 @@ class ProjectSyncTest < ActiveSupport::TestCase
     Project.expects(:find_by_id).with(p.id).returns(p)
     %i[
       check_url fetch_repository find_or_create_host fetch_owner find_or_create_owner
-      fetch_dependencies fetch_packages import_mentions fetch_readme combine_keywords
+      fetch_dependencies fetch_packages fetch_readme combine_keywords
       fetch_commits fetch_events fetch_issue_stats sync_issues fetch_citation_file
       fetch_codemeta fetch_zenodo_file sync_releases update_committers
       update_keywords_from_contributors update_score update_science_score fetch_swhids_async
@@ -633,6 +633,24 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_equal "HUMAnN User Manual", derived.reload.name
     assert_equal({ "files" => { "readme" => "readme.md" }, "derived_name" => "HUMAnN User Manual" }, derived.repository["metadata"])
     assert_equal "Curated", curated.reload.name
+  end
+
+  test "sync does not import paper mentions" do
+    project = build_project
+    stub_request(:get, project.url).to_return(status: 200)
+    stub_request(:get, project.repos_api_url).to_return(status: 200, body: repo_hash.to_json)
+    %i[
+      find_or_create_host fetch_owner find_or_create_owner fetch_dependencies
+      fetch_packages fetch_readme combine_keywords fetch_commits
+      fetch_events fetch_issue_stats sync_issues fetch_citation_file fetch_codemeta
+      fetch_zenodo_file sync_releases update_committers update_keywords_from_contributors
+      update_score
+    ].each { |method| Project.any_instance.stubs(method) }
+    Project.any_instance.expects(:import_mentions).never
+
+    SyncProjectWorker.new.perform(project.id)
+
+    assert_not_requested :any, /papers\.ecosyste\.ms/
   end
 
   test "SWHID enqueueing skips ineligible projects and stored attempts" do
