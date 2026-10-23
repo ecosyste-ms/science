@@ -24,6 +24,7 @@ class BriefRescanRakeTest < ActiveSupport::TestCase
     project("unscanned").update!(brief: nil)
     project("legacy").update!(brief: { "version" => "0.12.0" })
     project("error").update!(brief: { "version" => "0.14.0", "dependencies" => [], "error" => "timeout" })
+    project("failed-refresh").update!(brief: { "version" => "0.14.0", "dependencies" => [], "last_error" => { "error" => "timeout" } })
     no_readme = project("no-readme").tap { |record| record.update!(readme: nil) }
     no_bibtex = project("no-bibtex").tap { |record| record.update!(readme: "Contact @example for details.") }
     project("no-repository").update!(repository: nil)

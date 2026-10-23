@@ -699,7 +699,13 @@ module Project::Sync
   end
 
   def record_brief_error(msg)
-    update_column(:brief, { 'error' => msg.to_s[0, 500], 'attempted_at' => Time.now.utc.iso8601 })
+    failure = { 'error' => msg.to_s[0, 500], 'attempted_at' => Time.now.utc.iso8601 }
+    # A failed refresh says nothing about the software, so keep the last successful scan.
+    if brief.is_a?(Hash) && brief.key?('dependencies') && !brief.key?('error')
+      update_column(:brief, brief.merge('last_error' => failure))
+    else
+      update_column(:brief, failure)
+    end
   end
 
   def sync_issues

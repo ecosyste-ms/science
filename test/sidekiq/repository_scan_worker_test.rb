@@ -177,6 +177,37 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     previous_limit ? ENV["LIMIT"] = previous_limit : ENV.delete("LIMIT")
   end
 
+  test "a failed version rescan keeps the previous successful scan and its score" do
+    require "rake"
+    Rails.application.load_tasks unless Rake::Task.task_defined?("projects:rescan_brief")
+    RepositoryScanWorker.new.perform(@project.id)
+    @project.reload
+    assert @project.science_score_breakdown.dig("breakdown", "has_research_tooling", "present")
+    successful = @project.brief.merge("version" => "0.14.0")
+    score = @project.science_score
+    @project.update_columns(brief: successful,
+      repository: @project.repository.merge("clone_url" => File.join(@directory, "missing")))
+    previous_limit = ENV["LIMIT"]
+    ENV["LIMIT"] = "100"
+
+    output, = capture_io { Rake::Task["projects:rescan_brief"].execute }
+    assert_equal 1, JSON.parse(output).fetch("enqueued")
+    RepositoryScanWorker.perform_one
+
+    @project.reload
+    assert_equal successful, @project.brief.except("last_error")
+    assert_match "does not exist", @project.brief.dig("last_error", "error")
+    @project.update_science_score
+    assert_equal score, @project.reload.science_score
+    assert @project.science_score_breakdown.dig("breakdown", "has_research_tooling", "present")
+    SoftwareSearchIndexer.index(@project.id)
+    assert_not_empty @project.reload.search_identifiers
+    output, = capture_io { Rake::Task["projects:rescan_brief"].execute }
+    assert_equal 0, JSON.parse(output).fetch("selected")
+  ensure
+    previous_limit ? ENV["LIMIT"] = previous_limit : ENV.delete("LIMIT")
+  end
+
   test "a configured GitHub token does not add credentials to local clones" do
     ENV["GITHUB_TOKEN"] = "github-test-token"
 

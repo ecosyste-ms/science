@@ -17,7 +17,7 @@ class BriefRescanEnqueuer
 
   def candidates
     Project.visible.with_repository.eligible_for_brief
-      .where("brief ? 'dependencies' AND NOT (brief ? 'error')")
+      .where("brief ? 'dependencies' AND NOT (brief ? 'error') AND NOT (brief ? 'last_error')")
       .where("brief->>'status' IS DISTINCT FROM 'gated'")
   end
 
