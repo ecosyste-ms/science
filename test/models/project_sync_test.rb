@@ -608,6 +608,33 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_nil project.swhids
   end
 
+  test "sync refreshes derived names after replacing repository metadata and keeps curated names" do
+    readme = "# ***ATTENTION***\n\nPlease use the support forum.\n\n# HUMAnN User Manual\n"
+    derived = Project.create!(url: "https://github.com/biobakery/humann", name: "ATTENTION", readme: readme,
+      repository: repo_hash.merge("full_name" => "biobakery/humann", "metadata" => { "derived_name" => "ATTENTION" }))
+    curated = Project.create!(url: "https://github.com/biobakery/curated", name: "Curated", readme: readme,
+      repository: repo_hash.merge("full_name" => "biobakery/curated", "metadata" => { "derived_name" => "Other" }))
+    [derived, curated].each do |project|
+      stub_request(:get, project.url).to_return(status: 200)
+      stub_request(:get, project.repos_api_url).to_return(status: 200,
+        body: repo_hash.merge("full_name" => project.repository["full_name"], "metadata" => { "files" => { "readme" => "readme.md" } }).to_json)
+    end
+    %i[
+      find_or_create_host fetch_owner find_or_create_owner fetch_dependencies
+      fetch_packages import_mentions fetch_readme combine_keywords fetch_commits
+      fetch_events fetch_issue_stats sync_issues fetch_citation_file fetch_codemeta
+      fetch_zenodo_file sync_releases update_committers update_keywords_from_contributors
+      update_score
+    ].each { |method| Project.any_instance.stubs(method) }
+
+    SyncProjectWorker.new.perform(derived.id)
+    SyncProjectWorker.new.perform(curated.id)
+
+    assert_equal "HUMAnN User Manual", derived.reload.name
+    assert_equal({ "files" => { "readme" => "readme.md" }, "derived_name" => "HUMAnN User Manual" }, derived.repository["metadata"])
+    assert_equal "Curated", curated.reload.name
+  end
+
   test "SWHID enqueueing skips ineligible projects and stored attempts" do
     project = build_project(science_score: Project::SCIENCE_SCORE_THRESHOLD - 1)
     assert_nil project.fetch_swhids_async

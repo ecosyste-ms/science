@@ -205,7 +205,13 @@ module Project::Sync
 
     response = conn.get
     return unless response.success?
-    self.repository = JSON.parse(response.body)
+    data = JSON.parse(response.body)
+    # The marker separates derived names from curated ones, so it has to survive a refresh.
+    derived_name = repository.dig("metadata", "derived_name") if repository.is_a?(Hash) && repository["metadata"].is_a?(Hash)
+    if derived_name && data.is_a?(Hash)
+      data["metadata"] = (data["metadata"].is_a?(Hash) ? data["metadata"] : {}).merge("derived_name" => derived_name)
+    end
+    self.repository = data
     self.save
   rescue => e
     puts "Error fetching repository for #{repository_url}"
