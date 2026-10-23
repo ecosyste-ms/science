@@ -59,6 +59,16 @@ class Package < ApplicationRecord
     Paper.where(id: package_papers.select(:paper_id))
   end
 
+  def metadata_lookup
+    {
+      status: ecosystems_sync_status || "unchecked",
+      checked_at: ecosystems_checked_at,
+      retry_at: ecosystems_retry_at,
+      source_url: ecosystems_id.present? ? "#{PackagesApiClient::BASE_URL}registries/#{ERB::Util.url_encode(package_registry.name)}/packages/#{ERB::Util.url_encode(name)}" : nil,
+      source_updated_at: ecosystems_updated_at,
+    }
+  end
+
   def linked_projects
     paper_ids = package_papers.where(role: PackagePaper::MODEL_ROLES).select(:paper_id)
     Project.where(id: ProjectPaper.where(paper_id: paper_ids, role: "implementation").select(:project_id))

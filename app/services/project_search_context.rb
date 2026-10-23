@@ -8,7 +8,7 @@ class ProjectSearchContext
 
   def self.scope
     Project.visible.scientific.select(*PROJECT_COLUMNS)
-      .preload(:direct_project_dependencies, published_package_records: :package_registry)
+      .preload(direct_project_dependencies: { package: :package_registry }, published_package_records: :package_registry)
   end
 
   def initialize(project)
@@ -85,10 +85,23 @@ class ProjectSearchContext
         name: dependency.package_name,
         ecosystem: dependency.ecosystem,
         purl: dependency.purl,
+        resolved_package: resolved_package(dependency.package),
         source: metadata.text(record["source"]),
         occurrences: occurrences,
         updated_at: dependency.updated_at,
       }
     end
+  end
+
+  def resolved_package(package)
+    return unless package
+
+    {
+      id: package.id,
+      name: package.name,
+      purl: package.purl,
+      registry: { name: package.package_registry.name, ecosystem: package.package_registry.ecosystem },
+      metadata_lookup: package.metadata_lookup,
+    }
   end
 end

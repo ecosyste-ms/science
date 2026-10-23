@@ -217,6 +217,7 @@ class ProjectDependencyIndexer
 
   def brief_occurrence(dependency)
     {
+      "filepath" => dependency["manifest"].presence,
       "requirements" => dependency["version"],
       "kind" => dependency["scope"],
       "optional" => dependency["optional"] == true,

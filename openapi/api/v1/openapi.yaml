@@ -1541,7 +1541,7 @@ components:
           description: Stored direct dependency records, including unresolved package identities
           items:
             type: object
-            required: [dependency_id, package_id, name, ecosystem, purl, source, occurrences, updated_at]
+            required: [dependency_id, package_id, name, ecosystem, purl, resolved_package, source, occurrences, updated_at]
             properties:
               dependency_id:
                 type: integer
@@ -1559,6 +1559,29 @@ components:
                 type: string
                 nullable: true
                 description: Recorded dependency source, such as repos_manifests or brief
+              resolved_package:
+                type: object
+                nullable: true
+                description: Linked package evidence, separate from the original dependency identity
+                required: [id, name, purl, registry, metadata_lookup]
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  purl:
+                    type: string
+                    nullable: true
+                  registry:
+                    type: object
+                    required: [name, ecosystem]
+                    properties:
+                      name:
+                        type: string
+                      ecosystem:
+                        type: string
+                  metadata_lookup:
+                    $ref: "#/components/schemas/PackageMetadataLookup"
               updated_at:
                 type: string
                 format: date-time
@@ -1702,6 +1725,33 @@ components:
           $ref: "#/components/schemas/ReviewedRelationshipEvidence"
         project_evidence:
           $ref: "#/components/schemas/ReviewedRelationshipEvidence"
+    PackageMetadataLookup:
+      type: object
+      required: [status, checked_at, retry_at, source_url, source_updated_at]
+      description: >-
+        Last stored metadata lookup outcome, not proof of software existence or
+        identity. Previous metadata can be retained after a failed or unavailable lookup.
+      properties:
+        status:
+          type: string
+          enum: [unchecked, matched, missing, unavailable, ambiguous, transient_error, failed]
+        checked_at:
+          type: string
+          format: date-time
+          nullable: true
+        retry_at:
+          type: string
+          format: date-time
+          nullable: true
+        source_url:
+          type: string
+          format: uri
+          nullable: true
+          description: Packages API record URL when upstream metadata has been matched
+        source_updated_at:
+          type: string
+          format: date-time
+          nullable: true
     Package:
       type: object
       properties:
@@ -1721,6 +1771,8 @@ components:
         repositories_url:
           type: string
           description: Read-only reviewed repository relationships and evidence
+        metadata_lookup:
+          $ref: "#/components/schemas/PackageMetadataLookup"
         description:
           type: string
           nullable: true

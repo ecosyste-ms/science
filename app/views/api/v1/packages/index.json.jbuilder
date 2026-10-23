@@ -6,6 +6,7 @@ json.array! @packages do |package|
     :purl,
     :repository_url
   json.description package.metadata["description"]
+  json.metadata_lookup package.metadata_lookup
   json.repositories_url repositories_api_v1_package_url(package)
   json.versions_url api_v1_package_versions_url(package)
   json.registry do

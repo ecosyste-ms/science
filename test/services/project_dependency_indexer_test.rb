@@ -117,6 +117,24 @@ class ProjectDependencyIndexerTest < ActiveSupport::TestCase
     assert_empty project.project_dependencies
   end
 
+  test "preserves Brief paths and distinct requirements while deduplicating repeated occurrences" do
+    dependency = { "name" => "astropy", "purl" => "pkg:pypi/astropy", "direct" => true, "scope" => "runtime", "version" => ">=6" }
+    project = Project.create!(url: "https://github.com/example/brief-paths", brief: { "dependencies" => [
+      dependency.merge("manifest" => "requirements.txt"),
+      dependency.merge("manifest" => "requirements.txt"),
+      dependency.merge("manifest" => "requirements.txt", "version" => ">=7"),
+      dependency.merge("manifest" => "pyproject.toml"),
+      dependency,
+    ] })
+
+    Project.sync_dependencies(limit: 1)
+
+    occurrences = project.project_dependencies.sole.metadata.fetch("occurrences")
+    assert_equal 4, occurrences.length
+    assert_equal [nil, "pyproject.toml", "requirements.txt", "requirements.txt"], occurrences.pluck("filepath")
+    assert_equal [">=6", ">=7"], occurrences.select { |row| row["filepath"] == "requirements.txt" }.pluck("requirements")
+  end
+
   test "records an empty repos result once while waiting for future Brief data" do
     project = Project.create!(
       url: "https://github.com/example/dependency-empty",

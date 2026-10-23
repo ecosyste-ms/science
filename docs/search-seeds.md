@@ -106,6 +106,12 @@ Values retain their original case. The same value can appear with several source
 
 Dependencies come from the saved dependency index, including records that have no resolved package ID or PURL. Each occurrence can include `filepath`, `manifest_kind`, `requirements`, `kind`, and `optional`. These distinguish development and optional dependencies from runtime requirements where source metadata supplies that detail. Dependencies belong to the project; they are not assigned to every package it publishes.
 
+Brief's manifest paths are retained as occurrence filepaths. Repeated declarations in different files remain separate occurrences of one dependency identity, including when their requirements are identical.
+
+Each dependency also includes `resolved_package`, or null when no package has been linked. This contains the linked package's `id`, `name`, `purl`, `registry` and `metadata_lookup`. The dependency's original name, ecosystem and PURL remain separate source claims; a resolved PURL does not replace a missing or conflicting source PURL.
+
+`metadata_lookup` is also present in package API responses. Its `status` is `unchecked` until a lookup outcome has been stored, or the saved `matched`, `missing`, `unavailable`, `ambiguous`, `transient_error` or `failed` state. `checked_at` dates the last lookup and `retry_at` gives the scheduled retry time when present. `source_url` refers to the Packages API record when one has been matched, and `source_updated_at` dates that upstream metadata. A later unavailable or failed lookup can coexist with retained metadata from an earlier match. These states describe metadata availability rather than whether software exists or a paper refers to it.
+
 The request reads stored metadata without fetching or indexing it. Empty arrays indicate missing evidence, rather than proof that a project has no dependencies or packages. Check `dependencies_indexed_at` before interpreting an empty dependency list. Context can help assess a text match, but it does not establish that a paper used the software.
 
 ## Search and lookup

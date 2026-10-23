@@ -82,7 +82,7 @@ class SearchSeedExport
       Project.connection.execute("SET TRANSACTION READ ONLY")
       Project.uncached do
         scope = ProjectSearchSeeds.scope.select(*ProjectSearchContext::PROJECT_COLUMNS)
-          .reorder(nil).preload(:direct_project_dependencies, project_fields: :field)
+          .reorder(nil).preload(direct_project_dependencies: { package: :package_registry }, project_fields: :field)
         scope = scope.limit(limit) if limit
         count = 0
         scope.find_in_batches(batch_size: batch_size) do |projects|
