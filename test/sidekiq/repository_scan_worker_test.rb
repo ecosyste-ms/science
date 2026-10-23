@@ -308,6 +308,23 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     assert_equal 0, BriefScanEnqueuer.new(limit: 10).enqueue
   end
 
+  test "project syncs queue first scans for registry matches but leave retries to the capped task" do
+    @project.update!(science_score: 0, joss_metadata: nil)
+    record = ExternalSoftwareRecord.create!(source: "ascl", identifier: "ascl:2601.001", status: "ok", retrieved_at: Time.current, next_refresh_at: Time.current)
+    ProjectExternalSoftwareRecord.create!(project: @project, external_software_record: record, relationship: "repository", match_status: "matched")
+    @project.update_columns(brief: { "error" => "timeout", "attempted_at" => 30.days.ago.iso8601, "attempts" => 1 })
+
+    assert @project.brief_scan_due?
+    assert_nil @project.fetch_swhids_async
+    assert_empty RepositoryScanWorker.jobs
+    assert_equal 1, BriefScanEnqueuer.new(limit: 1).enqueue
+
+    unscanned = Project.create!(url: "https://github.com/test/unscanned", science_score: 0, repository: { "clone_url" => @source })
+    ProjectExternalSoftwareRecord.create!(project: unscanned, external_software_record: record, relationship: "repository", match_status: "matched")
+    assert unscanned.fetch_swhids_async
+    assert_equal [@project.id, unscanned.id], RepositoryScanWorker.jobs.map { |job| job["args"].first }
+  end
+
   test "first scans are selected ahead of due retries" do
     @project.update_columns(brief: { "error" => "timeout", "attempted_at" => 30.days.ago.iso8601, "attempts" => 1 })
     unscanned = Project.create!(url: "https://github.com/test/unscanned", science_score: 50, repository: { "clone_url" => @source })

@@ -621,7 +621,8 @@ module Project::Sync
     return unless persisted?
     return if gated?
     scope = Project.visible.with_repository.where(id: id)
-    if brief_scan_due? && scope.with_research_registry_match.exists?
+    # Retries only go through projects:fetch_brief, so its LIMIT caps clone volume.
+    if brief_scan_due? && !brief_retry_due? && scope.with_research_registry_match.exists?
       return RepositoryScanWorker.perform_async(id)
     end
     return unless scope.scientific.exists?
