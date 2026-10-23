@@ -3,7 +3,14 @@ require "yaml"
 class RepositoryMetadata
   attr_reader :frontmatter, :document, :brief, :body, :slug
 
-  GENERIC_HEADING = /\A(?:model (?:overview|card|details|description)|overview|introduction|usage|installation|getting started)\z/i
+  BOILERPLATE_HEADINGS = Set[
+    "model overview", "model card", "model details", "model description", "overview", "introduction", "usage",
+    "installation", "install", "getting started", "quick start", "quickstart", "setup", "attention", "warning",
+    "note", "notes", "important", "notice", "news", "updates", "announcement", "announcements", "requirements",
+    "prerequisites", "dependencies", "contents", "table of contents", "toc", "motivation", "synopsis", "about",
+    "abstract", "summary", "description", "license", "citation", "how to cite", "acknowledgements",
+    "acknowledgments", "contributing", "contact", "authors", "changelog", "faq", "documentation", "examples", "welcome"
+  ].freeze
 
   def initialize(readme:, brief:, slug: nil)
     @brief = brief || {}
@@ -33,10 +40,23 @@ class RepositoryMetadata
     return title if title
 
     headings = document.css("h1, h2").filter_map { |node| node.text.squish.sub(/\AModel card for\b[:\s]*/i, "").presence }
-    # Notices and section titles often come first, so only trust a heading that resembles the repository name.
-    return headings.find { |heading| !heading.match?(GENERIC_HEADING) && matches_slug?(heading) } if slug.present?
+    if slug.blank?
+      first = headings.first
+      return first unless first.nil? || boilerplate?(first)
 
-    headings.first unless headings.first&.match?(GENERIC_HEADING)
+      return
+    end
+
+    # Notices and section titles often come first, so prefer a heading that resembles the repository name.
+    candidates = headings.reject { |heading| boilerplate?(heading) }
+    candidates.find { |heading| matches_slug?(heading) } || candidates.first
+  end
+
+  def boilerplate?(heading)
+    return true if heading.strip.end_with?(":")
+
+    text = heading.downcase.gsub(/:[a-z0-9_+-]+:/, " ").gsub(/[^a-z\s\/&]/, " ").squish
+    text.empty? || text.split(%r{\s*(?:/|&|\band\b)\s*}).all? { |part| BOILERPLATE_HEADINGS.include?(part.squish) }
   end
 
   def matches_slug?(heading)
