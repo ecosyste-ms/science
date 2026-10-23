@@ -27,26 +27,12 @@ class RepositoryMetadataTest < ActiveSupport::TestCase
     assert_equal "SPLADE CoCondenser SelfDistil", metadata.name
   end
 
-  test "without a slug match the first heading that is not boilerplate becomes the name" do
-    title = "Simple Baselines for Human Pose Estimation and Tracking"
-    assert_equal title, RepositoryMetadata.new(readme: "# #{title}", brief: {}, slug: "human-pose-estimation.pytorch").name
-    assert_equal title, RepositoryMetadata.new(readme: "# :warning: :warning: :warning:\n\n# #{title}", brief: {}, slug: "x").name
-    ["# 🔥🔥🔥 News!!", "# Requirements:", "# Motivation/Synopsis", "# Table of Contents", "## Notes & Updates", "# 🚀"].each do |readme|
-      assert_nil RepositoryMetadata.new(readme: readme, brief: {}, slug: "lab-tool").name, readme
+  test "boilerplate first headings are not names" do
+    ["# :warning: :warning: :warning:", "# 🔥🔥🔥 News!!", "# Requirements:", "# Motivation/Synopsis",
+      "# Table of Contents", "## Notes & Updates", "# 🚀", "# ***ATTENTION***\n\n# Usage"].each do |readme|
+      assert_nil RepositoryMetadata.new(readme: readme, brief: {}).name, readme
     end
-    assert_nil RepositoryMetadata.new(readme: "# ***ATTENTION***\n\n# Usage", brief: {}).name
-    assert_equal "Fine-tuning", RepositoryMetadata.new(readme: "# Fine-tuning", brief: {}, slug: "instruction-fusion").name
-  end
-
-  test "with a repository slug a heading resembling it is preferred" do
-    notice = "# ***ATTENTION***\n\nPlease post support questions on the forum.\n\n# HUMAnN User Manual\n"
-    assert_equal "HUMAnN User Manual", RepositoryMetadata.new(readme: notice, brief: {}, slug: "humann").name
-    assert_equal "MetaPhlAn", RepositoryMetadata.new(readme: "# MetaPhlAn", brief: {}, slug: "MetaPhlAn2").name
-    assert_equal "scikit learn", RepositoryMetadata.new(readme: "# scikit learn", brief: {}, slug: "scikit-learn").name
-    assert_nil RepositoryMetadata.new(readme: "# Welcome\n\n## Contents", brief: {}, slug: "framework").name
-    assert_nil RepositoryMetadata.new(readme: "# Model Overview", brief: {}, slug: "model").name
-    assert_equal "R", RepositoryMetadata.new(readme: "# R", brief: {}, slug: "r").name
-    assert_equal "Title", RepositoryMetadata.new(readme: "---\ntitle: Title\n---\n# Other", brief: {}, slug: "repo").name
+    assert_equal "Fine-tuning", RepositoryMetadata.new(readme: "# Fine-tuning", brief: {}).name
   end
 
   test "human languages do not become source languages" do

@@ -221,8 +221,8 @@ class ModelProjectScanTest < ActiveSupport::TestCase
     RepositoryScanWorker.new.perform(project.id)
 
     assert_equal "A library for comparing measurements from independent scientific experiments.", project.reload.description
-    assert_equal "Scientific library", project.repository["name"]
-    assert_equal "Scientific library", project.name
+    assert_nil project.repository["name"]
+    assert_equal "library", project.name
     assert project.brief["dependencies"].any?
     assert_not_requested :any, /.*/
   end

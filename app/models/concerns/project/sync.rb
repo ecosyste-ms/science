@@ -183,10 +183,24 @@ module Project::Sync
     metadata = repository["metadata"] || {}
     return if name.present? && name != metadata["derived_name"]
 
-    value = repository["name"].presence || readme_name || repository["full_name"].presence || repository_slug
+    value = if model_project?
+      repository["name"].presence || readme_name || repository["full_name"].presence || repository_slug
+    else
+      declared_name || repository["full_name"].presence || repository_slug
+    end
     return if value.blank?
 
     update!(name: value, repository: repository.merge("metadata" => metadata.merge("derived_name" => value)))
+  end
+
+  def declared_name
+    metadata = ProjectMetadata.new(self)
+    cff_title = begin
+      metadata.text(metadata.cff_document["title"])
+    rescue Psych::Exception
+      nil
+    end
+    cff_title || metadata.text(metadata.json_document(:codemeta)["name"])
   end
 
   def repos_api_url
@@ -722,7 +736,7 @@ module Project::Sync
     previous_brief_dependencies = brief.is_a?(Hash) ? brief['dependencies'] : nil
     self.brief = data
     unless repository_from_package?
-      extracted = RepositoryMetadata.new(readme: readme, brief: data, slug: (repository_slug unless model_project?)).attributes
+      extracted = RepositoryMetadata.new(readme: readme, brief: data).attributes.except("name")
       self.repository = extracted.merge(repository.reject { |_, value| value.blank? })
     end
     if previous_brief_dependencies != data['dependencies']

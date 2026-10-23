@@ -1,7 +1,7 @@
 require "yaml"
 
 class RepositoryMetadata
-  attr_reader :frontmatter, :document, :brief, :body, :slug
+  attr_reader :frontmatter, :document, :brief, :body
 
   BOILERPLATE_HEADINGS = Set[
     "model overview", "model card", "model details", "model description", "overview", "introduction", "usage",
@@ -12,9 +12,8 @@ class RepositoryMetadata
     "acknowledgments", "contributing", "contact", "authors", "changelog", "faq", "documentation", "examples", "welcome"
   ].freeze
 
-  def initialize(readme:, brief:, slug: nil)
+  def initialize(readme:, brief:)
     @brief = brief || {}
-    @slug = slug
     text = readme.to_s
     frontmatter = text.match(/\A---\s*\r?\n(.*?)\r?\n(?:---|\.\.\.)\s*(?:\r?\n|\z)/m)
     @frontmatter = parse_card(frontmatter&.[](1))
@@ -39,17 +38,8 @@ class RepositoryMetadata
     title = strings(frontmatter["title"]).first
     return title if title
 
-    headings = document.css("h1, h2").filter_map { |node| node.text.squish.sub(/\AModel card for\b[:\s]*/i, "").presence }
-    if slug.blank?
-      first = headings.first
-      return first unless first.nil? || boilerplate?(first)
-
-      return
-    end
-
-    # Notices and section titles often come first, so prefer a heading that resembles the repository name.
-    candidates = headings.reject { |heading| boilerplate?(heading) }
-    candidates.find { |heading| matches_slug?(heading) } || candidates.first
+    heading = document.at_css("h1, h2")&.text&.squish&.sub(/\AModel card for\b[:\s]*/i, "")&.presence
+    heading unless heading.nil? || boilerplate?(heading)
   end
 
   def boilerplate?(heading)
@@ -57,15 +47,6 @@ class RepositoryMetadata
 
     text = heading.downcase.gsub(/:[a-z0-9_+-]+:/, " ").gsub(/[^a-z\s\/&]/, " ").squish
     text.empty? || text.split(%r{\s*(?:/|&|\band\b)\s*}).all? { |part| BOILERPLATE_HEADINGS.include?(part.squish) }
-  end
-
-  def matches_slug?(heading)
-    text = heading.downcase.gsub(/[^a-z0-9]/, "")
-    target = slug.downcase.gsub(/[^a-z0-9]/, "")
-    return false if text.length < 3 || target.length < 3
-
-    text.include?(target) || target.include?(text) ||
-      DidYouMean::Levenshtein.distance(text, target) <= target.length / 5
   end
 
   def description

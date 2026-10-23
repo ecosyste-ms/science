@@ -608,9 +608,10 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_nil project.swhids
   end
 
-  test "sync refreshes derived names after replacing repository metadata and keeps curated names" do
+  test "sync refreshes derived names from declared metadata and keeps curated names" do
     readme = "# ***ATTENTION***\n\nPlease use the support forum.\n\n# HUMAnN User Manual\n"
-    derived = Project.create!(url: "https://github.com/biobakery/humann", name: "ATTENTION", readme: readme,
+    citation = "cff-version: 1.2.0\nmessage: Cite this software\ntitle: HUMAnN\nauthors:\n  - name: bioBakery\n"
+    derived = Project.create!(url: "https://github.com/biobakery/humann", name: "ATTENTION", readme: readme, citation_file: citation,
       repository: repo_hash.merge("full_name" => "biobakery/humann", "metadata" => { "derived_name" => "ATTENTION" }))
     curated = Project.create!(url: "https://github.com/biobakery/curated", name: "Curated", readme: readme,
       repository: repo_hash.merge("full_name" => "biobakery/curated", "metadata" => { "derived_name" => "Other" }))
@@ -630,8 +631,8 @@ class ProjectSyncTest < ActiveSupport::TestCase
     SyncProjectWorker.new.perform(derived.id)
     SyncProjectWorker.new.perform(curated.id)
 
-    assert_equal "HUMAnN User Manual", derived.reload.name
-    assert_equal({ "files" => { "readme" => "readme.md" }, "derived_name" => "HUMAnN User Manual" }, derived.repository["metadata"])
+    assert_equal "HUMAnN", derived.reload.name
+    assert_equal({ "files" => { "readme" => "readme.md" }, "derived_name" => "HUMAnN" }, derived.repository["metadata"])
     assert_equal "Curated", curated.reload.name
   end
 

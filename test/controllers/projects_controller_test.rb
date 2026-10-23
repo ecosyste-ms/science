@@ -582,7 +582,7 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_select "h6", text: "unnamed-project-listing"
   end
 
-  test "listings lookup and project pages use the README heading when the name is missing" do
+  test "listings lookup and project pages use the repository name rather than README headings when the name is missing" do
     project = Project.create!(
       url: "https://github.com/ssec-jhu/levseq-dash",
       science_score: 67,
@@ -593,7 +593,8 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "h3 a[href='#{project_path(project)}']" do |links|
-      assert_includes links.first.text, "LevSeq Dashboard"
+      assert_includes links.first.text, "levseq-dash"
+      assert_not_includes links.first.text, "LevSeq Dashboard"
       assert_not_includes links.first.text, project.url
       assert_not_includes links.first.text, "Example code"
     end
@@ -601,12 +602,12 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     get lookup_projects_url, params: { q: "levseq-dash" }
 
     assert_response :success
-    assert_select "h6", text: "LevSeq Dashboard"
+    assert_select "h6", text: "levseq-dash"
 
     get project_url(project)
 
     assert_response :success
-    assert_select "h1.mb-3", text: "LevSeq Dashboard"
+    assert_select "h1.mb-3", text: "levseq-dash"
     assert_nil project.reload.name
   end
 

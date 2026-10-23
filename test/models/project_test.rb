@@ -19,13 +19,13 @@ class ProjectTest < ActiveSupport::TestCase
     assert_equal "Saved name", project.to_s
   end
 
-  test "readme_name extracts plain text from Markdown and HTML headings" do
+  test "readme_name extracts plain text from model Markdown and HTML headings" do
     ["# [Tool **name**](https://example.org) ![Build](badge.svg)",
       "Tool name\n=========", "<h1>Tool <em>name</em></h1>"].each do |readme|
-      project = Project.new(name: " ", readme: readme, url: "https://github.com/lab/tool-name")
-
-      assert_equal "Tool name", project.readme_name
-      assert_equal "Tool name", project.to_s
+      assert_equal "Tool name", Project.new(readme: readme, model: true, url: "https://huggingface.co/lab/model").readme_name
+      repository = Project.new(name: " ", readme: readme, url: "https://github.com/lab/repo")
+      assert_nil repository.readme_name
+      assert_equal "repo", repository.to_s
     end
   end
 
@@ -40,10 +40,10 @@ class ProjectTest < ActiveSupport::TestCase
 
   test "readme names remove the model card prefix" do
     ["# Model card for **Example**", "# MODEL CARD FOR: Example"].each do |readme|
-      assert_equal "Example", Project.new(readme: readme).readme_name
+      assert_equal "Example", Project.new(readme: readme, model: true).readme_name
     end
-    assert_nil Project.new(readme: "# Model card for").readme_name
-    assert_equal "A model card for Example", Project.new(readme: "# A model card for Example").readme_name
+    assert_nil Project.new(readme: "# Model card for", model: true).readme_name
+    assert_equal "A model card for Example", Project.new(readme: "# A model card for Example", model: true).readme_name
   end
 
   test "model card name accepts model-index names and handles missing or ambiguous names" do
