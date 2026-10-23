@@ -56,7 +56,7 @@ gem "asciidoctor"
 
 group :development, :test do
   gem 'dotenv-rails'
-  gem 'sqlite3', '~> 2.9', require: false
+  gem 'sqlite3', '~> 2.10', require: false
 end
 
 group :development do
