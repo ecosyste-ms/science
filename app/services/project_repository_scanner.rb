@@ -19,11 +19,15 @@ class ProjectRepositoryScanner
     swhid_due = scientific? && @project.swhid_scan_due?
     return unless brief_due || swhid_due
 
-    with_checkout do |checkout, origin, clone_command|
-      @project.fetch_swhids(checkout: checkout, origin: origin, clone_command: clone_command) if swhid_due
+    known_large = brief_due && (@project.brief&.[]("error") == RepositoryCheckout::DISK_LIMIT_ERROR || @project.brief&.key?("partial_checkout"))
+    with_checkout(brief_due: brief_due, partial: known_large) do |checkout, origin, clone_command, partial|
+      @project.fetch_swhids(checkout: checkout, origin: origin, clone_command: clone_command) if swhid_due && !partial
       if brief_due
         @project.fetch_brief(checkout: checkout)
         @project.reload
+        if partial && !@project.brief&.key?("error") && !@project.brief&.key?("last_error")
+          @project.update_column(:brief, @project.brief.merge("partial_checkout" => partial))
+        end
         if !@project.brief&.key?("error") && @project.brief&.dig("resources").is_a?(Hash)
           @revision ||= RepositoryCommand.new.run(["git", "-C", checkout, "rev-parse", "HEAD"]).strip
           @files = RepositoryResources.paths(@project.brief).map do |path|
@@ -44,29 +48,45 @@ class ProjectRepositoryScanner
           ImportProjectPapersWorker.perform_async(@project.id)
         end
       end
-      if !swhid_due && scientific? && @project.swhid_scan_due?
+      if !swhid_due && !partial && scientific? && @project.swhid_scan_due?
         @project.fetch_swhids(checkout: checkout, origin: origin, clone_command: clone_command)
       end
     end
   end
 
-  def with_checkout
+  # Repositories over the disk limit get a Brief-only retry without large files; SWHIDs need every file.
+  def with_checkout(brief_due: false, partial: false, &block)
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     origin = @project.repository["clone_url"].presence || @project.url
     if @project.repository_from_package? && !@revision.to_s.match?(/\A[0-9a-f]{40}\z/)
       raise RepositoryCommand::Error, "Model checkout requires a full commit SHA"
     end
-    repository = RepositoryCheckout.new(origin, revision: @revision, skip_lfs: @project.repository_from_package?)
+    opened = false
+    options = { revision: @revision, skip_lfs: @project.repository_from_package? }
+    options[:partial] = true if partial
+    repository = RepositoryCheckout.new(origin, **options)
     repository.open do |checkout, _, command|
-      yield checkout, origin, command
+      opened = true
+      details = { "blob_limit" => RepositoryCheckout::PARTIAL_BLOB_LIMIT, "skipped_paths" => repository.skipped_paths } if partial
+      yield checkout, origin, command, details
     end
   rescue RepositoryCommand::Error, SystemCallError => error
-    @project.record_brief_error(error.message) if @force_brief || @project.brief_scan_due?
-    if scientific? && @project.swhid_scan_due?
-      @project.store_swhids("status" => "error", "origin" => origin, "clone_command" => repository&.command,
-        "attempted_at" => Time.current.iso8601, "error" => error.message.to_s.scrub[0, 500],
-        "duration_ms" => ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round)
+    too_large = !opened && error.message == RepositoryCheckout::DISK_LIMIT_ERROR
+    if too_large && !partial && brief_due && !@project.repository_from_package?
+      record_swhid_error(origin, repository, error, started)
+      return with_checkout(brief_due: brief_due, partial: true, &block)
     end
+    message = too_large && partial ? Project::BRIEF_TOO_LARGE_ERROR : error.message
+    @project.record_brief_error(message) if @force_brief || @project.brief_scan_due?
+    record_swhid_error(origin, repository, error, started) unless partial
+  end
+
+  def record_swhid_error(origin, repository, error, started)
+    return unless scientific? && @project.swhid_scan_due?
+
+    @project.store_swhids("status" => "error", "origin" => origin, "clone_command" => repository&.command,
+      "attempted_at" => Time.current.iso8601, "error" => error.message.to_s.scrub[0, 500],
+      "duration_ms" => ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round)
   end
 
   def scientific?

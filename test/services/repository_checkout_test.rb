@@ -32,6 +32,24 @@ class RepositoryCheckoutTest < ActiveSupport::TestCase
     assert_equal before, Dir.glob(File.join(Dir.tmpdir, "science-repository-*"))
   end
 
+  test "partial checkouts leave large files on the server" do
+    File.binwrite(File.join(@repository_directory, "data set [1].bin"), Random.bytes(2.megabytes))
+    FileUtils.mkdir_p(File.join(@repository_directory, "src"))
+    File.write(File.join(@repository_directory, "src", "main.py"), "print('hello')\n")
+    git("-C", @repository_directory, "add", ".")
+    git("-C", @repository_directory, "-c", "user.name=Test", "-c", "user.email=test@example.org", "-c", "commit.gpgsign=false", "commit", "-m", "Add data")
+    git("-C", @repository_directory, "config", "uploadpack.allowFilter", "true")
+
+    checkout_test = RepositoryCheckout.new("file://#{@repository_directory}", partial: true)
+    checkout_test.open do |checkout|
+      assert File.exist?(File.join(checkout, "src", "main.py"))
+      assert File.exist?(File.join(checkout, "README.md"))
+      assert_not File.exist?(File.join(checkout, "data set [1].bin"))
+      assert_equal 1, git("-C", checkout, "rev-list", "--objects", "--missing=print", "HEAD").lines.count { |line| line.start_with?("?") }
+    end
+    assert_equal 1, checkout_test.skipped_paths
+  end
+
   test "resource evidence refuses paths outside the checkout and LFS pointers" do
     Dir.mktmpdir do |outside|
       File.write(File.join(outside, "README.md"), "private")

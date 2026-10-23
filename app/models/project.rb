@@ -9,6 +9,7 @@ class Project < ApplicationRecord
   SCIENCE_SCORE_THRESHOLD = 20
   BRIEF_RETRY_LIMIT = 3
   BRIEF_RETRY_COOLDOWN = 7.days
+  BRIEF_TOO_LARGE_ERROR = "repository too large for a partial checkout".freeze
   DOI_IMAGE_SUFFIX_PATTERN = /\.(?:gif|jpe?g|png|svg|webp)(?:[?#]\S*)?\z/i
   ENCODED_DOI_SEPARATOR_PATTERN = /(10\.\d{4,9})%2f/i
   DOI_MARKDOWN_LINK_BOUNDARY_PATTERN = /\]\s*\(/
@@ -182,9 +183,10 @@ class Project < ApplicationRecord
   scope :needing_brief_dependencies, -> {
     where("brief IS NULL OR (NOT (brief ? 'dependencies') AND NOT (brief ? 'error'))")
       .or(where(
-        "brief ? 'error' AND NOT (brief ? 'dependencies') AND COALESCE((brief->>'attempts')::int, 1) < :limit AND " \
+        "brief ? 'error' AND NOT (brief ? 'dependencies') AND brief->>'error' IS DISTINCT FROM :too_large AND " \
+        "COALESCE((brief->>'attempts')::int, 1) < :limit AND " \
         "COALESCE((brief->>'attempted_at')::timestamptz, '-infinity') <= CAST(:now AS timestamptz) - make_interval(secs => :cooldown) * COALESCE((brief->>'attempts')::int, 1)",
-        limit: BRIEF_RETRY_LIMIT, cooldown: BRIEF_RETRY_COOLDOWN.to_i, now: Time.current
+        limit: BRIEF_RETRY_LIMIT, cooldown: BRIEF_RETRY_COOLDOWN.to_i, now: Time.current, too_large: BRIEF_TOO_LARGE_ERROR
       ))
       .where("brief->>'status' IS DISTINCT FROM 'gated'")
   }

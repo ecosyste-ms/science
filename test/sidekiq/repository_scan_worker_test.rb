@@ -253,6 +253,71 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     assert_equal 0, BriefScanEnqueuer.new(limit: 10).enqueue
   end
 
+  test "repositories over the disk limit are scanned without large files or SWHIDs" do
+    File.binwrite(File.join(@source, "measurements.bin"), Random.bytes(4.megabytes))
+    git("-C", @source, "add", ".")
+    git("-C", @source, "-c", "user.name=Test", "-c", "user.email=test@example.org",
+      "-c", "commit.gpgsign=false", "commit", "-m", "Add data")
+    git("-C", @source, "config", "uploadpack.allowFilter", "true")
+    origin = "file://#{@source}"
+    @project.update!(repository: { "clone_url" => origin })
+    full = RepositoryCheckout.new(origin, disk_limit: 3.megabytes)
+    partial = RepositoryCheckout.new(origin, disk_limit: 3.megabytes, partial: true)
+    RepositoryCheckout.expects(:new).with(origin, revision: nil, skip_lfs: false).returns(full)
+    RepositoryCheckout.expects(:new).with(origin, revision: nil, skip_lfs: false, partial: true).returns(partial)
+
+    RepositoryScanWorker.new.perform(@project.id)
+
+    @project.reload
+    assert @project.brief.key?("dependencies")
+    assert_not @project.brief.key?("error")
+    assert_equal({ "blob_limit" => 1.megabyte, "skipped_paths" => 1 }, @project.brief["partial_checkout"])
+    assert @project.science_score_breakdown.dig("breakdown", "has_research_tooling", "present")
+    assert_equal "error", @project.swhids["status"]
+    assert_equal RepositoryCheckout::DISK_LIMIT_ERROR, @project.swhids["error"]
+  end
+
+  test "a stored disk limit failure retries with a partial checkout directly" do
+    origin = "file://#{@source}"
+    git("-C", @source, "config", "uploadpack.allowFilter", "true")
+    @project.update!(repository: { "clone_url" => origin })
+    @project.update_columns(brief: { "error" => RepositoryCheckout::DISK_LIMIT_ERROR, "attempted_at" => 30.days.ago.iso8601 })
+    partial = RepositoryCheckout.new(origin, partial: true)
+    RepositoryCheckout.expects(:new).once.with(origin, revision: nil, skip_lfs: false, partial: true).returns(partial)
+
+    assert_equal 1, BriefScanEnqueuer.new(limit: 10).enqueue
+    RepositoryScanWorker.drain
+
+    assert @project.reload.brief.key?("dependencies")
+    assert_equal 0, @project.brief.dig("partial_checkout", "skipped_paths")
+  end
+
+  test "repositories too large for a partial checkout are recorded and not retried" do
+    origin = "file://#{@source}"
+    git("-C", @source, "config", "uploadpack.allowFilter", "true")
+    @project.update!(repository: { "clone_url" => origin })
+    full = RepositoryCheckout.new(origin, disk_limit: 1)
+    partial = RepositoryCheckout.new(origin, disk_limit: 1, partial: true)
+    RepositoryCheckout.expects(:new).twice.returns(full).then.returns(partial)
+
+    RepositoryScanWorker.new.perform(@project.id)
+
+    assert_equal Project::BRIEF_TOO_LARGE_ERROR, @project.reload.brief["error"]
+    travel 365.days
+    assert_not @project.brief_scan_due?
+    assert_equal 0, BriefScanEnqueuer.new(limit: 10).enqueue
+  end
+
+  test "first scans are selected ahead of due retries" do
+    @project.update_columns(brief: { "error" => "timeout", "attempted_at" => 30.days.ago.iso8601, "attempts" => 1 })
+    unscanned = Project.create!(url: "https://github.com/test/unscanned", science_score: 50, repository: { "clone_url" => @source })
+
+    assert_equal 1, BriefScanEnqueuer.new(limit: 1).enqueue
+    assert_equal [[unscanned.id]], RepositoryScanWorker.jobs.map { |job| job["args"] }
+    BriefScanEnqueuer.new(limit: 2).enqueue
+    assert_equal [unscanned.id, @project.id], RepositoryScanWorker.jobs.map { |job| job["args"].first }
+  end
+
   test "a configured GitHub token does not add credentials to local clones" do
     ENV["GITHUB_TOKEN"] = "github-test-token"
 

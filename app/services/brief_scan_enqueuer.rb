@@ -15,10 +15,18 @@ class BriefScanEnqueuer
 
   def enqueue
     enqueued = 0
+    remaining = limit
+    # First scans go ahead of retries so a retry backlog cannot hold up new projects.
+    batches = rescan ? [projects] : [projects.where("brief IS NULL OR NOT (brief ? 'error')"), projects.where("brief ? 'error'")]
 
-    projects.select(:id).limit(limit).find_each(batch_size: 500) do |project|
-      args = rescan ? [project.id, true] : [project.id]
-      enqueued += 1 if RepositoryScanWorker.perform_async(*args)
+    batches.each do |scope|
+      break unless remaining.positive?
+
+      scope.select(:id).limit(remaining).find_each(batch_size: 500) do |project|
+        remaining -= 1
+        args = rescan ? [project.id, true] : [project.id]
+        enqueued += 1 if RepositoryScanWorker.perform_async(*args)
+      end
     end
 
     enqueued

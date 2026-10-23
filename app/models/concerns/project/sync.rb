@@ -678,6 +678,7 @@ module Project::Sync
 
   def brief_retry_due?
     return false unless brief.is_a?(Hash) && brief.key?("error") && !brief.key?("dependencies")
+    return false if brief["error"] == Project::BRIEF_TOO_LARGE_ERROR
 
     attempts = brief.fetch("attempts", 1).to_i
     attempted_at = Time.zone.parse(brief["attempted_at"].to_s)
