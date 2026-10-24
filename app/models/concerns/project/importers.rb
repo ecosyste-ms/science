@@ -887,6 +887,20 @@ module Project::Importers
             existing_project = matching_projects.first
           end
 
+          if matching_projects.empty? && source_project_id.nil?
+            project = Project.find_or_create_by(url: repo_url) do |record|
+              record.name = paper['title']
+              record.description = "#{paper['title']} - Published in JOSS (#{paper['year']})"
+              record.joss_metadata = paper
+            end
+            if project.previously_new_record?
+              total_created += 1
+              project.sync_async
+              next
+            end
+            existing_project = project.persisted? ? project : Project.find_by(url: repo_url)
+          end
+
           if existing_project
             total_existing += 1
             metadata_updated = existing_project.update(
@@ -897,17 +911,6 @@ module Project::Importers
             end
           elsif source_project_id || matching_projects.many?
             total_ambiguous += 1
-          else
-            project = Project.create(
-              url: repo_url,
-              name: paper['title'],
-              description: "#{paper['title']} - Published in JOSS (#{paper['year']})",
-              joss_metadata: paper
-            )
-            if project.persisted?
-              total_created += 1
-              project.sync_async
-            end
           end
         end
 
