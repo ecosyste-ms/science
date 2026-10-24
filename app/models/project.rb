@@ -10,6 +10,7 @@ class Project < ApplicationRecord
   BRIEF_RETRY_LIMIT = 3
   BRIEF_RETRY_COOLDOWN = 7.days
   BRIEF_TOO_LARGE_ERROR = "repository too large for a partial checkout".freeze
+  SWHID_RETRY_COOLDOWN = 1.day
   DOI_IMAGE_SUFFIX_PATTERN = /\.(?:gif|jpe?g|png|svg|webp)(?:[?#]\S*)?\z/i
   ENCODED_DOI_SEPARATOR_PATTERN = /(10\.\d{4,9})%2f/i
   DOI_MARKDOWN_LINK_BOUNDARY_PATTERN = /\]\s*\(/
@@ -190,7 +191,12 @@ class Project < ApplicationRecord
       ))
       .where("brief->>'status' IS DISTINCT FROM 'gated'")
   }
-  scope :needing_swhids, -> { where(swhids: nil) }
+  scope :needing_swhids, -> { where("swhids->>'status' IS NULL") }
+  scope :retryable_swhids, -> {
+    where("swhids->>'status' = 'error' AND (swhids->'archival' IS NULL OR swhids->'archival' = 'null'::jsonb)")
+      .where("swhids->>'error' IS DISTINCT FROM ?", RepositoryCheckout::DISK_LIMIT_ERROR)
+      .where("COALESCE(NULLIF(swhids->>'attempted_at', '')::timestamptz, '-infinity') <= ?", SWHID_RETRY_COOLDOWN.ago)
+  }
   scope :with_readme, -> { where.not(readme: nil) }
   scope :without_readme, -> { where(readme: nil) }
   scope :with_codemeta_file, -> { where.not(codemeta: nil) }

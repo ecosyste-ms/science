@@ -121,12 +121,26 @@ class FetchSwhidWorkerTest < ActiveSupport::TestCase
   end
 
   test "duplicate jobs skip a stored result or error" do
-    [{ "status" => "success" }, { "status" => "error", "error" => "timeout" }].each do |result|
+    [{ "status" => "success" }, { "status" => "error", "error" => "timeout", "attempted_at" => Time.current.iso8601 }].each do |result|
       @project.update!(swhids: result)
       ProjectSwhidScanner.expects(:new).never
       perform_fetch(@project.id)
       assert_equal result, @project.reload.swhids
     end
+  end
+
+  test "worker retries an old calculation error through a real checkout and persists coverage" do
+    @project.update!(swhids: { "status" => "error", "error" => "command timed out", "attempted_at" => 2.days.ago.iso8601 })
+    stub_request(:post, SwhidArchiveChecker::ENDPOINT).to_return do |request|
+      { body: JSON.parse(request.body).to_h { |id| [id, { known: true }] }.to_json }
+    end
+
+    perform_fetch(@project.id)
+
+    assert_equal "success", @project.reload.swhids["status"]
+    assert_equal "archived", @project.swhids.dig("revision", "archive", "status")
+    assert_equal "archived", @project.swhids.dig("directory", "archive", "status")
+    assert_not File.exist?(@project.swhids.dig("revision", "input", "path"))
   end
 
   test "worker rechecks scientific eligibility and repository metadata" do

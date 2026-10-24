@@ -32,8 +32,11 @@ class RepositoryCheckoutTest < ActiveSupport::TestCase
     assert_equal before, Dir.glob(File.join(Dir.tmpdir, "science-repository-*"))
   end
 
-  test "partial checkouts leave large files on the server" do
-    File.binwrite(File.join(@repository_directory, "data set [1].bin"), Random.bytes(2.megabytes))
+  test "partial checkouts preserve filename bytes while leaving large files on the server" do
+    large_paths = ["data set [1].bin", "数据 [1].bin"]
+    large_paths.each do |path|
+      File.binwrite(File.join(@repository_directory, path), Random.bytes(2.megabytes))
+    end
     FileUtils.mkdir_p(File.join(@repository_directory, "src"))
     File.write(File.join(@repository_directory, "src", "main.py"), "print('hello')\n")
     git("-C", @repository_directory, "add", ".")
@@ -44,10 +47,10 @@ class RepositoryCheckoutTest < ActiveSupport::TestCase
     checkout_test.open do |checkout|
       assert File.exist?(File.join(checkout, "src", "main.py"))
       assert File.exist?(File.join(checkout, "README.md"))
-      assert_not File.exist?(File.join(checkout, "data set [1].bin"))
-      assert_equal 1, git("-C", checkout, "rev-list", "--objects", "--missing=print", "HEAD").lines.count { |line| line.start_with?("?") }
+      large_paths.each { |path| assert_not File.exist?(File.join(checkout, path)) }
+      assert_equal large_paths.size, git("-C", checkout, "rev-list", "--objects", "--missing=print", "HEAD").lines.count { |line| line.start_with?("?") }
     end
-    assert_equal 1, checkout_test.skipped_paths
+    assert_equal large_paths.size, checkout_test.skipped_paths
   end
 
   test "resource evidence refuses paths outside the checkout and LFS pointers" do

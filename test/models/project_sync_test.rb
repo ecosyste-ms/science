@@ -654,14 +654,14 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_not_requested :any, /papers\.ecosyste\.ms/
   end
 
-  test "SWHID enqueueing skips ineligible projects and stored attempts" do
+  test "SWHID enqueueing skips ineligible projects, successes and recent errors" do
     project = build_project(science_score: Project::SCIENCE_SCORE_THRESHOLD - 1)
     assert_nil project.fetch_swhids_async
     project.update!(science_score: 42, repository: nil)
     assert_nil project.fetch_swhids_async
     project.update!(repository: repo_hash, swhids: { "status" => "success" })
     assert_nil project.fetch_swhids_async
-    project.update!(swhids: { "status" => "error" })
+    project.update!(swhids: { "status" => "error", "attempted_at" => Time.current.iso8601 })
     assert_nil project.fetch_swhids_async
     assert_empty FetchSwhidWorker.jobs
   end

@@ -215,8 +215,8 @@ class CheckSwhidBatchWorkerTest < ActiveSupport::TestCase
       directory = "swh:1:dir:b3bb6ae45c8b3cb7ee9d9c3b84b1319cda7060d0"
       first = create_project(1)
       second = create_project(2)
-      first.update!(swhids: { "revision" => { "status" => "success", "swhid" => revision } })
-      second.update!(swhids: { "directory" => { "status" => "success", "swhid" => directory } })
+      first.update!(swhids: { "status" => "success", "revision" => { "status" => "success", "swhid" => revision } })
+      second.update!(swhids: { "status" => "success", "directory" => { "status" => "success", "swhid" => directory } })
       WebMock.disable_net_connect!(allow: "archive.softwareheritage.org", allow_localhost: true)
 
       [first, second].each(&:fetch_swhids_async)

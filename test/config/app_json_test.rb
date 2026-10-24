@@ -1,6 +1,12 @@
 require "test_helper"
 
 class AppJsonTest < ActiveSupport::TestCase
+  test "due SWHID work is recovered independently every ten minutes" do
+    crons = JSON.parse(Rails.root.join("app.json").read).fetch("cron")
+      .select { |entry| entry.fetch("command").include?("swhids:enqueue") }
+    assert_equal [{ "command" => "bundle exec rake swhids:enqueue", "schedule" => "3,13,23,33,43,53 * * * *" }], crons
+  end
+
   test "journal papers are enriched through a bounded recurring queue" do
     crons = JSON.parse(Rails.root.join("app.json").read).fetch("cron")
       .select { |entry| entry.fetch("command").include?("journals:enrich") }

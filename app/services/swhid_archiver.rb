@@ -18,7 +18,7 @@ class SwhidArchiver
     if request
       return true if request["status"] == "uncertain" && retryable_submission?(request)
 
-      %w[submitting pending rate_limited].include?(request["status"]) && Time.iso8601(request.fetch("next_check_at")) <= Time.current
+      %w[submitting pending rate_limited authentication_failed].include?(request["status"]) && Time.iso8601(request.fetch("next_check_at")) <= Time.current
     else
       origin = URI.parse(project.swhids&.dig("origin").to_s)
       %w[http https].include?(origin.scheme) && origin.host.present? &&
@@ -59,6 +59,14 @@ class SwhidArchiver
     end
     confirm(request) if request["status"] == "pending" && result["save_task_status"] == "succeeded"
     persist(request)
+  rescue SwhidApi::AuthenticationError => error
+    if request
+      request["status"] = request["id"] ? "pending" : "authentication_failed"
+      request["error"] = error.message
+      request["next_check_at"] = Time.current.iso8601
+      persist(request, reschedule: false)
+    end
+    raise
   rescue SwhidApi::RateLimited => error
     retry_at = SwhidApi.retry_job_at(error)
     if request
@@ -79,7 +87,7 @@ class SwhidArchiver
   end
 
   def retryable_submission?(request)
-    request["id"].blank? && (request["status"] == "rate_limited" || (request["status"] == "uncertain" && request["error"] == "HTTP 429"))
+    request["id"].blank? && (%w[rate_limited authentication_failed].include?(request["status"]) || (request["status"] == "uncertain" && request["error"] == "HTTP 429"))
   end
 
   def prepare_submission
@@ -171,7 +179,7 @@ class SwhidArchiver
     request["completed_at"] = Time.current.iso8601
   end
 
-  def persist(request)
+  def persist(request, reschedule: true)
     saved = project.with_lock do
       data = project.swhids&.deep_dup
       next false unless data&.dig("archival", "attempted_at") == request["attempted_at"]
@@ -180,7 +188,7 @@ class SwhidArchiver
       project.update!(swhids: data)
       true
     end
-    if saved && %w[pending rate_limited].include?(request["status"])
+    if saved && reschedule && %w[pending rate_limited].include?(request["status"])
       CheckSwhidArchivalWorker.perform_at(Time.iso8601(request.fetch("next_check_at")), project.id)
     elsif saved && request["status"] == "completed"
       CheckSwhidOriginWorker.perform_async(project.id, true)

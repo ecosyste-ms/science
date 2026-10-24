@@ -1,4 +1,13 @@
 namespace :swhids do
+  desc "Queue due SWHID work (SCAN_LIMIT=5 CHECK_LIMIT=500 ARCHIVAL_LIMIT=100)"
+  task enqueue: :environment do
+    puts JSON.generate(SwhidEnqueuer.new(
+      scan_limit: ENV.fetch("SCAN_LIMIT", "5"),
+      check_limit: ENV.fetch("CHECK_LIMIT", "500"),
+      archival_limit: ENV.fetch("ARCHIVAL_LIMIT", "100")
+    ).enqueue)
+  end
+
   desc "Queue optional ancestor checks after object and origin checks (LIMIT=100 AFTER_ID=0)"
   task check_history: :environment do
     limit = Integer(ENV.fetch("LIMIT", "100"), 10)

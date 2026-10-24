@@ -4,6 +4,8 @@ class SwhidApi
   COOLDOWN_KEY = "swh-api-retry-at"
   DEFAULT_RETRY = 1.hour
 
+  class AuthenticationError < StandardError; end
+
   class RateLimited < StandardError
     attr_reader :retry_at
 
@@ -24,6 +26,9 @@ class SwhidApi
       request.body = body if body
       request.params = params
     end
+    if [401, 403].include?(response.status)
+      raise AuthenticationError, "Software Heritage API access denied (HTTP #{response.status}); check SWH_API_TOKEN and account access"
+    end
     if response.status == 429
       retry_at = retry_time(response.headers["retry-after"])
       previous = Rails.cache.read(COOLDOWN_KEY)
@@ -32,6 +37,9 @@ class SwhidApi
       raise RateLimited, retry_at
     end
     response
+  rescue AuthenticationError => error
+    Appsignal.report_error(error)
+    raise
   end
 
   def self.retry_time(value)

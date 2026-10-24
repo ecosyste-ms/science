@@ -66,7 +66,7 @@ class RepositoryCheckout
     end
     @skipped_paths = paths.size
     patterns = File.join(directory, "sparse-patterns")
-    File.write(patterns, ["/*", *paths.map { |path| "!/#{path.gsub(/[\\*?\[\]!# ]/) { |char| "\\#{char}" }}" }].join("\n") + "\n")
+    File.binwrite(patterns, ["/*", *paths.map { |path| "!/#{path.gsub(/[\\*?\[\]!# ]/) { |char| "\\#{char}" }}" }].join("\n") + "\n")
     runner.run([*git, "-C", checkout, "sparse-checkout", "set", "--no-cone", "--stdin"], input: patterns)
     runner.run([*git, "-C", checkout, "checkout", "--quiet"])
   end

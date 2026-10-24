@@ -675,7 +675,12 @@ module Project::Sync
   end
 
   def swhid_scan_due?
-    swhids.nil? || swhids["status"].nil?
+    return true if swhids.nil? || swhids["status"].nil?
+    return false unless swhids["status"] == "error" && swhids["archival"].nil?
+    return false if swhids["error"] == RepositoryCheckout::DISK_LIMIT_ERROR
+
+    attempted_at = Time.zone.parse(swhids["attempted_at"].to_s)
+    attempted_at.nil? || attempted_at <= Project::SWHID_RETRY_COOLDOWN.ago
   end
 
   def enqueue_swhid_check

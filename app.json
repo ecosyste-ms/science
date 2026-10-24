@@ -165,6 +165,10 @@
       "schedule": "10 */6 * * *"
     },
     {
+      "command": "bundle exec rake swhids:enqueue",
+      "schedule": "3,13,23,33,43,53 * * * *"
+    },
+    {
       "command": "bundle exec rake owners:check_ror_repositories",
       "schedule": "50 * * * *"
     },
