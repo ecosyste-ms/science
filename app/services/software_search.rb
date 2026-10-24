@@ -35,7 +35,7 @@ class SoftwareSearch
     value = query.strip
     return value.unicode_normalize(:nfc).downcase if kind == "name"
     return SoftwareIdentifier.normalize(value, kind) if SoftwareIdentifier::SCHEMES.include?(kind)
-    return Purl.parse(value).with(version: nil, subpath: nil).to_s if kind == "purl"
+    return PurlNormalizer.normalize(value) if kind == "purl"
 
     uri = URI.parse(value)
     unless %w[http https].include?(uri.scheme&.downcase) && uri.host.present? && uri.userinfo.nil?

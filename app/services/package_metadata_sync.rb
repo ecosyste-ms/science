@@ -158,7 +158,7 @@ class PackageMetadataSync
     purl = record["purl"].presence
     return unless purl
 
-    normalized_purl = Purl.parse(purl).with(version: nil, subpath: nil).to_s
+    normalized_purl = PurlNormalizer.normalize(purl)
     package_id = Package.where(purl: normalized_purl)
       .where.not(id: package.id)
       .pick(:id)

@@ -131,6 +131,18 @@ class ProjectSyncTest < ActiveSupport::TestCase
     assert_equal p, package.reload.published_by_project
   end
 
+  test "fetch_packages links julia packages whose upstream purl carries a uuid" do
+    p = build_project
+    registry = PackageRegistry.create!(name: "juliahub.com", url: "https://juliahub.com", ecosystem: "julia", purl_type: "julia", default: true)
+    package = Package.create!(package_registry: registry, name: "Dates", purl: "pkg:julia/Dates")
+    record = package_record(name: "Dates", purl: "pkg:julia/Dates@1.9.0?uuid=ade2ca70-3891-5945-98fb-dc099432e06a", registry: registry)
+    stub_request(:get, p.packages_url).to_return(status: 200, body: [record].to_json)
+
+    p.fetch_packages
+
+    assert_equal p, package.reload.published_by_project
+  end
+
   test "fetch_packages keeps one spelling of case-variant Go modules" do
     p = build_project(url: "https://github.com/s-andrews/FastQC", repository: repo_hash.merge("full_name" => "s-andrews/FastQC"))
     registry = PackageRegistry.create!(name: "proxy.golang.org", url: "https://proxy.golang.org", ecosystem: "go", purl_type: "golang")
