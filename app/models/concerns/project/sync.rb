@@ -383,7 +383,7 @@ module Project::Sync
 
   def unlink_published_packages(records)
     purls = records.filter_map do |record|
-      Purl.parse(record["purl"]).with(version: nil, subpath: nil).to_s if record["purl"].present?
+      PurlNormalizer.normalize(record["purl"]) if record["purl"].present?
     rescue Purl::Error
       nil
     end
@@ -397,7 +397,7 @@ module Project::Sync
       purl = record["purl"]
       next if purl.blank?
 
-      Purl.parse(purl).with(version: nil, subpath: nil).to_s
+      PurlNormalizer.normalize(purl)
     rescue Purl::Error
       nil
     end.uniq
