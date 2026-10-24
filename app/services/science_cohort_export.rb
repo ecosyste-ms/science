@@ -31,8 +31,9 @@ class ScienceCohortExport
             exporter_sha256: Digest::SHA256.file(__FILE__).hexdigest
           })
           ProjectSearchSeeds.scope.select(:swhids).reorder(nil).find_in_batches(batch_size: @batch_size) do |projects|
+            years = SearchSeedYear.new(projects)
             projects.each do |project|
-              write(file, "project", ProjectSearchSeeds.new(project).as_json.merge(swhids: ProjectSwhidEvidence.new(project).as_json))
+              write(file, "project", ProjectSearchSeeds.new(project, years: years).as_json.merge(swhids: ProjectSwhidEvidence.new(project).as_json))
               counts[:projects] += 1
             end
             @progress&.call(counts.dup)

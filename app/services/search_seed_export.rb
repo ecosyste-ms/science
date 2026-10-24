@@ -6,9 +6,9 @@ class SearchSeedExport
   SCHEMA_VERSION = 2
   BATCH_SIZE = 250
   COLUMNS = {
-    projects: %i[project_id repository_url science_score updated_at last_synced_at],
-    packages: %i[project_id package_id purl registry ecosystem],
-    seeds: %i[project_id package_entry_id type value normalized_value source relation],
+    projects: %i[project_id repository_url science_score updated_at last_synced_at search_year suggested_start_year],
+    packages: %i[project_id package_id purl registry ecosystem search_year suggested_start_year],
+    seeds: %i[project_id package_entry_id type value normalized_value source relation identifier_evidence],
     project_fields: %i[project_id openalex_id name domain confidence_score],
     project_contexts: %i[project_id data],
   }.freeze
@@ -62,8 +62,14 @@ class SearchSeedExport
       write_metadata("package_extractor_sha256", Digest::SHA256.file(
         Rails.root.join("app/services/project_package_entries.rb")
       ).hexdigest)
+      %w[search_seed_year search_seed_clues software_identifier].each do |name|
+        write_metadata("#{name}_sha256", Digest::SHA256.file(Rails.root.join("app/services/#{name}.rb")).hexdigest)
+      end
+      write_metadata("common_words_sha256", Digest::SHA256.file(Rails.root.join("config/search_seed_common_words.txt")).hexdigest)
+      write_metadata("literal_variants", SearchSeedClues::RULES)
       write_metadata("source_isolation", "repeatable_read, read_only")
       export_projects
+      SearchSeedClues.populate(database)
       @counts = coverage_counts
       write_metadata("counts", @counts)
       write_metadata("completed_at", Time.current.utc.iso8601(6))
@@ -86,7 +92,8 @@ class SearchSeedExport
         scope = scope.limit(limit) if limit
         count = 0
         scope.find_in_batches(batch_size: batch_size) do |projects|
-          projects.each { |project| write_project(project) }
+          years = SearchSeedYear.new(projects)
+          projects.each { |project| write_project(project, years: years) }
           count += projects.length
           progress&.call("Exported #{count} projects")
         end
@@ -94,15 +101,15 @@ class SearchSeedExport
     end
   end
 
-  def write_project(project)
-    record = ProjectSearchSeeds.new(project).as_json
-    insert(:projects, record)
+  def write_project(project, years:)
+    record = ProjectSearchSeeds.new(project, years: years).as_json
+    insert(:projects, record.merge(suggested_start_year: record.dig(:search_year, :suggested_start_year)))
     insert(:project_contexts, project_id: project.id, data: ProjectSearchContext.new(project).to_json)
     record.fetch(:seeds).each do |seed|
       insert(:seeds, seed.merge(project_id: project.id, package_entry_id: nil))
     end
     record.fetch(:packages).each do |package|
-      insert(:packages, package.merge(project_id: project.id))
+      insert(:packages, package.merge(project_id: project.id, suggested_start_year: package.dig(:search_year, :suggested_start_year)))
       package_entry_id = database.last_insert_row_id
       package.fetch(:seeds).each do |seed|
         insert(:seeds, seed.merge(project_id: project.id, package_entry_id: package_entry_id))
@@ -129,7 +136,11 @@ class SearchSeedExport
 
   def insert(table, record)
     values = COLUMNS.fetch(table).map do |column|
-      value = record.fetch(column)
+      value = if %i[identifier_evidence search_year].include?(column)
+        record[column]&.to_json
+      else
+        record.fetch(column)
+      end
       value.respond_to?(:iso8601) ? value.iso8601(6) : value
     end
     statements.fetch(table).execute(*values)
@@ -159,6 +170,9 @@ class SearchSeedExport
       package_entries_without_package_id: database.get_first_value("SELECT COUNT(*) FROM packages WHERE package_id IS NULL"),
       package_entries_without_purl: database.get_first_value("SELECT COUNT(*) FROM packages WHERE purl IS NULL"),
       shared_names: database.get_first_value("SELECT COUNT(*) FROM name_collisions"),
+      search_strings: database.get_first_value("SELECT COUNT(*) FROM clues"),
+      clue_seed_links: database.get_first_value("SELECT COUNT(*) FROM clue_seeds"),
+      ambiguous_search_strings: database.get_first_value("SELECT COUNT(*) FROM clues WHERE ambiguous = 1"),
     }
   end
 

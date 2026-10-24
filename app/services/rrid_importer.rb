@@ -46,7 +46,12 @@ class RridImporter < ExternalSoftwareImporter
       next if record.attempted_at && record.attempted_at > started_at
       record.update!(metadata: entity, status: "ok", retrieved_at: started_at, attempted_at: started_at,
         last_error: nil, next_refresh_at: 30.days.from_now, collection_url: collection_url(entity), next_discovery_at: nil)
-      record.project_external_software_records.delete_all
+      links = record.project_external_software_records
+      project_ids = links.pluck(:project_id)
+      links.delete_all
+      ActiveRecord.after_all_transactions_commit do
+        project_ids.each { |project_id| IndexSoftwareSearchWorker.perform_async(project_id) }
+      end
     end
   end
 

@@ -34,6 +34,7 @@ class ScienceCohortRakeTest < ActiveSupport::TestCase
     assert_equal "repeatable_read, read_only", records.first.dig("data", "source_isolation")
     assert_equal project.id, records[1].dig("data", "project_id")
     assert_equal "unchecked", records[1].dig("data", "swhids", "status")
+    assert_equal 2011, records[1].dig("data", "packages").sole.dig("search_year", "suggested_start_year")
     assert_equal package.id, records[2].dig("data", "id")
     assert_equal 1, records[2].dig("data", "scientific_projects_count")
     assert_equal result.fetch("snapshot_id"), records.last.dig("data", "snapshot_id")
@@ -84,7 +85,8 @@ class ScienceCohortRakeTest < ActiveSupport::TestCase
     project = create(Project, url: "https://github.com/cohort/source", name: "Source", science_score: 40)
     registry = create(PackageRegistry, name: "pypi.org", url: "https://pypi.org", ecosystem: "pypi", purl_type: "pypi")
     package = create(Package, name: "source", purl: "pkg:pypi/source", package_registry: registry,
-      repository_url: project.url, published_by_project: project)
+      repository_url: project.url, published_by_project: project,
+      metadata: { "first_release_published_at" => "2012-05-01T00:00:00Z" })
     create(ProjectDependency, project: project, package: package, package_name: package.name, ecosystem: "pypi", direct: true)
     [project, package]
   end

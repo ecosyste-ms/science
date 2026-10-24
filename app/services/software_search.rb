@@ -1,5 +1,5 @@
 class SoftwareSearch
-  KINDS = %w[name doi repository_url homepage_url purl].freeze
+  KINDS = (%w[name repository_url homepage_url purl] + SoftwareIdentifier::SCHEMES).freeze
 
   def self.results(query:, kind: "name", limit: 10, after_id: 0, search: false)
     raise ArgumentError, "kind must be one of: #{KINDS.join(', ')}" unless KINDS.include?(kind)
@@ -23,17 +23,18 @@ class SoftwareSearch
       scope = scope.where("search_identifiers @> ?::jsonb", { kind => [value] }.to_json)
     end
     projects = scope.limit(limit + 1).to_a
+    years = SearchSeedYear.new(projects.first(limit))
     {
       query: value, kind: kind, match: search ? "contains" : "exact",
       next_after_id: projects.length > limit ? projects[limit - 1].id : nil,
-      projects: projects.first(limit).filter_map { |project| evidence(project, value, kind, search) },
+      projects: projects.first(limit).filter_map { |project| evidence(project, value, kind, search, years: years) },
     }
   end
 
   def self.normalize(query, kind)
     value = query.strip
     return value.unicode_normalize(:nfc).downcase if kind == "name"
-    return value.sub(%r{\Ahttps?://(?:dx\.)?doi\.org/}i, "").downcase if kind == "doi"
+    return SoftwareIdentifier.normalize(value, kind) if SoftwareIdentifier::SCHEMES.include?(kind)
     return Purl.parse(value).with(version: nil, subpath: nil).to_s if kind == "purl"
 
     uri = URI.parse(value)
@@ -47,8 +48,8 @@ class SoftwareSearch
     raise ArgumentError, "invalid #{kind}"
   end
 
-  def self.evidence(project, value, kind, search)
-    document = ProjectSearchSeeds.new(project).as_json
+  def self.evidence(project, value, kind, search, years:)
+    document = ProjectSearchSeeds.new(project, years: years).as_json
     matches = ->(seed) do
       seed[:type] == kind && (search ? seed[:normalized_value].include?(value) : seed[:normalized_value] == value)
     end

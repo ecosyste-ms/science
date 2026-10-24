@@ -318,7 +318,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [name, doi, repository_url, homepage_url, purl]
+            enum: [name, doi, repository_url, homepage_url, purl, rrid, wikidata, biotools, ascl, swmath]
             default: name
         - $ref: "#/components/parameters/SoftwareLimit"
         - $ref: "#/components/parameters/SoftwareAfterId"
@@ -1444,7 +1444,7 @@ components:
           type: string
         kind:
           type: string
-          enum: [name, doi, repository_url, homepage_url, purl]
+          enum: [name, doi, repository_url, homepage_url, purl, rrid, wikidata, biotools, ascl, swmath]
         match:
           type: string
           enum: [exact, contains]
@@ -1600,13 +1600,51 @@ components:
                       type: string
                     optional:
                       type: boolean
+    SearchYear:
+      type: object
+      required: [earliest_release_at, suggested_start_year, evidence]
+      properties:
+        earliest_release_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Earliest observed release date in the retained evidence; may come from incomplete history
+        suggested_start_year:
+          type: integer
+          nullable: true
+          description: One year before the earliest date, or null when the evidence cannot support a bound
+        evidence:
+          type: array
+          items:
+            type: object
+            required: [source, date, supports_bound]
+            properties:
+              source:
+                type: string
+              date:
+                type: string
+                format: date-time
+                nullable: true
+              source_url:
+                type: string
+                nullable: true
+              completed_at:
+                type: string
+                format: date-time
+                nullable: true
+              records:
+                type: integer
+              dated_records:
+                type: integer
+              supports_bound:
+                type: boolean
     SearchSeed:
       type: object
       required: [type, value, normalized_value, source, relation]
       properties:
         type:
           type: string
-          enum: [name, repository_url, homepage_url, doi]
+          enum: [name, repository_url, homepage_url, doi, rrid, wikidata, biotools, ascl, swmath]
         value:
           type: string
           description: Trimmed source value, or the DOI extracted from a source identifier
@@ -1616,6 +1654,8 @@ components:
             Names use Unicode NFC and lowercase without stemming or punctuation removal.
             DOIs are lowercase. URL schemes and hosts are lowercase; path case is preserved.
             Repository history URLs may already be normalized by the alias index.
+            RRIDs use uppercase SCR identifiers without the RRID prefix. Wikidata IDs
+            are uppercase; bio.tools IDs are lowercase. ASCL and swMATH use registry spelling.
         source:
           type: string
           description: Stored metadata field, for example citation_cff.preferred-citation.doi
@@ -1626,9 +1666,37 @@ components:
             Relationship asserted by the source metadata, not verified evidence of a paper
             using the software. Preferred citations and BibTeX citations are kept distinct
             because they may describe software, a publication, or another resource.
+        identifier_evidence:
+          type: object
+          description: Present for confirmed stored registry links; ambiguous matches are excluded
+          required: [scheme, external_software_record_id, project_external_software_record_id, record_url, relationship, evidence, retrieved_at, source_status]
+          properties:
+            scheme:
+              type: string
+              enum: [rrid, wikidata, biotools, ascl, swmath, doi]
+            external_software_record_id:
+              type: integer
+            project_external_software_record_id:
+              type: integer
+            record_url:
+              type: string
+              nullable: true
+            relationship:
+              type: string
+            evidence:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+            retrieved_at:
+              type: string
+              format: date-time
+            source_status:
+              type: string
+              enum: [ok, error]
     ProjectSearchSeeds:
       type: object
-      required: [project_id, repository_url, science_score, updated_at, last_synced_at, seeds, packages]
+      required: [project_id, repository_url, science_score, updated_at, last_synced_at, search_year, seeds, packages]
       properties:
         project_id:
           type: integer
@@ -1643,6 +1711,8 @@ components:
           type: string
           format: date-time
           nullable: true
+        search_year:
+          $ref: "#/components/schemas/SearchYear"
         seeds:
           type: array
           items:
@@ -1655,7 +1725,7 @@ components:
             and incidental README references are not included as software identities.
           items:
             type: object
-            required: [package_id, purl, registry, ecosystem, seeds]
+            required: [package_id, purl, registry, ecosystem, search_year, seeds]
             properties:
               package_id:
                 type: integer
@@ -1671,6 +1741,8 @@ components:
               ecosystem:
                 type: string
                 nullable: true
+              search_year:
+                $ref: "#/components/schemas/SearchYear"
               seeds:
                 type: array
                 items:

@@ -1,19 +1,25 @@
 class ProjectSearchSeeds
   PROJECT_COLUMNS = %i[
     id name url repository packages citation_file codemeta zenodo joss_metadata
-    science_score updated_at last_synced_at
+    science_score updated_at last_synced_at release_sync_state
   ].freeze
 
   attr_reader :project, :metadata
 
   def self.scope
     Project.visible.scientific.select(*PROJECT_COLUMNS).order(:id)
-      .preload(:repository_aliases, published_package_records: :package_registry)
+      .preload(:repository_aliases, published_package_records: :package_registry,
+        project_external_software_records: :external_software_record)
   end
 
-  def initialize(project)
+  def initialize(project, years: nil)
     @project = project
     @metadata = ProjectMetadata.new(project)
+    @years = years
+  end
+
+  def years
+    @years ||= SearchSeedYear.new([project])
   end
 
   def as_json(*)
@@ -23,6 +29,7 @@ class ProjectSearchSeeds
       science_score: project.science_score,
       updated_at: project.updated_at,
       last_synced_at: project.last_synced_at,
+      search_year: years.for_project(project),
       seeds: project_seeds,
       packages: package_entries,
     }
@@ -40,9 +47,34 @@ class ProjectSearchSeeds
     seeds.concat(citation_seeds)
     seeds.concat(codemeta_seeds)
     seeds.concat(zenodo_seeds)
+    seeds.concat(external_identifier_seeds)
     joss = project.joss_metadata.is_a?(Hash) ? project.joss_metadata : {}
     seeds.concat(doi_seeds(joss["doi"], "joss_metadata.doi", "publication"))
     seeds.compact.uniq
+  end
+
+  def external_identifier_seeds
+    project.project_external_software_records.filter_map do |link|
+      record = link.external_software_record
+      scheme = record.source.downcase
+      next unless link.match_status.casecmp?("matched") && SoftwareIdentifier::SCHEMES.include?(scheme)
+      next unless %w[ok error].include?(record.status.downcase) && record.retrieved_at
+      next unless %w[source_code_repository software software_version software_concept].include?(link.relationship)
+
+      {
+        type: scheme, value: record.identifier,
+        normalized_value: SoftwareIdentifier.normalize(record.identifier, scheme),
+        source: "external_software_records.identifier", relation: "software",
+        identifier_evidence: {
+          scheme: scheme, external_software_record_id: record.id,
+          project_external_software_record_id: link.id, record_url: record.record_url,
+          relationship: link.relationship, evidence: link.evidence,
+          retrieved_at: record.retrieved_at, source_status: record.status,
+        },
+      }
+    rescue ArgumentError
+      nil
+    end
   end
 
   def repository_alias_seeds(repository)
@@ -138,7 +170,7 @@ class ProjectSearchSeeds
           seed("homepage_url", record["homepage"], "#{source}.homepage"),
         ].compact
       end
-      entry.except(:sources).merge(seeds: seeds.uniq) if seeds.any?
+      entry.except(:sources).merge(seeds: seeds.uniq, search_year: years.for_package(entry, project)) if seeds.any?
     end
   end
 

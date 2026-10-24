@@ -89,7 +89,8 @@ class Api::V1::ProjectsController < Api::V1::ApplicationController
 
   def search_seeds
     @pagy, projects = pagy_countless(ProjectSearchSeeds.scope, limit_max: 100)
-    render json: projects.map { |project| ProjectSearchSeeds.new(project).as_json }
+    years = SearchSeedYear.new(projects)
+    render json: projects.map { |project| ProjectSearchSeeds.new(project, years: years).as_json }
   end
 
   def search_context

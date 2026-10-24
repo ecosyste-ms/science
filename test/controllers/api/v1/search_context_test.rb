@@ -68,7 +68,7 @@ class Api::V1::SearchContextTest < ActionDispatch::IntegrationTest
     seeds = response.parsed_body.sole
     assert_not seeds.key?("descriptions")
     assert_not seeds.key?("direct_dependencies")
-    assert_equal %w[ecosystem package_id purl registry seeds], seeds.fetch("packages").first.keys.sort
+    assert_equal %w[ecosystem package_id purl registry search_year seeds], seeds.fetch("packages").first.keys.sort
     assert seeds.fetch("packages").none? { |item| item["purl"] == "pkg:pypi/numpy" }
   end
 

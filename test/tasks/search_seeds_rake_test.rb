@@ -107,6 +107,84 @@ class SearchSeedsRakeTest < ActiveSupport::TestCase
     end
   end
 
+  test "literal clue export deduplicates evidence while preserving candidates matching rules and years" do
+    first = create(Project, url: "https://github.com/clues/first", name: "Star", science_score: 50,
+      repository: { "homepage" => "https://EXAMPLE.org/Docs", "releases_url" => "https://repos.example/first/releases" },
+      release_sync_state: { "releases" => { "url" => "https://repos.example/first/releases", "page" => 1, "completed_at" => Time.current.iso8601 } },
+      codemeta: { "name" => "Star", "alternateName" => ["Star", "Climate\t Lab"], "identifier" => "10.1234/Star" }.to_json,
+      packages: [{ "name" => "Star", "purl" => "pkg:pypi/star", "first_release_published_at" => "2005-01-01T00:00:00Z" }])
+    create(Release, project: first, tag_name: "v1", uuid: "first", published_at: "2011-01-01")
+    second = create(Project, url: "https://github.com/clues/second", name: "Star", science_score: 50,
+      repository: { "homepage" => "https://example.org/docs" }, codemeta: { "alternateName" => ["Climate\u00a0Lab"] }.to_json)
+    create(Project, url: "https://github.com/clues/third", name: "Sage", science_score: 50)
+    record = create(ExternalSoftwareRecord, source: "rrid", identifier: "SCR_002285", status: "ok",
+      retrieved_at: Time.current, next_refresh_at: 1.day.from_now)
+    [first, second].each do |project|
+      create(ProjectExternalSoftwareRecord, project: project, external_software_record: record,
+        match_status: "matched", relationship: "source_code_repository", evidence: [{ "source_field" => "distributions.current" }])
+    end
+    duplicate = create(ExternalSoftwareRecord, source: "rrid", identifier: "RRID:SCR_002285", status: "ok",
+      retrieved_at: Time.current, next_refresh_at: 1.day.from_now)
+    create(ProjectExternalSoftwareRecord, project: first, external_software_record: duplicate,
+      match_status: "matched", relationship: "source_code_repository", evidence: [{ "source_field" => "distributions.alternate" }])
+    { "wikidata" => "Q123", "biotools" => "ClimateTools", "ascl" => "2401.123", "swmath" => "123" }.each do |scheme, value|
+      identifier = create(ExternalSoftwareRecord, source: scheme, identifier: value, status: "ok",
+        retrieved_at: Time.current, next_refresh_at: 1.day.from_now)
+      create(ProjectExternalSoftwareRecord, project: first, external_software_record: identifier,
+        match_status: "matched", relationship: "source_code_repository")
+    end
+
+    capture_io { Rake::Task["search_seeds:export"].invoke }
+
+    SQLite3::Database.new(ENV.fetch("OUTPUT")) do |db|
+      assert_equal "ok", db.get_first_value("PRAGMA integrity_check")
+      assert_empty db.execute("PRAGMA foreign_key_check")
+      assert_equal 1, db.get_first_value("SELECT COUNT(*) FROM clues WHERE value = 'star' AND case_sensitive = 0")
+      assert_equal [1, 1, 1, nil], db.get_first_row("SELECT shared_name, ordinary_word, ambiguous, suggested_start_year FROM clues WHERE value = 'star'")
+      candidates = db.execute("SELECT project_id, package_entry_id, suggested_start_year FROM clue_candidates WHERE clue_id = (SELECT id FROM clues WHERE value = 'star') ORDER BY project_id, package_entry_id")
+      assert_equal [first.id, first.id, second.id], candidates.map(&:first)
+      assert_equal [2010, 2004, nil], candidates.map(&:last)
+      assert_equal [0, 1, 1], db.get_first_row("SELECT shared_name, ordinary_word, ambiguous FROM clues WHERE value = 'sage'")
+      assert_equal [1, nil], db.get_first_row("SELECT shared_name, ordinary_word FROM clues WHERE value = 'climate lab'")
+      assert_equal ["Climate\t Lab", "Climate\u00a0Lab"], db.execute(<<~SQL).flatten
+        SELECT DISTINCT s.value FROM clue_seeds cs JOIN seeds s ON s.id = cs.seed_id
+        JOIN clues c ON c.id = cs.clue_id WHERE c.value = 'climate lab' ORDER BY s.project_id
+      SQL
+      assert_equal 2, db.get_first_value("SELECT COUNT(*) FROM clues WHERE value IN ('example.org/Docs', 'example.org/docs') AND case_sensitive = 1")
+      assert_equal 0, db.get_first_value("SELECT COUNT(*) FROM clues WHERE value LIKE 'https://example.org/%'")
+      assert_equal ["10.1234/star"], db.execute("SELECT value FROM clues WHERE value LIKE '%10.1234/star' ORDER BY value").flatten
+      assert_equal [first.id, second.id], db.execute("SELECT project_id FROM clue_candidates WHERE clue_id = (SELECT id FROM clues WHERE value = 'scr_002285') ORDER BY project_id").flatten
+      assert_equal 3, db.get_first_value("SELECT COUNT(*) FROM clue_seeds WHERE clue_id = (SELECT id FROM clues WHERE value = 'scr_002285')")
+      assert_equal ["ascl:2401.123", "climatetools", "https://ascl.net/2401.123", "https://zbmath.org/software/123", "q123", "swmath:123"], db.execute(<<~SQL).flatten
+        SELECT DISTINCT c.value FROM clues c JOIN clue_seeds cs ON cs.clue_id = c.id
+        JOIN seeds s ON s.id = cs.seed_id WHERE s.type IN ('ascl', 'biotools', 'wikidata', 'swmath') ORDER BY c.value
+      SQL
+      evidence = JSON.parse(db.get_first_value("SELECT identifier_evidence FROM seeds WHERE type = 'rrid' LIMIT 1"))
+      assert_equal record.id, evidence.fetch("external_software_record_id")
+      assert_equal "rrid", evidence.fetch("scheme")
+      assert_equal [{ "source_field" => "distributions.current" }], evidence.fetch("evidence")
+      assert_equal 0, db.get_first_value("SELECT COUNT(*) FROM seeds s WHERE NOT EXISTS (SELECT 1 FROM clue_seeds cs WHERE cs.seed_id = s.id)")
+      assert_equal db.get_first_value("SELECT COUNT(*) FROM seeds"), db.get_first_value("SELECT COUNT(DISTINCT seed_id) FROM clue_seeds")
+      assert_equal 2010, JSON.parse(db.get_first_value("SELECT search_year FROM projects WHERE project_id = ?", first.id)).fetch("suggested_start_year")
+      metadata = JSON.parse(db.get_first_value("SELECT value FROM metadata WHERE key = 'literal_variants'"))
+      assert_equal %w[identifier], metadata.fetch("rrid")
+    end
+  end
+
+  test "shared clue year covers the earliest known candidate when all candidate bounds are known" do
+    [2012, 2001].each_with_index do |year, index|
+      create(Project, url: "https://github.com/clues/#{index}", name: "Project#{index}", science_score: 50,
+        packages: [{ "name" => "SharedName", "first_release_published_at" => "#{year}-01-01T00:00:00Z" }])
+    end
+
+    capture_io { Rake::Task["search_seeds:export"].invoke }
+
+    SQLite3::Database.new(ENV.fetch("OUTPUT")) do |db|
+      assert_equal 2000, db.get_first_value("SELECT suggested_start_year FROM clues WHERE value = 'sharedname'")
+      assert_equal [2000, 2011], db.execute("SELECT suggested_start_year FROM clue_candidates WHERE clue_id = (SELECT id FROM clues WHERE value = 'sharedname') ORDER BY suggested_start_year").flatten
+    end
+  end
+
   test "invalid limits fail before creating a file" do
     ENV["LIMIT"] = "0"
 

@@ -84,6 +84,10 @@ class ExternalSoftwareImporter
     QueryBatch.each(existing.values.map(&:id), arguments_per_row: 1, fixed_arguments: 1) do |ids|
       record.project_external_software_records.where(id: ids).delete_all
     end
+    project_ids = (links.keys + existing.keys).uniq
+    ActiveRecord.after_all_transactions_commit do
+      project_ids.each { |project_id| IndexSoftwareSearchWorker.perform_async(project_id) }
+    end
   end
 
   def record_failure(id, error, started_at, retry_at)

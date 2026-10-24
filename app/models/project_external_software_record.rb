@@ -2,6 +2,14 @@ class ProjectExternalSoftwareRecord < ApplicationRecord
   belongs_to :project
   belongs_to :external_software_record
 
+  after_commit :enqueue_software_search_index
+
+  def enqueue_software_search_index
+    ([project_id] + Array(previous_changes["project_id"])).compact.uniq.each do |id|
+      IndexSoftwareSearchWorker.perform_async(id)
+    end
+  end
+
   scope :confirmed_identifier_matches, -> {
     joins(:external_software_record)
       .where("LOWER(project_external_software_records.match_status) = ?", "matched")

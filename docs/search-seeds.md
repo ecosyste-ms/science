@@ -29,6 +29,7 @@ The response is an array with one object per project:
 | `science_score` | Saved scientific relevance score |
 | `updated_at` | Project record update time |
 | `last_synced_at` | Project sync time, or `null` |
+| `search_year` | Release evidence and a nullable suggested start year for this project |
 | `seeds` | Seeds associated with the project |
 | `packages` | Package identities and their own seeds; may be empty |
 
@@ -46,15 +47,16 @@ A name seed has this shape:
 }
 ```
 
-`type` is one of `name`, `repository_url`, `homepage_url`, or `doi`. `value` retains the trimmed source spelling; DOI values contain the extracted identifier. `normalized_value` is intended for matching:
+`type` is one of `name`, `repository_url`, `homepage_url`, `doi`, `rrid`, `wikidata`, `biotools`, `ascl`, or `swmath`. `value` retains the trimmed source spelling; DOI values contain the extracted identifier. `normalized_value` is intended for matching:
 
 - Names use Unicode NFC and lowercase, preserving punctuation. There is no stemming or word-boundary policy.
 - DOIs are lowercase.
 - URLs have lowercase schemes and hosts, with path case preserved. Repository history may already have been normalized before storage.
+- RRIDs use uppercase `SCR_` identifiers without an optional `RRID:` prefix. Wikidata IDs use uppercase, bio.tools IDs use lowercase, and ASCL and swMATH IDs retain registry spelling.
 
 `source` identifies the metadata field, such as `codemeta.alternateName` or `citation_cff.preferred-citation.doi`. The same value can occur several times with different sources. Preserve those evidence records even if the matcher searches the string only once.
 
-Each package contains `package_id`, `purl`, `registry`, `ecosystem`, and `seeds`. Linked local package records have a `package_id`; unmatched package metadata stored on the project has `package_id: null`. PURLs omit version and subpath, and may also be `null` when missing or invalid. Registry and ecosystem fields can be missing on older metadata.
+Each package contains `package_id`, `purl`, `registry`, `ecosystem`, `search_year`, and `seeds`. Linked local package records have a `package_id`; unmatched package metadata stored on the project has `package_id: null`. PURLs omit version and subpath, and may also be `null` when missing or invalid. Registry and ecosystem fields can be missing on older metadata.
 
 Package metadata with the same normalized PURL is combined within the project, retaining seeds from both sources. For example, `package.name` and `project.packages[0].name` can appear under one package. Without a matching PURL, entries remain separate. The array position in a source path refers to the stored metadata at extraction time and should not be used as a permanent identifier.
 
@@ -63,6 +65,10 @@ Package metadata with the same normalized PURL is combined within the project, r
 Project seeds come from the project name and repository URL, repository homepage and rename history, and selected citation metadata. CFF contributes the root title, URL, code repository, DOI identifiers, and preferred-citation DOIs. CodeMeta contributes names, alternate names, homepage, code repository, identifiers, and reference-publication DOIs. Zenodo contributes its root DOI and documentation DOIs, while JOSS contributes its publication DOI. BibTeX citation content supplies DOI fields and DOI resolver URLs.
 
 Package seeds contain names and homepages from linked package records and package metadata stored on the project. Arbitrary links in citation references, CodeMeta related links, and Zenodo references are not promoted to software aliases. Invalid optional metadata is skipped so usable seeds can still be returned.
+
+Confirmed links to RRID, Wikidata, bio.tools, ASCL, swMATH and software DOI records contribute identifier seeds. Links must have `match_status: matched`, retrieved evidence, and a software or source-code relationship. Registry records with status `ok` are included, as are records with status `error` that retain previously retrieved evidence. Missing records, ambiguous matches and publication relationships are excluded. A suite identifier can remain linked to several projects.
+
+These seeds add `identifier_evidence`, with the scheme, registry record ID, project link ID, record URL, relationship, retrieval time, source status and stored matching evidence. The `source` is `external_software_records.identifier`; the nested evidence identifies the particular record and preserves duplicate provenance. Publication DOIs from citation metadata retain their existing relations.
 
 The `relation` field preserves distinctions needed when evaluating a hit:
 
@@ -75,6 +81,26 @@ The `relation` field preserves distinctions needed when evaluating a hit:
 | `reference` | A root DOI identifier from a CFF record typed as a dataset |
 
 These relationships describe source metadata. A publication DOI hit can identify a citation target, but it does not establish that the paper used the software. Repository and package metadata can also contain incorrect associations; provenance makes those claims inspectable.
+
+## Search years
+
+Each project and package has its own `search_year` object. For example:
+
+```json
+{
+  "earliest_release_at": "2012-05-01T00:00:00Z",
+  "suggested_start_year": 2011,
+  "evidence": [
+    {"source": "package.first_release_published_at", "date": "2012-05-01T00:00:00Z", "supports_bound": true}
+  ]
+}
+```
+
+An explicit package `first_release_published_at` supports a bound. Collected package versions support one after a completed initial scan for the current package identity, with no conflicts or undated versions. Project release history requires every configured tag and release source to have completed a scan for its current URL, without conflicts, an active or incomplete scan, errors, or undated records. Draft forge releases are excluded. Evidence includes the source field, source URL and scan completion time where available, plus total and dated record counts for collected histories.
+
+The suggested year is one year before the earliest retained date, to allow for preprints. An observed date can remain in `earliest_release_at` while `suggested_start_year` is null because the history is incomplete. Missing evidence also produces a null bound. Repository creation and record update dates are not release dates. Project dates do not become package dates, and a package date does not set its project's bound.
+
+The year is a search optimization based on the stored evidence. Upstream histories can omit older releases. Consumers should keep the evidence inspectable and allow searches outside the suggested bound.
 
 ## Using seeds in a detector
 
@@ -116,7 +142,7 @@ The request reads stored metadata without fetching or indexing it. Empty arrays 
 
 ## Search and lookup
 
-`GET /api/v1/software/lookup?q=orbdot&kind=name` finds exact normalized names or identifiers. Supported kinds are `name` (the default), `repository_url`, `homepage_url`, `doi`, and `purl`. Names use lowercase Unicode NFC. DOI resolver URLs are accepted, URL paths retain case, and PURLs are normalized without a version or subpath.
+`GET /api/v1/software/lookup?q=orbdot&kind=name` finds exact normalized names or identifiers. Supported kinds are `name` (the default), `repository_url`, `homepage_url`, `doi`, `purl`, `rrid`, `wikidata`, `biotools`, `ascl`, and `swmath`. Names use lowercase Unicode NFC. DOI resolver URLs are accepted, URL paths retain case, and PURLs are normalized without a version or subpath. Identifier extraction and lookup share normalization; for example, `kind=rrid&q=rrid:scr_015687` queries `SCR_015687`.
 
 `GET /api/v1/software/search?q=orbit` finds names containing the supplied text, including project names, aliases, and published package names. Search requires at least three characters. Matching is case insensitive and literal, so `%` and `_` are ordinary characters. Results are ordered by project ID, without relevance or confidence scores.
 
@@ -124,7 +150,7 @@ Both endpoints return `query`, `kind`, `match`, `projects`, and `next_after_id`.
 
 Set `limit` between 1 and 25 (default 10). Pass `next_after_id` as `after_id` with the same query and kind until it is null. The cursor is a project ID. The result is a live view: metadata updates can change matches between pages, and a page can be empty while still returning a cursor if indexed candidates no longer match their current metadata. A missing result does not prove a project is absent from Science.
 
-These routes only read stored data. Names and identifiers are indexed on the `projects` table in `search_identifiers` (JSONB), with `search_names` for substring search and `search_indexed_at` for freshness. PostgreSQL GIN indexes support exact containment and trigram name search. Committed project metadata, published package, and repository alias changes queue index refreshes. Bulk writes that bypass callbacks require a reindex. Evidence is extracted from current metadata for the selected page.
+These routes only read stored data. Names and identifiers are indexed on the `projects` table in `search_identifiers` (JSONB), with `search_names` for substring search and `search_indexed_at` for freshness. PostgreSQL GIN indexes support exact containment and trigram name search. Committed project metadata, published package, repository alias and external identifier changes queue index refreshes, including bulk registry imports. Other bulk writes that bypass callbacks require a reindex. Evidence is extracted from current metadata for the selected page.
 
 After deploying the migration, populate the fields once from the configured Science database:
 
@@ -164,10 +190,12 @@ The file has these tables:
 | `seeds` | Project and package seeds with original values, normalized values, sources, and relations |
 | `project_fields` | Saved OpenAlex field assignments, names, domains, and confidence scores |
 | `project_contexts` | One row per project, with the context endpoint's JSON response in `data` |
+| `clues` | Deduplicated literal search strings, matching rules, ambiguity flags and combined start years |
+| `clue_seeds` | Each clue's source seed IDs and the variant rule that emitted it |
 
 `packages.id` is a row ID within this snapshot. `packages.package_id` is the local Science package ID and can be null. `seeds.package_entry_id` points to the snapshot package entry; null identifies a project-level seed. Preserve `project_id` when joining records, because the same software name can occur under multiple projects.
 
-Schema version 2 is stored both in `metadata` and SQLite's `PRAGMA user_version`. Version 2 adds `project_contexts`; the seed tables retain their version 1 layout. Extractor digests identify the source files used for seeds, context, and package identity grouping. Snapshot IDs identify individual exports; project timestamps retain their source meaning and do not indicate when the export ran.
+Schema version 2 is stored both in `metadata` and SQLite's `PRAGMA user_version`. Exports include `project_contexts`, identifier evidence, search years and literal clue tables. Projects and packages retain the API's `search_year` JSON and expose its `suggested_start_year` as a nullable integer column. Seeds retain optional `identifier_evidence` as JSON. Extractor and common-word list digests identify the code and data used for extraction. Snapshot IDs identify individual exports; project timestamps retain their source meaning and do not indicate when the export ran.
 
 The context table has an indexed `project_id` primary key. Retrieve the same JSON as the endpoint with `SELECT data FROM project_contexts WHERE project_id = 123`. SQLite JSON functions also support queries over the evidence, for example:
 
@@ -200,3 +228,35 @@ SELECT value FROM metadata WHERE key = 'counts';
 ```
 
 The counts include projects without packages, DOI seeds, or OpenAlex field assignments, and package entries without local IDs or PURLs. Field coverage uses saved project classifications and can count one project in several fields. These measures describe coverage of the exported population, rather than mention-detection accuracy.
+
+## Literal search list
+
+`clues` contains one row per literal string and case rule across all sources and entities. `clue_seeds` maps each row back to every original seed, including its original spelling, source, relation and candidate identity. `clue_candidates` provides distinct project and package candidates with their individual search years. Repeated evidence does not create extra searches or merge software identities.
+
+The export supports these finite variants, recorded in `metadata.literal_variants`:
+
+- Names: Unicode NFC and lowercase, with each run of Unicode whitespace replaced by one ASCII space and outer whitespace removed. `Climate\t Lab` and `Climate Lab` both emit `climate lab`. Punctuation remains unchanged, so `scikit-learn` does not create `scikit learn`.
+- Repository and homepage URLs: the normalized URL without its scheme. `https://EXAMPLE.org/Docs` emits `example.org/Docs`, which also occurs in the HTTP variant. Paths retain case; `/Docs` and `/docs` remain separate.
+- DOIs: the bare lowercase identifier. This literal also matches within a `doi:` prefix or HTTP(S) resolver URL.
+- RRIDs: the bare identifier. This literal also matches within `RRID:SCR_015687` and `RRID: SCR_015687`.
+- Wikidata and bio.tools: the bare identifier, which also occurs within the registry record URL.
+- ASCL and swMATH: the scheme-prefixed identifier and HTTPS registry record URL. Bare numeric identifiers are omitted from this search list.
+
+Case-insensitive literals are stored in lowercase NFC with `case_sensitive = 0`. URL variants use `case_sensitive = 1`. A string with different case rules has separate rows. Prefixes and resolver forms already covered by an identifier literal do not create extra searches. No wildcard, stemming, arbitrary punctuation substitution or regular-expression expansion is performed.
+
+Ambiguous clues remain in the list. `shared_name` reuses `name_collisions` and also detects collisions introduced by whitespace folding. `ordinary_word = 1` identifies entries in the checked-in `config/search_seed_common_words.txt` list, including `star`; null means unassessed. This list is a small set of common words, so null does not imply an unambiguous name. `short_name` flags names under three characters. `ambiguous` is true when any of these flags is set, allowing consumers to run them separately.
+
+Each clue's `suggested_start_year` is the minimum candidate year when every candidate has a known bound. Any unknown candidate makes the combined bound null. All original bounds and evidence remain available through `clue_candidates`.
+
+For example, recover a clue's evidence and candidate links:
+
+```sql
+SELECT c.value, c.case_sensitive, s.project_id, s.package_entry_id,
+       s.type, s.value, s.source, s.relation, s.identifier_evidence, cs.variant
+FROM clues c
+JOIN clue_seeds cs ON cs.clue_id = c.id
+JOIN seeds s ON s.id = cs.seed_id
+WHERE c.value = 'star';
+```
+
+Export counts include `search_strings`, `clue_seed_links` and `ambiguous_search_strings`. Compare search strings with seed rows to measure the effect of deduplication and variant expansion separately from candidate coverage.
