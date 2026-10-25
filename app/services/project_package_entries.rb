@@ -45,7 +45,7 @@ class ProjectPackageEntries
   def normalized_purl(value)
     return unless value.is_a?(String) && value.present?
 
-    Purl.parse(value).with(version: nil, subpath: nil).to_s
+    PurlNormalizer.normalize(value)
   rescue Purl::Error
     nil
   end

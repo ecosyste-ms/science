@@ -200,7 +200,7 @@ class ProjectDependencyIndexer
   def canonical_purl(value)
     return if value.blank?
 
-    Purl.parse(value).with(version: nil, subpath: nil).to_s
+    PurlNormalizer.normalize(value)
   rescue Purl::Error
     nil
   end

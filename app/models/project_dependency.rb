@@ -27,8 +27,7 @@ class ProjectDependency < ApplicationRecord
       return
     end
 
-    parsed = Purl.parse(purl)
-    self.purl = parsed.with(version: nil, subpath: nil).to_s
+    self.purl = PurlNormalizer.normalize(purl)
   rescue Purl::Error => error
     errors.add(:purl, error.message)
   end

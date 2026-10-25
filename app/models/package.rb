@@ -51,7 +51,7 @@ class Package < ApplicationRecord
   has_many :package_projects, dependent: :delete_all
 
   def self.resolve_purl!(value)
-    purl = Purl.parse(value).with(version: nil, subpath: nil).to_s
+    purl = PurlNormalizer.normalize(value)
     find_by(purl: purl) || raise(ArgumentError, "Expected an existing package for #{purl}")
   end
 
@@ -177,7 +177,7 @@ class Package < ApplicationRecord
     end
 
     normalized = purls.map do |value|
-      Purl.parse(value.strip.gsub("npm/@", "npm/%40")).with(version: nil, subpath: nil).to_s
+      PurlNormalizer.normalize(value.strip.gsub("npm/@", "npm/%40"))
     end.uniq
     ids = where(purl: normalized).pluck(:id)
     ranked_by_scientific_dependents(include_unranked: true, package_ids: ids).reorder(:id)
@@ -254,7 +254,7 @@ class Package < ApplicationRecord
     end
 
     parsed = Purl.parse(purl)
-    self.purl = parsed.with(version: nil, subpath: nil).to_s
+    self.purl = PurlNormalizer.normalize(parsed)
     if package_registry && parsed.type != package_registry.purl_type
       errors.add(:purl, "type must match the package registry")
     end

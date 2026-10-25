@@ -115,6 +115,18 @@ class Api::V1::PackagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal before_jobs, Sidekiq::Worker.jobs
   end
 
+  test "bulk lookup matches julia packages with or without the uuid qualifier" do
+    julia = create_registry("juliahub.com", "julia", "julia")
+    package = Package.create!(package_registry: julia, name: "Dates", purl: "pkg:julia/Dates?uuid=ade2ca70-3891-5945-98fb-dc099432e06a")
+    assert_equal "pkg:julia/Dates", package.purl
+
+    ["pkg:julia/Dates", "pkg:julia/Dates@1.9.0?uuid=ade2ca70-3891-5945-98fb-dc099432e06a"].each do |purl|
+      post bulk_lookup_api_v1_packages_url, params: { purls: [purl] }, as: :json
+      assert_response :success
+      assert_equal [package.id], response.parsed_body.pluck("id")
+    end
+  end
+
   test "bulk lookup validates bounds and returns explicit empty matches" do
     [nil, [], "pkg:pypi/numpy", [nil], ["invalid"], ["x" * 2001], ["pkg:pypi/numpy"] * 101].each do |purls|
       post bulk_lookup_api_v1_packages_url, params: { purls: purls }, as: :json

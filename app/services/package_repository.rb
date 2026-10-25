@@ -31,7 +31,7 @@ class PackageRepository
 
   def self.import!(record, registry:)
     Package.transaction do
-      package = registry.packages.find_or_initialize_by(purl: record.fetch("purl"))
+      package = registry.packages.find_or_initialize_by(purl: PurlNormalizer.normalize(record.fetch("purl")))
       package.name = record.fetch("name")
       existing = Project.exists?(url: origin(package))
       conflict = PackageMetadataSync.new.local_identity_conflict(package, record)
