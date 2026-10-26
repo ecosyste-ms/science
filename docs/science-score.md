@@ -16,6 +16,8 @@ Confirmed ASCL, bio.tools, swMATH and RRID matches remain eligible for routine r
 
 Views and API responses read the saved breakdown. They do not calculate a new score during a request, so changed weights take effect only after the project is scored again.
 
+`projects:rescore` runs every minute and queues a pass over up to 1,000 visible projects using stored evidence. It includes zero and unscored projects, saves a Redis cursor, and starts another pass after reaching the end. Each batch stops after 45 seconds between projects; failed projects are logged and revisited on the next pass. Only one batch runs at a time, with per-project row locks and query timeouts. Unchanged scores and breakdowns do not write the project or enqueue search updates. The Redis hash `science:production:score-refresh` records the cursor, last batch counts, check time and last completed pass.
+
 ## Non-JOSS projects
 
 The standard path adds weighted signals. The table shows each signal's maximum point contribution. A fractional signal multiplies those points by its strength before the values are added.

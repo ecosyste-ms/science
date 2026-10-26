@@ -128,6 +128,11 @@ namespace :projects do
     puts "Project citation authors: #{result.inspect}"
   end
 
+  desc 'enqueue the next batch of recurring science score updates'
+  task :rescore => :environment do
+    puts "Score refresh job: #{RescoreProjectsWorker.perform_async.inspect}"
+  end
+
   desc 'rescore stored citation metadata (LIMIT=250 AFTER_ID=0)'
   task :rescore_citations => :environment do
     result = Project.rescore_citations(

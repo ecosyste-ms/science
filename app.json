@@ -1,6 +1,10 @@
 {
   "cron": [
     {
+      "command": "bundle exec rake projects:rescore",
+      "schedule": "* * * * *"
+    },
+    {
       "command": "bundle exec rake projects:import_joss",
       "schedule": "*/30 * * * *"
     },
