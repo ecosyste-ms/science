@@ -181,16 +181,20 @@ class Project < ApplicationRecord
   scope :with_keywords, -> { where.not(keywords: []) }
   scope :without_keywords, -> { where(keywords: []) }
   scope :with_packages, -> { where.not(packages: [nil, []]) }
-  scope :needing_brief_dependencies, -> {
+  scope :needing_first_brief, -> {
     where("brief IS NULL OR (NOT (brief ? 'dependencies') AND NOT (brief ? 'error'))")
-      .or(where(
-        "brief ? 'error' AND NOT (brief ? 'dependencies') AND brief->>'error' IS DISTINCT FROM :too_large AND " \
-        "COALESCE((brief->>'attempts')::int, 1) < :limit AND " \
-        "COALESCE((brief->>'attempted_at')::timestamptz, '-infinity') <= CAST(:now AS timestamptz) - make_interval(secs => :cooldown) * COALESCE((brief->>'attempts')::int, 1)",
-        limit: BRIEF_RETRY_LIMIT, cooldown: BRIEF_RETRY_COOLDOWN.to_i, now: Time.current, too_large: BRIEF_TOO_LARGE_ERROR
-      ))
       .where("brief->>'status' IS DISTINCT FROM 'gated'")
   }
+  scope :needing_brief_retry, -> {
+    where(
+      "brief ? 'error' AND NOT (brief ? 'dependencies') AND brief->>'error' IS DISTINCT FROM :too_large AND " \
+      "COALESCE((brief->>'attempts')::int, 1) < :limit AND " \
+      "COALESCE((brief->>'attempted_at')::timestamptz, '-infinity') <= CAST(:now AS timestamptz) - make_interval(secs => :cooldown) * COALESCE((brief->>'attempts')::int, 1)",
+      limit: BRIEF_RETRY_LIMIT, cooldown: BRIEF_RETRY_COOLDOWN.to_i, now: Time.current, too_large: BRIEF_TOO_LARGE_ERROR
+    )
+      .where("brief->>'status' IS DISTINCT FROM 'gated'")
+  }
+  scope :needing_brief_dependencies, -> { needing_first_brief.or(needing_brief_retry) }
   scope :needing_swhids, -> { where("swhids->>'status' IS NULL") }
   scope :retryable_swhids, -> {
     where("swhids->>'status' = 'error' AND (swhids->'archival' IS NULL OR swhids->'archival' = 'null'::jsonb)")

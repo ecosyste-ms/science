@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_19_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_26_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -731,6 +731,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_19_130000) do
     t.index ["id"], name: "index_projects_pending_repository_aliases", where: "((repository IS NOT NULL) AND (repository_aliases_indexed_at IS NULL))"
     t.index ["id"], name: "index_projects_with_doi_seeds", where: "(search_identifiers ? 'doi'::text)"
     t.index ["joss_publication_index_version", "id"], name: "index_projects_on_joss_publication_version", where: "((joss_metadata IS NOT NULL) OR (joss_publication_source_digest IS NOT NULL))"
+    t.index ["keywords"], name: "index_projects_on_keywords", using: :gin
     t.index ["language"], name: "index_projects_on_language"
     t.index ["last_synced_at", "id"], name: "index_projects_on_model_listing", order: { last_synced_at: "DESC NULLS LAST", id: :desc }, where: "model", include: ["owner_id"]
     t.index ["last_synced_at", "id"], name: "index_projects_on_sync_schedule", order: { last_synced_at: "NULLS FIRST" }

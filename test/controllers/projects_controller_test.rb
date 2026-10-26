@@ -40,6 +40,27 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "keyword listings preserve visibility ranking and exact keyword values" do
+    @project.update!(keywords: ["Homebrew", "bioinformatics"], score: 5)
+    @non_science_project.update!(keywords: ["Homebrew"])
+    second = Project.create!(url: "https://github.com/test/keyword-second", science_score: 85, score: 2, keywords: ["Homebrew"])
+    Project.create!(url: "https://github.com/test/keyword-other", science_score: 100, keywords: ["homebrew"])
+    owner = Owner.create!(host: Host.create!(name: "GitHub"), login: "keyword-hidden")
+    Project.create!(url: "https://github.com/keyword-hidden/project", owner_record: owner, science_score: 100, keywords: ["Homebrew"])
+    owner.update!(hidden: true)
+
+    get projects_url, params: { keyword: "Homebrew" }
+
+    assert_response :success
+    assert_equal [@project.id, second.id], assigns(:projects).map(&:id)
+
+    @project.update!(citation_file: "CITATION.cff")
+    get citation_projects_url, params: { keyword: "Homebrew", sort: "score", order: "desc" }
+
+    assert_response :success
+    assert_equal [@project.id], assigns(:projects).map(&:id)
+  end
+
   test "shows package and scanned repository metadata through the project page" do
     registry = PackageRegistry.create!(name: "huggingface.co", url: "https://huggingface.co", ecosystem: "huggingface", purl_type: "huggingface")
     package = registry.packages.create!(name: "example/model", purl: "pkg:huggingface/example/model",

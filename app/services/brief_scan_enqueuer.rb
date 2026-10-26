@@ -17,7 +17,7 @@ class BriefScanEnqueuer
     enqueued = 0
     remaining = limit
     # First scans go ahead of retries so a retry backlog cannot hold up new projects.
-    batches = rescan ? [projects] : [projects.where("brief IS NULL OR NOT (brief ? 'error')"), projects.where("brief ? 'error'")]
+    batches = rescan ? [projects] : [projects, projects(retry_errors: true)]
 
     batches.each do |scope|
       break unless remaining.positive?
@@ -32,12 +32,12 @@ class BriefScanEnqueuer
     enqueued
   end
 
-  def projects
+  def projects(retry_errors: false)
     scope = Project.visible.with_repository
     scope = if rescan
       scope.with_external_identifier.where("science_score < ?", Project::SCIENCE_SCORE_THRESHOLD)
     else
-      scope.needing_brief_dependencies.eligible_for_brief
+      scope.merge(retry_errors ? Project.needing_brief_retry : Project.needing_first_brief).eligible_for_brief
     end
     scope = scope.with_joss if cohort == "joss"
     scope = scope.where(joss_metadata: nil) if cohort == "non_joss"

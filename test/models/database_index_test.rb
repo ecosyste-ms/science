@@ -44,6 +44,16 @@ class DatabaseIndexTest < ActiveSupport::TestCase
     end
   end
 
+  test "project keyword containment has a GIN index" do
+    index = ActiveRecord::Base.connection.indexes(:projects).find { |item| item.name == "index_projects_on_keywords" }
+
+    assert_not_nil index
+    assert_equal :gin, index.using
+    assert_equal ["keywords"], index.columns
+    assert_nil index.where
+    assert index.valid?
+  end
+
   def assert_index_replacement(table, removed, covering)
     index_names = ActiveRecord::Base.connection.indexes(table).map(&:name)
 
