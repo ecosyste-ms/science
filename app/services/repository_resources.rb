@@ -19,6 +19,15 @@ class RepositoryResources
     end
     metadata["files"] = stored_paths.compact
     metadata["file_sources"] = sources.compact
+    previous = Array(metadata["r_package_descriptions"]).grep(Hash).index_by { |item| item["path"] }
+    metadata["r_package_descriptions"] = description_paths(project.brief).filter_map do |path|
+      file = by_path[path]
+      if file&.dig("status") == "ok"
+        file.except("content").merge("revision" => revision, "fields" => RPackageDescription.fields(file["content"]))
+      else
+        previous[path]
+      end
+    end
     if project.repository_from_package? && project.swhids && project.swhids["commit"] != revision
       attributes[:swhids] = project.swhids.slice("origin_archive")
     end
@@ -34,7 +43,14 @@ class RepositoryResources
   end
 
   def self.paths(brief)
-    resource_paths(brief).values.uniq.sort
+    (resource_paths(brief).values + description_paths(brief)).uniq.sort
+  end
+
+  def self.description_paths(brief)
+    Array(brief["manifests"]).grep(Hash).filter_map do |manifest|
+      path = manifest["path"]
+      path if safe_path?(path) && File.basename(path) == "DESCRIPTION"
+    end.uniq.sort
   end
 
   def self.resource_paths(brief)

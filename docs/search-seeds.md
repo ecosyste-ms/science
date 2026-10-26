@@ -121,6 +121,8 @@ The response includes `project_id`, `repository_url`, `updated_at`, and `last_sy
 - `packages`: packages published by this project, with their IDs, PURLs, registry, ecosystem, names, descriptions, and languages.
 - `dependencies_indexed_at`: the last completed dependency indexing time, or null.
 - `direct_dependencies`: indexed direct dependencies, with IDs, names, ecosystems, PURLs, source, manifest occurrences, and update timestamps.
+- `repository_provenance`: the repository URL and stored `fork`, `source_name`, `mirror_url`, and repository `last_synced_at` claims, each with its source field. Absent fields are omitted; explicit null and false values are retained. Source names belong to the host in `repository_url`.
+- `package_manifests`: selected R `DESCRIPTION` claims grouped by file path, with revision, SHA-256 digest, retrieval time and file URL. Each entry includes sourced `names`, `titles`, `descriptions`, `urls` and `bug_reports` arrays.
 
 Names, descriptions, and languages are arrays of evidence objects. For example:
 
@@ -129,6 +131,8 @@ Names, descriptions, and languages are arrays of evidence objects. For example:
 ```
 
 Values retain their original case. The same value can appear with several sources. Package metadata uses the same identity grouping as search seeds: records with the same normalized PURL share an entry, while distinct registry identities and forks remain separate. Package descriptions and languages come from linked package metadata and legacy package records stored on the project.
+
+R manifest claims come from `Package`, `Title`, `Description`, `URL` and `BugReports`, collected during repository scans. Folded text is joined and multiple URLs are retained; R expressions are never evaluated. These claims remain separate from confirmed package identities. Declared URLs do not establish a mirror relationship or registry membership. A failed file read retains earlier evidence with its original revision and retrieval time. Both context additions are included in the SQLite export's `project_contexts` JSON.
 
 Dependencies come from the saved dependency index, including records that have no resolved package ID or PURL. Each occurrence can include `filepath`, `manifest_kind`, `requirements`, `kind`, and `optional`. These distinguish development and optional dependencies from runtime requirements where source metadata supplies that detail. Dependencies belong to the project; they are not assigned to every package it publishes.
 

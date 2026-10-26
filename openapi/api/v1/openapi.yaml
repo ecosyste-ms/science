@@ -1474,9 +1474,19 @@ components:
         source:
           type: string
           description: Stored metadata field supplying this value
+    RepositoryTextClaim:
+      type: object
+      required: [value, source]
+      properties:
+        value:
+          type: string
+          nullable: true
+        source:
+          type: string
+          description: Stored repository metadata field supplying this claim
     ProjectSearchContext:
       type: object
-      required: [project_id, repository_url, updated_at, last_synced_at, descriptions, languages, packages, dependencies_indexed_at, direct_dependencies]
+      required: [project_id, repository_url, updated_at, last_synced_at, repository_provenance, package_manifests, descriptions, languages, packages, dependencies_indexed_at, direct_dependencies]
       properties:
         project_id:
           type: integer
@@ -1489,6 +1499,73 @@ components:
           type: string
           format: date-time
           nullable: true
+        repository_provenance:
+          type: object
+          required: [repository_url]
+          description: >-
+            Stored repository claims. Missing fields are omitted; explicit null and
+            false values are preserved. Source names belong to the repository URL's
+            host. A declared mirror URL does not confirm a mirror relationship.
+          properties:
+            repository_url:
+              type: string
+            fork:
+              type: object
+              required: [value, source]
+              properties:
+                value:
+                  type: boolean
+                  nullable: true
+                source:
+                  type: string
+                  enum: [repository.fork]
+            source_name:
+              $ref: "#/components/schemas/RepositoryTextClaim"
+            mirror_url:
+              $ref: "#/components/schemas/RepositoryTextClaim"
+            last_synced_at:
+              $ref: "#/components/schemas/RepositoryTextClaim"
+        package_manifests:
+          type: array
+          description: >-
+            R DESCRIPTION source claims collected during repository scans, grouped
+            by file path. These do not establish registry membership or package PURLs.
+            Failed reads retain earlier evidence with its original provenance.
+          items:
+            type: object
+            required: [path, revision, sha256, retrieved_at, url, names, titles, descriptions, urls, bug_reports]
+            properties:
+              path:
+                type: string
+              revision:
+                type: string
+              sha256:
+                type: string
+              retrieved_at:
+                type: string
+                format: date-time
+              url:
+                type: string
+              names:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContextEvidence"
+              titles:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContextEvidence"
+              descriptions:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContextEvidence"
+              urls:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContextEvidence"
+              bug_reports:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContextEvidence"
         descriptions:
           type: array
           items:

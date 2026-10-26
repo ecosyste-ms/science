@@ -25,6 +25,8 @@ class ProjectSearchContext
       repository_url: project.repository_url,
       updated_at: project.updated_at,
       last_synced_at: project.last_synced_at,
+      repository_provenance: repository_provenance(repository),
+      package_manifests: package_manifests(repository),
       descriptions: [
         evidence(project[:description], "project.description"),
         evidence(repository["description"], "repository.description"),
@@ -44,6 +46,28 @@ class ProjectSearchContext
   def evidence(value, source)
     value = metadata.text(value)
     { value: value, source: source } if value
+  end
+
+  def repository_provenance(repository)
+    %w[fork source_name mirror_url last_synced_at].each_with_object({ repository_url: project.repository_url }) do |key, result|
+      next unless repository.key?(key)
+
+      result[key] = { value: repository[key], source: "repository.#{key}" }
+    end
+  end
+
+  def package_manifests(repository)
+    stored = repository["metadata"].is_a?(Hash) ? repository["metadata"]["r_package_descriptions"] : nil
+    Array.wrap(stored).grep(Hash).map do |item|
+      fields = item["fields"].is_a?(Hash) ? item["fields"] : {}
+      item.slice("path", "revision", "sha256", "retrieved_at", "url").merge(
+        "names" => [evidence(fields["Package"], "DESCRIPTION.Package")].compact,
+        "titles" => [evidence(fields["Title"], "DESCRIPTION.Title")].compact,
+        "descriptions" => [evidence(fields["Description"], "DESCRIPTION.Description")].compact,
+        "urls" => RPackageDescription.urls(metadata.text(fields["URL"])).map { |url| evidence(url, "DESCRIPTION.URL") },
+        "bug_reports" => RPackageDescription.urls(metadata.text(fields["BugReports"])).map { |url| evidence(url, "DESCRIPTION.BugReports") }
+      )
+    end
   end
 
   def language_evidence(values, source)

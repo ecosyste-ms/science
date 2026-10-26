@@ -59,4 +59,28 @@ class LocalPaperCandidatesRakeTest < ActionDispatch::IntegrationTest
       assert_equal "skipped", result["candidates"].sole.dig("import", "status")
     end
   end
+
+  test "publisher URL DOI candidates resolve through the import task and retain the original occurrence" do
+    url = "https://link.springer.com/article/10.1186%2F1471-2105-9-559?source=readme#citeas"
+    project = Project.create!(url: "https://github.com/example/wgcna", readme: "Please cite [WGCNA](#{url}).")
+    candidates = project.paper_file_candidates("readme", project.readme, "readme_bibtex")
+    ENV["FILE"] = File.join(@directory, "candidates.json")
+    ENV["OUTPUT"] = File.join(@directory, "references.json")
+    ENV.delete("LOCAL_ONLY")
+    ENV["OPENALEX_API_KEY"] = "test-key"
+    File.write(ENV.fetch("FILE"), candidates.to_json)
+    work = { "id" => "https://openalex.org/W123", "title" => "WGCNA", "doi" => "https://doi.org/10.1186/1471-2105-9-559" }
+    stub_request(:get, "https://api.openalex.org/works/doi:10.1186/1471-2105-9-559")
+      .with(query: { "api_key" => "test-key" }).to_return(body: work.to_json)
+    assert_difference "ProjectPaper.count", 1 do
+      Rake::Task["papers:import_candidates"].reenable
+      capture_io { Rake::Task["papers:import_candidates"].invoke }
+      result = JSON.parse(File.read(ENV.fetch("OUTPUT")))
+      assert_equal "needs_review", result.fetch("candidates").sole.fetch("assessment")
+    end
+    link = project.project_papers.sole
+    assert_equal "10.1186/1471-2105-9-559", link.paper.doi
+    assert_includes link.evidence.sole.fetch("occurrences").sole.fetch("raw"), url
+    assert_equal "reference", link.role
+  end
 end

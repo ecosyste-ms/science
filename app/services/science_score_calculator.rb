@@ -357,7 +357,7 @@ class ScienceScoreCalculator
     'cran' => %w[
       sf terra raster stars ape phytools phangorn vegan ade4 seqinr
       brms rstan rstanarm cmdstanr lavaan lme4 nlme mgcv survival
-      spatstat sp rgdal rgeos gstat deSolve
+      spatstat sp rgdal rgeos gstat desolve
     ],
     'bioconductor' => %w[
       deseq2 edger limma biostrings genomicranges summarizedexperiment

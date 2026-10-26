@@ -561,8 +561,9 @@ class Project < ApplicationRecord
   end
 
   def dependency_packages
-    return [] unless dependencies.present?
-    dependencies.map{|d| d["dependencies"]}.flatten.select{|d| d['direct'] }.reject{|d| ignored_ecosystems.include?(d['ecosystem']) }.map{|d| [d['ecosystem'],d["package_name"].downcase]}.uniq
+    grouped, = ProjectDependencyIndexer.new(self).grouped_dependencies
+    grouped.values.reject { |dependency| ignored_ecosystems.include?(dependency[:ecosystem]) }
+      .map { |dependency| [dependency[:ecosystem], dependency[:package_name].downcase] }.uniq
   end
 
   def dependency_ecosystems

@@ -1,6 +1,23 @@
 require 'test_helper'
 
 class Api::V1::ProjectsControllerTest < ActionDispatch::IntegrationTest
+  test "search orders filtered results by id across pages" do
+    projects = 25.times.map do |index|
+      Project.create!(url: "https://github.com/pagination/item-#{25 - index}", language: "R", keywords: ["biology"])
+    end
+    projects.first.update_column(:description, "Updated after the other rows")
+    queries = []
+    pages = ActiveSupport::Notifications.subscribed(->(*args) { queries << args.last[:sql] }, "sql.active_record") do
+      [1, 2].map do |page|
+        get search_api_v1_projects_url, params: { q: "/pagination/", language: "R", keywords: "biology", page: page }
+        assert_response :success
+        response.parsed_body.pluck("id")
+      end
+    end
+    assert_equal projects.map(&:id), pages.flatten
+    assert_equal [20, 5], pages.map(&:size)
+    assert queries.any? { |sql| sql.include?('ORDER BY "projects"."id" ASC') }
+  end
   test 'index includes funding links when some packages have no metadata' do
     project = Project.create!(
       url: 'https://github.com/example/funding-project',

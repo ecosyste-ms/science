@@ -26,7 +26,10 @@ class SearchSeedsRakeTest < ActiveSupport::TestCase
     project = create(Project,
       url: "https://github.com/export/climate", name: "Climate's Tools\nLab", science_score: 50,
       description: "Climate models",
-      repository: { "archived" => true, "previous_names" => ["export/ClimateLegacy"], "language" => "Python" },
+      repository: { "archived" => true, "previous_names" => ["export/ClimateLegacy"], "language" => "Python",
+        "fork" => false, "source_name" => nil, "mirror_url" => "https://example.org/climate", "last_synced_at" => "2026-10-23T12:00:00Z",
+        "metadata" => { "r_package_descriptions" => [{ "path" => "r/DESCRIPTION", "revision" => "abc123", "sha256" => "digest",
+          "fields" => { "Package" => "ClimateR", "Description" => "R climate tools", "URL" => "https://example.org/climate" } }] } },
       packages: [{ "name" => "STATS", "ecosystem" => "conda" }],
       codemeta: { "identifier" => "10.1234/climate" }.to_json
     )
@@ -70,6 +73,12 @@ class SearchSeedsRakeTest < ActiveSupport::TestCase
       assert_equal "Climate models", context.fetch("descriptions").sole.fetch("value")
       assert_equal "Python", context.fetch("languages").sole.fetch("value")
       assert_equal "numpy", context.fetch("direct_dependencies").sole.fetch("name")
+      assert_equal false, context.fetch("repository_provenance").fetch("fork").fetch("value")
+      assert_nil context.fetch("repository_provenance").fetch("source_name").fetch("value")
+      manifest = context.fetch("package_manifests").sole
+      assert_equal "r/DESCRIPTION", manifest.fetch("path")
+      assert_equal "ClimateR", manifest.fetch("names").sole.fetch("value")
+      assert_equal "R climate tools", manifest.fetch("descriptions").sole.fetch("value")
       session = ActionDispatch::Integration::Session.new(Rails.application)
       session.get("/api/v1/projects/#{project.id}/search_context")
       assert_equal 200, session.response.status

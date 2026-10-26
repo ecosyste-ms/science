@@ -66,7 +66,7 @@ class Api::V1::ProjectsController < Api::V1::ApplicationController
   end
 
   def search
-    @scope = Project.visible.includes(project_fields: :field)
+    @scope = Project.visible.includes(project_fields: :field).order(:id)
 
     if params[:q].present?
       @scope = @scope.where("url ILIKE ?", "%#{params[:q]}%")

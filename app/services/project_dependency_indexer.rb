@@ -152,7 +152,7 @@ class ProjectDependencyIndexer
   end
 
   def grouped_brief_dependencies(brief)
-    return [{}, 0] unless brief.is_a?(Hash)
+    return [{}, 0] unless brief.is_a?(Hash) && !brief.key?("error")
 
     dependencies = brief["dependencies"]
     return [{}, 0] if dependencies.nil?

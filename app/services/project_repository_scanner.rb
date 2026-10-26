@@ -28,7 +28,7 @@ class ProjectRepositoryScanner
         if partial && !@project.brief&.key?("error") && !@project.brief&.key?("last_error")
           @project.update_column(:brief, @project.brief.merge("partial_checkout" => partial))
         end
-        if !@project.brief&.key?("error") && @project.brief&.dig("resources").is_a?(Hash)
+        if @project.brief.is_a?(Hash) && !@project.brief.key?("error") && !@project.brief.key?("last_error")
           @revision ||= RepositoryCommand.new.run(["git", "-C", checkout, "rev-parse", "HEAD"]).strip
           @files = RepositoryResources.paths(@project.brief).map do |path|
             base = @project.repository["html_url"].presence || @project.url

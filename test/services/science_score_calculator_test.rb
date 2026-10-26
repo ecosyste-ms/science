@@ -495,6 +495,44 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     assert_match "Package is in the scientific dependency list", result[:details]
   end
 
+  test "persisted scoring uses direct Brief fallback with repository source precedence" do
+    brief = { "dependencies" => [
+      { "name" => "SCIPY", "purl" => "pkg:pypi/scipy", "direct" => true },
+      { "name" => "scipy", "purl" => "pkg:conda/scipy", "direct" => true },
+      { "name" => "astropy", "purl" => "pkg:pypi/astropy", "direct" => false },
+      { "name" => "sf", "purl" => "pkg:cran/sf", "direct" => true },
+      { "name" => "deSolve", "purl" => "pkg:cran/deSolve", "direct" => true },
+    ] }
+    @project.stubs(:joss_vocabulary_analysis).returns(score: 0, terms: [], model_id: nil)
+    [nil, []].each do |legacy|
+      @project.update!(dependencies: legacy, brief: brief)
+      @project.update_science_score
+      assert_equal 8, @project.reload.science_score
+      assert_equal 3, @project.science_score_breakdown.dig("breakdown", "has_scientific_dependencies", "matches")
+    end
+    @project.update!(dependencies: [{ "ecosystem" => "PyPI", "dependencies" => [
+      { "package_name" => "requests", "direct" => true },
+      { "package_name" => "scipy", "direct" => false },
+      { "package_name" => "sf", "ecosystem" => "Homebrew", "direct" => true },
+    ] }])
+    @project.update_science_score
+    assert_equal 0, @project.reload.science_score
+    @project.update!(dependencies: nil, brief: brief.merge("error" => "failed scan"))
+    @project.update_science_score
+    assert_equal 0, @project.reload.science_score
+  end
+
+  test "persisted scoring recognizes deSolve as a package and direct dependency regardless of case" do
+    %w[deSolve DESOLVE desolve].each do |name|
+      @project.update!(packages: [{ "ecosystem" => "CRAN", "name" => name }], dependencies: nil)
+      @project.update_science_score
+      assert_equal 1.0, @project.reload.science_score_breakdown.dig("breakdown", "has_scientific_dependencies", "strength")
+      @project.update!(packages: [], dependencies: [{ "dependencies" => [{ "ecosystem" => "CRAN", "package_name" => name, "direct" => true }] }])
+      @project.update_science_score
+      assert_equal 0.4, @project.reload.science_score_breakdown.dig("breakdown", "has_scientific_dependencies", "strength")
+    end
+  end
+
   test "check_scientific_dependencies scores by match count" do
     @project.stubs(:dependency_packages).returns([['pypi', 'astropy'], ['pypi', 'requests']])
     result = ScienceScoreCalculator.new(@project).check_scientific_dependencies

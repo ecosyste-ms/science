@@ -1,6 +1,28 @@
 require "test_helper"
 
 class Api::V1::SearchContextTest < ActionDispatch::IntegrationTest
+  test "preserves stored repository relationships including absent null and false fields" do
+    project = create_project(repository: { "fork" => true, "source_name" => "broadinstitute/gatk", "last_synced_at" => "2026-10-23T12:00:00Z" })
+    get search_context_api_v1_project_url(project)
+    provenance = response.parsed_body.fetch("repository_provenance")
+    assert_equal project.repository_url, provenance.fetch("repository_url")
+    assert_equal({ "value" => true, "source" => "repository.fork" }, provenance.fetch("fork"))
+    assert_equal "broadinstitute/gatk", provenance.fetch("source_name").fetch("value")
+    assert_equal "2026-10-23T12:00:00Z", provenance.fetch("last_synced_at").fetch("value")
+    refute provenance.key?("mirror_url")
+
+    project.update!(repository: { "fork" => false, "mirror_url" => nil, "description" => "Read-only mirror" })
+    get search_context_api_v1_project_url(project)
+    provenance = response.parsed_body.fetch("repository_provenance")
+    assert_equal false, provenance.fetch("fork").fetch("value")
+    assert_nil provenance.fetch("mirror_url").fetch("value")
+    refute provenance.key?("source_name")
+
+    project.update!(repository: {})
+    get search_context_api_v1_project_url(project)
+    assert_equal({ "repository_url" => project.repository_url }, response.parsed_body.fetch("repository_provenance"))
+    assert_empty response.parsed_body.fetch("package_manifests")
+  end
   test "returns sourced context and indexed direct dependencies for a candidate project" do
     project = create_project(
       description: "Data analysis tools",

@@ -58,6 +58,141 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     assert_not_requested :any, /archive\.softwareheritage\.org/
   end
 
+  test "scan scores Brief dependencies before indexing and refreshes their context" do
+    File.write(File.join(@source, "requirements.txt"), "scipy\nastropy\nbiopython\nscipy\n")
+    commit_source
+    @project.update!(dependencies: [], dependencies_indexed_at: Time.current)
+    RepositoryScanWorker.new.perform(@project.id)
+
+    @project.reload
+    signal = @project.science_score_breakdown.dig("breakdown", "has_scientific_dependencies")
+    assert_equal 3, signal.fetch("matches")
+    assert_equal 1.0, signal.fetch("strength")
+    assert_nil @project.dependencies_indexed_at
+    assert_empty @project.project_dependencies
+    Project.sync_dependencies
+    assert_equal %w[astropy biopython scipy], @project.reload.project_dependencies.order(:package_name).pluck(:package_name)
+    session = ActionDispatch::Integration::Session.new(Rails.application)
+    session.get("/api/v1/projects/#{@project.id}/search_context")
+    assert_equal 200, session.response.status
+    assert_equal %w[astropy biopython scipy], session.response.parsed_body.fetch("direct_dependencies").pluck("name").sort
+
+    File.write(File.join(@source, "requirements.txt"), "scipy\n")
+    commit_source
+    @project.update!(brief: @project.brief.merge("version" => "0.14.0"))
+    RepositoryScanWorker.new.perform(@project.id, false, true)
+    assert_nil @project.reload.dependencies_indexed_at
+    assert_equal 0.4, @project.science_score_breakdown.dig("breakdown", "has_scientific_dependencies", "strength")
+    Project.sync_dependencies
+    assert_equal ["scipy"], @project.reload.project_dependencies.pluck(:package_name)
+
+    @project.update!(brief: @project.brief.merge("version" => "0.14.0"))
+    RepositoryBriefScan.stubs(:call).raises(RepositoryCommand::Error, "scan failed")
+    RepositoryScanWorker.new.perform(@project.id, false, true)
+    assert_equal "scan failed", @project.reload.brief.dig("last_error", "error")
+    assert_equal 0.4, @project.science_score_breakdown.dig("breakdown", "has_scientific_dependencies", "strength")
+  end
+
+  test "scan retains separate R DESCRIPTION claims with file provenance" do
+    File.delete(File.join(@source, "codemeta.json"))
+    File.write(File.join(@source, "DESCRIPTION"), <<~DCF)
+      Package: SNPRelate
+      Title: Parallel Computing Toolset for Relatedness
+      Description: Analysis of genome-wide SNP data
+          with parallel computing.
+      URL: https://github.com/zhengxwen/SNPRelate
+      BugReports: https://github.com/zhengxwen/SNPRelate/issues
+      Authors@R: stop("must not execute")
+    DCF
+    FileUtils.mkdir_p(File.join(@source, "other"))
+    File.write(File.join(@source, "other", "DESCRIPTION"), <<~DCF)
+      Package: rpart
+      Title: Recursive Partitioning and Regression Trees
+      Description: Recursive partitioning
+          for classification and regression.
+      URL: https://example.org/rpart, https://example.org/rpart/manual (manual)
+      BugReports: not a URL
+    DCF
+    commit_source
+    revision = git("-C", @source, "rev-parse", "HEAD").strip
+    RepositoryScanWorker.new.perform(@project.id)
+
+    stored = @project.reload.repository.dig("metadata", "r_package_descriptions")
+    assert_equal ["DESCRIPTION"], stored.pluck("path")
+    assert_equal [revision], stored.pluck("revision").uniq
+    assert_equal Digest::SHA256.file(File.join(@source, "DESCRIPTION")).hexdigest, stored.first.fetch("sha256")
+    assert stored.first.fetch("retrieved_at").present?
+    refute stored.first.fetch("fields").key?("Authors@R")
+    session = ActionDispatch::Integration::Session.new(Rails.application)
+    session.get("/api/v1/projects/#{@project.id}/search_context")
+    assert_equal 200, session.response.status
+    manifests = session.response.parsed_body.fetch("package_manifests")
+    assert_equal ["SNPRelate"], manifests.map { |item| item.fetch("names").sole.fetch("value") }
+    assert_equal "Analysis of genome-wide SNP data with parallel computing.", manifests.first.fetch("descriptions").sole.fetch("value")
+    assert_empty session.response.parsed_body.fetch("packages")
+    assert manifests.all? { |item| item.fetch("url").include?(revision) }
+
+    stub_request(:get, @project.repos_api_url).to_return(body: { "clone_url" => @source, "metadata" => { "upstream" => true } }.to_json)
+    @project.fetch_repository
+    assert_equal stored, @project.reload.repository.dig("metadata", "r_package_descriptions")
+    assert @project.repository.dig("metadata", "upstream")
+
+    FileUtils.cp(File.join(@source, "other", "DESCRIPTION"), File.join(@source, "DESCRIPTION"))
+    commit_source
+    @project.update!(brief: @project.brief.merge("version" => "0.14.0"))
+    RepositoryScanWorker.new.perform(@project.id, false, true)
+    session.get("/api/v1/projects/#{@project.id}/search_context")
+    manifest = session.response.parsed_body.fetch("package_manifests").sole
+    assert_equal "rpart", manifest.fetch("names").sole.fetch("value")
+    assert_equal ["https://example.org/rpart", "https://example.org/rpart/manual"], manifest.fetch("urls").pluck("value")
+    assert_empty manifest.fetch("bug_reports")
+  end
+
+  def commit_source
+    git("-C", @source, "add", ".")
+    git("-C", @source, "-c", "user.name=Test", "-c", "user.email=test@example.org",
+      "-c", "commit.gpgsign=false", "commit", "-m", "Update repository input")
+  end
+
+  test "scan and paper import workers retain publisher DOI citation evidence and suppress duplicate credit" do
+    previous_key = ENV["OPENALEX_API_KEY"]
+    ENV["OPENALEX_API_KEY"] = "test-key"
+    FileUtils.mkdir_p(File.join(@source, "inst"))
+    publisher_url = "https://link.springer.com/article/10.1186/1471-2105-9-559"
+    citation = "bibentry(bibtype = 'Article', title = 'WGCNA: an R package for weighted correlation network analysis', url = '#{publisher_url}')\n"
+    File.write(File.join(@source, "inst", "CITATION"), citation)
+    commit_source
+    @project.update!(joss_metadata: nil)
+    RepositoryScanWorker.new.perform(@project.id)
+    assert_equal citation, @project.reload.citation_file
+    assert @project.science_score_breakdown.dig("breakdown", "has_citation_file", "present")
+    assert_equal 0.5, @project.science_score_breakdown.dig("breakdown", "has_citation_file", "strength")
+    before_score = @project.science_score
+    assert_empty @project.project_papers
+    work = { "id" => "https://openalex.org/W123", "title" => "WGCNA: an R package for weighted correlation network analysis",
+      "doi" => "https://doi.org/10.1186/1471-2105-9-559" }
+    request = stub_request(:get, "https://api.openalex.org/works/doi:10.1186/1471-2105-9-559")
+      .with(query: { "api_key" => "test-key" }).to_return({ status: 404 }, { body: work.to_json })
+    ImportProjectPapersWorker.new.perform(@project.id)
+    assert_empty @project.reload.project_papers
+    assert_equal before_score, @project.science_score
+    ImportProjectPapersWorker.new.perform(@project.id)
+    link = @project.reload.project_papers.sole
+    assert_equal "reference", link.role
+    assert_equal "10.1186/1471-2105-9-559", link.paper.doi
+    evidence = link.evidence.sole
+    assert_equal "inst/CITATION", evidence.fetch("file_path")
+    assert_equal @project.brief.fetch("revision"), evidence.fetch("revision")
+    assert_equal Digest::SHA256.hexdigest(citation), evidence.fetch("file_sha256")
+    assert_includes evidence.fetch("occurrences").sole.fetch("raw"), publisher_url
+    assert_equal 20, @project.science_score_breakdown.dig("breakdown", "has_resolved_paper", "score")
+    assert_in_delta 12, @project.science_score - before_score
+    assert_equal "has_resolved_paper", @project.science_score_breakdown.dig("breakdown", "has_citation_file", "duplicate_of")
+    assert_requested request, times: 2
+  ensure
+    ENV["OPENALEX_API_KEY"] = previous_key
+  end
+
   test "queued legacy workers use the shared checkout and skip completed analyses" do
     FetchBriefWorker.new.perform(@project.id)
     FetchSwhidWorker.new.perform(@project.id)

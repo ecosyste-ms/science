@@ -140,7 +140,12 @@ class FilePaperCandidates
           refs << ["pmid", id] if id
           refs << ["paper_url", url] if path.match?(/\.pdf\z/i)
         else
-          refs << ["paper_url", url] if path.match?(/\.pdf\z/i)
+          # PDF paths can append publisher-specific suffixes to a DOI.
+          if path.match?(/\.pdf\z/i)
+            refs << ["paper_url", url]
+          elsif (doi = path[%r{(?:\A|/)(10\.\d{4,9}/\S+)\z}i, 1])
+            add_doi(refs, trim(doi))
+          end
         end
       rescue URI::InvalidURIError, ArgumentError
         nil
