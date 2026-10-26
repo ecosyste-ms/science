@@ -224,8 +224,9 @@ class Project < ApplicationRecord
   }
   scope :model_projects, -> { where(model: true) }
   scope :eligible_for_brief, -> {
+    # Keep dependency checks per package instead of expanding all scientific dependencies.
     dependency = Package.direct_scientific_dependencies
-      .where("project_dependencies.package_id = packages.id").arel.exists
+      .where("project_dependencies.package_id = packages.id").offset(0).arel.exists
     publisher = Package.where("packages.published_by_project_id = projects.id")
       .where(dependency).arel.exists
     where('science_score > 0').or(where(publisher))

@@ -77,6 +77,54 @@ class BriefScanRakeTest < ActiveSupport::TestCase
     assert_equal expected.map { |record| [record.id] }, RepositoryScanWorker.jobs.map { |job| job.fetch("args") }
   end
 
+  test "publisher eligibility requires any visible scientific direct dependent and keeps global ID order" do
+    registry = PackageRegistry.create!(name: "brief-task.example", url: "https://brief-task.example", ecosystem: "npm", purl_type: "npm")
+    publisher = project("publisher").tap { |record| record.update!(science_score: nil) }
+    ordinary = project("ordinary")
+    indirect = project("indirect").tap { |record| record.update!(science_score: 0) }
+    nonscientific = project("nonscientific").tap { |record| record.update!(science_score: 0) }
+    hidden_dependent = project("hidden-dependent-publisher").tap { |record| record.update!(science_score: 0) }
+    unresolved = project("unresolved").tap { |record| record.update!(science_score: 0) }
+    model = project("model").tap { |record| record.update!(science_score: 0, model: true) }
+    dependent = project("dependent", brief: { "dependencies" => [] })
+    below_threshold = project("below-threshold", brief: { "dependencies" => [] }).tap { |record| record.update!(science_score: 19.99) }
+    hidden = project("hidden-dependent", brief: { "dependencies" => [] })
+    owner = Owner.create!(host: Host.create!(name: "GitHub"), login: "brief-dependency-hidden")
+    hidden.update!(owner_record: owner)
+    owner.update!(hidden: true)
+
+    rows = [
+      [publisher, below_threshold, true],
+      [publisher, dependent, true],
+      [indirect, dependent, false],
+      [nonscientific, below_threshold, true],
+      [hidden_dependent, hidden, true],
+      [unresolved, dependent, true],
+    ]
+    rows.each_with_index do |(source, consumer, direct), index|
+      package = registry.packages.create!(name: "brief-eligibility-#{index}", purl: "pkg:npm/brief-eligibility-#{index}", published_by_project: source)
+      ProjectDependency.create!(project: consumer, package: source == unresolved ? nil : package,
+        ecosystem: "npm", package_name: package.name, purl: package.purl, direct: direct)
+    end
+    record = ExternalSoftwareRecord.create!(source: "ASCL", identifier: "overlap", status: "ok", retrieved_at: Time.current, next_refresh_at: Time.current)
+    ProjectExternalSoftwareRecord.create!(project: publisher, external_software_record: record, relationship: "repository", match_status: "Matched")
+    ENV["LIMIT"] = "3"
+
+    capture_io { Rake::Task["projects:fetch_brief"].execute }
+
+    assert_equal [[publisher.id], [ordinary.id], [model.id]], RepositoryScanWorker.jobs.map { |job| job.fetch("args") }
+    ProjectExternalSoftwareRecord.where(project: publisher).delete_all
+    clear_swhid_batch
+    capture_io { Rake::Task["projects:fetch_brief"].execute }
+    assert_equal [[publisher.id], [ordinary.id], [model.id]], RepositoryScanWorker.jobs.map { |job| job.fetch("args") }
+    assert publisher.eligible_for_brief?
+    assert Project.eligible_for_brief.exists?(publisher.id)
+    [indirect, nonscientific, hidden_dependent, unresolved].each do |record|
+      assert_not record.eligible_for_brief?
+      assert_not Project.eligible_for_brief.exists?(record.id)
+    end
+  end
+
   def project(name, brief: nil)
     Project.create!(url: "https://github.com/test/brief-task-#{name}", science_score: 20,
       repository: { "clone_url" => "https://github.com/test/brief-task-#{name}.git" }, brief: brief)
