@@ -188,6 +188,21 @@ class JorsImportTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "transport failures identify the redirected endpoint and preserve hourly retry" do
+    stub_request(:get, "#{JorsClient::CATALOGUE_URL}?page=1").to_return(status: 307,
+      headers: { "Location" => "/articles?page=1" })
+    stub_request(:get, "https://#{JorsClient::HOST}/articles?page=1").to_timeout
+    task("jors:sweep")
+    ImportJournalWorker.perform_one
+    import = ExternalSoftwareImport.sole
+    assert_includes import.last_error, "https://#{JorsClient::HOST}/articles: Faraday::TimeoutError"
+    assert_match(/elapsed=\d+(\.\d+)?s, open_timeout=5s, timeout=15s/, import.last_error)
+    assert_in_delta 1.hour.from_now.to_f, import.next_run_at.to_f, 2
+    assert_nil import.cursor
+    assert_equal 0, import.items_processed
+    assert_empty import.pending_records
+  end
+
   test "rate limits defer a sweep and share cooldown across article requests" do
     stub_request(:get, "#{JorsClient::CATALOGUE_URL}?page=1").to_return(status: 429, headers: { "Retry-After" => "600" })
     task("jors:sweep")

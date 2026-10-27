@@ -1,11 +1,16 @@
 namespace :external_software do
-  desc "Queue cached repository discovery and pending project syncs (LIMIT=100, maximum 100)"
+  desc "Queue cached repository discovery (LIMIT=100, maximum 100)"
   task discover: :environment do
     limit = Integer(ENV.fetch("LIMIT", "100"), 10)
     raise ArgumentError, "limit must be between 1 and 100" unless limit.between?(1, 100)
     jid = DiscoverExternalRepositoriesWorker.perform_async(limit)
-    syncs = ExternalProjectSync.enqueue_pending(limit: limit)
-    puts JSON.generate(queued: jid.present?, limit: limit, project_syncs: syncs)
+    puts JSON.generate(queued: jid.present?, limit: limit)
+  end
+
+  desc "Queue pending project syncs, reserving one fifth for retries (LIMIT=100, maximum 100)"
+  task sync: :environment do
+    limit = Integer(ENV.fetch("LIMIT", "100"), 10)
+    puts JSON.generate(project_syncs: ExternalProjectSync.enqueue_pending(limit: limit), limit: limit)
   end
 
   desc "Show cached repository discovery and project sync backlog"

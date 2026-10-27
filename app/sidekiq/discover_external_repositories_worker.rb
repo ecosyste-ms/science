@@ -6,7 +6,6 @@ class DiscoverExternalRepositoriesWorker
 
   def perform(limit = 100)
     result = ExternalRepositoryDiscovery.new.run(limit: limit)
-    ExternalProjectSync.enqueue_pending(limit: limit)
     Rails.logger.info(result.merge(event: "external_repository_discovery").to_json)
     result
   end

@@ -16,9 +16,11 @@ class ExternalProjectSync < ApplicationRecord
 
   def self.enqueue_pending(limit: 100)
     raise ArgumentError, "limit must be between 1 and 100" unless limit.is_a?(Integer) && limit.between?(1, 100)
-    ids = due.order(:next_attempt_at, :id).limit(limit).pluck(:id)
-    ids.each { |id| SyncExternalProjectWorker.perform_async(id) }
-    ids.size
+    candidates = due.order(:next_attempt_at, :id)
+    retry_limit = [limit / 5, 1].max
+    ids = candidates.where.not(last_error: nil).limit(retry_limit).pluck(:id)
+    ids += candidates.where.not(id: ids).limit(limit - ids.size).pluck(:id)
+    ids.count { |id| SyncExternalProjectWorker.perform_async(id).present? }
   end
 
   def claim

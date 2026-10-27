@@ -32,6 +32,7 @@ class DiscoverExternalRepositoriesWorkerTest < ActiveSupport::TestCase
   def discover(limit = 100)
     DiscoverExternalRepositoriesWorker.perform_async(limit)
     DiscoverExternalRepositoriesWorker.perform_one
+    ExternalProjectSync.enqueue_pending(limit: limit)
   end
 
   test "scheduled task discovers unlabelled repositories and retains provenance without awarding scores" do
@@ -51,6 +52,9 @@ class DiscoverExternalRepositoriesWorkerTest < ActiveSupport::TestCase
     assert_difference "Project.count", 1 do
       DiscoverExternalRepositoriesWorker.perform_one
     end
+    assert_empty SyncExternalProjectWorker.jobs
+    Rake::Task["external_software:sync"].reenable
+    capture_io { Rake::Task["external_software:sync"].invoke }
     project = Project.sole
     assert_equal "https://github.com/sympy/sympy", project.url
     assert_equal 0, project.science_score.to_f
@@ -221,7 +225,8 @@ class DiscoverExternalRepositoriesWorkerTest < ActiveSupport::TestCase
   test "a lost queue submission leaves durable sync requests for the next task" do
     record = import_biotools
     SyncExternalProjectWorker.stubs(:perform_async).raises(RedisClient::CannotConnectError)
-    assert_raises(RedisClient::CannotConnectError) { DiscoverExternalRepositoriesWorker.new.perform }
+    DiscoverExternalRepositoriesWorker.new.perform
+    assert_raises(RedisClient::CannotConnectError) { ExternalProjectSync.enqueue_pending }
     assert record.reload.discovered_at
     assert_equal 1, Project.count
     assert_equal 1, ExternalProjectSync.pending.count

@@ -16,6 +16,7 @@ class JournalHttpClient
     end
     cooldown = Rails.cache.read(cooldown_key)
     raise RateLimited, Time.at(cooldown).utc if cooldown && cooldown > Time.current.to_f
+    started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     response = Faraday.get(url, nil, { "User-Agent" => "science.ecosyste.ms (+https://science.ecosyste.ms)" }) do |request|
       request.options.open_timeout = 5
       request.options.timeout = 15
@@ -29,7 +30,10 @@ class JournalHttpClient
     raise Error, "Journal response exceeds 5 MB" if response.body.bytesize > 5.megabytes
     response.body
   rescue Faraday::Error => error
-    raise Error, "Journal request failed: #{error.class.name}"
+    elapsed = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at).round(3)
+    cause = error.wrapped_exception || error.cause
+    detail = cause ? " (#{cause.class.name})" : ""
+    raise Error, "Journal request failed at #{uri.scheme}://#{uri.host}#{uri.path}: #{error.class.name}#{detail}; elapsed=#{elapsed}s, open_timeout=5s, timeout=15s"
   rescue URI::InvalidURIError
     raise Error, "Invalid journal request URL"
   end

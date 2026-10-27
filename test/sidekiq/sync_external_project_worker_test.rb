@@ -104,7 +104,8 @@ class SyncExternalProjectWorkerTest < ActiveSupport::TestCase
   test "queue recovery remains bounded and repeated scheduling deduplicates jobs" do
     other = Project.create!(url: "https://github.com/scientific-lab/other")
     ExternalProjectSync.request(other.id)
-    2.times { assert_equal 1, ExternalProjectSync.enqueue_pending(limit: 1) }
+    assert_equal 1, ExternalProjectSync.enqueue_pending(limit: 1)
+    assert_equal 0, ExternalProjectSync.enqueue_pending(limit: 1)
     assert_equal 1, SyncExternalProjectWorker.jobs.size
     assert_equal 2, ExternalProjectSync.pending.count
   end

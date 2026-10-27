@@ -122,6 +122,7 @@ class JournalSchedulingTest < ActiveSupport::TestCase
       assert_empty project.project_papers
       scheduled_journal_tasks("external_software", "discover")
       DiscoverExternalRepositoriesWorker.perform_one
+      scheduled_journal_tasks("external_software", "sync")
       replacement = Project.find_by!(url: "https://github.com/neuraloperator/new-repository")
       assert_equal paper.id, replacement.project_papers.sole.paper_id
       assert_equal "software_description", replacement.project_papers.sole.role

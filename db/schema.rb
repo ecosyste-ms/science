@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_26_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_27_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -132,6 +132,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_26_120000) do
     t.datetime "lease_expires_at"
     t.text "last_error"
     t.index ["next_attempt_at", "id"], name: "index_external_project_syncs_pending", where: "((completed_at IS NULL) OR (requested_at > completed_at))"
+    t.index ["next_attempt_at", "id"], name: "index_external_project_syncs_retries", where: "(((completed_at IS NULL) OR (requested_at > completed_at)) AND (last_error IS NOT NULL))"
     t.index ["project_id"], name: "index_external_project_syncs_on_project_id", unique: true
   end
 

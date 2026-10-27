@@ -141,6 +141,10 @@
       "schedule": "57 * * * *"
     },
     {
+      "command": "bundle exec rake external_software:sync",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "command": "bundle exec rake ascl:resume ascl:refresh",
       "schedule": "14 * * * *"
     },
