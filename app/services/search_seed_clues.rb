@@ -25,10 +25,10 @@ class SearchSeedClues
   end
 
   def self.populate(database)
-    words = File.read(Rails.root.join("config/search_seed_common_words.txt")).split
+    words = File.read(Rails.root.join("config/search_seed_common_words.txt")).split.to_set
     clue = database.prepare(<<~SQL)
-      INSERT INTO clues (value, case_sensitive, ordinary_word)
-      VALUES (?, ?, ?)
+      INSERT INTO clues (value, case_sensitive, ordinary_word, punctuation_only)
+      VALUES (?, ?, ?, ?)
       ON CONFLICT(value, case_sensitive) DO UPDATE SET value = excluded.value
       RETURNING id
     SQL
@@ -37,7 +37,8 @@ class SearchSeedClues
       variants(type, value).each do |literal, variant, case_sensitive|
         literal = literal.unicode_normalize(:nfc).downcase unless case_sensitive
         ordinary_word = !case_sensitive && words.include?(literal) ? 1 : nil
-        clue_id = clue.execute(literal, case_sensitive ? 1 : 0, ordinary_word).next.first
+        punctuation_only = literal.match?(/[\p{L}\p{N}]/) ? 0 : 1
+        clue_id = clue.execute(literal, case_sensitive ? 1 : 0, ordinary_word, punctuation_only).next.first
         link.execute(clue_id, id, variant)
       end
     end
@@ -56,7 +57,7 @@ class SearchSeedClues
       UPDATE clues AS c SET suggested_start_year =
         (SELECT CASE WHEN COUNT(*) = COUNT(suggested_start_year) THEN MIN(suggested_start_year) END
          FROM clue_candidates WHERE clue_id = c.id);
-      UPDATE clues SET ambiguous = shared_name OR COALESCE(ordinary_word, 0) = 1 OR short_name;
+      UPDATE clues SET ambiguous = shared_name OR COALESCE(ordinary_word, 0) = 1 OR short_name OR punctuation_only;
     SQL
   ensure
     clue&.close

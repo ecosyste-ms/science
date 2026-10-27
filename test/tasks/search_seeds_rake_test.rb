@@ -180,6 +180,40 @@ class SearchSeedsRakeTest < ActiveSupport::TestCase
     end
   end
 
+  test "export flags ordinary words and punctuation without removing names or source links" do
+    project = create(Project, url: "https://github.com/clues/and", name: "AND", science_score: 50,
+      packages: [{ "name" => "and", "ecosystem" => "cran" }],
+      codemeta: { "alternateName" => ["Can", "based", "Fig", "Differences", "Survey", "Sample", "Patterns",
+        "Method", "Content", "======", "***", "\u2026\u2014\u2026", "Δ", "目录", "123", "C++", "ClueTestName"] }.to_json)
+
+    capture_io { Rake::Task["search_seeds:export"].invoke }
+
+    SQLite3::Database.new(ENV.fetch("OUTPUT")) do |db|
+      %w[and can based fig differences survey sample patterns method content].each do |word|
+        assert_equal [1, 0, 1], db.get_first_row(
+          "SELECT ordinary_word, punctuation_only, ambiguous FROM clues WHERE value = ?", word), word
+      end
+      ["======", "***", "\u2026\u2014\u2026"].each do |value|
+        assert_equal [0, 1, 1], db.get_first_row(
+          "SELECT short_name, punctuation_only, ambiguous FROM clues WHERE value = ?", value), value
+      end
+      ["δ", "目录", "123", "c++", "cluetestname", "github.com/clues/and"].each do |value|
+        assert_equal [nil, 0], db.get_first_row(
+          "SELECT ordinary_word, punctuation_only FROM clues WHERE value = ?", value), value
+      end
+      assert_equal 1, db.get_first_value("SELECT COUNT(*) FROM clues WHERE value = 'and'")
+      assert_equal %w[project.name project.packages[0].name project.url], db.execute(<<~SQL).flatten.sort
+        SELECT DISTINCT s.source FROM clue_seeds cs JOIN seeds s ON s.id = cs.seed_id
+        JOIN clues c ON c.id = cs.clue_id WHERE c.value = 'and'
+      SQL
+      assert_equal [project.id], db.execute(<<~SQL).flatten
+        SELECT DISTINCT project_id FROM clue_candidates
+        WHERE clue_id = (SELECT id FROM clues WHERE value = 'and')
+      SQL
+      assert_equal 0, db.get_first_value("SELECT COUNT(*) FROM seeds s WHERE NOT EXISTS (SELECT 1 FROM clue_seeds cs WHERE cs.seed_id = s.id)")
+    end
+  end
+
   test "shared clue year covers the earliest known candidate when all candidate bounds are known" do
     [2012, 2001].each_with_index do |year, index|
       create(Project, url: "https://github.com/clues/#{index}", name: "Project#{index}", science_score: 50,

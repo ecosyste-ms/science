@@ -60,6 +60,7 @@ CREATE TABLE clues (
   shared_name INTEGER NOT NULL DEFAULT 0 CHECK (shared_name IN (0, 1)),
   ordinary_word INTEGER CHECK (ordinary_word IN (0, 1)),
   short_name INTEGER NOT NULL DEFAULT 0 CHECK (short_name IN (0, 1)),
+  punctuation_only INTEGER NOT NULL DEFAULT 0 CHECK (punctuation_only IN (0, 1)),
   ambiguous INTEGER NOT NULL DEFAULT 0 CHECK (ambiguous IN (0, 1)),
   suggested_start_year INTEGER,
   UNIQUE (value, case_sensitive)
