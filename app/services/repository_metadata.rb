@@ -35,11 +35,15 @@ class RepositoryMetadata
   end
 
   def name
+    name_evidence&.fetch(:value)
+  end
+
+  def name_evidence
     title = strings(frontmatter["title"]).first
-    return title if title
+    return { value: title, kind: "declared_metadata", source: "readme.frontmatter.title" } if title
 
     heading = document.at_css("h1, h2")&.text&.squish&.sub(/\AModel card for\b[:\s]*/i, "")&.presence
-    heading unless heading.nil? || boilerplate?(heading)
+    { value: heading, kind: "derived_heading", source: "readme.heading" } unless heading.nil? || boilerplate?(heading)
   end
 
   def boilerplate?(heading)

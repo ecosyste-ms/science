@@ -438,9 +438,13 @@ class Project < ApplicationRecord
   end
 
   def readme_name
+    readme_name_evidence&.fetch(:value)
+  end
+
+  def readme_name_evidence
     return unless has_attribute?(:readme) && readme.present? && has_attribute?(:model) && model_project?
 
-    RepositoryMetadata.new(readme: readme, brief: nil).name
+    RepositoryMetadata.new(readme: readme, brief: nil).name_evidence
   end
 
   def readme_body

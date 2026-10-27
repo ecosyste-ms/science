@@ -57,7 +57,18 @@ class PackageRepository
     card = (hub["card_data"].is_a?(Hash) ? hub["card_data"] : {}).merge(metadata.frontmatter)
     strings = metadata.method(:strings)
     names = Array.wrap(card["model-index"]).filter_map { |entry| entry["name"] if entry.is_a?(Hash) }
-    display_name = strings.call(card["model_name"]).first || (strings.call(names).first if strings.call(names).one?)
+    display_name = strings.call(card["model_name"]).first
+    name_field = "model_name"
+    if display_name.nil? && strings.call(names).one?
+      display_name = strings.call(names).first
+      name_field = "model-index"
+    end
+    name_evidence = if display_name
+      origin = metadata.frontmatter.key?(name_field) ? "readme.frontmatter" : "package.metadata.metadata.card_data"
+      { value: display_name, kind: "declared_metadata", source: "#{origin}.#{name_field}" }
+    else
+      metadata.name_evidence
+    end
     repository = (project.repository || {}).deep_dup
     repository.merge!("html_url" => url, "clone_url" => url, "full_name" => "#{parsed.namespace}/#{parsed.name}",
       "owner" => parsed.namespace, "default_branch" => "main",
@@ -82,7 +93,7 @@ class PackageRepository
     }.reject { |_, value| value.empty? }
     repository["metadata"] = (repository["metadata"] || {}).merge("model_package_purl" => package.purl,
       "source" => "packages.ecosyste.ms", "revision" => data["latest_release_number"],
-      "details" => details)
+      "details" => details, "repository_name_evidence" => name_evidence&.stringify_keys)
     displayed_package = data.merge("name" => package.name, "purl" => package.purl, "registry_url" => data["registry_url"].presence || url,
       "registry" => { "name" => package.package_registry.name, "url" => package.package_registry.url },
       "maintainers" => Array(data["maintainers"]), "advisories" => Array(data["advisories"]),

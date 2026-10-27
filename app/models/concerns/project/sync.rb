@@ -183,24 +183,48 @@ module Project::Sync
     metadata = repository["metadata"] || {}
     return if name.present? && name != metadata["derived_name"]
 
-    value = if model_project?
-      repository["name"].presence || readme_name || repository["full_name"].presence || repository_slug
-    else
-      declared_name || repository["full_name"].presence || repository_slug
-    end
-    return if value.blank?
+    evidence = display_name_evidence
+    return unless evidence
 
-    update!(name: value, repository: repository.merge("metadata" => metadata.merge("derived_name" => value)))
+    update!(name: evidence[:value], repository: repository.merge("metadata" => metadata.merge(
+      "derived_name" => evidence[:value], "derived_name_evidence" => evidence.stringify_keys)))
+  end
+
+  def display_name_evidence
+    if model_project?
+      if repository["name"].present?
+        recorded = repository.dig("metadata", "repository_name_evidence")
+        return recorded.symbolize_keys.slice(:value, :kind, :source) if recorded.is_a?(Hash) && recorded["value"] == repository["name"]
+
+        return { value: repository["name"], kind: "repository_name", source: "repository.name" }
+      end
+      readme_evidence = readme_name_evidence
+      return readme_evidence if readme_evidence
+    else
+      declared = declared_name_evidence
+      return declared if declared
+    end
+    return { value: repository["full_name"], kind: "repository_name", source: "repository.full_name" } if repository["full_name"].present?
+
+    slug = repository_slug
+    { value: slug, kind: "repository_slug", source: "project.url" } if slug.present?
   end
 
   def declared_name
+    declared_name_evidence&.fetch(:value)
+  end
+
+  def declared_name_evidence
     metadata = ProjectMetadata.new(self)
     cff_title = begin
       metadata.text(metadata.cff_document["title"])
     rescue Psych::Exception
       nil
     end
-    cff_title || metadata.text(metadata.json_document(:codemeta)["name"])
+    return { value: cff_title, kind: "declared_metadata", source: "citation_cff.title" } if cff_title
+
+    name = metadata.text(metadata.json_document(:codemeta)["name"])
+    { value: name, kind: "declared_metadata", source: "codemeta.name" } if name
   end
 
   def repos_api_url
@@ -220,7 +244,7 @@ module Project::Sync
     return unless response.success?
     data = JSON.parse(response.body)
     # Keep locally collected evidence and the marker for derived names across API refreshes.
-    local_metadata = repository["metadata"].slice("derived_name", "r_package_descriptions") if repository.is_a?(Hash) && repository["metadata"].is_a?(Hash)
+    local_metadata = repository["metadata"].slice("derived_name", "derived_name_evidence", "r_package_descriptions") if repository.is_a?(Hash) && repository["metadata"].is_a?(Hash)
     if local_metadata.present? && data.is_a?(Hash)
       data["metadata"] = (data["metadata"].is_a?(Hash) ? data["metadata"] : {}).merge(local_metadata)
     end

@@ -43,7 +43,12 @@ A name seed has this shape:
   "value": "OrbDot",
   "normalized_value": "orbdot",
   "source": "project.name",
-  "relation": "software"
+  "relation": "software",
+  "name_evidence": {
+    "kind": "unknown",
+    "source": "project.name",
+    "value": "OrbDot"
+  }
 }
 ```
 
@@ -55,6 +60,8 @@ A name seed has this shape:
 - RRIDs use uppercase `SCR_` identifiers without an optional `RRID:` prefix. Wikidata IDs use uppercase, bio.tools IDs use lowercase, and ASCL and swMATH IDs retain registry spelling.
 
 `source` identifies the metadata field, such as `codemeta.alternateName` or `citation_cff.preferred-citation.doi`. The same value can occur several times with different sources. Preserve those evidence records even if the matcher searches the string only once.
+
+Name seeds also contain `name_evidence`, with the original value, source and origin kind. Direct metadata names use `declared_metadata`; repository URL names use `repository_slug`; package names use `package_name`. Automatic display-name refreshes record their chosen source, including `derived_heading` for a model README heading and `repository_name` for repository metadata. Older automatic names without a recorded source use `derived_unknown`, while other historical display names use `unknown`. Equal text alone does not establish where a stored display name came from. Changing a display name away from its recorded automatic value prevents the old origin from being attached to it.
 
 Each package contains `package_id`, `purl`, `registry`, `ecosystem`, `search_year`, and `seeds`. Linked local package records have a `package_id`; unmatched package metadata stored on the project has `package_id: null`. PURLs omit version and subpath, and may also be `null` when missing or invalid. Registry and ecosystem fields can be missing on older metadata.
 
@@ -191,7 +198,7 @@ The file has these tables:
 | `metadata` | JSON values keyed by name: schema version, snapshot ID, start and completion times, selection rules, extractor source digest, isolation mode, and counts |
 | `projects` | Project IDs, repository URLs, Science Scores, and source timestamps |
 | `packages` | Package entries associated with projects, including nullable local package IDs and PURLs |
-| `seeds` | Project and package seeds with original values, normalized values, sources, and relations |
+| `seeds` | Project and package seeds with original values, normalized values, sources, relations and optional name/identifier evidence |
 | `project_fields` | Saved OpenAlex field assignments, names, domains, and confidence scores |
 | `project_contexts` | One row per project, with the context endpoint's JSON response in `data` |
 | `clues` | Deduplicated literal search strings, matching rules, ambiguity flags and combined start years |
@@ -248,9 +255,17 @@ The export supports these finite variants, recorded in `metadata.literal_variant
 
 Case-insensitive literals are stored in lowercase NFC with `case_sensitive = 0`. URL variants use `case_sensitive = 1`. A string with different case rules has separate rows. Prefixes and resolver forms already covered by an identifier literal do not create extra searches. No wildcard, stemming, arbitrary punctuation substitution or regular-expression expansion is performed.
 
-Ambiguous clues remain in the list with all candidate and source links. `shared_name` reuses `name_collisions` and also detects collisions introduced by whitespace folding. `ordinary_word = 1` identifies case-insensitive literals in the checked-in `config/search_seed_common_words.txt` review list, including function words such as `and`, scientific prose such as `method`, and abbreviations such as `fig`. Null means unassessed; the list is not a complete dictionary and does not measure corpus frequency. The same flag applies to matching repository slugs, package names and bare identifiers.
+Ambiguous clues remain in the list with all candidate and source links. `shared_name` reuses `name_collisions` and also detects collisions introduced by whitespace folding. `ordinary_word = 1` identifies case-insensitive literals in the checked-in `config/search_seed_common_words.txt` review list or the English dictionary extract described below. Null means unassessed. `word_evidence` is a JSON array naming each matching source, its language and its kind (`reviewed_list` or `dictionary`); an empty array is not evidence that a string is unambiguous. These checks apply equally to repository slugs, package names and bare identifiers, without measuring their frequency in paper text.
 
-`short_name` flags names under three characters. `punctuation_only` flags literals containing no Unicode letters or numbers, including separators longer than the short-name threshold and symbol-only names. `ambiguous` is true when any flag is set, allowing consumers to run those clues separately or require supporting context. Flags do not establish whether a particular occurrence is a software mention or which candidate it identifies. Schema version 2 exports predating `punctuation_only` lack that column; consumers reading older snapshots can check `PRAGMA table_info(clues)`.
+`short_name` flags names under three characters. `punctuation_only` flags literals containing no Unicode letters or numbers, including long separators and symbol-only names. `generic_name` flags exact normalized names in `config/search_seed_generic_names.txt`, such as `About`, `Content` and `Method`. This classification does not assert that the name was derived from a heading, and does not change the stored name.
+
+`non_specific_url` flags roots, namespace-only paths and known navigation pages on GitHub, GitLab.com, Bitbucket.org and Codeberg.org. For example, `github.com/owner` is flagged while `github.com/owner/repo` is retained without this flag. Query strings do not supply a missing repository path. Dedicated homepages such as `project.example/` and `project.github.io/` are not flagged merely for lacking a path. A zero flag means the rule did not identify a non-specific URL; it does not verify a repository's existence or cover every hosting service.
+
+`ambiguous` is true when any flag is set, allowing consumers to run those clues separately or require supporting context. Flags do not establish whether an occurrence is a software mention or which candidate it identifies. Schema version 2 is retained; older snapshots may lack the added columns and views. Consumers can inspect `PRAGMA table_info(clues)`, `PRAGMA table_info(seeds)` and `sqlite_master` before using them.
+
+The dictionary extract contains 39,738 lowercase, letters-only entries from the [English Speller Database](https://github.com/en-wl/wordlist). It uses size 35, American and British spellings, variant level 1, with special categories and abbreviations excluded. `config/search_seed_dictionary/source.json` records the upstream commit, extraction command, filtering steps and SHA-256 digest; `COPYRIGHT.txt` in that directory contains the upstream attribution and permission notice. Dictionary membership is evidence of an English word, not a frequency estimate or a judgement about a software mention. No dictionary evidence is supplied for other languages.
+
+To reproduce the extract, check out the revision recorded in `source.json` in the upstream repository, run `make scowl.db`, then the recorded `scowl word-list` command. Keep entries consisting entirely of Unicode letters whose spelling is already lowercase, normalize to NFC, deduplicate, sort and write one entry per line. The export checks the resulting file against its recorded digest. `metadata.word_sources` includes source descriptions, digests and the dictionary's copyright notice; reviewed and dictionary evidence remain separate, and the generic-name list has its own digest.
 
 Each clue's `suggested_start_year` is the minimum candidate year when every candidate has a known bound. Any unknown candidate makes the combined bound null. All original bounds and evidence remain available through `clue_candidates`.
 
@@ -266,3 +281,18 @@ WHERE c.value = 'star';
 ```
 
 Export counts include `search_strings`, `clue_seed_links` and `ambiguous_search_strings`. Compare search strings with seed rows to measure the effect of deduplication and variant expansion separately from candidate coverage.
+
+`clue_candidate_summary` reports distinct `project_candidates` and `package_candidates` for every clue, plus `fork_projects`, `nonfork_projects` and `unknown_fork_projects`. Repeated source evidence does not increase these counts. Package counts refer to exported package entries, which may lack a PURL or local package ID. Both the view's `count_scope` and `metadata.candidate_count_scope` say `exported_projects`: counts are limited to the selected export population and must not be presented as full-catalogue counts for a sample.
+
+`clue_candidate_details` retains each candidate and adds its repository URL, stored fork flag, upstream `fork_source_name` and `mirror_url` from the exported project context. An absent or non-boolean fork claim remains unknown. Source names are relative to the repository's host; they are claims about an upstream relationship, not proof that candidates are interchangeable. No projects are merged, and an upstream project need not be present in the export.
+
+```sql
+SELECT c.value, s.* FROM clue_candidate_summary s
+JOIN clues c ON c.id = s.clue_id
+WHERE s.project_candidates > 1
+ORDER BY s.project_candidates DESC, c.value;
+
+SELECT project_id, repository_url, fork, fork_source_name, mirror_url
+FROM clue_candidate_details
+WHERE clue_id = 123;
+```

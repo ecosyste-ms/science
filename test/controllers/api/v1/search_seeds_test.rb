@@ -176,6 +176,32 @@ class Api::V1::SearchSeedsTest < ActionDispatch::IntegrationTest
     assert_seed response.parsed_body.sole.fetch("seeds"), "doi", "10.1234/climate", "citation_bib.doi", "citation"
   end
 
+  test "name provenance distinguishes recorded origins from unknown historical names" do
+    declared = create_project(name: 'Declared', repository: { 'metadata' => {
+      'derived_name' => 'Declared', 'derived_name_evidence' => {
+        'value' => 'Declared', 'kind' => 'declared_metadata', 'source' => 'citation_cff.title',
+      },
+    } })
+    legacy = create_project(name: 'About', repository: { 'metadata' => { 'derived_name' => 'About' } })
+    curated = create_project(name: 'Curated', repository: declared.repository)
+    heading = create_project(name: 'Heading', repository: { 'metadata' => {
+      'derived_name' => 'Heading', 'derived_name_evidence' => {
+        'value' => 'Heading', 'kind' => 'derived_heading', 'source' => 'readme.heading',
+      },
+    } })
+
+    get search_seeds_api_v1_projects_url
+
+    assert_response :success
+    names = response.parsed_body.to_h { |record| [record['project_id'], record['seeds'].find { |seed| seed['source'] == 'project.name' }] }
+    assert_equal 'declared_metadata', names.fetch(declared.id).dig('name_evidence', 'kind')
+    assert_equal 'citation_cff.title', names.fetch(declared.id).dig('name_evidence', 'source')
+    assert_equal 'derived_unknown', names.fetch(legacy.id).dig('name_evidence', 'kind')
+    assert_equal 'unknown', names.fetch(curated.id).dig('name_evidence', 'kind')
+    assert_equal 'derived_heading', names.fetch(heading.id).dig('name_evidence', 'kind')
+    assert_equal 'About', names.fetch(legacy.id)['value']
+  end
+
   def create_project(**attributes)
     Project.create!({ url: "https://github.com/seeds/#{SecureRandom.hex(6)}", science_score: 50 }.merge(attributes))
   end

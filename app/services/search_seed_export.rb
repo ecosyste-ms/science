@@ -8,7 +8,7 @@ class SearchSeedExport
   COLUMNS = {
     projects: %i[project_id repository_url science_score updated_at last_synced_at search_year suggested_start_year],
     packages: %i[project_id package_id purl registry ecosystem search_year suggested_start_year],
-    seeds: %i[project_id package_entry_id type value normalized_value source relation identifier_evidence],
+    seeds: %i[project_id package_entry_id type value normalized_value source relation identifier_evidence name_evidence],
     project_fields: %i[project_id openalex_id name domain confidence_score],
     project_contexts: %i[project_id data],
   }.freeze
@@ -62,10 +62,13 @@ class SearchSeedExport
       write_metadata("package_extractor_sha256", Digest::SHA256.file(
         Rails.root.join("app/services/project_package_entries.rb")
       ).hexdigest)
-      %w[search_seed_year search_seed_clues software_identifier].each do |name|
+      %w[search_seed_year search_seed_clues search_seed_words software_identifier].each do |name|
         write_metadata("#{name}_sha256", Digest::SHA256.file(Rails.root.join("app/services/#{name}.rb")).hexdigest)
       end
       write_metadata("common_words_sha256", Digest::SHA256.file(Rails.root.join("config/search_seed_common_words.txt")).hexdigest)
+      write_metadata("generic_names_sha256", Digest::SHA256.file(Rails.root.join("config/search_seed_generic_names.txt")).hexdigest)
+      write_metadata("word_sources", SearchSeedWords.new.sources)
+      write_metadata("candidate_count_scope", "exported_projects")
       write_metadata("literal_variants", SearchSeedClues::RULES)
       write_metadata("source_isolation", "repeatable_read, read_only")
       export_projects
@@ -136,7 +139,7 @@ class SearchSeedExport
 
   def insert(table, record)
     values = COLUMNS.fetch(table).map do |column|
-      value = if %i[identifier_evidence search_year].include?(column)
+      value = if %i[identifier_evidence name_evidence search_year].include?(column)
         record[column]&.to_json
       else
         record.fetch(column)

@@ -1,0 +1,51 @@
+about
+abstract
+acknowledgements
+acknowledgments
+attention
+authors
+changelog
+citation
+contact
+content
+contents
+contributing
+dependencies
+description
+documentation
+environment
+examples
+faq
+getting started
+how to cite
+important
+install
+installation
+introduction
+license
+method
+methods
+model card
+model description
+model details
+model overview
+motivation
+news
+note
+notes
+notice
+overview
+prerequisites
+quick start
+quickstart
+readme
+requirements
+setup
+summary
+synopsis
+table of contents
+toc
+updates
+usage
+warning
+welcome

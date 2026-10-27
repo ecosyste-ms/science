@@ -1,0 +1,14 @@
+{
+  "id": "esdb",
+  "name": "English Speller Database",
+  "kind": "dictionary",
+  "language": "en",
+  "url": "https://github.com/en-wl/wordlist",
+  "revision": "1e5b7d3a72f47a71da5d28686c1dd4b397178485",
+  "extraction": "./scowl word-list 35 A,B,Z 1 --categories= --wo-poses=abbr",
+  "filter": "Keep lowercase letters-only entries; normalize to NFC; deduplicate and sort.",
+  "file": "english.txt",
+  "sha256": "4149a858db048c5ce74e8c3dffef043cec3974d78f0e154ad2e63baf0838b141",
+  "entries": 39738,
+  "copyright": "COPYRIGHT.txt"
+}

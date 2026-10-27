@@ -644,8 +644,11 @@ class ProjectSyncTest < ActiveSupport::TestCase
     SyncProjectWorker.new.perform(curated.id)
 
     assert_equal "HUMAnN", derived.reload.name
-    assert_equal({ "files" => { "readme" => "readme.md" }, "derived_name" => "HUMAnN" }, derived.repository["metadata"])
+    assert_equal({ "files" => { "readme" => "readme.md" }, "derived_name" => "HUMAnN",
+      "derived_name_evidence" => { "value" => "HUMAnN", "kind" => "declared_metadata", "source" => "citation_cff.title" } }, derived.repository["metadata"])
     assert_equal "Curated", curated.reload.name
+    SyncProjectWorker.new.perform(derived.id)
+    assert_equal 'citation_cff.title', derived.reload.repository.dig('metadata', 'derived_name_evidence', 'source')
   end
 
   test "sync does not import paper mentions" do

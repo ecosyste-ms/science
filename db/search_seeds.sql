@@ -41,7 +41,8 @@ CREATE TABLE seeds (
   normalized_value TEXT NOT NULL,
   source TEXT NOT NULL,
   relation TEXT NOT NULL,
-  identifier_evidence TEXT CHECK (identifier_evidence IS NULL OR json_valid(identifier_evidence))
+  identifier_evidence TEXT CHECK (identifier_evidence IS NULL OR json_valid(identifier_evidence)),
+  name_evidence TEXT CHECK (name_evidence IS NULL OR json_valid(name_evidence))
 );
 
 CREATE TABLE project_fields (
@@ -61,6 +62,9 @@ CREATE TABLE clues (
   ordinary_word INTEGER CHECK (ordinary_word IN (0, 1)),
   short_name INTEGER NOT NULL DEFAULT 0 CHECK (short_name IN (0, 1)),
   punctuation_only INTEGER NOT NULL DEFAULT 0 CHECK (punctuation_only IN (0, 1)),
+  non_specific_url INTEGER NOT NULL DEFAULT 0 CHECK (non_specific_url IN (0, 1)),
+  generic_name INTEGER NOT NULL DEFAULT 0 CHECK (generic_name IN (0, 1)),
+  word_evidence TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(word_evidence)),
   ambiguous INTEGER NOT NULL DEFAULT 0 CHECK (ambiguous IN (0, 1)),
   suggested_start_year INTEGER,
   UNIQUE (value, case_sensitive)
@@ -93,6 +97,26 @@ FROM clue_seeds cs
 JOIN seeds s ON s.id = cs.seed_id
 JOIN projects p ON p.project_id = s.project_id
 LEFT JOIN packages k ON k.id = s.package_entry_id;
+
+CREATE VIEW clue_candidate_details AS
+SELECT c.*, p.repository_url,
+       CASE WHEN json_type(ctx.data, '$.repository_provenance.fork.value') IN ('true', 'false')
+            THEN json_extract(ctx.data, '$.repository_provenance.fork.value') END AS fork,
+       json_extract(ctx.data, '$.repository_provenance.source_name.value') AS fork_source_name,
+       json_extract(ctx.data, '$.repository_provenance.mirror_url.value') AS mirror_url
+FROM clue_candidates c
+JOIN projects p ON p.project_id = c.project_id
+LEFT JOIN project_contexts ctx ON ctx.project_id = c.project_id;
+
+CREATE VIEW clue_candidate_summary AS
+SELECT clue_id, COUNT(DISTINCT project_id) AS project_candidates,
+       COUNT(DISTINCT package_entry_id) AS package_candidates,
+       COUNT(DISTINCT CASE WHEN fork = 1 THEN project_id END) AS fork_projects,
+       COUNT(DISTINCT CASE WHEN fork = 0 THEN project_id END) AS nonfork_projects,
+       COUNT(DISTINCT CASE WHEN fork IS NULL THEN project_id END) AS unknown_fork_projects,
+       'exported_projects' AS count_scope
+FROM clue_candidate_details
+GROUP BY clue_id;
 
 CREATE VIEW registry_coverage AS
 SELECT registry COLLATE NOCASE AS registry, ecosystem COLLATE NOCASE AS ecosystem,

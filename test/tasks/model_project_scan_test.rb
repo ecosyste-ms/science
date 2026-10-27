@@ -160,6 +160,8 @@ class ModelProjectScanTest < ActiveSupport::TestCase
 
       assert_equal expected_name, project.reload.name
       assert_equal expected_name, project.repository.dig("metadata", "derived_name")
+      expected_kind = expected_name == "Example/Model" ? "repository_name" : "derived_heading"
+      assert_equal expected_kind, project.repository.dig("metadata", "derived_name_evidence", "kind")
     end
   end
 
@@ -176,6 +178,7 @@ class ModelProjectScanTest < ActiveSupport::TestCase
     end
     project = @package.reload.published_by_project
     assert_equal "Research encoder", project.to_s
+    assert_equal 'readme.frontmatter.model_name', project.repository.dig('metadata', 'derived_name_evidence', 'source')
     assert_equal "An encoder for comparing scientific abstracts across multiple languages.", project.description
     assert_equal "Python", project.language
     assert_equal "mit", project.repository_license

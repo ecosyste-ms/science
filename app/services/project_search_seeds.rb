@@ -197,8 +197,31 @@ class ProjectSearchSeeds
       uri.host = uri.host.downcase
       uri.to_s
     end
-    { type: type, value: value, normalized_value: normalized, source: source, relation: "software" }
+    result = { type: type, value: value, normalized_value: normalized, source: source, relation: "software" }
+    result[:name_evidence] = name_evidence(source, value) if type == "name"
+    result
   rescue URI::InvalidURIError
     nil
+  end
+
+  def name_evidence(source, value)
+    if source == "project.name"
+      stored = project.repository.is_a?(Hash) ? project.repository["metadata"] : nil
+      if stored.is_a?(Hash) && stored["derived_name"] == value
+        evidence = stored["derived_name_evidence"]
+        if evidence.is_a?(Hash) && evidence["value"] == value && evidence["kind"].is_a?(String) && evidence["source"].is_a?(String)
+          return evidence.symbolize_keys.slice(:kind, :source, :value)
+        end
+        return { kind: "derived_unknown", source: "repository.metadata.derived_name", value: value }
+      end
+      return { kind: "unknown", source: source, value: value }
+    end
+
+    kind = case source
+    when "project.url", "repository.previous_names" then "repository_slug"
+    when /\A(?:package\.name|project\.packages\[\d+\]\.name)\z/ then "package_name"
+    else "declared_metadata"
+    end
+    { kind: kind, source: source, value: value }
   end
 end

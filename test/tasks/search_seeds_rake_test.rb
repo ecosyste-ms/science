@@ -214,6 +214,70 @@ class SearchSeedsRakeTest < ActiveSupport::TestCase
     end
   end
 
+  test "export records URL specificity word evidence name origins and subset collisions" do
+    original = create(Project, url: "https://github.com/clues/original", name: "SharedTool", science_score: 50,
+      repository: { "fork" => false, "homepage" => "https://project.example/" },
+      codemeta: { "alternateName" => ["ice", "perception", "cross", "About", "ClueTestName"] }.to_json,
+      packages: [{ "name" => "SharedTool", "ecosystem" => "cran" }])
+    fork = create(Project, url: "https://github.com/clues/fork", name: "SharedTool", science_score: 50,
+      repository: { "fork" => true, "source_name" => "clues/original", "homepage" => "https://GITHUB.com/" })
+    create(Project, url: "https://github.com/clues/unassessed", name: "SharedTool", science_score: 50)
+    outside = create(Project, url: "https://github.com/clues/outside", name: "SharedTool", science_score: 50)
+    ENV["LIMIT"] = "3"
+
+    capture_io { Rake::Task["search_seeds:export"].invoke }
+
+    SQLite3::Database.new(ENV.fetch("OUTPUT")) do |db|
+      assert_equal [1, 1], db.get_first_row("SELECT non_specific_url, ambiguous FROM clues WHERE value='github.com/'")
+      assert_equal 0, db.get_first_value("SELECT non_specific_url FROM clues WHERE value='project.example/'")
+      %w[ice perception cross].each do |word|
+        assert_equal 1, db.get_first_value("SELECT ordinary_word FROM clues WHERE value=?", word)
+        evidence = JSON.parse(db.get_first_value("SELECT word_evidence FROM clues WHERE value=?", word))
+        assert evidence.any? { |item| item['source'] == 'esdb' && item['language'] == 'en' && item['kind'] == 'dictionary' }
+      end
+      assert_nil db.get_first_value("SELECT ordinary_word FROM clues WHERE value='cluetestname'")
+      assert_equal [], JSON.parse(db.get_first_value("SELECT word_evidence FROM clues WHERE value='cluetestname'"))
+      assert_equal [1, 1], db.get_first_row("SELECT generic_name, ambiguous FROM clues WHERE value='about'")
+      assert_equal 'unknown', JSON.parse(db.get_first_value("SELECT name_evidence FROM seeds WHERE project_id=? AND source='project.name'", original.id)).fetch('kind')
+      assert_equal 'declared_metadata', JSON.parse(db.get_first_value("SELECT name_evidence FROM seeds WHERE normalized_value='about'")).fetch('kind')
+      assert_equal [3, 1, 1, 1, 'exported_projects'], db.get_first_row(<<~SQL)
+        SELECT project_candidates, package_candidates, fork_projects, unknown_fork_projects, count_scope
+        FROM clue_candidate_summary WHERE clue_id=(SELECT id FROM clues WHERE value='sharedtool')
+      SQL
+      assert_equal [1, 'clues/original'], db.get_first_row(<<~SQL, fork.id)
+        SELECT fork, fork_source_name FROM clue_candidate_details
+        WHERE clue_id=(SELECT id FROM clues WHERE value='sharedtool') AND project_id=?
+      SQL
+      assert_nil db.get_first_value('SELECT project_id FROM projects WHERE project_id=?', outside.id)
+      metadata = db.execute('SELECT key, value FROM metadata').to_h.transform_values { |v| JSON.parse(v) }
+      assert_equal 'exported_projects', metadata.fetch('candidate_count_scope')
+      assert_equal 'en', metadata.fetch('word_sources').find { |source| source['id'] == 'esdb' }.fetch('language')
+      assert_includes metadata.fetch('word_sources').find { |source| source['id'] == 'esdb' }.fetch('copyright_notice'), 'Kevin Atkinson'
+    end
+  end
+
+  test "URL flags respect hosting paths and preserve dedicated homepages" do
+    urls = {
+      'https://github.com/' => 1, 'https://GITHUB.com/owner' => 1,
+      'https://github.com/search?q=owner/repo' => 1, 'https://github.com/owner/repo' => 0,
+      'https://gitlab.com/group' => 1, 'https://gitlab.com/group/subgroup/repo' => 0,
+      'https://codeberg.org/' => 1, 'https://bitbucket.org/team/' => 1,
+      'https://project.example/' => 0, 'https://project.github.io/' => 0,
+    }
+    urls.each_with_index do |(url, _), i|
+      create(Project, url: "https://github.com/url-test/project#{i}", science_score: 50, repository: { 'homepage' => url })
+    end
+
+    capture_io { Rake::Task['search_seeds:export'].invoke }
+
+    SQLite3::Database.new(ENV.fetch('OUTPUT')) do |db|
+      urls.each do |url, expected|
+        literal = url.sub('https://', '').sub('GITHUB.com', 'github.com')
+        assert_equal expected, db.get_first_value('SELECT non_specific_url FROM clues WHERE value=?', literal), url
+      end
+    end
+  end
+
   test "shared clue year covers the earliest known candidate when all candidate bounds are known" do
     [2012, 2001].each_with_index do |year, index|
       create(Project, url: "https://github.com/clues/#{index}", name: "Project#{index}", science_score: 50,
