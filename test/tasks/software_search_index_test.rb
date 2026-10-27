@@ -13,7 +13,7 @@ class SoftwareSearchIndexTest < ActiveSupport::TestCase
 
   test "indexes existing projects in bounded resumable batches without changing source timestamps" do
     first = Project.create!(url: "https://github.com/search/first", name: "First", science_score: 50)
-    second = Project.create!(url: "https://github.com/search/second", name: "Second", science_score: 50)
+    second = Project.create!(url: "https://github.com/search/second", name: "Second", science_score: 1)
     third = Project.create!(url: "https://github.com/search/third", name: "Third", science_score: 50)
     timestamp = second.updated_at
     ENV["LIMIT"] = "1"

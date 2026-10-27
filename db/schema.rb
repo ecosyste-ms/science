@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_27_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_27_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -740,7 +740,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_27_120000) do
     t.index ["reviewed"], name: "index_projects_on_reviewed"
     t.index ["science_score"], name: "index_projects_on_science_score"
     t.index ["search_identifiers"], name: "index_projects_on_search_identifiers", opclass: :jsonb_path_ops, using: :gin
+    t.index ["name"], name: "index_projects_on_search_name", opclass: :gin_trgm_ops, where: "(science_score > (0)::double precision)", using: :gin
     t.index ["search_names"], name: "index_projects_on_search_names", opclass: :gin_trgm_ops, using: :gin
+    t.index ["url"], name: "index_projects_on_search_url", opclass: :gin_trgm_ops, where: "(science_score > (0)::double precision)", using: :gin
     t.index ["url"], name: "index_projects_on_url", unique: true
   end
 

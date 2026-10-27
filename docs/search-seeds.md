@@ -153,6 +153,10 @@ The request reads stored metadata without fetching or indexing it. Empty arrays 
 
 ## Search and lookup
 
+The main search box uses `/projects/search`. It matches project names and repository URLs, plus indexed aliases and published package names. Matching is case insensitive and treats `%` and `_` literally. Complete historical repository URLs also match their indexed aliases. Results include visible projects with a positive Science Score, retain the keyword and language filters, and sort by combined science and ranking score with project ID breaking ties.
+
+Confirmed linked Wikidata labels and aliases contribute names to the shared index and seed exports. Each name records its language, source field, catalogue record and project link in `name_evidence`. Ambiguous links contribute no names; when several confirmed projects share a name, they remain separate results. A failed source refresh retains names from the last retrieved record, while a missing record removes them on index refresh.
+
 `GET /api/v1/software/lookup?q=orbdot&kind=name` finds exact normalized names or identifiers. Supported kinds are `name` (the default), `repository_url`, `homepage_url`, `doi`, `purl`, `rrid`, `wikidata`, `biotools`, `ascl`, and `swmath`. Names use lowercase Unicode NFC. DOI resolver URLs are accepted, URL paths retain case, and PURLs are normalized without a version or subpath. Identifier extraction and lookup share normalization; for example, `kind=rrid&q=rrid:scr_015687` queries `SCR_015687`.
 
 `GET /api/v1/software/search?q=orbit` finds names containing the supplied text, including project names, aliases, and published package names. Search requires at least three characters. Matching is case insensitive and literal, so `%` and `_` are ordinary characters. Results are ordered by project ID, without relevance or confidence scores.
@@ -161,7 +165,7 @@ Both endpoints return `query`, `kind`, `match`, `projects`, and `next_after_id`.
 
 Set `limit` between 1 and 25 (default 10). Pass `next_after_id` as `after_id` with the same query and kind until it is null. The cursor is a project ID. The result is a live view: metadata updates can change matches between pages, and a page can be empty while still returning a cursor if indexed candidates no longer match their current metadata. A missing result does not prove a project is absent from Science.
 
-These routes only read stored data. Names and identifiers are indexed on the `projects` table in `search_identifiers` (JSONB), with `search_names` for substring search and `search_indexed_at` for freshness. PostgreSQL GIN indexes support exact containment and trigram name search. Committed project metadata, published package, repository alias and external identifier changes queue index refreshes, including bulk registry imports. Other bulk writes that bypass callbacks require a reindex. Evidence is extracted from current metadata for the selected page.
+These routes only read stored data. Names and identifiers are indexed on the `projects` table in `search_identifiers` (JSONB), with `search_names` for substring search and `search_indexed_at` for freshness. The index covers positive-score projects for main search; the software API and seed export retain their scientific threshold of 20. PostgreSQL GIN indexes support exact containment and trigram searches. Committed project metadata, published package, repository alias and external identifier changes queue index refreshes, including bulk registry imports. Other bulk writes that bypass callbacks require a reindex. API evidence is extracted from current metadata for the selected page; main-search aliases reflect the last completed index refresh.
 
 After deploying the migration, populate the fields once from the configured Science database:
 

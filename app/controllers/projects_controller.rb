@@ -37,7 +37,7 @@ class ProjectsController < ApplicationController
     @scope = Project.visible.includes(project_fields: :field).where('science_score > 0')
 
     if params[:q].present?
-      @scope = @scope.where("url ILIKE ?", "%#{params[:q]}%")
+      @scope = @scope.merge(SoftwareSearch.projects(params[:q]))
     end
 
     if params[:keywords].present?
@@ -48,7 +48,7 @@ class ProjectsController < ApplicationController
       @scope = @scope.language(params[:language])
     end
 
-    @scope = @scope.order(Arel.sql('(science_score + COALESCE(score, 0)) DESC'))
+    @scope = @scope.order(Arel.sql('(science_score + COALESCE(score, 0)) DESC'), id: :asc)
 
     @pagy, @projects = pagy(@scope, limit: 20)
   end

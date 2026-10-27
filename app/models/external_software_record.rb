@@ -2,9 +2,8 @@ class ExternalSoftwareRecord < ApplicationRecord
   has_many :project_external_software_records, dependent: :delete_all
   has_many :projects, through: :project_external_software_records
 
-  after_save_commit :enqueue_software_search_index
+  after_commit :enqueue_software_search_index
   before_destroy :remember_search_projects, prepend: true
-  after_destroy_commit :enqueue_software_search_index
 
   def remember_search_projects
     @search_project_ids = project_external_software_records.pluck(:project_id)

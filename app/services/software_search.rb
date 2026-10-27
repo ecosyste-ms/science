@@ -1,6 +1,20 @@
 class SoftwareSearch
   KINDS = (%w[name repository_url homepage_url purl] + SoftwareIdentifier::SCHEMES).freeze
 
+  def self.projects(query)
+    value = query.to_s.strip.unicode_normalize(:nfc)
+    pattern = "%#{Project.sanitize_sql_like(value)}%"
+    scope = Project.where("projects.url::text ILIKE :pattern OR projects.name ILIKE :pattern OR projects.search_names LIKE :names",
+      pattern: pattern, names: "%#{Project.sanitize_sql_like(value.downcase)}%")
+    if value.match?(%r{\Ahttps?://}i)
+      url = normalize(value, "repository_url")
+      scope = scope.or(Project.where("search_identifiers @> ?::jsonb", { repository_url: [url] }.to_json))
+    end
+    scope
+  rescue ArgumentError
+    scope
+  end
+
   def self.results(query:, kind: "name", limit: 10, after_id: 0, search: false)
     raise ArgumentError, "kind must be one of: #{KINDS.join(', ')}" unless KINDS.include?(kind)
     unless query.is_a?(String) && query.strip.length.between?(1, 2000)

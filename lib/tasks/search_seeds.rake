@@ -1,11 +1,11 @@
 namespace :search_seeds do
-  desc "Index software names and identifiers for API lookup (optional: LIMIT=n AFTER_ID=n)"
+  desc "Index software names and identifiers for web search and API lookup (optional: LIMIT=n AFTER_ID=n)"
   task index: :environment do
     after_id = Integer(ENV.fetch("AFTER_ID", "0"), 10)
     limit = Integer(ENV["LIMIT"], 10) if ENV["LIMIT"].present?
     raise ArgumentError, "AFTER_ID must be nonnegative and LIMIT positive" if after_id.negative? || (limit && limit < 1)
 
-    scope = Project.visible.scientific.select(:id).where("id > ?", after_id)
+    scope = Project.visible.where('science_score > 0').select(:id).where("id > ?", after_id)
     scope = scope.limit(limit) if limit
     count = 0
     scope.find_each(batch_size: 250) do |project|

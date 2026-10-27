@@ -48,18 +48,16 @@ class ProjectSearchSeeds
     seeds.concat(codemeta_seeds)
     seeds.concat(zenodo_seeds)
     seeds.concat(external_identifier_seeds)
+    seeds.concat(wikidata_name_seeds)
     joss = project.joss_metadata.is_a?(Hash) ? project.joss_metadata : {}
     seeds.concat(doi_seeds(joss["doi"], "joss_metadata.doi", "publication"))
     seeds.compact.uniq
   end
 
   def external_identifier_seeds
-    project.project_external_software_records.filter_map do |link|
+    confirmed_software_links.filter_map do |link|
       record = link.external_software_record
       scheme = record.source.downcase
-      next unless link.match_status.casecmp?("matched") && SoftwareIdentifier::SCHEMES.include?(scheme)
-      next unless %w[ok error].include?(record.status.downcase) && record.retrieved_at
-      next unless %w[source_code_repository software software_version software_concept].include?(link.relationship)
 
       {
         type: scheme, value: record.identifier,
@@ -77,6 +75,45 @@ class ProjectSearchSeeds
     end
   end
 
+  def confirmed_software_links
+    project.project_external_software_records.select do |link|
+      record = link.external_software_record
+      link.match_status.casecmp?("matched") && SoftwareIdentifier::SCHEMES.include?(record.source.downcase) &&
+        %w[ok error].include?(record.status.downcase) && record.retrieved_at &&
+        %w[source_code_repository software software_version software_concept].include?(link.relationship.downcase)
+    end
+  end
+
+  def wikidata_name_seeds
+    confirmed_software_links.select { |link| link.external_software_record.source.casecmp?("wikidata") }.flat_map do |link|
+      record = link.external_software_record
+      next [] unless record.metadata.is_a?(Hash)
+
+      %w[labels aliases].flat_map do |field|
+        translations = record.metadata[field]
+        next [] unless translations.is_a?(Hash)
+
+        translations.flat_map do |language, items|
+          (field == "labels" ? [items] : Array.wrap(items)).filter_map do |item|
+            next unless item.is_a?(Hash)
+
+            source = "external_software_records.metadata.#{field}.#{language}"
+            entry = seed("name", item["value"], source)
+            next unless entry
+
+            entry.merge(name_evidence: {
+              kind: field == "labels" ? "registry_label" : "registry_alias", source: source,
+              value: entry[:value], language: language, scheme: "wikidata",
+              external_software_record_id: record.id, project_external_software_record_id: link.id,
+              record_url: record.record_url, relationship: link.relationship, evidence: link.evidence,
+              retrieved_at: record.retrieved_at, source_status: record.status,
+            })
+          end
+        end
+      end
+    end
+  end
+
   def repository_alias_seeds(repository)
     host = URI.parse(project.repository_url).host
     previous_names = repository["previous_names"]
@@ -90,13 +127,18 @@ class ProjectSearchSeeds
         uri if RepositoryUrlNormalizer.normalize(value)
       end
     else
-      project.repository_aliases.filter_map { |record| RepositoryUrlNormalizer.parse(record.url) }
+      []
     end
-    urls.flat_map do |uri|
+    aliases = urls.map { |uri| [uri, "repository.previous_names"] }
+    aliases += project.repository_aliases.filter_map do |record|
+      uri = RepositoryUrlNormalizer.parse(record.url)
+      [uri, "project_repository_aliases.url"] if uri
+    end
+    aliases.flat_map do |uri, source|
       url = "https://#{uri.host}#{uri.path}"
       [
-        seed("repository_url", url, "repository.previous_names"),
-        seed("name", uri.path.split("/").last&.delete_suffix(".git"), "repository.previous_names"),
+        seed("repository_url", url, source),
+        seed("name", uri.path.split("/").last&.delete_suffix(".git"), source),
       ]
     end
   rescue URI::InvalidURIError
@@ -218,7 +260,7 @@ class ProjectSearchSeeds
     end
 
     kind = case source
-    when "project.url", "repository.previous_names" then "repository_slug"
+    when "project.url", "repository.previous_names", "project_repository_aliases.url" then "repository_slug"
     when /\A(?:package\.name|project\.packages\[\d+\]\.name)\z/ then "package_name"
     else "declared_metadata"
     end
