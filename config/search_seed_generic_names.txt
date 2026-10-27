@@ -2,6 +2,7 @@ about
 abstract
 acknowledgements
 acknowledgments
+als
 attention
 authors
 changelog
@@ -17,6 +18,8 @@ environment
 examples
 faq
 getting started
+gis
+hcp
 how to cite
 important
 install

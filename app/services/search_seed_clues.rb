@@ -33,7 +33,7 @@ class SearchSeedClues
     when "name"
       [[value.gsub(/\p{Space}+/, " ").strip, "whitespace", false]]
     when "repository_url", "homepage_url"
-      [[value.sub(%r{\Ahttps?://}, ""), "schemeless_url", true]]
+      [[value.sub(%r{\Ahttps?://}, ""), "schemeless_url", !github_repository_url?(value)]]
     when "doi", "rrid", "wikidata", "biotools"
       [[value, "identifier", false]]
     when "ascl"
@@ -43,6 +43,19 @@ class SearchSeedClues
     else
       raise ArgumentError, "unsupported seed type: #{type}"
     end
+  end
+
+  def self.github_repository_url?(value)
+    uri = URI.parse(value)
+    return false unless %w[http https].include?(uri.scheme) && %w[github.com www.github.com].include?(uri.host)
+    return false unless uri.userinfo.nil? && uri.query.nil? && uri.fragment.nil? && uri.port == uri.default_port
+
+    path = uri.path.match(%r{\A/([a-z0-9-]+)/([a-z0-9_.-]+)/?\z}i)
+    return false unless path && !%w[. ..].include?(path[2])
+
+    !HOST_PAGES.fetch("github.com").include?(path[1].downcase)
+  rescue URI::InvalidURIError
+    false
   end
 
   def self.populate(database)

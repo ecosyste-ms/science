@@ -180,6 +180,70 @@ class SearchSeedsRakeTest < ActiveSupport::TestCase
     end
   end
 
+  test "export merges GitHub repository case variants and retains source spellings and candidates" do
+    first = create(Project, url: "https://github.com/clues/first", name: "github.com/clues/mixedtool", science_score: 50,
+      codemeta: { "codeRepository" => "https://GitHub.com/Clues/MixedTool" }.to_json,
+      packages: [{ "name" => "MixedTool", "homepage" => "http://github.com/CLUES/MIXEDTOOL" }])
+    second = create(Project, url: "https://github.com/clues/second", science_score: 50,
+      repository: { "homepage" => "https://github.com/clues/mixedtool" })
+
+    capture_io { Rake::Task["search_seeds:export"].invoke }
+
+    SQLite3::Database.new(ENV.fetch("OUTPUT")) do |db|
+      assert_equal [[0]], db.execute("SELECT case_sensitive FROM clues WHERE value='github.com/clues/mixedtool'")
+      assert_equal [first.id, second.id], db.execute(<<~SQL).flatten
+        SELECT DISTINCT project_id FROM clue_candidates
+        WHERE clue_id=(SELECT id FROM clues WHERE value='github.com/clues/mixedtool') ORDER BY project_id
+      SQL
+      assert_equal 1, db.get_first_value(<<~SQL)
+        SELECT COUNT(DISTINCT package_entry_id) FROM clue_candidates
+        WHERE clue_id=(SELECT id FROM clues WHERE value='github.com/clues/mixedtool')
+      SQL
+      assert_equal ["http://github.com/CLUES/MIXEDTOOL", "https://GitHub.com/Clues/MixedTool", "https://github.com/clues/mixedtool"], db.execute(<<~SQL).flatten.sort
+        SELECT DISTINCT s.value FROM seeds s JOIN clue_seeds cs ON cs.seed_id=s.id JOIN clues c ON c.id=cs.clue_id
+        WHERE c.value='github.com/clues/mixedtool' AND s.type IN ('repository_url', 'homepage_url')
+      SQL
+      assert_equal ['schemeless_url'], db.execute(<<~SQL).flatten
+        SELECT DISTINCT cs.variant FROM clue_seeds cs JOIN seeds s ON s.id=cs.seed_id JOIN clues c ON c.id=cs.clue_id
+        WHERE c.value='github.com/clues/mixedtool' AND s.type IN ('repository_url', 'homepage_url')
+      SQL
+      assert_equal 0, db.get_first_value('SELECT COUNT(*) FROM seeds s WHERE NOT EXISTS (SELECT 1 FROM clue_seeds cs WHERE cs.seed_id=s.id)')
+    end
+  end
+
+  test "GitHub case normalization preserves other URL distinctions" do
+    urls = {
+      'https://www.github.com/Clues/MixedTool' => ['www.github.com/clues/mixedtool', 0],
+      'https://github.com/Clues/MixedTool/' => ['github.com/clues/mixedtool/', 0],
+      'https://github.com/Clues/MixedTool.git' => ['github.com/clues/mixedtool.git', 0],
+      'https://github.com/Clues/MixedTool/blob/Main/README.md' => ['github.com/Clues/MixedTool/blob/Main/README.md', 1],
+      'https://github.com/Clues/MixedTool/blob/main/readme.md' => ['github.com/Clues/MixedTool/blob/main/readme.md', 1],
+      'https://github.com/Clues/MixedTool?tab=Readme' => ['github.com/Clues/MixedTool?tab=Readme', 1],
+      'https://github.com/Clues/MixedTool#Section' => ['github.com/Clues/MixedTool#Section', 1],
+      'https://github.com/Clues/MixedTool?' => ['github.com/Clues/MixedTool?', 1],
+      'https://github.com/Topics/Science' => ['github.com/Topics/Science', 1],
+      'https://github.com:8443/Clues/MixedTool' => ['github.com:8443/Clues/MixedTool', 1],
+      'https://github.com//Clues/MixedTool' => ['github.com//Clues/MixedTool', 1],
+      'https://github.com/Clues/%4DixedTool' => ['github.com/Clues/%4DixedTool', 1],
+      'https://clues.github.io/Docs/Index' => ['clues.github.io/Docs/Index', 1],
+      'https://github.com.example.org/Clues/MixedTool' => ['github.com.example.org/Clues/MixedTool', 1],
+      'https://gitlab.com/Clues/MixedTool' => ['gitlab.com/Clues/MixedTool', 1],
+    }
+    create(Project, url: "https://github.com/clues/url-variants", science_score: 50,
+      packages: urls.keys.map.with_index { |url, i| { "name" => "Tool#{i}", "homepage" => url } })
+
+    capture_io { Rake::Task["search_seeds:export"].invoke }
+
+    SQLite3::Database.new(ENV.fetch("OUTPUT")) do |db|
+      urls.each do |original, (literal, rule)|
+        assert_equal [literal, rule], db.get_first_row(<<~SQL, original), original
+          SELECT c.value, c.case_sensitive FROM clues c JOIN clue_seeds cs ON cs.clue_id=c.id
+          JOIN seeds s ON s.id=cs.seed_id WHERE s.value=? AND s.type='homepage_url'
+        SQL
+      end
+    end
+  end
+
   test "export flags ordinary words and punctuation without removing names or source links" do
     project = create(Project, url: "https://github.com/clues/and", name: "AND", science_score: 50,
       packages: [{ "name" => "and", "ecosystem" => "cran" }],
@@ -211,6 +275,45 @@ class SearchSeedsRakeTest < ActiveSupport::TestCase
         WHERE clue_id = (SELECT id FROM clues WHERE value = 'and')
       SQL
       assert_equal 0, db.get_first_value("SELECT COUNT(*) FROM seeds s WHERE NOT EXISTS (SELECT 1 FROM clue_seeds cs WHERE cs.seed_id = s.id)")
+    end
+  end
+
+  test "export flags scientific words calendar names and reviewed acronyms while retaining evidence" do
+    project = create(Project, url: "https://github.com/clues/qgis", name: "QGIS", science_score: 50,
+      codemeta: { "alternateName" => %w[substrate outlier metrics plasticity December Monday HCP ALS TensorFlow ClueTestName] }.to_json)
+    record = create(ExternalSoftwareRecord, source: "wikidata", identifier: "Q123", status: "ok",
+      retrieved_at: Time.current, next_refresh_at: 1.day.from_now,
+      metadata: { "aliases" => { "pl" => [{ "language" => "pl", "value" => "GIS" }] } })
+    create(ProjectExternalSoftwareRecord, project: project, external_software_record: record,
+      match_status: "matched", relationship: "source_code_repository")
+
+    capture_io { Rake::Task["search_seeds:export"].invoke }
+
+    SQLite3::Database.new(ENV.fetch("OUTPUT")) do |db|
+      %w[substrate outlier metrics plasticity december monday].each do |word|
+        assert_equal [1, 1], db.get_first_row("SELECT ordinary_word, ambiguous FROM clues WHERE value=?", word), word
+        evidence = JSON.parse(db.get_first_value("SELECT word_evidence FROM clues WHERE value=?", word))
+        source = %w[december monday].include?(word) ? 'reviewed' : 'esdb'
+        assert evidence.any? { |item| item['source'] == source }, word
+      end
+      %w[gis hcp als].each do |word|
+        assert_equal [1, 1], db.get_first_row("SELECT generic_name, ambiguous FROM clues WHERE value=?", word), word
+        assert_equal [project.id], db.execute(<<~SQL, word).flatten
+          SELECT project_id FROM clue_candidates WHERE clue_id=(SELECT id FROM clues WHERE value=?)
+        SQL
+      end
+      assert_equal ['pl', record.id], db.get_first_row(<<~SQL)
+        SELECT json_extract(s.name_evidence, '$.language'), json_extract(s.name_evidence, '$.external_software_record_id')
+        FROM seeds s JOIN clue_seeds cs ON cs.seed_id=s.id JOIN clues c ON c.id=cs.clue_id WHERE c.value='gis'
+      SQL
+      %w[tensorflow cluetestname].each do |word|
+        assert_equal [nil, 0], db.get_first_row("SELECT ordinary_word, ambiguous FROM clues WHERE value=?", word), word
+      end
+      metadata = db.execute('SELECT key, value FROM metadata').to_h.transform_values { |value| JSON.parse(value) }
+      dictionary = metadata.fetch('word_sources').find { |source| source['id'] == 'esdb' }
+      assert_equal Digest::SHA256.file(Rails.root.join('config/search_seed_dictionary/english.txt')).hexdigest, dictionary.fetch('sha256')
+      assert_equal File.readlines(Rails.root.join('config/search_seed_dictionary/english.txt')).size, dictionary.fetch('entries')
+      assert_equal 0, db.get_first_value('SELECT COUNT(*) FROM seeds s WHERE NOT EXISTS (SELECT 1 FROM clue_seeds cs WHERE cs.seed_id=s.id)')
     end
   end
 
