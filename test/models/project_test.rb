@@ -153,7 +153,8 @@ class ProjectTest < ActiveSupport::TestCase
     assert result[:score] > 0
     assert result[:breakdown][:has_citation_file][:present]
     assert result[:breakdown][:has_codemeta][:present]
-    assert result[:breakdown][:has_doi_in_readme][:present]
+    assert result[:breakdown][:has_publication_identifier][:present]
+    assert_equal "has_publication_identifier", result[:breakdown][:has_doi_in_readme][:duplicate_of]
   end
 
   test "calculate_science_score_breakdown handles missing data gracefully" do

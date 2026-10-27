@@ -4,6 +4,8 @@ class ScienceScoreCalculator
   RESEARCH_TOOLING_BONUS = 0.20
   SCIENTIFIC_DEPENDENCY_BONUS = 0.08
   RESOLVED_PAPER_SCORE = 20.0
+  REFERENCE_SIGNALS = %i[has_resolved_paper has_publication_identifier has_peer_review_badge].freeze
+  PUBLICATION_IDENTIFIER_KINDS = %w[doi arxiv pmid acl_id openreview_id semantic_scholar_corpus_id].freeze
   CITATION_STRENGTHS = {
     cff: 1.0,
     bibtex: 0.5,
@@ -54,6 +56,8 @@ class ScienceScoreCalculator
     @breakdown = {
       has_citation_file: check_citation_file,
       has_resolved_paper: check_resolved_paper,
+      has_publication_identifier: check_publication_identifier,
+      has_peer_review_badge: check_peer_review_badge,
       has_codemeta: check_codemeta_file,
       has_zenodo: check_zenodo_file,
       has_doi_in_readme: check_doi_in_readme,
@@ -71,8 +75,7 @@ class ScienceScoreCalculator
       @breakdown[:joss_vocabulary_similarity] = check_joss_vocabulary_similarity
     end
 
-    suppress_duplicate_zenodo_academic_link
-    suppress_resolved_paper_duplicates
+    suppress_reference_duplicates
     calculate_score
   end
 
@@ -85,31 +88,47 @@ class ScienceScoreCalculator
     }
   end
 
-  def suppress_resolved_paper_duplicates
-    return unless @breakdown[:has_resolved_paper][:present]
+  def check_publication_identifier
+    identifiers = [project.readme, project.citation_file].filter_map(&:presence).flat_map do |content|
+      extractor = FilePaperCandidates.new("content" => content)
+      rows = extractor.extract.map { |row| [row["identifier_kind"], row["identifier"]] }
+      rows + extractor.identifiers(content)
+    end.select do |kind, value|
+      PUBLICATION_IDENTIFIER_KINDS.include?(kind) &&
+        !(kind == "doi" && value.match?(Project::DOI_IMAGE_SUFFIX_PATTERN))
+    end.uniq
+    {
+      present: identifiers.any?,
+      description: "Publication or archive identifiers",
+      details: identifiers.any? ? "Recognized identifiers; no resolution required; reference evidence capped at 20 points" : nil,
+      identifiers: identifiers.map { |kind, value| { kind: kind, value: value } }
+    }
+  end
+
+  def check_peer_review_badge
+    badges = ResearchReviewBadges.extract(project.readme)
+    {
+      present: badges.any?,
+      description: "Research software review badge",
+      details: badges.any? ? "Badge present: #{badges.pluck(:program).uniq.join(', ')}; review status not checked" : nil,
+      badges: badges
+    }
+  end
+
+  def suppress_reference_duplicates
     return if project.joss_metadata.present?
 
-    keys = %i[has_doi_in_readme has_academic_links]
+    reference = REFERENCE_SIGNALS.find { |key| @breakdown[key][:present] }
+    return unless reference
+
+    keys = %i[has_doi_in_readme has_academic_links] + (REFERENCE_SIGNALS - [reference])
     keys << :has_citation_file if @breakdown[:has_citation_file][:strength] == CITATION_STRENGTHS[:bibtex]
     keys.each do |key|
       signal = @breakdown[key]
       next unless signal[:present]
 
-      signal.merge!(present: false, duplicate_of: "has_resolved_paper")
+      signal.merge!(present: false, duplicate_of: reference.to_s)
     end
-  end
-
-  def suppress_duplicate_zenodo_academic_link
-    academic_links = @breakdown[:has_academic_links]
-    doi = @breakdown[:has_doi_in_readme]
-    return unless academic_links[:sites] == ["zenodo.org"]
-    return unless doi[:archive_dois].to_i.positive?
-
-    academic_links.merge!(
-      present: false,
-      details: "Zenodo link already counted by archive DOI",
-      duplicate_of: "has_doi_in_readme"
-    )
   end
 
   def calculate_score
@@ -144,7 +163,6 @@ class ScienceScoreCalculator
         has_citation_file: 0.16,
         has_codemeta: 0.13,
         has_zenodo: 0.15,
-        has_doi_in_readme: 0.13,
         has_academic_links: 0.08,
         has_academic_committers: 0.05,
         has_institutional_owner: 0.10,
@@ -161,10 +179,11 @@ class ScienceScoreCalculator
         weighted_score += weight * (value[:strength] || 1.0)
       end
 
-      final_score = (weighted_score / scoring_weights.values.sum) * 100
+      final_score = weighted_score * 100
 
-      if @breakdown[:has_resolved_paper][:present]
-        @breakdown[:has_resolved_paper][:score] = RESOLVED_PAPER_SCORE
+      reference = REFERENCE_SIGNALS.find { |key| @breakdown[key][:present] }
+      if reference
+        @breakdown[reference][:score] = RESOLVED_PAPER_SCORE
         final_score += RESOLVED_PAPER_SCORE
       end
 

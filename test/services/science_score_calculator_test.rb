@@ -249,14 +249,14 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     doi = result[:breakdown][:has_doi_in_readme]
     links = result[:breakdown][:has_academic_links]
 
-    assert_equal 13.0, result[:score]
+    assert_equal 20.0, result[:score]
     assert_equal 1, doi[:archive_dois]
     refute links[:present]
     assert_equal ["zenodo.org"], links[:sites]
-    assert_equal "has_doi_in_readme", links[:duplicate_of]
+    assert_equal "has_publication_identifier", links[:duplicate_of]
   end
 
-  test "calculate retains a distinct academic link alongside an archive DOI" do
+  test "calculate caps archive and preprint identifiers together" do
     @project.readme = <<~README
       Archive: https://doi.org/10.5281/zenodo.1234
       Preprint: https://arxiv.org/abs/1234.5678
@@ -266,8 +266,8 @@ class ScienceScoreCalculatorTest < ActiveSupport::TestCase
     result = ScienceScoreCalculator.new(@project).calculate
     links = result[:breakdown][:has_academic_links]
 
-    assert_equal 21.0, result[:score]
-    assert links[:present]
+    assert_equal 20.0, result[:score]
+    refute links[:present]
     assert_equal ["arxiv.org", "zenodo.org"], links[:sites]
   end
 

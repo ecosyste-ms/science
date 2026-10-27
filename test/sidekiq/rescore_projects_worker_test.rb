@@ -52,7 +52,7 @@ class RescoreProjectsWorkerTest < ActiveSupport::TestCase
 
       first.update!(readme: "https://doi.org/10.1234/new-evidence")
       RescoreProjectsWorker.new.perform
-      assert_equal 13, first.reload.science_score
+      assert_equal 20, first.reload.science_score
     end
   end
 
@@ -88,7 +88,7 @@ class RescoreProjectsWorkerTest < ActiveSupport::TestCase
 
     assert_equal 1, result[:failed]
     assert_equal 2, result[:checked]
-    assert_equal 13, last.reload.science_score
+    assert_equal 20, last.reload.science_score
     assert_equal 0, hidden.reload.science_score
     assert_equal last.id.to_s, state["after_id"]
   ensure

@@ -165,7 +165,8 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     @project.update!(joss_metadata: nil)
     RepositoryScanWorker.new.perform(@project.id)
     assert_equal citation, @project.reload.citation_file
-    assert @project.science_score_breakdown.dig("breakdown", "has_citation_file", "present")
+    assert @project.science_score_breakdown.dig("breakdown", "has_publication_identifier", "present")
+    assert_equal "has_publication_identifier", @project.science_score_breakdown.dig("breakdown", "has_citation_file", "duplicate_of")
     assert_equal 0.5, @project.science_score_breakdown.dig("breakdown", "has_citation_file", "strength")
     before_score = @project.science_score
     assert_empty @project.project_papers
@@ -186,7 +187,7 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     assert_equal Digest::SHA256.hexdigest(citation), evidence.fetch("file_sha256")
     assert_includes evidence.fetch("occurrences").sole.fetch("raw"), publisher_url
     assert_equal 20, @project.science_score_breakdown.dig("breakdown", "has_resolved_paper", "score")
-    assert_in_delta 12, @project.science_score - before_score
+    assert_equal before_score, @project.science_score
     assert_equal "has_resolved_paper", @project.science_score_breakdown.dig("breakdown", "has_citation_file", "duplicate_of")
     assert_requested request, times: 2
   ensure

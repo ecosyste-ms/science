@@ -31,16 +31,19 @@ base score = sum(signal points * signal strength)
 | CITATION file | 16 | Stored citation file content |
 | CodeMeta file | 13 | A reported CodeMeta filename or downloaded software metadata |
 | Zenodo file | 15 | A Zenodo filename reported by repository metadata |
-| DOI reference | 13 | A DOI extracted from the README or JOSS metadata |
 | Academic link | 8 | A recognized publication or archive host in the README |
 | Academic committers | 5 | Fraction of committers matched to academic organization domains |
 | Institutional owner | 10 | Organization owner matched to a research organization domain |
 | Scientific registry | 7 | A package published through CRAN or Bioconductor |
 | JOSS vocabulary | 13 | Vocabulary score of at least 30 from the active JOSS model |
 
-The weights total 100 percent. Citation evidence accepts detected citation filenames or downloaded content. Structured BibTeX in the README supplies the half-strength citation signal (8 points) when the separate citation content is unstructured or absent. CodeMeta accepts a filename advertised by repository metadata or downloaded JSON containing a nonblank string `name` and a `SoftwareSourceCode` or `SoftwareApplication` type. Zenodo checks the advertised filename. DOI details separate common archive prefixes, including Zenodo and Figshare, from journal references, but both count as the same scoring signal.
+These are fixed point contributions; removing a signal does not increase the others. Citation evidence accepts detected citation filenames or downloaded content. Structured BibTeX in the README supplies the half-strength citation signal (8 points) when the separate citation content is unstructured or absent. CodeMeta accepts a filename advertised by repository metadata or downloaded JSON containing a nonblank string `name` and a `SoftwareSourceCode` or `SoftwareApplication` type. Zenodo checks the advertised filename.
 
-A project with a resolved paper relationship receives a single 20-point publication contribution. This replaces DOI, academic-link and half-strength BibTeX contributions with one allowance, regardless of the number of papers. The saved breakdown retains those signals with `duplicate_of: has_resolved_paper`. Full-strength CFF software metadata and other independent signals still count. Existing penalties apply afterwards. The rule is shared by model and software projects; a reference does not establish implementation or authorship. JOSS scoring remains separate.
+A project receives one 20-point reference contribution when it has a recognized publication or archive identifier, a research software review badge, or a resolved paper relationship. Identifiers are extracted from stored README and citation contents using the citation import parser: DOI, arXiv, PMID, ACL Anthology, OpenReview and Semantic Scholar Corpus IDs. DOI image paths, generic PDF links and title-only candidates do not qualify as identifiers. No resolver request or successful paper import is required.
+
+Badge detection recognizes pyOpenSci's `peer-reviewed.svg` and Shields badges, rOpenSci's numbered `status.svg` and `stats.svg` badges, and JOSS paper status badges. Images linked to numbered pyOpenSci or rOpenSci review issues also qualify, including older shortened badge URLs. Presence in the README is sufficient; the detector does not fetch the badge or check acceptance status. The saved breakdown records the programme, badge URL and review identifier and URL where available.
+
+Identifiers, badges and resolved papers share the same 20-point allowance. This replaces DOI, academic-link and half-strength BibTeX contributions, regardless of the number of references or badges. The saved breakdown retains overlapping signals with `duplicate_of` pointing to the credited signal. Full-strength CFF software metadata and other independent signals still count. Existing penalties apply afterwards. The rule is shared by model and software projects; a reference does not establish implementation or authorship, and a badge does not establish completed review. Imported JOSS metadata retains its separate scoring path.
 
 Academic committer strength is the sum of matched organization strengths divided by the number of committers. An institutional owner uses the matched domain strength directly. ROR company records can identify an institution for owner browsing, but company domains are excluded from academic email evidence.
 

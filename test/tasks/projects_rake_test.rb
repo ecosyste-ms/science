@@ -382,13 +382,13 @@ class ProjectsRakeTest < ActiveSupport::TestCase
       Rake::Task["projects:rescore_overlapping_science_signals"].execute
     end
 
-    assert_equal 13.0, zenodo.reload.science_score
-    assert_equal "has_doi_in_readme", zenodo.science_score_breakdown.dig(
+    assert_equal 20.0, zenodo.reload.science_score
+    assert_equal "has_publication_identifier", zenodo.science_score_breakdown.dig(
       :breakdown,
       :has_academic_links,
       :duplicate_of
     )
-    assert_equal 4.2, homework.reload.science_score
+    assert_equal 4.0, homework.reload.science_score
     assert_includes homework.science_score_breakdown.dig(
       :breakdown,
       :negative_indicators,

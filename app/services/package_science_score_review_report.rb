@@ -3,6 +3,9 @@ class PackageScienceScoreReviewReport
   MAX_LIMIT = 100
   DEFAULT_MAX_SCORE = 40.0
   NON_JOSS_POSITIVE_SIGNALS = %i[
+    has_resolved_paper
+    has_publication_identifier
+    has_peer_review_badge
     has_citation_file
     has_codemeta
     has_zenodo
