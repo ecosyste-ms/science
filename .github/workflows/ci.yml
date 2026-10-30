@@ -1,15 +1,27 @@
 name: CI
 
-on: [push]
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
 
 jobs:
   verify:
+    permissions:
+      contents: read
     name: Build
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     services:
       postgres:
-        image: postgres:14
+        image: postgres:14@sha256:0472f5295d05c211cc42b3daa5e84a128e390c5267b60ced9fe044bcf4edfdb8
         env:
           POSTGRES_USER: science
           POSTGRES_DB: science_test
@@ -21,31 +33,48 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       redis:
-        image: redis
+        image: redis@sha256:4764ce37931aac77c0d033680b339b19b4a4a81772204d268947cb851212d0ac
         ports:
         - 6379:6379
-        options: --entrypoint redis-server
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Install dependent libraries
         run: |
           sudo apt-get update
-          sudo apt-get install -y libpq-dev libidn11-dev libarchive-tools
+          sudo apt-get install --no-install-recommends -y libpq-dev libidn11-dev libarchive-tools
       - name: Install Brief
+        working-directory: ${{ runner.temp }}
+        env:
+          TOOL_SHA256: 6ea53649f378bb8b9e76e6126daf518b534898de598ce7b2508cc1c17a4c76ab
         run: |
-          curl --fail --location https://github.com/git-pkgs/brief/releases/download/v0.14.2/brief_0.14.2_linux_amd64.tar.gz | sudo tar -xz -C /usr/local/bin brief
+          curl -fsSL --output brief.tar.gz "https://github.com/git-pkgs/brief/releases/download/v0.14.2/brief_0.14.2_linux_amd64.tar.gz"
+          echo "${TOOL_SHA256}  brief.tar.gz" | sha256sum --check
+          sudo tar -xz -f brief.tar.gz -C /usr/local/bin brief
           brief --version
       - name: Install swhid
+        working-directory: ${{ runner.temp }}
+        env:
+          TOOL_VERSION: 0.1.0
+          TOOL_SHA256: 6573c1aced9872cd89a3b95fa54cd573d3e11295b6481ead54f1c38e35eb1a93
         run: |
-          curl --fail --location https://github.com/andrew/swhid-go/releases/download/v0.1.0/swhid_0.1.0_linux_amd64.tar.gz | sudo tar -xz -C /usr/local/bin swhid
+          curl -fsSL --output swhid.tar.gz "https://github.com/andrew/swhid-go/releases/download/v${TOOL_VERSION}/swhid_${TOOL_VERSION}_linux_amd64.tar.gz"
+          echo "${TOOL_SHA256}  swhid.tar.gz" | sha256sum --check
+          sudo tar -xz -f swhid.tar.gz -C /usr/local/bin swhid
           swhid --version
       - name: Set up Node
-        uses: actions/setup-node@v7.1.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 15
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1.335.0
         with:
           bundler-cache: true
 
