@@ -1,5 +1,11 @@
 namespace :open_alex do
   namespace :software do
+    desc "Start software discovery or repeat a completed OpenAlex sweep"
+    task harvest: :environment do
+      record = ExternalSoftwareImport.harvest_open_alex
+      puts JSON.generate(queued: record.present?)
+    end
+
     desc "Start or resume software discovery (LIMIT=100 FROM=YYYY-MM-DD UNTIL=YYYY-MM-DD RESTART=true)"
     task sweep: :environment do
       record = ExternalSoftwareImport.start_open_alex(
@@ -16,9 +22,9 @@ namespace :open_alex do
       puts JSON.generate(queued: record.present?)
     end
 
-    desc "Queue due OpenAlex source metadata hydration (LIMIT=25, maximum 1000)"
+    desc "Queue due OpenAlex source metadata hydration (LIMIT=100, maximum 1000)"
     task refresh: :environment do
-      limit = Integer(ENV.fetch("LIMIT", "25"), 10)
+      limit = Integer(ENV.fetch("LIMIT", "100"), 10)
       raise ArgumentError, "limit must be between 1 and 1000" unless limit.between?(1, 1000)
       ids = ExternalSoftwareRecord.where(source: "openalex").where("next_refresh_at <= ?", Time.current)
         .order(:next_refresh_at, :id).limit(limit).pluck(:identifier)

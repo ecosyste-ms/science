@@ -6,17 +6,19 @@ Project ingestion creates or updates repository URLs from known research-softwar
 
 `open_alex:software:sweep` enumerates software works in lexical OpenAlex ID order, using cursor pagination with at most 100 works per page. It saves each page before processing and persists the records and checkpoint in one transaction. The default creation cutoff is yesterday; `UNTIL` fixes another cutoff. `FROM` switches to an update-date window ending at `UNTIL`. Resume keeps the saved window and page size. A completed sweep can be repeated with `RESTART=true`; use overlapping update windows to capture later changes. The API key needs access to OpenAlex's creation/update date filters. Cursors do not provide a fixed snapshot, and a software-only update window cannot report records reclassified away from software.
 
+Every Sunday at 04:35 UTC, `open_alex:software:harvest` starts the first sweep or repeats a completed sweep through the previous day, preserving the saved page size. An unfinished sweep keeps its cursor, pending page, lease and retry time. Every ten minutes, `open_alex:software:resume open_alex:software:refresh` recovers due unfinished work and queues up to 100 due source records in hydration batches of 25. Existing discovery and project-sync schedules process the resulting repository candidates.
+
 ```bash
 bundle exec rake open_alex:software:sweep
 bundle exec rake open_alex:software:status
 bundle exec rake open_alex:software:resume
-LIMIT=25 bundle exec rake open_alex:software:refresh
+LIMIT=100 bundle exec rake open_alex:software:refresh
 FROM=2026-11-01 UNTIL=2026-11-03 RESTART=true bundle exec rake open_alex:software:sweep
 ```
 
 Enumeration saves `openalex` source records independently of source metadata retrieval. The refresh task queues bounded DataCite and Zenodo hydration, retaining OpenAlex metadata and the original repository-link fields. Direct repository locations are also accepted, including when a DOI is outside DataCite's coverage. Records without repository links remain cached, and DataCite dataset classifications or missing Zenodo deposits supply no repository candidates. Due hydrated records enter the existing `external_software:discover` path, which matches current URLs and aliases, respects hidden owners, creates minimal projects and requests normal repository enrichment.
 
-Links have relationship `repository_candidate`. They establish repository identity without confirming software content or contributing software identifier seeds or Science Score. GitHub repositories can contain datasets, and software-labelled deposits require content assessment before stronger claims. Later refreshes recheck individual OpenAlex works and withdraw links after reclassification; missing works hide their references. No OpenAlex software tasks are scheduled automatically.
+Links have relationship `repository_candidate`. They establish repository identity without confirming software content or contributing software identifier seeds or Science Score. GitHub repositories can contain datasets, and software-labelled deposits require content assessment before stronger claims. Later refreshes recheck individual OpenAlex works and withdraw links after reclassification; missing works hide their references.
 
 ## Scheduled discovery
 

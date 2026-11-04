@@ -46,6 +46,8 @@ class ExternalSoftwareImport < ApplicationRecord
           start_wikidata(page_size: record.page_size, restart: true)
         elsif source == "jss"
           start_jss(page_size: record.page_size, restart: true)
+        elsif source == "openalex"
+          start_open_alex(page_size: record.page_size, restart: true)
         else
           start_catalogue(source: source, page_size: record.page_size, restart: true)
         end
@@ -120,6 +122,11 @@ class ExternalSoftwareImport < ApplicationRecord
     end
     start_catalogue(source: "openalex", page_size: page_size, restart: restart,
       initial_cursor: OpenAlexSoftwareClient.initial_cursor(from: from, until_time: until_time))
+  end
+
+  def self.harvest_open_alex
+    start_open_alex
+    resweep("openalex")
   end
 
   def self.resumable_open_alex

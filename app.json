@@ -169,6 +169,14 @@
       "schedule": "40 3 * * *"
     },
     {
+      "command": "bundle exec rake open_alex:software:resume open_alex:software:refresh",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "command": "bundle exec rake open_alex:software:harvest",
+      "schedule": "35 4 * * 0"
+    },
+    {
       "command": "bundle exec rake swhids:refresh",
       "schedule": "10 */6 * * *"
     },
