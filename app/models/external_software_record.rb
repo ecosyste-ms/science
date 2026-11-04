@@ -32,7 +32,7 @@ class ExternalSoftwareRecord < ApplicationRecord
   end
 
   def self.source_name(source)
-    { "wikidata" => "Wikidata", "biotools" => "bio.tools", "ascl" => "ASCL", "mloss" => "JMLR MLOSS", "jors" => "JORS", "jss" => "JSS", "swmath" => "swMATH", "rrid" => "RRID", "doi" => "Software DOIs" }.fetch(source, source.humanize)
+    { "wikidata" => "Wikidata", "biotools" => "bio.tools", "ascl" => "ASCL", "mloss" => "JMLR MLOSS", "jors" => "JORS", "jss" => "JSS", "swmath" => "swMATH", "rrid" => "RRID", "doi" => "Software DOIs", "openalex" => "OpenAlex" }.fetch(source, source.humanize)
   end
 
   def record_url
@@ -56,6 +56,8 @@ class ExternalSoftwareRecord < ApplicationRecord
       "#{RridClient::RESOLVER_URL}/#{RridClient.identifier(identifier)}"
     when "doi"
       SoftwareDoiClient.record_url(identifier)
+    when "openalex"
+      "https://openalex.org/#{OpenAlexSoftwareClient.identifier(identifier)}"
     end
   rescue ArgumentError
     nil

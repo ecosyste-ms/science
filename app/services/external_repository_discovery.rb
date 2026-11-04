@@ -2,7 +2,7 @@ require "digest"
 
 class ExternalRepositoryDiscovery
   IMPORTERS = { "wikidata" => WikidataImporter, "biotools" => BiotoolsImporter,
-    "ascl" => AsclImporter, "mloss" => MlossImporter, "jors" => JorsImporter, "jss" => JssImporter, "swmath" => SwmathImporter, "rrid" => RridImporter }.freeze
+    "ascl" => AsclImporter, "mloss" => MlossImporter, "jors" => JorsImporter, "jss" => JssImporter, "swmath" => SwmathImporter, "rrid" => RridImporter, "openalex" => OpenAlexSoftwareImporter }.freeze
 
   def self.due
     ExternalSoftwareRecord.where(source: IMPORTERS.keys, status: "ok")
@@ -133,6 +133,8 @@ class ExternalRepositoryDiscovery
       record.metadata.except("articles_count")
     when "rrid"
       record.metadata.slice("item", "rrid", "recordValid", "distributions", "graph", "supportingAwards", "organization", "legal")
+    when "openalex"
+      OpenAlexSoftwareImporter.new.repository_statements(record.metadata)
     else
       record.metadata.except("additionDate", "lastUpdate")
     end

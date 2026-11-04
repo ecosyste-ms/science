@@ -77,8 +77,10 @@ class OpenAlexApiClient
     response = connection.get(path, params.merge(api_key: api_key))
     unless response.success?
       Rails.logger.warn("OpenAlex request failed: status=#{response.status}")
+      reason = JSON.parse(response.body)["error"] rescue nil
+      detail = ": #{reason}" if ["Plan upgrade required", "API key required for cursor paging"].include?(reason)
       raise RequestError.new(
-        "OpenAlex request failed with HTTP #{response.status}",
+        "OpenAlex request failed with HTTP #{response.status}#{detail}",
         status: response.status, retry_at: retry_at(response)
       )
     end
