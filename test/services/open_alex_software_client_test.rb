@@ -23,7 +23,7 @@ class OpenAlexSoftwareClientTest < ActiveSupport::TestCase
     state["select"] = "id,type"
     client = OpenAlexSoftwareClient.new(client: OpenAlexApiClient.new(api_key: "test-key"))
     assert_raises(ArgumentError) { client.page(after: JSON.generate(state)) }
-    assert_not_requested :any, /api.openalex.org/
+    assert_not_requested :any, %r{\Ahttps://api\.openalex\.org/}
   end
 
   test "a record before the preceding page boundary is rejected" do

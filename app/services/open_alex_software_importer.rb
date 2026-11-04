@@ -54,8 +54,9 @@ class OpenAlexSoftwareImporter < ExternalSoftwareImporter
     available_doi = doi && !doi["missing"]
     return [] if available_doi && !SoftwareDoiImporter.new.software?(doi)
     entries = available_doi ? SoftwareDoiImporter.new.repository_statements(doi) : []
-    locations = Array(work["locations"]) + [work["primary_location"]].compact
-    locations.uniq.each_with_index do |location, index|
+    locations = Array(work["locations"]).each_with_index.map { |location, index| [location, "openalex.locations[#{index}]"] }
+    locations << [work["primary_location"], "openalex.primary_location"] if work["primary_location"]
+    locations.uniq(&:first).each do |location, path|
       next unless location.is_a?(Hash)
       url = location["landing_page_url"]
       next unless url.is_a?(String) && url.length.between?(1, 2000)
@@ -63,7 +64,7 @@ class OpenAlexSoftwareImporter < ExternalSoftwareImporter
       normalized = RepositoryUrlNormalizer.normalize(url)
       next unless uri && uri.userinfo.nil? && %w[http https].include?(uri.scheme) && [80, 443].include?(uri.port)
       next unless normalized && repository_url?(normalized)
-      entries << { repository_url: url, source_field: "openalex.locations[#{index}].landing_page_url" }
+      entries << { repository_url: url, source_field: "#{path}.landing_page_url" }
     end
     entries.map { |entry| entry.merge(openalex_work_id: work.fetch("id"),
       source_record_url: work.fetch("id"), collection_url: entry[:collection_url] || "#{OpenAlexApiClient::BASE_URL}/works") }.uniq

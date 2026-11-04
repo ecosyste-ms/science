@@ -22,7 +22,7 @@ class ImportOpenAlexSoftwareWorker
   rescue OpenAlexApiClient::RequestError => error
     if token
       time = import.defer(token, error.retry_at || 1.hour.from_now, error.message)
-      unless [400, 401, 403].include?(error.status) || error.message.include?("Plan upgrade required")
+      unless [400, 401, 403].include?(error.status) || error.reason == "Plan upgrade required"
         self.class.perform_at(time, import.id) if time
       end
     end

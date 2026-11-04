@@ -250,4 +250,53 @@ class ImportOpenAlexSoftwareWorkerTest < ActiveSupport::TestCase
     assert_equal "https://github.com/research/tool", Project.sole.url
     assert_equal true, ExternalSoftwareRecord.sole.metadata.dig("software_doi", "missing")
   end
+
+  test "primary locations retain their own provenance through repository discovery" do
+    payload = work("W100", url: "https://github.com/research/primary")
+    payload["locations"] = []
+    page([payload])
+    start
+    ImportOpenAlexSoftwareWorker.perform_one
+    task("open_alex:software:refresh")
+    SyncOpenAlexSoftwareWorker.perform_one
+    DiscoverExternalRepositoriesWorker.new.perform
+
+    evidence = Project.sole.project_external_software_records.sole.evidence.sole
+    assert_equal "openalex.primary_location.landing_page_url", evidence["source_field"]
+  end
+
+  test "deduplicating locations preserves their original array positions" do
+    payload = work("W100", url: "https://github.com/research/first")
+    payload["locations"] = [payload["primary_location"], payload["primary_location"],
+      { "landing_page_url" => "https://github.com/research/last" }]
+    page([payload])
+    start
+    ImportOpenAlexSoftwareWorker.perform_one
+    task("open_alex:software:refresh")
+    SyncOpenAlexSoftwareWorker.perform_one
+    DiscoverExternalRepositoriesWorker.new.perform
+
+    first = Project.find_by!(url: "https://github.com/research/first")
+    last = Project.find_by!(url: "https://github.com/research/last")
+    assert_equal "openalex.locations[0].landing_page_url", first.project_external_software_records.sole.evidence.sole["source_field"]
+    assert_equal "openalex.locations[2].landing_page_url", last.project_external_software_records.sole.evidence.sole["source_field"]
+  end
+
+  test "sweep retry decisions use the exact reason instead of diagnostic text" do
+    import = start
+    ["Plan upgrade required", "Temporary error mentioning Plan upgrade required"].each do |reason|
+      stub_request(:get, "https://api.openalex.org/works").with(query: hash_including("api_key" => "test-key"))
+        .to_return(status: 429, headers: { "Retry-After" => "3600" }, body: { error: reason }.to_json)
+      ImportOpenAlexSoftwareWorker.clear
+      Faraday::Retry::Middleware.any_instance.expects(:sleep).never
+      ImportOpenAlexSoftwareWorker.new.perform(import.id)
+
+      assert_equal(reason == "Plan upgrade required" ? 0 : 1, ImportOpenAlexSoftwareWorker.jobs.size)
+      assert_includes import.reload.last_error, reason
+      assert_equal "*", JSON.parse(import.cursor)["token"]
+      travel_to import.next_run_at + 1.second
+    end
+  ensure
+    travel_back
+  end
 end
