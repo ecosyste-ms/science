@@ -8,6 +8,8 @@ Project ingestion creates or updates repository URLs from known research-softwar
 
 Every Sunday at 04:35 UTC, `open_alex:software:harvest` starts the first sweep or repeats a completed sweep through the previous day, preserving the saved page size. An unfinished sweep keeps its cursor, pending page, lease and retry time. Every ten minutes, `open_alex:software:resume open_alex:software:refresh` recovers due unfinished work and queues up to 100 due source records in hydration batches of 25. Existing discovery and project-sync schedules process the resulting repository candidates.
 
+OpenAlex HTTP 400, 401, 403 and the exact `Plan upgrade required` reason block automatic retries. The sweep retains its cursor, and affected metadata records have status `blocked`. After fixing the request or API access, run `bundle exec rake open_alex:software:retry` to queue the saved sweep and unblock up to 100 metadata records for the next refresh. `LIMIT` raises that bound to at most 1000; repeat the command for more blocked records. Ordinary rate limits retain their retry times.
+
 ```bash
 bundle exec rake open_alex:software:sweep
 bundle exec rake open_alex:software:status

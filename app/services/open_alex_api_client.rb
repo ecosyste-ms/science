@@ -21,6 +21,10 @@ class OpenAlexApiClient
       @reason = reason
       super(message)
     end
+
+    def terminal?
+      [400, 401, 403].include?(status) || reason == "Plan upgrade required"
+    end
   end
 
   attr_reader :api_key, :connection

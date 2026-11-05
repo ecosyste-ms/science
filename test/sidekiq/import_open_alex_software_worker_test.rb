@@ -294,6 +294,8 @@ class ImportOpenAlexSoftwareWorkerTest < ActiveSupport::TestCase
       assert_equal(reason == "Plan upgrade required" ? 0 : 1, ImportOpenAlexSoftwareWorker.jobs.size)
       assert_includes import.reload.last_error, reason
       assert_equal "*", JSON.parse(import.cursor)["token"]
+      assert_equal(reason == "Plan upgrade required", import.open_alex_blocked?)
+      task("open_alex:software:retry") if import.open_alex_blocked?
       travel_to import.next_run_at + 1.second
     end
   ensure

@@ -6,6 +6,7 @@ class OpenAlexSoftwareSchedulingTest < ActiveSupport::TestCase
   include JournalSchedule
 
   setup do
+    Sidekiq::Testing.server_middleware { |chain| chain.add SidekiqUniqueJobs::Middleware::Server }
     Rails.application.load_tasks unless Rake::Task.task_defined?("open_alex:software:harvest")
     @previous_env = %w[LIMIT FROM UNTIL RESTART OPENALEX_API_KEY].index_with { |key| ENV[key] }
     %w[LIMIT FROM UNTIL RESTART].each { |key| ENV.delete(key) }
@@ -23,6 +24,157 @@ class OpenAlexSoftwareSchedulingTest < ActiveSupport::TestCase
   def clear_hydration
     SyncOpenAlexSoftwareWorker.clear
     SidekiqUniqueJobs::Digests.new.delete_by_pattern("#{SyncOpenAlexSoftwareWorker.get_sidekiq_options.fetch('lock_prefix')}:*")
+  end
+
+  def invoke_task(name)
+    Rake::Task[name].reenable
+    JSON.parse(capture_io { Rake::Task[name].invoke }.first)
+  end
+
+  [[400, "Invalid query"], [401, "Invalid API key"], [403, "Forbidden"],
+    [429, "Plan upgrade required"]].each do |status, reason|
+    test "HTTP #{status} #{reason} blocks recovery until explicitly retried" do
+      scheduled_journal_tasks("open_alex:software", "harvest")
+      first = stub_request(:get, "https://api.openalex.org/works").with(query: hash_including("cursor" => "*"))
+        .to_return(body: { results: [{ id: "https://openalex.org/W100", type: "software" }],
+          meta: { next_cursor: "saved/+==" } }.to_json)
+      ImportOpenAlexSoftwareWorker.perform_one
+      import = ExternalSoftwareImport.find_by!(source: "openalex")
+      checkpoint = import.cursor
+      failed = stub_request(:get, "https://api.openalex.org/works").with(query: hash_including("cursor" => "saved/+=="))
+        .to_return(status: status, headers: { "Retry-After" => "3600" }, body: { error: reason }.to_json)
+      travel_to import.next_run_at + 1.second do
+        ImportOpenAlexSoftwareWorker.perform_one
+      end
+      assert import.reload.open_alex_blocked?
+      assert_nil import.lease_token
+      assert_includes import.last_error, reason
+      assert_nil import.completed_at
+      assert_equal JSON.parse(checkpoint), JSON.parse(import.cursor).except("blocked")
+
+      travel 8.days do
+        assert_equal false, scheduled_journal_tasks("open_alex:software", "resume").first["queued"]
+        assert_equal [{ "queued" => false }], scheduled_journal_tasks("open_alex:software", "harvest")
+        invoke_task("open_alex:software:sweep")
+        ImportOpenAlexSoftwareWorker.new.perform(import.id)
+        assert_empty ImportOpenAlexSoftwareWorker.jobs
+        assert_equal true, invoke_task("open_alex:software:status").dig("import", "blocked")
+        assert_requested failed, times: 1
+
+        recovered = stub_request(:get, "https://api.openalex.org/works").with(query: hash_including("cursor" => "saved/+=="))
+          .to_return(body: { results: [{ id: "https://openalex.org/W101", type: "software" }],
+            meta: { next_cursor: nil } }.to_json)
+        assert_equal({ "import_queued" => true, "records_unblocked" => 0 }, invoke_task("open_alex:software:retry"))
+        assert_equal checkpoint, import.reload.cursor
+        ImportOpenAlexSoftwareWorker.perform_one
+        assert import.reload.completed_at
+        assert_equal 2, import.items_processed
+        refute import.open_alex_blocked?
+        assert_requested recovered, times: 2
+        assert_requested first, times: 1
+      end
+    end
+  end
+
+  [true, false].each do |retry_header|
+    test "hydration plan restriction with retry header #{retry_header} stays blocked until explicitly retried" do
+      scheduled_journal_tasks("open_alex:software", "harvest")
+      works = [{ id: "https://openalex.org/W100", type: "software", display_name: "Original tool" },
+        { id: "https://openalex.org/W101", type: "software" }]
+      stub_request(:get, "https://api.openalex.org/works").with(query: hash_including("cursor" => "*"))
+        .to_return(body: { results: works, meta: { next_cursor: nil } }.to_json)
+      ImportOpenAlexSoftwareWorker.perform_one
+      scheduled_journal_tasks("open_alex:software", "resume")
+      SyncOpenAlexSoftwareWorker.perform_one
+      record = ExternalSoftwareRecord.find_by!(identifier: "W100")
+      original = record.metadata
+
+      failed = stub_request(:get, "https://api.openalex.org/works/W100")
+        .with(query: hash_including("api_key" => "test-key"))
+        .to_return(status: 429, headers: retry_header ? { "Retry-After" => "3600" } : {},
+          body: { error: "Plan upgrade required" }.to_json)
+      stub_request(:get, "https://api.openalex.org/works/W101")
+        .with(query: hash_including("api_key" => "test-key"))
+        .to_return(body: works.last.to_json)
+      Faraday::Retry::Middleware.any_instance.stubs(:sleep)
+      travel 31.days do
+        scheduled_journal_tasks("open_alex:software", "resume")
+        SyncOpenAlexSoftwareWorker.perform_one
+        assert_equal "blocked", record.reload.status
+        assert_equal original, record.metadata
+        assert_includes record.last_error, "Plan upgrade required"
+        assert_equal "ok", ExternalSoftwareRecord.find_by!(identifier: "W101").status
+        assert_empty SyncOpenAlexSoftwareWorker.jobs
+      end
+
+      travel 40.days do
+        clear_hydration
+        assert_equal 0, scheduled_journal_tasks("open_alex:software", "resume").last["queued"]
+        SyncOpenAlexSoftwareWorker.new.perform(["W100"])
+        assert_empty SyncOpenAlexSoftwareWorker.jobs
+        scheduled_journal_tasks("open_alex:software", "harvest")
+        ImportOpenAlexSoftwareWorker.perform_one
+        assert_equal "blocked", record.reload.status
+        assert_requested failed, times: retry_header ? 1 : 3
+
+        recovered = stub_request(:get, "https://api.openalex.org/works/W100")
+          .with(query: hash_including("api_key" => "test-key"))
+          .to_return(body: works.first.merge(display_name: "Recovered tool").to_json)
+        assert_equal({ "import_queued" => false, "records_unblocked" => 1 }, invoke_task("open_alex:software:retry"))
+        assert_equal 1, scheduled_journal_tasks("open_alex:software", "resume").last["queued"]
+        SyncOpenAlexSoftwareWorker.perform_one
+        assert_equal "ok", record.reload.status
+        assert_equal "Recovered tool", record.metadata.dig("openalex", "display_name")
+        assert_nil record.last_error
+        assert_requested recovered, times: retry_header ? 2 : 4
+      end
+    end
+  end
+
+  test "explicit retry only unblocks the bounded OpenAlex population" do
+    3.times do |index|
+      ExternalSoftwareRecord.create!(source: "openalex", identifier: "W#{100 + index}",
+        status: "blocked", next_refresh_at: 1.day.from_now, last_error: "Plan upgrade required")
+    end
+    other = ExternalSoftwareRecord.create!(source: "ascl", identifier: "1010.083", status: "blocked", next_refresh_at: Time.current)
+    ENV["LIMIT"] = "2"
+    assert_equal({ "import_queued" => false, "records_unblocked" => 2 }, invoke_task("open_alex:software:retry"))
+    assert_equal 1, ExternalSoftwareRecord.where(source: "openalex", status: "blocked").count
+    assert_equal "blocked", other.reload.status
+    assert_empty ImportOpenAlexSoftwareWorker.jobs
+    ENV["LIMIT"] = "1001"
+    assert_raises(ArgumentError) { invoke_task("open_alex:software:retry") }
+    assert_equal 1, ExternalSoftwareRecord.where(source: "openalex", status: "blocked").count
+  end
+
+  test "ordinary hydration rate limits keep their retry time and recover automatically" do
+    work = { id: "https://openalex.org/W100", type: "software", display_name: "Research tool" }
+    record = ExternalSoftwareRecord.create!(source: "openalex", identifier: "W100", status: "ok",
+      metadata: { openalex: work }, next_refresh_at: 1.day.ago)
+    request = stub_request(:get, "https://api.openalex.org/works/W100")
+      .with(query: hash_including("api_key" => "test-key"))
+      .to_return(status: 429, headers: { "Retry-After" => "7200" },
+        body: { error: "Temporary error mentioning Plan upgrade required" }.to_json)
+    Faraday::Retry::Middleware.any_instance.expects(:sleep).never
+    assert_equal 1, scheduled_journal_tasks("open_alex:software", "resume").last["queued"]
+    SyncOpenAlexSoftwareWorker.perform_one
+    assert_equal "error", record.reload.status
+    assert_in_delta 2.hours.from_now.to_f, record.next_refresh_at.to_f, 2
+    assert_equal 1, SyncOpenAlexSoftwareWorker.jobs.size
+    assert_operator SyncOpenAlexSoftwareWorker.jobs.sole.fetch("at"), :>=, record.next_refresh_at.to_f
+    travel 10.minutes do
+      assert_equal 0, scheduled_journal_tasks("open_alex:software", "resume").last["queued"]
+    end
+    assert_requested request, times: 1
+    stub_request(:get, "https://api.openalex.org/works/W100")
+      .with(query: hash_including("api_key" => "test-key"))
+      .to_return(body: work.to_json)
+    travel_to Time.at(SyncOpenAlexSoftwareWorker.jobs.sole.fetch("at")) + 1.second do
+      SyncOpenAlexSoftwareWorker.perform_one
+    end
+    assert_equal "ok", record.reload.status
+    assert_nil record.last_error
+    assert_empty SyncOpenAlexSoftwareWorker.jobs
   end
 
   test "weekly schedule starts the first sweep and its worker stores the returned page" do

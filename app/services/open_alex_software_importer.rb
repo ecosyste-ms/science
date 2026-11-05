@@ -7,6 +7,7 @@ class OpenAlexSoftwareImporter < ExternalSoftwareImporter
       id = OpenAlexSoftwareClient.identifier(work.fetch("id"))
       record = record_for(id, started_at)
       record.with_lock do
+        next if record.status == "blocked"
         next if record.attempted_at && record.attempted_at >= started_at
         next if record.metadata["openalex"] == work && record.retrieved_at
         record.update!(metadata: record.metadata.merge("openalex" => work), status: "pending",
@@ -22,7 +23,7 @@ class OpenAlexSoftwareImporter < ExternalSoftwareImporter
     failures = []
     ids.each do |id|
       record = ExternalSoftwareRecord.find_by(source: SOURCE, identifier: id)
-      next unless record && record.next_refresh_at <= Time.current
+      next unless record && record.status != "blocked" && record.next_refresh_at <= Time.current
       started_at = Time.current
       begin
         work = record.status == "pending" ? record.metadata.fetch("openalex") : OpenAlexSoftwareClient.new.record(id)
@@ -35,6 +36,13 @@ class OpenAlexSoftwareImporter < ExternalSoftwareImporter
       rescue SoftwareDoiClient::Error, OpenAlexApiClient::RequestError, ArgumentError => error
         if error.is_a?(OpenAlexApiClient::RequestError) && error.status == 404
           persist(id, { "missing" => true }, {}, started_at)
+          next
+        end
+        if error.is_a?(OpenAlexApiClient::RequestError) && error.terminal?
+          record.with_lock do
+            next if record.attempted_at && record.attempted_at > started_at
+            record.update!(status: "blocked", attempted_at: started_at, last_error: error.message)
+          end
           next
         end
         retry_at = error.respond_to?(:retry_at) && error.retry_at ? error.retry_at : 1.hour.from_now

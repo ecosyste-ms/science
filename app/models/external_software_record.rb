@@ -15,7 +15,19 @@ class ExternalSoftwareRecord < ApplicationRecord
   end
 
   validates :source, :identifier, :next_refresh_at, presence: true
-  validates :status, inclusion: { in: %w[pending ok missing error] }
+  validates :status, inclusion: { in: %w[pending ok missing error blocked] }
+
+  def self.retry_open_alex(limit: 100)
+    raise ArgumentError, "limit must be between 1 and 1000" unless limit.is_a?(Integer) && limit.between?(1, 1000)
+
+    where(source: "openalex", status: "blocked").order(:id).limit(limit).sum do |record|
+      record.with_lock do
+        next 0 unless record.status == "blocked"
+        record.update!(status: "error", next_refresh_at: Time.current, last_error: nil)
+        1
+      end
+    end
+  end
 
   def self.wikidata_refresh_ids(limit: 100)
     raise ArgumentError, "limit must be between 1 and 1000" unless limit.is_a?(Integer) && limit.between?(1, 1000)

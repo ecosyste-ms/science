@@ -130,8 +130,30 @@ class ExternalSoftwareImport < ApplicationRecord
   end
 
   def self.resumable_open_alex
-    where(source: "openalex", completed_at: nil).where("next_run_at <= ?", Time.current)
+    record = where(source: "openalex", completed_at: nil).where("next_run_at <= ?", Time.current)
       .where("lease_expires_at IS NULL OR lease_expires_at <= ?", Time.current).first
+    record unless record&.open_alex_blocked?
+  end
+
+  def open_alex_blocked?
+    source == "openalex" && JSON.parse(cursor)["blocked"] == true
+  end
+
+  def block_open_alex(token, error)
+    with_lock do
+      return unless source == "openalex" && lease_token == token
+      update!(cursor: JSON.generate(JSON.parse(cursor).merge("blocked" => true)),
+        last_error: error.to_s.truncate(1000), lease_token: nil, lease_expires_at: nil)
+    end
+  end
+
+  def retry_open_alex
+    with_lock do
+      return false unless open_alex_blocked?
+      update!(cursor: JSON.generate(JSON.parse(cursor).except("blocked")),
+        next_run_at: Time.current, last_error: nil)
+      true
+    end
   end
 
   def self.start_catalogue(source:, page_size: nil, restart: false, initial_cursor: nil)
@@ -200,7 +222,7 @@ class ExternalSoftwareImport < ApplicationRecord
   end
 
   def enqueue
-    return if completed_at
+    return if completed_at || open_alex_blocked?
     worker = { "biotools" => ImportBiotoolsWorker, "ascl" => ImportAsclWorker, "mloss" => ImportMlossWorker,
       "swmath" => ImportSwmathWorker, "wikidata" => ImportWikidataWorker,
       "rrid_seeds" => ImportRridSeedsWorker, "rrid" => ImportRridWorker,
@@ -210,7 +232,7 @@ class ExternalSoftwareImport < ApplicationRecord
 
   def claim
     with_lock do
-      return if completed_at || next_run_at > Time.current || (lease_expires_at && lease_expires_at > Time.current)
+      return if completed_at || open_alex_blocked? || next_run_at > Time.current || (lease_expires_at && lease_expires_at > Time.current)
       update!(lease_token: SecureRandom.uuid, lease_expires_at: Time.current + LEASE_DURATION)
       lease_token
     end
@@ -285,6 +307,7 @@ class ExternalSoftwareImport < ApplicationRecord
       lease_expires_at: lease_expires_at, last_error: last_error,
     }
     result[:page] = result.delete(:after).to_i if source == "biotools"
+    result[:blocked] = open_alex_blocked? if source == "openalex"
     result
   end
 end
