@@ -1,6 +1,10 @@
 {
   "cron": [
     {
+      "command": "bundle exec rake jev:tick",
+      "schedule": "* * * * *"
+    },
+    {
       "command": "bundle exec rake projects:rescore",
       "schedule": "* * * * *"
     },

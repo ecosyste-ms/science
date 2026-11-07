@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_27_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_07_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -237,6 +237,100 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_27_130000) do
     t.string "user"
     t.string "uuid"
     t.index ["project_id"], name: "index_issues_on_project_id"
+  end
+
+  create_table "jev_discoveries", force: :cascade do |t|
+    t.bigint "jev_run_id", null: false
+    t.bigint "project_id"
+    t.string "repository_url", null: false
+    t.string "source", null: false
+    t.string "sampling_method", null: false
+    t.string "sample_group", null: false
+    t.jsonb "source_metadata", default: {}, null: false
+    t.jsonb "evidence", default: {}, null: false
+    t.string "evidence_fingerprint"
+    t.string "status", default: "pending_screen", null: false
+    t.string "classification", default: "uncertain", null: false
+    t.float "strict_probability"
+    t.float "implementation_probability"
+    t.bigint "screen_request_id"
+    t.bigint "enrich_request_id"
+    t.string "screen_band"
+    t.boolean "control", default: false, null: false
+    t.float "control_probability"
+    t.boolean "enrichment_selected", default: false, null: false
+    t.string "enrichment_reason"
+    t.integer "screen_attempts", default: 0, null: false
+    t.integer "enrich_attempts", default: 0, null: false
+    t.datetime "next_attempt_at"
+    t.datetime "lease_until"
+    t.string "processing_token"
+    t.text "last_error"
+    t.text "enrichment_error"
+    t.datetime "screened_at"
+    t.datetime "enriched_at"
+    t.datetime "next_check_at"
+    t.string "review_state", default: "unreviewed", null: false
+    t.text "review_notes"
+    t.string "reviewed_by"
+    t.datetime "reviewed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["enrich_request_id"], name: "index_jev_discoveries_on_enrich_request_id"
+    t.index ["jev_run_id", "classification", "review_state"], name: "index_jev_discoveries_review"
+    t.index ["jev_run_id", "repository_url"], name: "index_jev_discoveries_on_jev_run_id_and_repository_url", unique: true
+    t.index ["jev_run_id", "status", "next_attempt_at"], name: "index_jev_discoveries_due"
+    t.index ["jev_run_id"], name: "index_jev_discoveries_on_jev_run_id"
+    t.index ["lease_until"], name: "index_jev_discoveries_on_lease_until"
+    t.index ["next_check_at"], name: "index_jev_discoveries_on_next_check_at"
+    t.index ["project_id"], name: "index_jev_discoveries_on_project_id"
+    t.index ["screen_request_id"], name: "index_jev_discoveries_on_screen_request_id"
+  end
+
+  create_table "jev_requests", force: :cascade do |t|
+    t.bigint "jev_run_id", null: false
+    t.string "digest", null: false
+    t.string "cache_digest", null: false
+    t.string "stage", null: false
+    t.string "model", null: false
+    t.string "status", default: "pending", null: false
+    t.jsonb "question_versions", default: {}, null: false
+    t.jsonb "request_body", default: {}, null: false
+    t.jsonb "response_body", default: {}, null: false
+    t.jsonb "attempt_log", default: [], null: false
+    t.integer "input_tokens"
+    t.integer "output_tokens"
+    t.integer "attempts", default: 0, null: false
+    t.decimal "cost_usd", precision: 14, scale: 8, default: "0.0", null: false
+    t.decimal "reserved_usd", precision: 14, scale: 8, default: "0.0", null: false
+    t.float "latency_ms"
+    t.text "last_error"
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cache_digest", "status"], name: "index_jev_requests_on_cache_digest_and_status"
+    t.index ["digest"], name: "index_jev_requests_on_digest", unique: true
+    t.index ["jev_run_id", "stage", "status"], name: "index_jev_requests_on_jev_run_id_and_stage_and_status"
+    t.index ["jev_run_id"], name: "index_jev_requests_on_jev_run_id"
+  end
+
+  create_table "jev_runs", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "status", default: "running", null: false
+    t.string "seed", null: false
+    t.integer "target_count", null: false
+    t.boolean "sampling_complete", default: false, null: false
+    t.jsonb "sampling_state", default: {}, null: false
+    t.jsonb "settings", default: {}, null: false
+    t.decimal "budget_usd", precision: 14, scale: 8, null: false
+    t.decimal "spent_usd", precision: 14, scale: 8, default: "0.0", null: false
+    t.decimal "reserved_usd", precision: 14, scale: 8, default: "0.0", null: false
+    t.text "last_error"
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_jev_runs_on_name", unique: true
+    t.index ["status"], name: "index_jev_runs_on_status"
   end
 
   create_table "joss_vocabulary_models", force: :cascade do |t|
@@ -870,6 +964,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_27_130000) do
   add_foreign_key "developer_accounts", "hosts", on_delete: :cascade
   add_foreign_key "developer_accounts", "owners", on_delete: :nullify
   add_foreign_key "external_project_syncs", "projects", on_delete: :cascade
+  add_foreign_key "jev_discoveries", "jev_requests", column: "enrich_request_id"
+  add_foreign_key "jev_discoveries", "jev_requests", column: "screen_request_id"
+  add_foreign_key "jev_discoveries", "jev_runs"
+  add_foreign_key "jev_discoveries", "projects", on_delete: :nullify
+  add_foreign_key "jev_requests", "jev_runs"
   add_foreign_key "journal_paper_enrichments", "papers", on_delete: :cascade
   add_foreign_key "mention_sources", "mentions", on_delete: :cascade
   add_foreign_key "owner_research_organizations", "owners", on_delete: :cascade

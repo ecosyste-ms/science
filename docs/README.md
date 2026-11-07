@@ -3,6 +3,7 @@
 These documents explain parts of the application that need more detail than the root README. Add new documents to this index so they remain easy to find.
 
 - [Science Score](science-score.md): how project evidence becomes the scientific eligibility score
+- [Jev discovery](jev-discovery.md): separate screening, repository enrichment, review and bounded discovery runs
 - [Project ingestion and sync](project-ingestion-and-sync.md): how repository URLs are discovered, queued, and enriched
 - [Package discovery and ranking](package-discovery-and-ranking.md): how dependencies become package identities, metadata, project links, and package rankings
 - [Software search seeds](search-seeds.md): how to retrieve names, identifiers, and disambiguation context through the API or a local SQLite export

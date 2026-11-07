@@ -1,0 +1,29 @@
+<% @meta_title = "Discovery review" %>
+<div class="container-md">
+  <p><%= link_to "Discovery queue", jev_discoveries_path(run_id: @discovery.jev_run_id) %></p>
+  <h1 class="h3"><%= link_to @discovery.repository_url, @discovery.repository_url, rel: "noopener noreferrer" %></h1>
+  <p><%= @discovery.classification.humanize %> · <%= @discovery.status.humanize %> · <%= @discovery.sample_group %></p>
+  <p>Research probability: <%= @discovery.strict_probability&.round(3) || "Pending" %>. Implementation probability: <%= @discovery.implementation_probability&.round(3) || "Not enriched" %>.</p>
+  <% if @discovery.project %><p>Existing project: <%= link_to @discovery.project.name.presence || @discovery.project.url, project_path(@discovery.project) %>. Science Score: <%= @discovery.project.science_score %>.</p><% end %>
+  <% if @discovery.control? %><p>Random control from the <%= @discovery.screen_band %> screen band. Enrichment selection probability: <%= @discovery.control_probability %>.</p><% end %>
+  <% [@discovery.last_error, @discovery.enrichment_error].compact.each do |error| %><p class="alert alert-warning"><%= error %></p><% end %>
+  <%= form_with model: @discovery, local: true, class: "card card-body mb-4" do |form| %>
+    <h2 class="h5">Review</h2>
+    <p>This records your judgement only. It does not change Science Score or catalogue inclusion.</p>
+    <% if @discovery.errors.any? %><p class="text-danger"><%= @discovery.errors.full_messages.join(". ") %></p><% end %>
+    <%= form.label :review_state, "Judgement", class: "form-label" %>
+    <%= form.select :review_state, [["Unreviewed", "unreviewed"], ["Supported research software", "research"], ["Uncertain", "uncertain"], ["Not research software", "negative"]], {}, class: "form-select mb-3" %>
+    <%= form.label :review_notes, "Evidence and limitations", class: "form-label" %>
+    <%= form.text_area :review_notes, rows: 5, maxlength: 4000, class: "form-control mb-3" %>
+    <%= form.submit "Save review", class: "btn btn-primary" %>
+  <% end %>
+  <% [@discovery.screen_request, @discovery.enrich_request].compact.each do |request| %>
+    <h2 class="h5"><%= request.stage.humanize %> evaluation</h2>
+    <p>Model: <%= request.model %>. Question fingerprints: <%= request.question_versions.values.join(", ") %>. Evaluated: <%= request.completed_at %>. Input tokens: <%= request.input_tokens %>.</p>
+  <% end %>
+  <h2 class="h5">Sampling and provenance</h2>
+  <p><%= @discovery.source %> · <%= @discovery.sampling_method %></p>
+  <pre><%= JSON.pretty_generate(@discovery.source_metadata) %></pre>
+  <h2 class="h5">Evidence supplied for classification</h2>
+  <pre><%= JSON.pretty_generate(@discovery.evidence) %></pre>
+</div>

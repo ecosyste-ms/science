@@ -120,4 +120,5 @@ Rails.application.routes.draw do
   get '/500', to: 'errors#internal'
 
   root "home#index"
+  resources :jev_discoveries, path: "discovery-review", only: %i[index show update]
 end

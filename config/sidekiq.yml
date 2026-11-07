@@ -5,6 +5,14 @@
   - [brief, 1]
   - [swhid, 1]
 :capsules:
+  jev:
+    :concurrency: 2
+    :queues:
+      - jev
+  jev_enrich:
+    :concurrency: 1
+    :queues:
+      - jev_enrich
   external_metadata:
     :concurrency: 1
     :queues:

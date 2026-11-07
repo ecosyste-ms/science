@@ -5,12 +5,12 @@ require_relative "../support/swhid_pipeline"
 class SwhidQueueConfigTest < ActiveSupport::TestCase
   include SwhidPipeline
 
-  test "worker startup reserves API threads within the existing concurrency" do
+  test "worker startup separates API and repository queues" do
     cli = Sidekiq::CLI.new
     cli.config = Sidekiq::Config.new
     cli.parse(["-C", Rails.root.join("config/sidekiq.yml").to_s, "-e", "test"])
 
-    assert_equal 14, cli.config.total_concurrency
+    assert_equal 17, cli.config.total_concurrency
     assert_equal 8, cli.config.default_capsule.concurrency
     assert_equal({ "default" => 5, "brief" => 1, "swhid" => 1 }, cli.config.default_capsule.weights)
     api = cli.config.capsules.fetch("swh_api")
@@ -22,6 +22,10 @@ class SwhidQueueConfigTest < ActiveSupport::TestCase
     openalex = cli.config.capsules.fetch("openalex")
     assert_equal 4, openalex.concurrency
     assert_equal ["openalex"], openalex.queues
+    assert_equal 2, cli.config.capsules.fetch("jev").concurrency
+    assert_equal ["jev"], cli.config.capsules.fetch("jev").queues
+    assert_equal 1, cli.config.capsules.fetch("jev_enrich").concurrency
+    assert_equal ["jev_enrich"], cli.config.capsules.fetch("jev_enrich").queues
   end
 
   test "API jobs enqueue separately from repository scans" do

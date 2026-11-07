@@ -1,0 +1,38 @@
+<% @meta_title = "Discovery review" %>
+<div class="container-md">
+  <h1>Discovery review</h1>
+  <p>Candidate classifications are kept separate from Science Score. Reviewing a candidate does not add it to the catalogue.</p>
+  <%= form_with url: jev_discoveries_path, method: :get, local: true, class: "card card-body mb-4" do |form| %>
+    <div class="row g-3">
+      <div class="col-md-3"><%= form.label :run_id, "Run", class: "form-label" %><%= form.select :run_id, @runs.map { |run| [run.name, run.id] }, { selected: @run&.id }, class: "form-select" %></div>
+      <% { classification: ["research_candidate", "uncertain", "negative"], review_state: ["unreviewed", "research", "uncertain", "negative"], screen_band: ["promising", "borderline", "low"] }.each do |key, values| %>
+        <div class="col-md-3"><%= form.label key, key.to_s.humanize, class: "form-label" %><%= form.select key, values.map { |value| [value.humanize, value] }, { include_blank: "All", selected: params[key] }, class: "form-select" %></div>
+      <% end %>
+      <div class="col-md-5"><%= form.label :q, "Repository", class: "form-label" %><%= form.search_field :q, value: params[:q], class: "form-control" %></div>
+      <div class="col-md-4"><%= form.label :sample_group, "Sample group", class: "form-label" %><%= form.text_field :sample_group, value: params[:sample_group], class: "form-control" %></div>
+      <div class="col-md-3"><%= form.label :controls, "Random controls", class: "form-label" %><%= form.select :controls, [["All candidates", ""], ["Controls only", "1"]], { selected: params[:controls] }, class: "form-select" %></div>
+    </div>
+    <div class="mt-3"><%= form.submit "Filter", class: "btn btn-primary" %></div>
+  <% end %>
+  <% if @statistics %>
+    <div class="card card-body mb-4">
+      <h2 class="h5"><%= @run.name %> · <%= @run.status.humanize %></h2>
+      <p><%= number_with_delimiter @statistics[:sampled] %> of <%= number_with_delimiter @run.target_count %> candidates. Estimated spend <%= number_to_currency @statistics[:spent_usd], precision: 4 %>; reserved <%= number_to_currency @statistics[:reserved_usd], precision: 4 %>; limit <%= number_to_currency @statistics[:budget_usd] %>.</p>
+      <p>Processing: <%= @statistics[:statuses].map { |key, count| "#{key.humanize}: #{count}" }.join(" · ") %></p>
+      <p>Classifications: <%= @statistics[:classifications].map { |key, count| "#{key.humanize}: #{count}" }.join(" · ") %></p>
+      <p>Reviews: <%= @statistics[:reviews].map { |key, count| "#{key.humanize}: #{count}" }.join(" · ") %></p>
+      <% if @run.last_error.present? %><p class="text-danger"><%= @run.last_error %></p><% end %>
+    </div>
+  <% end %>
+  <div class="table-responsive">
+    <table class="table">
+      <thead><tr><th>Repository</th><th>Sample</th><th>Research</th><th>Implementation</th><th>Status</th><th>Review</th></tr></thead>
+      <tbody>
+        <% @discoveries.each do |discovery| %>
+          <tr><td><%= link_to discovery.repository_url.delete_prefix("https://"), jev_discovery_path(discovery) %></td><td><%= discovery.sample_group %><%= " · control" if discovery.control? %></td><td><%= discovery.strict_probability&.round(3) || "Pending" %></td><td><%= discovery.implementation_probability&.round(3) || "Not enriched" %></td><td><%= discovery.classification.humanize %><br><small><%= discovery.status.humanize %></small></td><td><%= discovery.review_state.humanize %></td></tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+  <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
+</div>
