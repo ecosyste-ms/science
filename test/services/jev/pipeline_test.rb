@@ -57,6 +57,39 @@ class Jev::PipelineTest < ActiveSupport::TestCase
     assert_requested request, times: 1
   end
 
+  test "worker sends and persists canonical bytes across JSONB reloads and fresh repeats" do
+    metadata = { "z" => [{ "z" => "λ", "a" => "μ" }], "a" => { "z" => 1, "a" => 2 } }
+    @candidate.update!(evidence: { "metadata" => metadata })
+    bodies = []
+    stub_request(:post, Jev::Client::API).to_return do |http|
+      bodies << http.body
+      { body: result("strict", 0.1).to_json }
+    end
+
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "screen")
+    first = @candidate.reload.screen_request.reload
+    replay = Jev::Client.new(@run).call(stage: "screen", state: first.request_body.fetch("state"), replicate: "byte replay")
+    assert_not_equal first.id, replay.id
+    assert_equal 2, bodies.size
+    assert_equal bodies.first, bodies.last
+    assert_equal bodies.first, first.wire_body
+    assert_equal first.wire_body, replay.reload.wire_body
+    assert_equal JSON.generate(Jev::Client.canonical(first.request_body)), first.wire_body
+    assert_equal first.request_body, JSON.parse(first.wire_body)
+  end
+
+  test "requests with unknown original bytes cannot satisfy the canonical request cache" do
+    payload = { "model" => @run.settings.fetch("model"), "state" => @candidate.evidence.fetch("metadata"), "questions" => Jev::Questions.for("screen") }
+    old = @run.requests.create!(digest: "old request", cache_digest: Jev::Client.fingerprint([payload, nil]), model: payload["model"], stage: "screen",
+      request_body: payload, status: "succeeded", response_body: result("strict", 0.9))
+    request = response("strict", 0.1)
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "screen")
+    assert_nil old.wire_body
+    assert_not_equal old.id, @candidate.reload.screen_request_id
+    assert_equal 0.1, @candidate.strict_probability
+    assert_requested request, times: 1
+  end
+
   test "timeout keeps a conservative reservation and retry does not repeat checkout" do
     @candidate.update!(status: "pending_enrich", strict_probability: 0.9)
     evidence = @candidate.evidence.merge("enriched" => { "readme" => "Soil solver", "source_file_paths" => ["soil.R"] })

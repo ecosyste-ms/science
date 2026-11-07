@@ -20,6 +20,8 @@ Application code is grouped under `Jev::`, including `Jev::Run`, `Jev::Discovery
 
 Successful identical inputs, questions and model releases share cached responses across runs. Questions have content fingerprints; requests retain inputs, outputs, attempts, token usage, latency and estimated charges. Failed attempts belong to the run that paid for them. Requests reserve a conservative charge before transmission, and unknown outcomes retain that reservation. Reported spend uses the [provider's pricing](https://help.typesafe.ai/articles/5187202169-how-much-does-jev-cost), checked on 7 November 2026: $0.042 per million input tokens with free output. It excludes repository fetching, compute and review. Check provider billing when changing model or pricing.
 
+New requests send recursively sorted JSON keys and retain the exact UTF-8 request text in `Jev::Request#wire_body`. The cache uses that text and the optional repeat identifier. Reloading the saved state from JSONB and repeating it therefore sends identical bytes. Older requests have no `wire_body`; their historical inputs and results remain available, but they cannot satisfy the new cache because their original key order is unknown. Re-evaluation can incur fresh inference charges even when the older parsed inputs match.
+
 Set `JEV_API_KEY` through the deployment environment and enable `JEV_ENABLED=true`. It defaults off. Do not put the key in commands, logs or tracked files. The scheduler runs once per minute and uses dedicated `jev` and `jev_enrich` Sidekiq capsules. Redis limits apply across all worker processes. The following settings are available:
 
 | Setting | Default | Purpose |
@@ -49,6 +51,16 @@ dokku run bundle exec rake jev:tick
 ```
 
 Replace `RUN_ID` with the returned ID. Status includes processing and classification counts, source groups, control bands, reviews, request errors, tokens, estimated spending, reservations, latency and throughput. The authenticated review queue supports run, probability-band, classification, sample-group, review-state, repository and control filters.
+
+For a database-only traversal, set `POPULATION=database`. This includes visible projects across every score band, including already included reference cases, and uses no external repository or package sampling:
+
+```sh
+dokku run env NAME=database-check POPULATION=database TARGET=1000 BUDGET_USD=0.10 bundle exec rake jev:start
+```
+
+This mode freezes the maximum project ID at creation and advances a persisted primary-key cursor by at most `JEV_BATCH_SIZE` visible rows per scheduler tick. `TARGET` bounds rows examined, including unsupported URLs and normalized duplicate repositories. It is an ordered traversal, not a random sample; an interrupted or budget-paused run resumes its cursor without reseeding. Newly created rows above the ceiling require another run. Visibility is checked during traversal and again during screening. Statistics expose the ceiling, cursor, examined rows, added candidates, unsupported URLs and duplicate URLs. Only supported normalized repository URLs receive candidates; duplicate URLs share one candidate. Deleted and hidden rows are outside the observed visible frame.
+
+To cover a frozen database of fewer than one million rows, use `TARGET=1000000`; traversal ends at the ceiling even if fewer candidates are created. Set the run budget and global budget before starting within the approved spending limit. The enrichment limit still applies, with additional selected candidates recorded as deferred. Screening completes before repository enrichment begins, so a full metadata traversal does not imply full source collection. No automatic catalogue inclusion occurs.
 
 ```sh
 dokku run env RUN_ID=1 bundle exec rake jev:pause

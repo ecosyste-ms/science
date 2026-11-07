@@ -1,7 +1,8 @@
 namespace :jev do
   desc "Start a bounded shadow discovery run (NAME required, TARGET=10000 BUDGET_USD=1)"
   task start: :environment do
-    run = Jev::Run.start!(name: ENV.fetch("NAME"), target: Integer(ENV.fetch("TARGET", "10000")), budget: ENV.fetch("BUDGET_USD", "1"))
+    run = Jev::Run.start!(name: ENV.fetch("NAME"), target: Integer(ENV.fetch("TARGET", "10000")), budget: ENV.fetch("BUDGET_USD", "1"),
+      population: ENV.fetch("POPULATION", "discovery"))
     puts JSON.pretty_generate(run.statistics)
   end
 

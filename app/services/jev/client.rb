@@ -25,10 +25,10 @@ class Jev::Client
   end
 
   def call(stage:, state:, replicate: nil)
-    payload = { "model" => @run.settings.fetch("model"), "state" => state, "questions" => Jev::Questions.for(stage) }
+    payload = self.class.canonical({ "model" => @run.settings.fetch("model"), "state" => state, "questions" => Jev::Questions.for(stage) })
     body = JSON.generate(payload)
     raise Error, "Jev input exceeds 24 KB" if body.bytesize > 24_000
-    cache_digest = self.class.fingerprint([payload, replicate])
+    cache_digest = self.class.fingerprint([body, replicate])
     cached = Jev::Request.find_by(cache_digest: cache_digest, status: "succeeded")
     return cached if cached
     digest = Digest::SHA256.hexdigest("#{@run.id}:#{cache_digest}")
@@ -41,7 +41,7 @@ class Jev::Client
         return cached if cached
         request = Jev::Request.create_or_find_by!(digest: digest) do |record|
           record.assign_attributes(run: @run, cache_digest: cache_digest, model: payload["model"], stage: stage,
-            request_body: payload, question_versions: Jev::Questions.versions(stage))
+            request_body: payload, wire_body: body, question_versions: Jev::Questions.versions(stage))
         end
         Jev::Limiter.with_slot("api") { evaluate(request, payload, body) }
       ensure

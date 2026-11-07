@@ -6,9 +6,14 @@ class Jev::Run < ApplicationRecord
   validates :target_count, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: 1_000_000 }
   validates :budget_usd, numericality: { greater_than: 0 }
 
-  def self.start!(name:, target: 10_000, budget: 1, seed: SecureRandom.hex(12))
+  def self.start!(name:, target: 10_000, budget: 1, seed: SecureRandom.hex(12), population: "discovery")
+    raise ArgumentError, "Unknown Jev population" unless %w[discovery database].include?(population)
+    settings = Jev::Settings.snapshot.merge("population" => population,
+      "question_versions" => %w[screen enrich].to_h { |stage| [stage, Jev::Questions.versions(stage)] })
+    settings["include_scored_projects"] = true if population == "database"
+    state = population == "database" ? { "database_ceiling" => Project.maximum(:id).to_i, "database_cursor" => 0 } : {}
     create!(name: name, seed: seed, target_count: target, budget_usd: budget,
-      settings: Jev::Settings.snapshot.merge("question_versions" => %w[screen enrich].to_h { |stage| [stage, Jev::Questions.versions(stage)] }))
+      settings: settings, sampling_state: state)
   end
 
   def statistics
@@ -28,6 +33,7 @@ class Jev::Run < ApplicationRecord
       failure_rate: scope.where(status: %w[failed_screen failed_enrich]).count.fdiv([scope.count, 1].max),
       enrichment_gaps: scope.where.not(enrichment_error: nil).count,
       spent_usd: spent_usd.to_f, reserved_usd: reserved_usd.to_f, budget_usd: budget_usd.to_f,
+      sampling_complete: sampling_complete, sampling_state: sampling_state,
       completed_at: completed_at, last_error: last_error }
   end
 

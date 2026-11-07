@@ -4,6 +4,7 @@ class Jev::Sampler
   end
 
   def seed
+    return seed_database if @run.settings["population"] == "database"
     @run.with_lock do
       return if @run.sampling_complete?
       state = @run.sampling_state.deep_dup
@@ -19,6 +20,38 @@ class Jev::Sampler
       end
     end
     seed_external
+  end
+
+  def seed_database
+    @run.with_lock do
+      return if @run.sampling_complete?
+      state = @run.sampling_state.deep_dup
+      examined = state.fetch("database_examined", 0)
+      limit = [@run.settings.fetch("batch_size"), @run.target_count - examined].min
+      projects = Project.visible.where("id > ? AND id <= ?", state.fetch("database_cursor"), state.fetch("database_ceiling"))
+        .select(:id, :url, :name, :description, :keywords, :language, :repository, :packages, :science_score, :science_score_breakdown, :readme,
+          Arel.sql("CASE WHEN brief IS NULL THEN NULL ELSE jsonb_build_object('languages', brief -> 'languages', 'lines', brief -> 'lines') END AS brief"))
+        .order(:id).limit(limit).to_a
+      projects.each do |project|
+        url = Jev::Evidence.repository_url(project.url)
+        if url
+          group = project.science_score.nil? ? "score_unscored" : project.science_score.zero? ? "score_zero" :
+            project.science_score < Project::SCIENCE_SCORE_THRESHOLD ? "score_low" : "score_included"
+          candidate = add(url: url, project: project, group: group, source: "science", method: "database_primary_key_traversal",
+            metadata: Jev::Evidence.metadata(project: project, url: url),
+            provenance: { "database_ceiling" => state.fetch("database_ceiling"), "selection" => "sequential_visible_projects" })
+          key = candidate.previously_new_record? ? "database_added" : "database_duplicate_urls"
+        else
+          key = "database_unsupported_urls"
+        end
+        state[key] = state.fetch(key, 0) + 1
+      end
+      state["database_cursor"] = projects.last.id if projects.any?
+      state["database_examined"] = examined + projects.size
+      exhausted = projects.size < limit || state.fetch("database_cursor") >= state.fetch("database_ceiling")
+      state["frame_exhausted"] = exhausted
+      @run.update!(sampling_state: state, sampling_complete: exhausted || state["database_examined"] >= @run.target_count)
+    end
   end
 
   def seed_local
