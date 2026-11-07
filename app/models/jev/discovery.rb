@@ -1,8 +1,8 @@
-class JevDiscovery < ApplicationRecord
-  belongs_to :jev_run
+class Jev::Discovery < ApplicationRecord
+  belongs_to :run, class_name: "Jev::Run", foreign_key: :jev_run_id
   belongs_to :project, optional: true
-  belongs_to :screen_request, class_name: "JevRequest", optional: true
-  belongs_to :enrich_request, class_name: "JevRequest", optional: true
+  belongs_to :screen_request, class_name: "Jev::Request", optional: true
+  belongs_to :enrich_request, class_name: "Jev::Request", optional: true
   validates :repository_url, :source, :sampling_method, :sample_group, presence: true
   validates :review_state, inclusion: { in: %w[unreviewed research negative uncertain] }
   validates :review_notes, length: { maximum: 4000 }
@@ -15,6 +15,12 @@ class JevDiscovery < ApplicationRecord
 
   def review!(state:, notes:, reviewer:)
     update!(review_state: state, review_notes: notes, reviewed_by: reviewer, reviewed_at: Time.current)
+  end
+
+  def resolve_repository!
+    with_lock do
+      update!(evidence: evidence.merge("repository_identity" => Jev::RepositoryIdentity.call(self)))
+    end
   end
 
   def retry_evidence!

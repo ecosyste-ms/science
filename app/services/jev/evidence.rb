@@ -1,7 +1,7 @@
-class JevEvidence
+class Jev::Evidence
   include EcosystemApiClient
-  REPOSITORY_FIELDS = %w[full_name description language topics fork archived pushed_at default_branch latest_commit_sha size metadata html_url].freeze
-  SOURCE_EXTENSION = /\.(?:r|jl|py|cpp|c|h|cc|cxx|hpp|ts|js|ipynb|sh|f|f90|f95|f03|f08|go|rs|java|scala|rb|m|rmd|qmd|nf|smk)\z/i
+  REPOSITORY_FIELDS = %w[full_name description language topics fork archived pushed_at default_branch latest_commit_sha size metadata html_url previous_names source_name mirror_url].freeze
+  SOURCE_EXTENSION = /\.(?:r|jl|py|pyx|pxd|cpp|c|h|cc|cxx|hpp|cu|cuh|ts|js|ipynb|sh|f|f90|f95|f03|f08|go|rs|java|scala|rb|m|rmd|qmd|nf|smk|swift|vb|vba|pro|wl|wls|nb|cs|fs|fsx|hs|lua|pl|pm|php|sas)\z/i
 
   def self.repository_url(value)
     uri = RepositoryUrlNormalizer.parse(value)
@@ -37,15 +37,15 @@ class JevEvidence
 
   def self.get(url, params = {})
     response = ecosystem_http_get(params.empty? ? url : "#{url}?#{URI.encode_www_form(params)}")
-    raise JevClient::Unavailable, "Repository metadata HTTP #{response.status}" unless response.success?
+    raise Jev::Client::Unavailable, "Repository metadata HTTP #{response.status}" unless response.success?
     JSON.parse(response.body)
   rescue JSON::ParserError, Faraday::Error => error
-    raise JevClient::Unavailable, "Repository metadata failed: #{error.class}"
+    raise Jev::Client::Unavailable, "Repository metadata failed: #{error.class}"
   end
 
   def self.fingerprint(metadata, project: nil, repository: nil)
     repo = repository || project&.repository || {}
-    JevClient.fingerprint([metadata, repo.slice("pushed_at", "latest_commit_sha", "default_branch"),
+    Jev::Client.fingerprint([metadata, repo.slice("pushed_at", "latest_commit_sha", "default_branch"),
       project && Digest::SHA256.hexdigest(project.readme.to_s), project&.brief&.slice("languages", "lines")])
   end
 
@@ -66,9 +66,9 @@ class JevEvidence
     end
     errors = []
     collection_started = nil
-    JevLimiter.with_slot("enrich") do
+    Jev::Limiter.with_slot("enrich") do
       collection_started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      disk_limit = JevSettings.integer("DISK_LIMIT_MB", 200, 25..500).megabytes
+      disk_limit = Jev::Settings.integer("DISK_LIMIT_MB", 200, 25..500).megabytes
       checkout = RepositoryCheckout.new(discovery.repository_url, skip_lfs: true, disk_limit: disk_limit, partial: true)
       checkout.open do |path, _, _|
         command = RepositoryCommand.new(timeout: 60, output_limit: 4.megabytes)
@@ -85,11 +85,13 @@ class JevEvidence
         rescue RepositoryCommand::Error, JSON::ParserError => error
           errors << "Brief scan failed: #{error.class}"
         end
-        readme = files.find { |file| File.basename(file).match?(/\Areadme(?:\.(?:md|rst|txt|rmd))?\z/i) && file.count('/') <= 1 }
+        readme = files.select { |file| File.basename(file).match?(/\Areadme(?:\.(?:md|markdown|rst|txt|rmd|adoc))?\z/i) && file.count('/') <= 1 }
+          .min_by { |file| [file.count('/'), file.downcase, file] }
         if readme
           filename = File.realpath(File.join(path, readme)) rescue nil
           if filename&.start_with?(File.realpath(path) + File::SEPARATOR) && File.file?(filename)
             state["readme"] = File.binread(filename, 40_000).to_s.dup.force_encoding("UTF-8").scrub.delete("\0")[0, 8000]
+            evidence["readme_path"] = readme
           end
         end
         evidence["revision"] = revision

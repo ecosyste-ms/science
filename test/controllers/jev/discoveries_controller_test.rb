@@ -1,8 +1,8 @@
 require "test_helper"
-require_relative "../support/jev_records"
+require_relative "../../support/jev/records"
 
-class JevDiscoveriesControllerTest < ActionDispatch::IntegrationTest
-  include JevRecords
+class Jev::DiscoveriesControllerTest < ActionDispatch::IntegrationTest
+  include Jev::Records
   setup do
     @username, @password = ENV["SIDEKIQ_USERNAME"], ENV["SIDEKIQ_PASSWORD"]
     ENV["SIDEKIQ_USERNAME"], ENV["SIDEKIQ_PASSWORD"] = "reviewer", "review-password"
@@ -46,12 +46,28 @@ class JevDiscoveriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "unreviewed", @candidate.reload.review_state
   end
 
+  test "queue filters repository identities and explains unconfirmed references" do
+    project = Project.create!(url: "https://github.com/canonical/model", science_score: 60)
+    @candidate.update!(evidence: @candidate.evidence.merge("repository_identity" => {
+      "status" => "possible_duplicate", "matches" => [{ "project_id" => project.id, "project_url" => project.url,
+        "science_score" => 60, "relation" => "readme_name_match", "confirmed" => false }] }))
+    other = discovery_candidate(run: @candidate.run)
+    get jev_discoveries_path(run_id: @candidate.jev_run_id, identity: "possible_duplicate"), headers: @headers
+    assert_response :success
+    assert_select "a[href=?]", jev_discovery_path(@candidate)
+    assert_select "a[href=?]", jev_discovery_path(other), count: 0
+    get jev_discovery_path(@candidate), headers: @headers
+    assert_response :success
+    assert_select "a[href=?]", project_path(project)
+    assert_match "do not establish that the implementations are identical", response.body
+  end
+
   test "review endpoint rejects cross site submissions" do
-    JevDiscoveriesController.allow_forgery_protection = true
+    Jev::DiscoveriesController.allow_forgery_protection = true
     patch jev_discovery_path(@candidate), headers: @headers, params: { jev_discovery: { review_state: "research" } }
     assert_response :unprocessable_entity
     assert_equal "unreviewed", @candidate.reload.review_state
   ensure
-    JevDiscoveriesController.allow_forgery_protection = false
+    Jev::DiscoveriesController.allow_forgery_protection = false
   end
 end

@@ -7,6 +7,18 @@
   <% if @discovery.project %><p>Existing project: <%= link_to @discovery.project.name.presence || @discovery.project.url, project_path(@discovery.project) %>. Science Score: <%= @discovery.project.science_score %>.</p><% end %>
   <% if @discovery.control? %><p>Random control from the <%= @discovery.screen_band %> screen band. Enrichment selection probability: <%= @discovery.control_probability %>.</p><% end %>
   <% [@discovery.last_error, @discovery.enrichment_error].compact.each do |error| %><p class="alert alert-warning"><%= error %></p><% end %>
+  <% if (identity = @discovery.evidence["repository_identity"]) %>
+    <div class="card card-body mb-4">
+      <h2 class="h5">Repository identity</h2>
+      <p><%= identity.fetch("status").humanize %>. Checked <%= identity["checked_at"] %>.</p>
+      <p>README and fork references suggest related repositories. They do not establish that the implementations are identical.</p>
+      <% identity.fetch("matches", []).each do |match| %>
+        <p><%= link_to match.fetch("project_url"), project_path(match.fetch("project_id")) %>: Science Score <%= match["science_score"] %>, <%= match.fetch("relation").humanize.downcase %><%= " (confirmed repository identity)" if match["confirmed"] %>.</p>
+      <% end %>
+      <% identity.fetch("related_candidates", []).each do |candidate| %><p>Related candidate: <%= link_to candidate.fetch("url"), jev_discovery_path(candidate.fetch("id")) %>.</p><% end %>
+      <% if identity["copy_statement"] %><p>The README contains an explicit copy or move statement. Review its context before counting a distinct discovery.</p><% end %>
+    </div>
+  <% end %>
   <%= form_with model: @discovery, local: true, class: "card card-body mb-4" do |form| %>
     <h2 class="h5">Review</h2>
     <p>This records your judgement only. It does not change Science Score or catalogue inclusion.</p>

@@ -1,4 +1,4 @@
-class JevClient
+class Jev::Client
   PRICE_PER_MILLION = BigDecimal("0.042")
   API = "https://api.typesafe.ai/v1/systemone".freeze
   LOCK_NAMESPACE = 7_349_411
@@ -25,25 +25,25 @@ class JevClient
   end
 
   def call(stage:, state:, replicate: nil)
-    payload = { "model" => @run.settings.fetch("model"), "state" => state, "questions" => JevQuestions.for(stage) }
+    payload = { "model" => @run.settings.fetch("model"), "state" => state, "questions" => Jev::Questions.for(stage) }
     body = JSON.generate(payload)
     raise Error, "Jev input exceeds 24 KB" if body.bytesize > 24_000
     cache_digest = self.class.fingerprint([payload, replicate])
-    cached = JevRequest.find_by(cache_digest: cache_digest, status: "succeeded")
+    cached = Jev::Request.find_by(cache_digest: cache_digest, status: "succeeded")
     return cached if cached
     digest = Digest::SHA256.hexdigest("#{@run.id}:#{cache_digest}")
-    JevRequest.with_connection do |connection|
+    Jev::Request.with_connection do |connection|
       lock_id = cache_digest[0, 7].to_i(16)
       acquired = connection.select_value("SELECT pg_try_advisory_lock(#{LOCK_NAMESPACE}, #{lock_id})")
-      raise JevLimiter::Busy, "Identical Jev request in progress" unless acquired
+      raise Jev::Limiter::Busy, "Identical Jev request in progress" unless acquired
       begin
-        cached = JevRequest.find_by(cache_digest: cache_digest, status: "succeeded")
+        cached = Jev::Request.find_by(cache_digest: cache_digest, status: "succeeded")
         return cached if cached
-        request = JevRequest.create_or_find_by!(digest: digest) do |record|
-          record.assign_attributes(jev_run: @run, cache_digest: cache_digest, model: payload["model"], stage: stage,
-            request_body: payload, question_versions: JevQuestions.versions(stage))
+        request = Jev::Request.create_or_find_by!(digest: digest) do |record|
+          record.assign_attributes(run: @run, cache_digest: cache_digest, model: payload["model"], stage: stage,
+            request_body: payload, question_versions: Jev::Questions.versions(stage))
         end
-        JevLimiter.with_slot("api") { evaluate(request, payload, body) }
+        Jev::Limiter.with_slot("api") { evaluate(request, payload, body) }
       ensure
         connection.execute("SELECT pg_advisory_unlock(#{LOCK_NAMESPACE}, #{lock_id})")
       end
@@ -102,20 +102,20 @@ class JevClient
   end
 
   def reserve!(request, amount)
-    JevRun.transaction do
-      JevRun.connection.execute("SELECT pg_advisory_xact_lock(#{BUDGET_LOCK})")
+    Jev::Run.transaction do
+      Jev::Run.connection.execute("SELECT pg_advisory_xact_lock(#{BUDGET_LOCK})")
       @run.reload
-      total = JevRun.sum(:spent_usd) + JevRun.sum(:reserved_usd)
+      total = Jev::Run.sum(:spent_usd) + Jev::Run.sum(:reserved_usd)
       raise BudgetExceeded, "Jev spending limit reached" if @run.spent_usd + @run.reserved_usd + amount > @run.budget_usd ||
-        total + amount > JevSettings.decimal("TOTAL_BUDGET_USD", 5)
+        total + amount > Jev::Settings.decimal("TOTAL_BUDGET_USD", 5)
       @run.update!(reserved_usd: @run.reserved_usd + amount)
       request.update!(status: "running", attempts: request.attempts + 1, reserved_usd: request.reserved_usd + amount)
     end
   end
 
   def settle!(request, reservation, cost)
-    JevRun.transaction do
-      JevRun.connection.execute("SELECT pg_advisory_xact_lock(#{BUDGET_LOCK})")
+    Jev::Run.transaction do
+      Jev::Run.connection.execute("SELECT pg_advisory_xact_lock(#{BUDGET_LOCK})")
       @run.reload
       @run.update!(reserved_usd: @run.reserved_usd - reservation, spent_usd: @run.spent_usd + cost)
       request.update!(reserved_usd: request.reserved_usd - reservation, cost_usd: request.cost_usd + cost)

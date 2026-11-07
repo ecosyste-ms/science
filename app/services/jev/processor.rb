@@ -1,11 +1,11 @@
-class JevProcessor
+class Jev::Processor
   def initialize(discovery)
     @discovery = discovery
-    @run = discovery.jev_run
+    @run = discovery.run
   end
 
   def perform(stage)
-    return unless JevSettings.enabled? && @run.status.in?(%w[running monitoring])
+    return unless Jev::Settings.enabled? && @run.status.in?(%w[running monitoring])
     token = SecureRandom.hex(16)
     claimed = false
     @discovery.with_lock do
@@ -17,9 +17,9 @@ class JevProcessor
     end
     attributes = stage == "screen" ? screen : enrich(token)
     @discovery.class.where(id: @discovery.id, processing_token: token).update_all(attributes.merge(processing_token: nil, lease_until: nil, updated_at: Time.current))
-  rescue JevLimiter::Busy
+  rescue Jev::Limiter::Busy
     defer(stage, token, 2.seconds, nil, decrement: true) if claimed
-  rescue JevClient::BudgetExceeded, JevClient::ConfigurationError => error
+  rescue Jev::Client::BudgetExceeded, Jev::Client::ConfigurationError => error
     @run.update!(status: "paused", last_error: error.message)
     defer(stage, token, 1.hour, error.message, decrement: true) if claimed
   rescue StandardError => error
@@ -37,7 +37,7 @@ class JevProcessor
     if @discovery.project && !Project.visible.where(id: @discovery.project_id).where("science_score < ? OR science_score IS NULL", Project::SCIENCE_SCORE_THRESHOLD).exists?
       return { status: "excluded", last_error: "Project is hidden or already above the Science Score threshold" }
     end
-    request = JevClient.new(@run).call(stage: "screen", state: @discovery.evidence.fetch("metadata"))
+    request = Jev::Client.new(@run).call(stage: "screen", state: @discovery.evidence.fetch("metadata"))
     probability = request.response_body.dig("answers", "strict", "noul")
     band = probability >= 0.6 ? "promising" : probability > 0.2 ? "borderline" : "low"
     chance = band == "low" ? 0.05 : band == "borderline" ? 0.20 : 1.0
@@ -55,11 +55,12 @@ class JevProcessor
     if @discovery.evidence["enriched"]
       evidence, error = @discovery.evidence, @discovery.enrichment_error
     else
-      evidence, error = JevEvidence.new.collect(@discovery)
+      evidence, error = Jev::Evidence.new.collect(@discovery)
       updated = @discovery.class.where(id: @discovery.id, processing_token: token).update_all(evidence: evidence, enrichment_error: error, updated_at: Time.current)
       return {} if updated.zero?
     end
-    request = JevClient.new(@run).call(stage: "enrich", state: evidence.fetch("enriched"))
+    evidence = evidence.merge("repository_identity" => Jev::RepositoryIdentity.call(@discovery, evidence: evidence))
+    request = Jev::Client.new(@run).call(stage: "enrich", state: evidence.fetch("enriched"))
     probability = request.response_body.dig("answers", "implementation", "noul")
     { evidence: evidence, implementation_probability: probability, enrich_request_id: request.id, enriched_at: Time.current,
       enrichment_error: error, classification: @discovery.classification_for(@discovery.strict_probability, probability),
@@ -74,7 +75,7 @@ class JevProcessor
 
   def safe_error(error)
     message = case error
-    when JevClient::Error, JevLimiter::Busy then error.message
+    when Jev::Client::Error, Jev::Limiter::Busy then error.message
     else "#{error.class}: processing failed"
     end
     key = ENV["JEV_API_KEY"]

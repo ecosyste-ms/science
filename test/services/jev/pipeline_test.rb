@@ -1,8 +1,9 @@
 require "test_helper"
-require_relative "../support/jev_records"
+require "rake"
+require_relative "../../support/jev/records"
 
-class JevPipelineTest < ActiveSupport::TestCase
-  include JevRecords
+class Jev::PipelineTest < ActiveSupport::TestCase
+  include Jev::Records
   setup do
     @environment = ENV.to_h.slice(*%w[JEV_ENABLED JEV_API_KEY JEV_TOTAL_BUDGET_USD JEV_REQUESTS_PER_SECOND])
     ENV["JEV_ENABLED"] = "true"
@@ -10,7 +11,7 @@ class JevPipelineTest < ActiveSupport::TestCase
     ENV["JEV_TOTAL_BUDGET_USD"] = "5"
     ENV["JEV_REQUESTS_PER_SECOND"] = "40"
     @run = discovery_run
-    @candidate = discovery_candidate(jev_run: @run)
+    @candidate = discovery_candidate(run: @run)
   end
 
   teardown do
@@ -23,50 +24,50 @@ class JevPipelineTest < ActiveSupport::TestCase
     before = project.reload.attributes
     screen = response("strict", 0.72)
     enrich = response("implementation", 0.94)
-    JevSchedulerWorker.new.perform
+    Jev::SchedulerWorker.new.perform
     assert_equal "queued_screen", @candidate.reload.status
-    JevDiscoveryWorker.new.perform(@candidate.id, "screen")
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "screen")
     assert_equal "pending_enrich", @candidate.reload.status
     state = @candidate.evidence.merge("enriched" => @candidate.evidence["metadata"].merge("source_file_paths" => ["src/soil.py"]))
-    JevEvidence.any_instance.expects(:collect).with(@candidate).returns([state, nil])
-    JevSchedulerWorker.new.perform
-    JevDiscoveryWorker.new.perform(@candidate.id, "enrich")
+    Jev::Evidence.any_instance.expects(:collect).with(@candidate).returns([state, nil])
+    Jev::SchedulerWorker.new.perform
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "enrich")
     assert_equal "complete", @candidate.reload.status
     assert_equal "research_candidate", @candidate.classification
     assert_equal 0.72, @candidate.strict_probability
     assert_equal 0.94, @candidate.implementation_probability
     assert_equal before, project.reload.attributes
-    assert_equal 2, @run.jev_requests.where(status: "succeeded").count
+    assert_equal 2, @run.requests.where(status: "succeeded").count
     assert_equal 200, @run.statistics[:input_tokens]
     assert_equal BigDecimal("0.0000084"), @run.reload.spent_usd
     assert_equal 0, @run.reserved_usd
     assert_requested screen, times: 1
     assert_requested enrich, times: 1
-    JevDiscoveryWorker.new.perform(@candidate.id, "enrich")
-    assert_equal 2, JevRequest.count
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "enrich")
+    assert_equal 2, Jev::Request.count
   end
 
   test "cached equivalent inputs are reused across runs and JSON key order" do
     request = response("strict", 0.1)
-    JevDiscoveryWorker.new.perform(@candidate.id, "screen")
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "screen")
     other = discovery_candidate(evidence: { "metadata" => @candidate.evidence["metadata"].to_a.reverse.to_h })
-    JevDiscoveryWorker.new.perform(other.id, "screen")
+    Jev::DiscoveryWorker.new.perform(other.id, "screen")
     assert_equal @candidate.reload.screen_request_id, other.reload.screen_request_id
-    assert_equal 0, other.jev_run.spent_usd
+    assert_equal 0, other.run.spent_usd
     assert_requested request, times: 1
   end
 
   test "timeout keeps a conservative reservation and retry does not repeat checkout" do
     @candidate.update!(status: "pending_enrich", strict_probability: 0.9)
     evidence = @candidate.evidence.merge("enriched" => { "readme" => "Soil solver", "source_file_paths" => ["soil.R"] })
-    JevEvidence.any_instance.expects(:collect).once.returns([evidence, "Partial checkout"])
-    request = stub_request(:post, JevClient::API).to_timeout
-    JevDiscoveryWorker.new.perform(@candidate.id, "enrich")
+    Jev::Evidence.any_instance.expects(:collect).once.returns([evidence, "Partial checkout"])
+    request = stub_request(:post, Jev::Client::API).to_timeout
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "enrich")
     assert_equal "pending_enrich", @candidate.reload.status
     assert_operator @run.reload.reserved_usd, :>, 0
     reserved = @run.reserved_usd
     request.to_return(body: result("implementation", 0.92).to_json)
-    JevDiscoveryWorker.new.perform(@candidate.id, "enrich")
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "enrich")
     assert_equal "complete", @candidate.reload.status
     assert_equal "Partial checkout", @candidate.enrichment_error
     assert_equal reserved, @run.reload.reserved_usd
@@ -74,12 +75,12 @@ class JevPipelineTest < ActiveSupport::TestCase
   end
 
   test "failed request retry in another run charges that run" do
-    stub_request(:post, JevClient::API).to_timeout
-    JevDiscoveryWorker.new.perform(@candidate.id, "screen")
+    stub_request(:post, Jev::Client::API).to_timeout
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "screen")
     other = discovery_candidate(evidence: @candidate.evidence)
     response("strict", 0.1)
-    JevDiscoveryWorker.new.perform(other.id, "screen")
-    assert_operator other.jev_run.reload.spent_usd, :>, 0
+    Jev::DiscoveryWorker.new.perform(other.id, "screen")
+    assert_operator other.run.reload.spent_usd, :>, 0
     assert_equal 0, @run.reload.spent_usd
     assert_operator @run.reserved_usd, :>, 0
   end
@@ -87,7 +88,7 @@ class JevPipelineTest < ActiveSupport::TestCase
   test "budget prevents the request and pauses the run" do
     @run.update!(budget_usd: "0.00000001")
     request = response("strict", 0.9)
-    JevDiscoveryWorker.new.perform(@candidate.id, "screen")
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "screen")
     assert_equal "paused", @run.reload.status
     assert_equal "pending_screen", @candidate.reload.status
     assert_equal 0, @candidate.screen_attempts
@@ -95,33 +96,33 @@ class JevPipelineTest < ActiveSupport::TestCase
   end
 
   test "authentication failures pause without consuming the retry allowance" do
-    stub_request(:post, JevClient::API).to_return(status: 401)
-    JevDiscoveryWorker.new.perform(@candidate.id, "screen")
+    stub_request(:post, Jev::Client::API).to_return(status: 401)
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "screen")
     assert_equal "paused", @run.reload.status
     assert_equal 0, @run.reserved_usd
     assert_equal 0, @candidate.reload.screen_attempts
-    assert_equal 401, @run.jev_requests.first.attempt_log.first["http_status"]
+    assert_equal 401, @run.requests.first.attempt_log.first["http_status"]
   end
 
   test "invalid JSON retains its unknown charge and a safe attempt record" do
-    stub_request(:post, JevClient::API).to_return(body: "broken JSON")
-    JevDiscoveryWorker.new.perform(@candidate.id, "screen")
+    stub_request(:post, Jev::Client::API).to_return(body: "broken JSON")
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "screen")
     assert_equal "pending_screen", @candidate.reload.status
     assert_equal "Invalid Jev JSON", @candidate.last_error
     assert_operator @run.reload.reserved_usd, :>, 0
-    assert_equal "Invalid Jev JSON", @run.jev_requests.first.attempt_log.first["error"]
-    refute_includes @run.jev_requests.first.to_json, ENV.fetch("JEV_API_KEY")
+    assert_equal "Invalid Jev JSON", @run.requests.first.attempt_log.first["error"]
+    refute_includes @run.requests.first.to_json, ENV.fetch("JEV_API_KEY")
   end
 
   test "invalid probabilities and model releases are recorded as failures" do
     data = result("strict", 1.1)
-    stub_request(:post, JevClient::API).to_return(body: data.to_json)
-    JevDiscoveryWorker.new.perform(@candidate.id, "screen")
+    stub_request(:post, Jev::Client::API).to_return(body: data.to_json)
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "screen")
     assert_equal "pending_screen", @candidate.reload.status
     assert_match "Invalid Jev probability", @candidate.last_error
     data["model"] = "another-model"
-    stub_request(:post, JevClient::API).to_return(body: data.to_json)
-    2.times { JevDiscoveryWorker.new.perform(@candidate.id, "screen") }
+    stub_request(:post, Jev::Client::API).to_return(body: data.to_json)
+    2.times { Jev::DiscoveryWorker.new.perform(@candidate.id, "screen") }
     assert_equal "failed_screen", @candidate.reload.status
     assert_match "Unexpected Jev model", @candidate.last_error
     assert_operator @run.reload.spent_usd, :>, 0
@@ -129,116 +130,116 @@ class JevPipelineTest < ActiveSupport::TestCase
 
   test "disabled Jev leaves ordinary records and pending work alone" do
     ENV["JEV_ENABLED"] = "false"
-    JevDiscoveryWorker.new.perform(@candidate.id, "screen")
-    JevSchedulerWorker.new.perform
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "screen")
+    Jev::SchedulerWorker.new.perform
     assert_equal "pending_screen", @candidate.reload.status
-    assert_equal 0, JevRequest.count
+    assert_equal 0, Jev::Request.count
   end
 
   test "a project that crosses the Science Score threshold is excluded" do
     project = Project.create!(url: @candidate.repository_url, science_score: 30)
     @candidate.update!(project: project)
-    JevDiscoveryWorker.new.perform(@candidate.id, "screen")
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "screen")
     assert_equal "excluded", @candidate.reload.status
-    assert_equal 0, JevRequest.count
+    assert_equal 0, Jev::Request.count
     assert_equal 30, project.reload.science_score
   end
 
   test "control sampling is deterministic and includes low and borderline cases" do
     %w[low borderline].zip([0.1, 0.4]).each do |band, probability|
       response("strict", probability)
-      candidates = 60.times.map { |i| discovery_candidate(jev_run: @run, repository_url: "https://github.com/discovery/control-#{band}-#{i}") }
-      candidates.each { |candidate| JevDiscoveryWorker.new.perform(candidate.id, "screen") }
-      controls = @run.jev_discoveries.where(screen_band: band, control: true)
+      candidates = 60.times.map { |i| discovery_candidate(run: @run, repository_url: "https://github.com/discovery/control-#{band}-#{i}") }
+      candidates.each { |candidate| Jev::DiscoveryWorker.new.perform(candidate.id, "screen") }
+      controls = @run.discoveries.where(screen_band: band, control: true)
       assert_operator controls.count, :>, 0
       assert controls.all? { |candidate| candidate.status == "pending_enrich" }
       assert_equal band == "low" ? 0.05 : 0.2, controls.first.control_probability
       chosen = controls.pluck(:id)
       candidates.each { |candidate| candidate.update!(status: "pending_screen") }
-      candidates.each { |candidate| JevDiscoveryWorker.new.perform(candidate.id, "screen") }
+      candidates.each { |candidate| Jev::DiscoveryWorker.new.perform(candidate.id, "screen") }
       assert_equal chosen.sort, controls.pluck(:id).sort
     end
   end
 
   test "expired leases resume and enrichment caps leave an inspectable record" do
     @candidate.update!(status: "screening", lease_until: 1.minute.ago, processing_token: "old")
-    JevSchedulerWorker.new.perform
+    Jev::SchedulerWorker.new.perform
     assert_equal "queued_screen", @candidate.reload.status
     assert_nil @candidate.processing_token
     @run.update!(settings: @run.settings.merge("max_enrichments" => 0))
     @candidate.update!(status: "pending_enrich", lease_until: nil)
-    JevSchedulerWorker.new.perform
+    Jev::SchedulerWorker.new.perform
     assert_equal "enrichment_deferred", @candidate.reload.status
   end
 
   test "rescan detects changed source revision and explicit reevaluation reuses unchanged requests" do
     response("strict", 0.1)
-    JevDiscoveryWorker.new.perform(@candidate.id, "screen")
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "screen")
     @candidate.update!(status: "complete", next_check_at: 1.minute.ago, review_state: "negative")
     repo = { "full_name" => "discovery/solver", "pushed_at" => "2026-11-07T12:00:00Z" }
-    JevEvidence.expects(:get).with(JevEvidence.repository_endpoint(@candidate.repository_url)).returns(repo)
-    JevSchedulerWorker.new.perform
+    Jev::Evidence.expects(:get).with(Jev::Evidence.repository_endpoint(@candidate.repository_url)).returns(repo)
+    Jev::SchedulerWorker.new.perform
     assert_equal "pending_screen", @candidate.reload.status
     assert_equal "unreviewed", @candidate.review_state
     assert_nil @candidate.screen_request_id
-    JevDiscoveryWorker.new.perform(@candidate.id, "screen")
-    requests = JevRequest.count
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "screen")
+    requests = Jev::Request.count
     @run.reevaluate!
-    JevDiscoveryWorker.new.perform(@candidate.id, "screen")
-    assert_equal requests, JevRequest.count
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "screen")
+    assert_equal requests, Jev::Request.count
   end
 
   test "scheduler samples existing score strata and broad absent repositories idempotently" do
     @candidate.destroy!
-    @run.update!(sampling_complete: false, target_count: 8)
+    @run.update!(sampling_complete: false, target_count: 8, settings: @run.settings.merge("external_sampling" => "name_pages"))
     4.times { |i| Project.create!(url: "https://github.com/sample/zero-#{i}", science_score: 0) }
     4.times { |i| Project.create!(url: "https://github.com/sample/low-#{i}", science_score: 5) }
     Project.create!(url: "https://github.com/sample/already-science", science_score: 80)
     registry = PackageRegistry.create!(name: "Example", ecosystem: "npm", purl_type: "npm", url: "https://example.org")
     2.times { |i| registry.packages.create!(name: "library-#{i}", repository_url: "https://github.com/sample/library-#{i}") }
     repositories = 10.times.map { |i| { "full_name" => "external/random-#{i}", "description" => "A text editor", "fork" => false } }
-    JevEvidence.stubs(:get).returns(repositories)
+    Jev::Evidence.stubs(:get).returns(repositories)
     before = Project.count
-    JevSchedulerWorker.new.perform
-    assert_equal 8, @run.jev_discoveries.count
-    assert_equal 2, @run.jev_discoveries.where(sample_group: "score_zero").count
-    assert_equal 1, @run.jev_discoveries.where(sample_group: "score_low").count
-    assert_equal 2, @run.jev_discoveries.where(source: "packages").count
-    assert_equal 3, @run.jev_discoveries.where(source: "repos").count
+    Jev::SchedulerWorker.new.perform
+    assert_equal 8, @run.discoveries.count
+    assert_equal 2, @run.discoveries.where(sample_group: "score_zero").count
+    assert_equal 1, @run.discoveries.where(sample_group: "score_low").count
+    assert_equal 2, @run.discoveries.where(source: "packages").count
+    assert_equal 3, @run.discoveries.where(source: "repos").count
     assert @run.reload.sampling_complete?
     assert_equal before, Project.count
-    JevSchedulerWorker.new.perform
-    assert_equal 8, @run.jev_discoveries.count
-    assert @run.jev_discoveries.where(source: "repos").first.source_metadata["page_frame"].present?
+    Jev::SchedulerWorker.new.perform
+    assert_equal 8, @run.discoveries.count
+    assert @run.discoveries.where(source: "repos").first.source_metadata["page_frame"].present?
   end
 
   test "repository sampling failures do not stop already sampled screens" do
     @run.update!(sampling_complete: false)
-    JevSampler.any_instance.expects(:seed).raises(JevClient::Unavailable, "Repository metadata timed out")
-    JevSchedulerWorker.new.perform
+    Jev::Sampler.any_instance.expects(:seed).raises(Jev::Client::Unavailable, "Repository metadata timed out")
+    Jev::SchedulerWorker.new.perform
     assert_equal "queued_screen", @candidate.reload.status
     assert_equal "Repository metadata timed out", @run.reload.last_error
     response("strict", 0.72)
-    JevDiscoveryWorker.new.perform(@candidate.id, "screen")
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "screen")
     assert_equal 0.72, @candidate.reload.strict_probability
-    JevSampler.any_instance.stubs(:seed)
-    JevSchedulerWorker.new.perform
+    Jev::Sampler.any_instance.stubs(:seed)
+    Jev::SchedulerWorker.new.perform
     assert_nil @run.reload.last_error
   end
 
   test "package sampling skips unsupported hosts before selecting its quota" do
     @candidate.destroy!
-    @run.update!(sampling_complete: false, target_count: 8, sampling_state: { "local_done" => true })
+    @run.update!(sampling_complete: false, target_count: 8, sampling_state: { "local_done" => true }, settings: @run.settings.merge("external_sampling" => "name_pages"))
     registry = PackageRegistry.create!(name: "Archive", ecosystem: "npm", purl_type: "npm", url: "https://example.org")
     10.times { |i| registry.packages.create!(name: "unsupported-#{i}", repository_url: "https://example.org/project-#{i}") }
     2.times { |i| registry.packages.create!(name: "supported-#{i}", repository_url: "https://GitHub.com/sample/tool-#{i}") }
-    JevEvidence.stubs(:get).returns([])
-    JevSchedulerWorker.new.perform
-    assert_equal 2, @run.jev_discoveries.where(source: "packages").count
+    Jev::Evidence.stubs(:get).returns([])
+    Jev::SchedulerWorker.new.perform
+    assert_equal 2, @run.discoveries.where(source: "packages").count
     assert @run.reload.sampling_state["packages_done"]
-    assert @run.jev_discoveries.all? { |record| record.repository_url.start_with?("https://github.com/") }
-    JevSchedulerWorker.new.perform
-    assert_equal 2, @run.jev_discoveries.count
+    assert @run.discoveries.all? { |record| record.repository_url.start_with?("https://github.com/") }
+    Jev::SchedulerWorker.new.perform
+    assert_equal 2, @run.discoveries.count
   end
 
   test "enrichment runs real git checkout and Brief without sending an outline" do
@@ -253,7 +254,7 @@ class JevPipelineTest < ActiveSupport::TestCase
       RepositoryCheckout.expects(:new).with(@candidate.repository_url, skip_lfs: true, partial: true, disk_limit: 200.megabytes).returns(checkout)
       response("implementation", 0.95)
       @candidate.update!(status: "pending_enrich", strict_probability: 0.7)
-      JevDiscoveryWorker.new.perform(@candidate.id, "enrich")
+      Jev::DiscoveryWorker.new.perform(@candidate.id, "enrich")
       assert_equal "complete", @candidate.reload.status, @candidate.last_error
       assert_nil @candidate.enrichment_error
       evidence = @candidate.evidence
@@ -271,11 +272,36 @@ class JevPipelineTest < ActiveSupport::TestCase
     RepositoryCheckout.any_instance.expects(:open).raises(RepositoryCommand::Error, "Repository not found")
     response("implementation", 0.1)
     @candidate.update!(status: "pending_enrich", strict_probability: 0.9)
-    JevDiscoveryWorker.new.perform(@candidate.id, "enrich")
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "enrich")
     assert_equal "complete", @candidate.reload.status
     assert_equal false, @candidate.evidence["source_paths_complete"]
     assert_match "checkout failed", @candidate.enrichment_error
     assert_equal "uncertain", @candidate.classification
+  end
+
+  test "worker prefers the root README over bundled documentation and records more source languages" do
+    Dir.mktmpdir("jev-root-readme-") do |path|
+      FileUtils.mkdir_p(File.join(path, "A_book"))
+      File.write(File.join(path, "A_book/README.md"), "Neural network teaching examples")
+      File.write(File.join(path, "readme.markdown"), "A robot dynamics research implementation")
+      %w[solver.pyx kernel.cu orbit.pro model.wl interface.swift driver.vb].each do |file|
+        File.write(File.join(path, file), "implementation\n")
+      end
+      command = RepositoryCommand.new
+      command.run(["git", "init", path])
+      command.run(["git", "-C", path, "add", "."])
+      command.run(["git", "-C", path, "-c", "user.name=Test", "-c", "user.email=test@example.org", "-c", "commit.gpgsign=false", "commit", "-m", "Add model"])
+      checkout = RepositoryCheckout.new(path, skip_lfs: true, partial: true)
+      RepositoryCheckout.expects(:new).with(@candidate.repository_url, skip_lfs: true, partial: true, disk_limit: 200.megabytes).returns(checkout)
+      response("implementation", 0.9)
+      @candidate.update!(status: "pending_enrich", strict_probability: 0.7)
+      Jev::DiscoveryWorker.new.perform(@candidate.id, "enrich")
+      assert_equal "complete", @candidate.reload.status, @candidate.last_error
+      assert_equal "A robot dynamics research implementation", @candidate.enrich_request.request_body.dig("state", "readme")
+      assert_equal "readme.markdown", @candidate.evidence["readme_path"]
+      assert_equal %w[driver.vb interface.swift kernel.cu model.wl orbit.pro solver.pyx], @candidate.evidence.dig("enriched", "source_file_paths")
+      refute @candidate.enrich_request.request_body.fetch("state").key?("readme_path")
+    end
   end
 
   test "missing line counts remain visible as an evidence gap" do
@@ -288,7 +314,7 @@ class JevPipelineTest < ActiveSupport::TestCase
       RepositoryBriefScan.expects(:call).with(path).returns({ "version" => "0.14.2", "languages" => [{ "name" => "Python" }], "lines" => nil })
       response("implementation", 0.7)
       @candidate.update!(status: "pending_enrich", strict_probability: 0.7)
-      JevDiscoveryWorker.new.perform(@candidate.id, "enrich")
+      Jev::DiscoveryWorker.new.perform(@candidate.id, "enrich")
       assert_equal "complete", @candidate.reload.status
       assert_equal "Brief line counts unavailable", @candidate.enrichment_error
     end
@@ -306,7 +332,7 @@ class JevPipelineTest < ActiveSupport::TestCase
       RepositoryCheckout.expects(:new).with(@candidate.repository_url, skip_lfs: true, partial: true, disk_limit: 200.megabytes).returns(checkout)
       response("implementation", 0.7)
       @candidate.update!(status: "pending_enrich", strict_probability: 0.7)
-      JevDiscoveryWorker.new.perform(@candidate.id, "enrich")
+      Jev::DiscoveryWorker.new.perform(@candidate.id, "enrich")
       assert_equal "complete", @candidate.reload.status, @candidate.last_error
       assert_nil @candidate.enrichment_error
       assert_equal "", @candidate.evidence.dig("enriched", "readme")
@@ -318,10 +344,10 @@ class JevPipelineTest < ActiveSupport::TestCase
     { "repository disk limit exceeded" => "disk_limit", "command timed out after 120 seconds" => "timeout",
       "command failed: Repository not found" => "unavailable", "ambiguous argument 'HEAD': unknown revision" => "missing_revision",
       "command output exceeds 4000000 bytes" => "output_limit" }.each do |message, kind|
-      candidate = discovery_candidate(jev_run: @run, status: "pending_enrich", strict_probability: 0.7)
+      candidate = discovery_candidate(run: @run, status: "pending_enrich", strict_probability: 0.7)
       RepositoryCheckout.any_instance.stubs(:open).raises(RepositoryCommand::Error, message)
       response("implementation", 0.1)
-      JevDiscoveryWorker.new.perform(candidate.id, "enrich")
+      Jev::DiscoveryWorker.new.perform(candidate.id, "enrich")
       assert_equal "complete", candidate.reload.status
       assert_equal kind, candidate.evidence["checkout_error"]
       assert_operator candidate.evidence["collection_ms"], :>=, 0
@@ -338,7 +364,7 @@ class JevPipelineTest < ActiveSupport::TestCase
       RepositoryCheckout.expects(:new).with(@candidate.repository_url, skip_lfs: true, partial: true, disk_limit: 200.megabytes).returns(checkout)
       response("implementation", 0.1)
       @candidate.update!(status: "pending_enrich", strict_probability: 0.7)
-      JevDiscoveryWorker.new.perform(@candidate.id, "enrich")
+      Jev::DiscoveryWorker.new.perform(@candidate.id, "enrich")
       assert_equal "complete", @candidate.reload.status, @candidate.last_error
       assert_equal [], @candidate.evidence.dig("enriched", "source_file_paths")
       assert_equal "uncertain", @candidate.classification
@@ -350,7 +376,7 @@ class JevPipelineTest < ActiveSupport::TestCase
     @candidate.update!(status: "pending_enrich", strict_probability: 0.9)
     RepositoryCheckout.any_instance.stubs(:open).raises(RepositoryCommand::Error, "command timed out after 120 seconds")
     response("implementation", 0.1)
-    JevDiscoveryWorker.new.perform(@candidate.id, "enrich")
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "enrich")
     old_request = @candidate.reload.enrich_request
     assert_equal "complete", @candidate.status
     ENV["RUN_ID"], ENV["LIMIT"] = @run.id.to_s, "1"
@@ -364,9 +390,9 @@ class JevPipelineTest < ActiveSupport::TestCase
     assert_equal old_request.id, @candidate.evidence.dig("previous_collections", 0, "request_id")
     assert_equal "succeeded", old_request.reload.status
     evidence = @candidate.evidence.merge("enriched" => @candidate.evidence["metadata"].merge("readme" => "A gene analysis implementation", "source_file_paths" => ["gene.py"]))
-    JevEvidence.any_instance.expects(:collect).returns([evidence, nil])
+    Jev::Evidence.any_instance.expects(:collect).returns([evidence, nil])
     response("implementation", 0.9)
-    JevDiscoveryWorker.new.perform(@candidate.id, "enrich")
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "enrich")
     assert_equal "complete", @candidate.reload.status
     assert_nil @candidate.enrichment_error
     assert_equal 0.9, @candidate.implementation_probability
@@ -380,7 +406,7 @@ class JevPipelineTest < ActiveSupport::TestCase
   end
 
   def response(name, probability)
-    stub_request(:post, JevClient::API).with { |request| JSON.parse(request.body)["questions"].key?(name) }
+    stub_request(:post, Jev::Client::API).with { |request| JSON.parse(request.body)["questions"].key?(name) }
       .to_return(body: result(name, probability).to_json)
   end
 end

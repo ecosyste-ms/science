@@ -1,4 +1,4 @@
-class JevQuestions
+class Jev::Questions
   STRICT = {
     "type" => "noul", "instructions" => "Does the supplied evidence establish that this project provides software for conducting scientific research?",
     "criteria" => { "true" => "Implements scientific methods, simulations, measurement, domain-specific data analysis, or a tool specifically designed for research workflows. Research-specific infrastructure counts. Publication metadata is not required.",

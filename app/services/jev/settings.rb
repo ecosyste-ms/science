@@ -1,4 +1,4 @@
-class JevSettings
+class Jev::Settings
   def self.enabled?
     ENV["JEV_ENABLED"] == "true"
   end
@@ -24,6 +24,7 @@ class JevSettings
       "max_enrichments" => integer("MAX_ENRICHMENTS", 1000, 0..100_000),
       "max_attempts" => integer("MAX_ATTEMPTS", 3, 1..8),
       "retry_seconds" => integer("RETRY_SECONDS", 60, 1..3600),
-      "rescan_days" => integer("RESCAN_DAYS", 7, 1..365) }
+      "rescan_days" => integer("RESCAN_DAYS", 7, 1..365),
+      "external_sampling" => "owner_time", "owner_windows" => integer("OWNER_WINDOWS", 5000, 1..50_000) }
   end
 end
