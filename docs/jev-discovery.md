@@ -45,10 +45,11 @@ Replace `RUN_ID` with the returned ID. Status includes processing and classifica
 dokku run env RUN_ID=1 bundle exec rake jev:pause
 dokku run env RUN_ID=1 bundle exec rake jev:resume
 dokku run env RUN_ID=1 bundle exec rake jev:retry
+dokku run env RUN_ID=1 LIMIT=20 bundle exec rake jev:retry_evidence
 dokku run env RUN_ID=1 bundle exec rake jev:reevaluate
 ```
 
-`retry` resets failed stage attempts. Resume after fixing credentials or increasing the budget within the intended spending limit. `reevaluate` adopts the current model and question fingerprints, invalidates active leases and clears current probabilities and review status. Unchanged successful requests are cached. Old request records and review notes remain stored; detailed review history is not versioned. Use a new named run when preserving an earlier evaluation cohort matters.
+`retry` resets failed stage attempts. `retry_evidence` clears cached incomplete source collections for a bounded number of completed candidates and queues fresh enrichment. It retains the earlier request ID, source revision and error in collection history; identical resulting model inputs still use the request cache. Checkout errors distinguish unavailable repositories, missing revisions, timeouts, disk/output limits and rate limits, and successful collections record duration in milliseconds. Resume after fixing credentials or increasing the budget within the intended spending limit. `reevaluate` adopts the current model and question fingerprints, invalidates active leases and clears current probabilities and review status. Unchanged successful requests are cached. Old request records and review notes remain stored; detailed review history is not versioned. Use a new named run when preserving an earlier evaluation cohort matters.
 
 Completed records are checked incrementally for changed metadata, repository push revision, stored README or Brief statistics and changed question content. The run retains its pinned model until explicit re-evaluation or a new run. Source evidence is recollected when its fingerprint changes. Checks use existing stored project evidence and repository API snapshots, so changes that upstream sources have not indexed remain undetected.
 

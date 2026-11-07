@@ -65,13 +65,15 @@ class JevEvidence
       state["brief"] = structural_brief(project.brief)
     end
     errors = []
+    collection_started = nil
     JevLimiter.with_slot("enrich") do
+      collection_started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       disk_limit = JevSettings.integer("DISK_LIMIT_MB", 200, 25..500).megabytes
       checkout = RepositoryCheckout.new(discovery.repository_url, skip_lfs: true, disk_limit: disk_limit, partial: true)
       checkout.open do |path, _, _|
         command = RepositoryCommand.new(timeout: 60, output_limit: 4.megabytes)
         revision = command.run(["git", "-C", path, "rev-parse", "HEAD"]).strip
-        files = command.run(["git", "-C", path, "ls-files", "-z"]).force_encoding("UTF-8").scrub.split("\0")
+        files = command.run(["git", "-C", path, "ls-files", "-z"]).dup.force_encoding("UTF-8").scrub.split("\0")
         sources = files.select { |file| file.match?(SOURCE_EXTENSION) || %w[Snakefile Makefile].include?(File.basename(file)) }
         state["source_file_paths"] = sources.first(80)
         state["source_paths_truncated"] = sources.size > 80
@@ -87,22 +89,37 @@ class JevEvidence
         if readme
           filename = File.realpath(File.join(path, readme)) rescue nil
           if filename&.start_with?(File.realpath(path) + File::SEPARATOR) && File.file?(filename)
-            state["readme"] = File.binread(filename, 40_000).force_encoding("UTF-8").scrub.delete("\0")[0, 8000]
+            state["readme"] = File.binread(filename, 40_000).to_s.dup.force_encoding("UTF-8").scrub.delete("\0")[0, 8000]
           end
         end
         evidence["revision"] = revision
         evidence["skipped_large_files"] = checkout.skipped_paths
         evidence["source_paths_complete"] = checkout.skipped_paths.zero?
       end
+      evidence["collection_ms"] = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - collection_started) * 1000
     end
     evidence["enriched"] = state
     evidence["collected_at"] = Time.current.iso8601
     [evidence, errors.presence&.join("; ")]
   rescue RepositoryCommand::Error, Errno::ENOENT => error
+    evidence["checkout_error"] = checkout_error_kind(error)
+    evidence["collection_ms"] = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - collection_started) * 1000 if collection_started
     evidence["enriched"] = state
     evidence["source_paths_complete"] = false
     evidence["collected_at"] = Time.current.iso8601
-    [evidence, "Repository checkout failed: #{error.class}"]
+    [evidence, "Repository checkout failed: #{evidence['checkout_error']}"]
+  end
+
+  def checkout_error_kind(error)
+    case error.message
+    when /repository disk limit exceeded/i then "disk_limit"
+    when /command timed out/i then "timeout"
+    when /rate limit|returned error: 429/i then "rate_limited"
+    when /repository not found|authentication failed|could not read Username|returned error: (?:401|403|404)/i then "unavailable"
+    when /unknown revision|ambiguous argument.*HEAD|remote HEAD.*nonexistent/i then "missing_revision"
+    when /command output exceeds/i then "output_limit"
+    else "command_failed"
+    end
   end
 
   def structural_brief(brief)

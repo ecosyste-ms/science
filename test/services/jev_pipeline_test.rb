@@ -263,6 +263,7 @@ class JevPipelineTest < ActiveSupport::TestCase
       assert evidence.dig("enriched", "brief", "lines").present?
       assert_equal %w[languages lines], evidence.dig("enriched", "brief").keys.sort
       assert_equal "A scientific soil water solver", evidence.dig("enriched", "readme")
+      assert_operator evidence["collection_ms"], :>, 0
     end
   end
 
@@ -291,6 +292,87 @@ class JevPipelineTest < ActiveSupport::TestCase
       assert_equal "complete", @candidate.reload.status
       assert_equal "Brief line counts unavailable", @candidate.enrichment_error
     end
+  end
+
+  test "empty README files do not fail repository enrichment" do
+    Dir.mktmpdir("jev-empty-readme-") do |path|
+      File.write(File.join(path, "README.md"), "")
+      File.write(File.join(path, "solver.py"), "def solve():\n    return 1\n")
+      command = RepositoryCommand.new
+      command.run(["git", "init", path])
+      command.run(["git", "-C", path, "add", "."])
+      command.run(["git", "-C", path, "-c", "user.name=Test", "-c", "user.email=test@example.org", "-c", "commit.gpgsign=false", "commit", "-m", "Add solver"])
+      checkout = RepositoryCheckout.new(path, skip_lfs: true, partial: true)
+      RepositoryCheckout.expects(:new).with(@candidate.repository_url, skip_lfs: true, partial: true, disk_limit: 200.megabytes).returns(checkout)
+      response("implementation", 0.7)
+      @candidate.update!(status: "pending_enrich", strict_probability: 0.7)
+      JevDiscoveryWorker.new.perform(@candidate.id, "enrich")
+      assert_equal "complete", @candidate.reload.status, @candidate.last_error
+      assert_nil @candidate.enrichment_error
+      assert_equal "", @candidate.evidence.dig("enriched", "readme")
+      assert_equal ["solver.py"], @candidate.evidence.dig("enriched", "source_file_paths")
+    end
+  end
+
+  test "checkout failures retain safe diagnostic categories and duration" do
+    { "repository disk limit exceeded" => "disk_limit", "command timed out after 120 seconds" => "timeout",
+      "command failed: Repository not found" => "unavailable", "ambiguous argument 'HEAD': unknown revision" => "missing_revision",
+      "command output exceeds 4000000 bytes" => "output_limit" }.each do |message, kind|
+      candidate = discovery_candidate(jev_run: @run, status: "pending_enrich", strict_probability: 0.7)
+      RepositoryCheckout.any_instance.stubs(:open).raises(RepositoryCommand::Error, message)
+      response("implementation", 0.1)
+      JevDiscoveryWorker.new.perform(candidate.id, "enrich")
+      assert_equal "complete", candidate.reload.status
+      assert_equal kind, candidate.evidence["checkout_error"]
+      assert_operator candidate.evidence["collection_ms"], :>=, 0
+      assert_equal "Repository checkout failed: #{kind}", candidate.enrichment_error
+    end
+  end
+
+  test "repositories with an empty committed tree remain reviewable" do
+    Dir.mktmpdir("jev-empty-tree-") do |path|
+      command = RepositoryCommand.new
+      command.run(["git", "init", path])
+      command.run(["git", "-C", path, "-c", "user.name=Test", "-c", "user.email=test@example.org", "-c", "commit.gpgsign=false", "commit", "--allow-empty", "-m", "Create repository"])
+      checkout = RepositoryCheckout.new(path, skip_lfs: true, partial: true)
+      RepositoryCheckout.expects(:new).with(@candidate.repository_url, skip_lfs: true, partial: true, disk_limit: 200.megabytes).returns(checkout)
+      response("implementation", 0.1)
+      @candidate.update!(status: "pending_enrich", strict_probability: 0.7)
+      JevDiscoveryWorker.new.perform(@candidate.id, "enrich")
+      assert_equal "complete", @candidate.reload.status, @candidate.last_error
+      assert_equal [], @candidate.evidence.dig("enriched", "source_file_paths")
+      assert_equal "uncertain", @candidate.classification
+    end
+  end
+
+  test "retry evidence task recollects cached gaps and retains the earlier request" do
+    original = ENV.to_h.slice("RUN_ID", "LIMIT")
+    @candidate.update!(status: "pending_enrich", strict_probability: 0.9)
+    RepositoryCheckout.any_instance.stubs(:open).raises(RepositoryCommand::Error, "command timed out after 120 seconds")
+    response("implementation", 0.1)
+    JevDiscoveryWorker.new.perform(@candidate.id, "enrich")
+    old_request = @candidate.reload.enrich_request
+    assert_equal "complete", @candidate.status
+    ENV["RUN_ID"], ENV["LIMIT"] = @run.id.to_s, "1"
+    Rails.application.load_tasks unless Rake::Task.task_defined?("jev:retry_evidence")
+    task = Rake::Task["jev:retry_evidence"]
+    task.reenable
+    capture_io { task.invoke }
+    assert_equal "pending_enrich", @candidate.reload.status
+    assert_nil @candidate.implementation_probability
+    refute @candidate.evidence.key?("enriched")
+    assert_equal old_request.id, @candidate.evidence.dig("previous_collections", 0, "request_id")
+    assert_equal "succeeded", old_request.reload.status
+    evidence = @candidate.evidence.merge("enriched" => @candidate.evidence["metadata"].merge("readme" => "A gene analysis implementation", "source_file_paths" => ["gene.py"]))
+    JevEvidence.any_instance.expects(:collect).returns([evidence, nil])
+    response("implementation", 0.9)
+    JevDiscoveryWorker.new.perform(@candidate.id, "enrich")
+    assert_equal "complete", @candidate.reload.status
+    assert_nil @candidate.enrichment_error
+    assert_equal 0.9, @candidate.implementation_probability
+    assert_not_equal old_request.id, @candidate.enrich_request_id
+  ensure
+    %w[RUN_ID LIMIT].each { |key| original.key?(key) ? ENV[key] = original[key] : ENV.delete(key) }
   end
 
   def result(name, probability)

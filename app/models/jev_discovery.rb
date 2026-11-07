@@ -16,4 +16,17 @@ class JevDiscovery < ApplicationRecord
   def review!(state:, notes:, reviewer:)
     update!(review_state: state, review_notes: notes, reviewed_by: reviewer, reviewed_at: Time.current)
   end
+
+  def retry_evidence!
+    with_lock do
+      raise ArgumentError, "Evidence collection is still in progress" unless status == "complete" && enrichment_error.present?
+      previous = { "error" => enrichment_error, "request_id" => enrich_request_id,
+        "revision" => evidence["revision"], "collected_at" => evidence["collected_at"] }
+      history = Array(evidence["previous_collections"]).last(9) + [previous]
+      update!(evidence: { "metadata" => evidence.fetch("metadata"), "previous_collections" => history },
+        status: "pending_enrich", classification: classification_for(strict_probability, nil), implementation_probability: nil,
+        enrich_request_id: nil, enriched_at: nil, enrichment_error: nil, enrich_attempts: 0, last_error: nil,
+        review_state: "unreviewed", next_attempt_at: Time.current, processing_token: nil, lease_until: nil)
+    end
+  end
 end

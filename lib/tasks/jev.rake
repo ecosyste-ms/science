@@ -25,6 +25,17 @@ namespace :jev do
     puts JSON.pretty_generate(run.statistics)
   end
 
+  desc "Recollect missing source evidence (RUN_ID required, LIMIT=100)"
+  task retry_evidence: :environment do
+    run = JevRun.find(ENV.fetch("RUN_ID"))
+    limit = Integer(ENV.fetch("LIMIT", "100"))
+    raise ArgumentError, "LIMIT must be between 1 and 1000" unless (1..1000).cover?(limit)
+    scope = run.jev_discoveries.where(status: "complete").where.not(enrichment_error: nil).order(:id).limit(limit)
+    retried = scope.map { |candidate| candidate.retry_evidence!; candidate.id }
+    run.update!(status: "running") if run.status == "monitoring" && retried.any?
+    puts JSON.pretty_generate(retried: retried, statistics: run.reload.statistics)
+  end
+
   desc "Re-evaluate a run with current model and question content (RUN_ID required)"
   task reevaluate: :environment do
     run = JevRun.find(ENV.fetch("RUN_ID"))
