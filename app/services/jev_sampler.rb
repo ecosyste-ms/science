@@ -12,6 +12,11 @@ class JevSampler
         state["local_done"] = true
         @run.update!(sampling_state: state)
       end
+      unless state["packages_done"]
+        seed_packages
+        state["packages_done"] = true
+        @run.update!(sampling_state: state)
+      end
     end
     seed_external
   end
@@ -33,14 +38,23 @@ class JevSampler
         end
       end
     end
+  end
+
+  def seed_packages
+    count = @run.jev_discoveries.count
     packages = Package.visible.where(published_by_project_id: nil).where.not(repository_url: [nil, ""])
-    random_order(packages, (target * 0.25).to_i).pluck(:id).each_slice(100) do |ids|
+      .where("repository_url ~* ?", '^https://(github[.]com|gitlab[.]com|codeberg[.]org)/')
+      .where("NOT EXISTS (SELECT 1 FROM projects WHERE projects.url = lower(packages.repository_url))")
+      .where("NOT EXISTS (SELECT 1 FROM project_repository_aliases WHERE project_repository_aliases.url = lower(packages.repository_url))")
+    random_order(packages, (@run.target_count * 0.25).to_i).pluck(:id).each_slice(100) do |ids|
       Package.where(id: ids).includes(:package_registry).find_each do |package|
+        break if count >= @run.target_count
         url = JevEvidence.repository_url(package.repository_url)
         next unless url && absent?(url)
-        add(url: url, group: "unlinked_package_#{package.package_registry.ecosystem.to_s.downcase}", source: "packages",
-          method: "seeded_hash_unlinked_stored_packages", metadata: JevEvidence.metadata(package: package, url: url),
+        candidate = add(url: url, group: "unlinked_package_#{package.package_registry.ecosystem.to_s.downcase}", source: "packages",
+          method: "seeded_hash_supported_unlinked_stored_packages", metadata: JevEvidence.metadata(package: package, url: url),
           provenance: { "package_id" => package.id })
+        count += 1 if candidate.previously_new_record?
       end
     end
   end
@@ -56,19 +70,19 @@ class JevSampler
     pages = external_pages
     3.times do
       break if @run.jev_discoveries.count >= @run.target_count || page_index >= pages.size
-      page, order, year = pages[page_index]
+      page, order = pages[page_index]
       url = "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories"
-      records = JevEvidence.get(url, per_page: 100, page: page, sort: "full_name", order: order, created_after: "#{year}-01-01T00:00:00Z")
+      records = JevEvidence.get(url, per_page: 100, page: page, sort: "full_name", order: order)
       raise JevClient::Error, "Unexpected repository list" unless records.is_a?(Array)
       records.shuffle(random: Random.new(Digest::SHA256.hexdigest("#{@run.seed}:#{page_index}").to_i(16))).each do |repository|
         break if @run.jev_discoveries.count >= @run.target_count
         next if repository["fork"]
         candidate = JevEvidence.repository_url("https://github.com/#{repository['full_name']}")
         next unless candidate && absent?(candidate)
-        add(url: candidate, group: "external_repositories", source: "repos", method: "seeded_random_page_time_window",
+        add(url: candidate, group: "external_repositories", source: "repos", method: "seeded_random_name_page",
           metadata: JevEvidence.metadata(repository: repository, url: candidate),
-          provenance: { "endpoint" => url, "page" => page, "order" => order, "created_after_year" => year,
-            "page_frame" => "1..100 within ascending/descending names and lower date bound", "repository" => repository.slice(*JevEvidence::REPOSITORY_FIELDS) })
+          provenance: { "endpoint" => url, "page" => page, "order" => order,
+            "page_frame" => "1..100 within ascending/descending names", "repository" => repository.slice(*JevEvidence::REPOSITORY_FIELDS) })
       end
       page_index += 1
       @run.update!(sampling_state: state.merge("external_index" => page_index))
@@ -80,7 +94,7 @@ class JevSampler
 
   def external_pages
     random = Random.new(Digest::SHA256.hexdigest(@run.seed).to_i(16))
-    (2010..2026).flat_map { |year| %w[asc desc].flat_map { |order| (1..100).map { |page| [page, order, year] } } }.shuffle(random: random)
+    %w[asc desc].flat_map { |order| (1..100).map { |page| [page, order] } }.shuffle(random: random)
   end
 
   def absent?(url)

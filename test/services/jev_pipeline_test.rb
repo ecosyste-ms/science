@@ -212,6 +212,35 @@ class JevPipelineTest < ActiveSupport::TestCase
     assert @run.jev_discoveries.where(source: "repos").first.source_metadata["page_frame"].present?
   end
 
+  test "repository sampling failures do not stop already sampled screens" do
+    @run.update!(sampling_complete: false)
+    JevSampler.any_instance.expects(:seed).raises(JevClient::Unavailable, "Repository metadata timed out")
+    JevSchedulerWorker.new.perform
+    assert_equal "queued_screen", @candidate.reload.status
+    assert_equal "Repository metadata timed out", @run.reload.last_error
+    response("strict", 0.72)
+    JevDiscoveryWorker.new.perform(@candidate.id, "screen")
+    assert_equal 0.72, @candidate.reload.strict_probability
+    JevSampler.any_instance.stubs(:seed)
+    JevSchedulerWorker.new.perform
+    assert_nil @run.reload.last_error
+  end
+
+  test "package sampling skips unsupported hosts before selecting its quota" do
+    @candidate.destroy!
+    @run.update!(sampling_complete: false, target_count: 8, sampling_state: { "local_done" => true })
+    registry = PackageRegistry.create!(name: "Archive", ecosystem: "npm", purl_type: "npm", url: "https://example.org")
+    10.times { |i| registry.packages.create!(name: "unsupported-#{i}", repository_url: "https://example.org/project-#{i}") }
+    2.times { |i| registry.packages.create!(name: "supported-#{i}", repository_url: "https://GitHub.com/sample/tool-#{i}") }
+    JevEvidence.stubs(:get).returns([])
+    JevSchedulerWorker.new.perform
+    assert_equal 2, @run.jev_discoveries.where(source: "packages").count
+    assert @run.reload.sampling_state["packages_done"]
+    assert @run.jev_discoveries.all? { |record| record.repository_url.start_with?("https://github.com/") }
+    JevSchedulerWorker.new.perform
+    assert_equal 2, @run.jev_discoveries.count
+  end
+
   test "enrichment runs real git checkout and Brief without sending an outline" do
     Dir.mktmpdir("jev-test-") do |path|
       File.write(File.join(path, "README.md"), "A scientific soil water solver")

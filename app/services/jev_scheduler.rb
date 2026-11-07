@@ -2,7 +2,12 @@ class JevScheduler
   def run
     return unless JevSettings.enabled?
     JevRun.where(status: %w[running monitoring]).order(:id).find_each do |run|
-      JevSampler.new(run).seed unless run.sampling_complete?
+      sampling_error = nil
+      begin
+        JevSampler.new(run).seed unless run.sampling_complete?
+      rescue JevClient::Error => error
+        sampling_error = error.message
+      end
       recover(run)
       enqueue(run, "screen")
       enqueue(run, "enrich")
@@ -11,6 +16,7 @@ class JevScheduler
       if run.sampling_complete? && !pending.exists?
         run.update!(status: "monitoring", completed_at: run.completed_at || Time.current)
       end
+      run.update!(last_error: sampling_error)
     rescue StandardError => error
       run.update!(last_error: "#{error.class}: scheduler failed")
       Rails.logger.error(event: "jev_scheduler_error", run_id: run.id, error: error.class.name)
