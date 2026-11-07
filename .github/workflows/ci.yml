@@ -69,6 +69,15 @@ jobs:
           echo "${TOOL_SHA256}  swhid.tar.gz" | sha256sum --check
           sudo tar -xz -f swhid.tar.gz -C /usr/local/bin swhid
           swhid --version
+      - name: Install SCC
+        working-directory: ${{ runner.temp }}
+        env:
+          TOOL_SHA256: c7328436d3027f4357d3d7853f7dc3ac2bbcb4ca08f1adad91a27c593884079b
+        run: |
+          curl -fsSL --output scc.tar.gz "https://github.com/boyter/scc/releases/download/v4.1.0/scc_Linux_x86_64.tar.gz"
+          echo "${TOOL_SHA256}  scc.tar.gz" | sha256sum --check
+          sudo tar -xz -f scc.tar.gz -C /usr/local/bin scc
+          scc --version
       - name: Set up Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:

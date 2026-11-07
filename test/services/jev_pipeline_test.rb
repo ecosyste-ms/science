@@ -248,6 +248,22 @@ class JevPipelineTest < ActiveSupport::TestCase
     assert_equal "uncertain", @candidate.classification
   end
 
+  test "missing line counts remain visible as an evidence gap" do
+    Dir.mktmpdir("jev-missing-lines-") do |path|
+      File.write(File.join(path, "README.md"), "A solver")
+      command = mock
+      command.stubs(:run).returns("a" * 40, "README.md\0")
+      RepositoryCommand.stubs(:new).returns(command)
+      RepositoryCheckout.any_instance.stubs(:open).yields(path, @candidate.repository_url, [])
+      RepositoryBriefScan.expects(:call).with(path).returns({ "version" => "0.14.2", "languages" => [{ "name" => "Python" }], "lines" => nil })
+      response("implementation", 0.7)
+      @candidate.update!(status: "pending_enrich", strict_probability: 0.7)
+      JevDiscoveryWorker.new.perform(@candidate.id, "enrich")
+      assert_equal "complete", @candidate.reload.status
+      assert_equal "Brief line counts unavailable", @candidate.enrichment_error
+    end
+  end
+
   def result(name, probability)
     { "model" => "jev-1.14.0", "answers" => { name => { "noul" => probability } }, "usage" => { "input_tokens" => 100, "output_tokens" => 0 } }
   end

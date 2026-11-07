@@ -78,6 +78,7 @@ class JevEvidence
         begin
           brief = RepositoryBriefScan.call(path)
           state["brief"] = structural_brief(brief)
+          errors << "Brief line counts unavailable" if state["brief"]["lines"].blank?
           evidence["brief_version"] = brief["version"]
         rescue RepositoryCommand::Error, JSON::ParserError => error
           errors << "Brief scan failed: #{error.class}"
