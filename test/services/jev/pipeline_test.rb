@@ -145,6 +145,43 @@ class Jev::PipelineTest < ActiveSupport::TestCase
     assert_equal 30, project.reload.science_score
   end
 
+  test "an opted in evaluation run screens included projects without changing them" do
+    @run.update!(settings: @run.settings.merge("include_scored_projects" => true))
+    project = Project.create!(url: @candidate.repository_url, science_score: 80, name: "Cache client", description: "A general purpose cache client")
+    metadata = Jev::Evidence.metadata(project: project, url: project.url)
+    @candidate.update!(project: project, evidence: { "metadata" => metadata })
+    before = project.reload.attributes
+    request = response("strict", 0.04)
+
+    Jev::SchedulerWorker.new.perform
+    assert_equal "queued_screen", @candidate.reload.status
+    Jev::DiscoveryWorker.new.perform(@candidate.id, "screen")
+
+    assert_equal 0.04, @candidate.reload.strict_probability
+    assert_equal "low", @candidate.screen_band
+    assert_equal "negative", @candidate.classification
+    assert_equal "succeeded", @candidate.screen_request.status
+    assert_equal before, project.reload.attributes
+    assert_requested request, times: 1
+  end
+
+  test "hidden projects remain excluded in default and opted in runs" do
+    host = Host.find_or_create_by!(name: "GitHub")
+    owner = Owner.create!(host: host, login: "hidden-evaluation-owner")
+    project = Project.create!(url: @candidate.repository_url, science_score: 80, owner_record: owner)
+    @candidate.update!(project: project)
+    owner.update!(hidden: true)
+
+    [false, true].each do |included|
+      @run.update!(settings: @run.settings.merge("include_scored_projects" => included))
+      @candidate.update!(status: "pending_screen")
+      Jev::DiscoveryWorker.new.perform(@candidate.id, "screen")
+      assert_equal "excluded", @candidate.reload.status
+      assert_nil @candidate.strict_probability
+    end
+    assert_equal 0, Jev::Request.count
+  end
+
   test "control sampling is deterministic and includes low and borderline cases" do
     %w[low borderline].zip([0.1, 0.4]).each do |band, probability|
       response("strict", probability)

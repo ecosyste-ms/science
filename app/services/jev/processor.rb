@@ -34,8 +34,12 @@ class Jev::Processor
   end
 
   def screen
-    if @discovery.project && !Project.visible.where(id: @discovery.project_id).where("science_score < ? OR science_score IS NULL", Project::SCIENCE_SCORE_THRESHOLD).exists?
-      return { status: "excluded", last_error: "Project is hidden or already above the Science Score threshold" }
+    if @discovery.project_id
+      projects = Project.visible.where(id: @discovery.project_id)
+      projects = projects.where("science_score < ? OR science_score IS NULL", Project::SCIENCE_SCORE_THRESHOLD) unless @run.settings["include_scored_projects"] == true
+      unless projects.exists?
+        return { status: "excluded", last_error: "Project is hidden or already above the Science Score threshold" }
+      end
     end
     request = Jev::Client.new(@run).call(stage: "screen", state: @discovery.evidence.fetch("metadata"))
     probability = request.response_body.dig("answers", "strict", "noul")
