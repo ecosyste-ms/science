@@ -15,6 +15,10 @@ Rails.application.routes.draw do
 
   namespace :api, :defaults => {:format => :json} do
     namespace :v1 do
+      namespace :discovery do
+        resources :runs, only: %i[index show]
+        resources :candidates, only: %i[index show]
+      end
       resources :research_organizations, only: %i[index show] do
         collection { get :accounts }
         member do

@@ -16,6 +16,144 @@ externalDocs:
 servers:
   - url: https://science.ecosyste.ms/api/v1
 paths:
+  "/discovery/runs":
+    get:
+      operationId: getDiscoveryRuns
+      tags: [discovery]
+      description: List shadow discovery runs, newest first. Reads stored data without triggering inference.
+      parameters:
+      - "$ref": "#/components/parameters/DiscoveryPage"
+      - "$ref": "#/components/parameters/DiscoveryPerPage"
+      responses:
+        '200':
+          description: Runs with pinned model, question fingerprints and estimated inference costs. Pagination uses Link headers.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/DiscoveryRun"
+        '400':
+          description: Invalid pagination parameters.
+  "/discovery/runs/{id}":
+    get:
+      operationId: getDiscoveryRun
+      tags: [discovery]
+      description: Return a shadow run and aggregate processing statistics, cached for up to 60 seconds. Statistics cover the run's entire sampling frame.
+      parameters:
+      - "$ref": "#/components/parameters/DiscoveryId"
+      responses:
+        '200':
+          description: Run details and aggregate counts, tokens, latency, failures and estimated cost.
+          content:
+            application/json:
+              schema:
+                allOf:
+                - "$ref": "#/components/schemas/DiscoveryRun"
+                - type: object
+                  properties:
+                    statistics:
+                      type: object
+                      additionalProperties: true
+        '404':
+          description: Run not found.
+  "/discovery/candidates":
+    get:
+      operationId: getDiscoveryCandidates
+      tags: [discovery]
+      description: >-
+        List stored shadow candidates across all runs in ascending ID order. Includes
+        zero-score projects and already included references; linked projects with hidden
+        owners are omitted. Use run_id to select a cohort. Probabilities are ranking
+        evidence, and classifications do not determine catalogue inclusion.
+      parameters:
+      - "$ref": "#/components/parameters/DiscoveryPage"
+      - "$ref": "#/components/parameters/DiscoveryPerPage"
+      - name: after_id
+        in: query
+        description: Return candidate IDs greater than this value; use with page 1 for cursor traversal.
+        schema: {type: integer, minimum: 1}
+      - name: run_id
+        in: query
+        schema: {type: integer, minimum: 1}
+      - name: project_id
+        in: query
+        schema: {type: integer, minimum: 1}
+      - name: repository_url
+        in: query
+        description: Exact normalized HTTPS repository URL, matched case-insensitively for supported hosts.
+        schema: {type: string, format: uri}
+      - name: classification
+        in: query
+        schema: {type: string, enum: [research_candidate, uncertain, negative]}
+      - name: status
+        in: query
+        schema: {type: string}
+      - name: sample_group
+        in: query
+        schema: {type: string}
+      - name: screen_band
+        in: query
+        schema: {type: string, enum: [promising, borderline, low]}
+      - name: control
+        in: query
+        schema: {type: boolean}
+      - name: review_state
+        in: query
+        schema: {type: string, enum: [unreviewed, research, uncertain, negative]}
+      - name: review_purpose
+        in: query
+        schema: {type: string, enum: [scientific, general_purpose, educational, non_scientific, uncertain]}
+      - name: review_implementation
+        in: query
+        schema: {type: string, enum: [supported, absent, uncertain]}
+      - name: review_catalogue_value
+        in: query
+        schema: {type: string, enum: [distinct_candidate, already_represented, existing_relationship, uncertain, not_applicable]}
+      responses:
+        '200':
+          description: Bounded candidate summaries. Follow the Link header for the next page; no total count query is performed.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/DiscoveryCandidate"
+        '400':
+          description: Invalid identifier, repository URL, boolean or page size.
+  "/discovery/candidates/{id}":
+    get:
+      operationId: getDiscoveryCandidate
+      tags: [discovery]
+      description: >-
+        Return recorded evidence and the actual screen/enrichment evaluations, including
+        cached evaluations originally paid for by another run. Operator identities,
+        free-text review notes and internal worker state are excluded.
+      parameters:
+      - "$ref": "#/components/parameters/DiscoveryId"
+      responses:
+        '200':
+          description: Shadow classification, evidence and evaluation provenance. Missing evaluations are null; historical omission manifests may be absent.
+          content:
+            application/json:
+              schema:
+                allOf:
+                - "$ref": "#/components/schemas/DiscoveryCandidate"
+                - type: object
+                  properties:
+                    evidence:
+                      type: object
+                      description: Metadata, enriched inputs, source revision, collection timing and recorded omission information.
+                      additionalProperties: true
+                    evaluations:
+                      type: object
+                      properties:
+                        screen:
+                          "$ref": "#/components/schemas/DiscoveryEvaluation"
+                        enrich:
+                          "$ref": "#/components/schemas/DiscoveryEvaluation"
+        '404':
+          description: Candidate not found or linked project is hidden.
   "/research_organizations":
     get:
       operationId: getResearchOrganizations
@@ -1071,6 +1209,19 @@ components:
               error:
                 type: string
   parameters:
+    DiscoveryId:
+      name: id
+      in: path
+      required: true
+      schema: {type: integer, minimum: 1}
+    DiscoveryPage:
+      name: page
+      in: query
+      schema: {type: integer, minimum: 1, default: 1}
+    DiscoveryPerPage:
+      name: per_page
+      in: query
+      schema: {type: integer, minimum: 1, maximum: 100, default: 100}
     ResearchOrganizationPage:
       name: page
       in: query
@@ -1122,6 +1273,78 @@ components:
         minimum: 0
         default: 0
   schemas:
+    DiscoveryRun:
+      type: object
+      properties:
+        id: {type: integer}
+        name: {type: string}
+        shadow: {type: boolean, enum: [true]}
+        status: {type: string}
+        target_count: {type: integer}
+        sampling_complete: {type: boolean}
+        model: {type: string, nullable: true}
+        question_versions: {type: object, nullable: true, additionalProperties: true}
+        population: {type: string, nullable: true}
+        budget_usd: {type: number}
+        spent_usd: {type: number}
+        reserved_usd: {type: number}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+        completed_at: {type: string, format: date-time, nullable: true}
+        url: {type: string, format: uri}
+        candidates_url: {type: string, format: uri}
+    DiscoveryCandidate:
+      type: object
+      properties:
+        id: {type: integer}
+        run_id: {type: integer}
+        project_id: {type: integer, nullable: true}
+        repository_url: {type: string, format: uri}
+        shadow: {type: boolean, enum: [true]}
+        status: {type: string}
+        classification: {type: string, enum: [research_candidate, uncertain, negative]}
+        strict_probability: {type: number, minimum: 0, maximum: 1, nullable: true}
+        implementation_probability: {type: number, minimum: 0, maximum: 1, nullable: true}
+        source: {type: string}
+        sampling_method: {type: string}
+        sample_group: {type: string}
+        screen_band: {type: string, nullable: true}
+        control: {type: boolean}
+        control_probability: {type: number, nullable: true}
+        enrichment_selected: {type: boolean}
+        enrichment_reason: {type: string, nullable: true}
+        evidence_fingerprint: {type: string, nullable: true}
+        evidence_incomplete: {type: boolean}
+        repository_identity_status: {type: string, nullable: true}
+        review_state: {type: string}
+        review_purpose: {type: string, nullable: true}
+        review_implementation: {type: string, nullable: true}
+        review_catalogue_value: {type: string, nullable: true}
+        reviewed_at: {type: string, format: date-time, nullable: true}
+        screened_at: {type: string, format: date-time, nullable: true}
+        enriched_at: {type: string, format: date-time, nullable: true}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+        url: {type: string, format: uri}
+        run_url: {type: string, format: uri}
+    DiscoveryEvaluation:
+      type: object
+      nullable: true
+      properties:
+        id: {type: integer}
+        model: {type: string}
+        status: {type: string}
+        digest: {type: string}
+        question_versions: {type: object, additionalProperties: true}
+        questions: {type: object, nullable: true, additionalProperties: true}
+        input: {type: object, nullable: true, additionalProperties: true}
+        answers: {type: object, nullable: true, additionalProperties: true}
+        input_tokens: {type: integer, nullable: true}
+        output_tokens: {type: integer, nullable: true}
+        attempts: {type: integer}
+        latency_ms: {type: number, nullable: true}
+        cost_usd: {type: number}
+        completed_at: {type: string, format: date-time, nullable: true}
     ResearchOrganization:
       type: object
       required:
