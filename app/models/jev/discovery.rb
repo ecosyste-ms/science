@@ -8,7 +8,10 @@ class Jev::Discovery < ApplicationRecord
   belongs_to :project, optional: true
   belongs_to :screen_request, class_name: "Jev::Request", optional: true
   belongs_to :enrich_request, class_name: "Jev::Request", optional: true
-  scope :publicly_accessible, -> { where(project_id: nil).or(where(project_id: Project.visible.select(:id))) }
+  scope :publicly_accessible, -> {
+    left_joins(project: :owner_record).where(owners: { hidden: [false, nil] })
+      .where("jev_discoveries.project_id IS NULL OR projects.id IS NOT NULL")
+  }
   validates :repository_url, :source, :sampling_method, :sample_group, presence: true
   validates :review_state, inclusion: { in: %w[unreviewed research negative uncertain] }
   validates :review_notes, length: { maximum: 4000 }
