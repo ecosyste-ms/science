@@ -245,18 +245,52 @@ class Jev::PipelineTest < ActiveSupport::TestCase
   test "rescan detects changed source revision and explicit reevaluation reuses unchanged requests" do
     response("strict", 0.1)
     Jev::DiscoveryWorker.new.perform(@candidate.id, "screen")
-    @candidate.update!(status: "complete", next_check_at: 1.minute.ago, review_state: "negative")
+    @candidate.update!(status: "complete", next_check_at: 1.minute.ago, review_state: "negative", review_purpose: "general_purpose",
+      review_implementation: "supported", review_catalogue_value: "not_applicable")
     repo = { "full_name" => "discovery/solver", "pushed_at" => "2026-11-07T12:00:00Z" }
     Jev::Evidence.expects(:get).with(Jev::Evidence.repository_endpoint(@candidate.repository_url)).returns(repo)
     Jev::SchedulerWorker.new.perform
     assert_equal "pending_screen", @candidate.reload.status
     assert_equal "unreviewed", @candidate.review_state
+    assert_nil @candidate.review_purpose
+    assert_nil @candidate.review_implementation
+    assert_nil @candidate.review_catalogue_value
     assert_nil @candidate.screen_request_id
     Jev::DiscoveryWorker.new.perform(@candidate.id, "screen")
     requests = Jev::Request.count
     @run.reevaluate!
+    assert_nil @candidate.reload.review_purpose
     Jev::DiscoveryWorker.new.perform(@candidate.id, "screen")
     assert_equal requests, Jev::Request.count
+  end
+
+  test "worker records omitted content outside the exact model payload while retaining tracked paths" do
+    Dir.mktmpdir("jev-omissions-") do |path|
+      File.write(File.join(path, "README.md"), "A scientific solver")
+      File.write(File.join(path, "solver.py"), "def solve():\n    return 1\n")
+      File.binwrite(File.join(path, "analysis.ipynb"), '{"cells":[]}' + ' ' * 2.megabytes)
+      File.binwrite(File.join(path, "数据.bin"), Random.bytes(2.megabytes))
+      command = RepositoryCommand.new
+      command.run(["git", "init", path])
+      command.run(["git", "-C", path, "add", "."])
+      command.run(["git", "-C", path, "-c", "user.name=Test", "-c", "user.email=test@example.org", "-c", "commit.gpgsign=false", "commit", "-m", "Add solver"])
+      command.run(["git", "-C", path, "config", "uploadpack.allowFilter", "true"])
+      checkout = RepositoryCheckout.new("file://#{path}", skip_lfs: true, partial: true)
+      RepositoryCheckout.expects(:new).with(@candidate.repository_url, skip_lfs: true, partial: true, disk_limit: 200.megabytes).returns(checkout)
+      response("implementation", 0.9)
+      @candidate.update!(status: "pending_enrich", strict_probability: 0.7)
+      Jev::DiscoveryWorker.new.perform(@candidate.id, "enrich")
+      assert_equal "complete", @candidate.reload.status, @candidate.last_error
+      assert_equal ["analysis.ipynb", "数据.bin"], @candidate.evidence["skipped_file_paths"]
+      assert_equal({ ".bin" => 1, ".ipynb" => 1 }, @candidate.evidence["skipped_file_types"])
+      assert_equal false, @candidate.evidence["skipped_file_paths_truncated"]
+      state = @candidate.enrich_request.request_body.fetch("state")
+      assert_equal ["analysis.ipynb", "solver.py"], state["source_file_paths"]
+      assert_equal "A scientific solver", state["readme"]
+      assert_equal (@candidate.evidence["metadata"].keys + %w[brief readme source_file_paths source_paths_truncated]).sort, state.keys.sort
+      assert_equal JSON.generate(Jev::Client.canonical(@candidate.enrich_request.request_body)), @candidate.enrich_request.wire_body
+      refute @candidate.enrich_request.wire_body.include?("skipped_file")
+    end
   end
 
   test "scheduler samples existing score strata and broad absent repositories idempotently" do

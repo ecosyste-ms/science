@@ -48,9 +48,12 @@ class RepositoryCheckoutTest < ActiveSupport::TestCase
       assert File.exist?(File.join(checkout, "src", "main.py"))
       assert File.exist?(File.join(checkout, "README.md"))
       large_paths.each { |path| assert_not File.exist?(File.join(checkout, path)) }
+      tracked = git("-C", checkout, "ls-files", "-z").force_encoding(Encoding::UTF_8).split("\0")
+      large_paths.each { |path| assert_includes tracked, path }
       assert_equal large_paths.size, git("-C", checkout, "rev-list", "--objects", "--missing=print", "HEAD").lines.count { |line| line.start_with?("?") }
     end
     assert_equal large_paths.size, checkout_test.skipped_paths
+    assert_equal large_paths.sort, checkout_test.skipped_file_paths.sort
   end
 
   test "resource evidence refuses paths outside the checkout and LFS pointers" do

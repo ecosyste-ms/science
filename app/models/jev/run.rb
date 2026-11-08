@@ -24,6 +24,9 @@ class Jev::Run < ApplicationRecord
       sources: scope.group(:sample_group).count, screen_bands: scope.group(:screen_band).count,
       controls: scope.where(control: true).group(:screen_band).count,
       reviews: scope.group(:review_state).count, enrichment_selected: scope.where(enrichment_selected: true).count,
+      purpose_reviews: scope.where.not(review_purpose: nil).group(:review_purpose).count,
+      implementation_reviews: scope.where.not(review_implementation: nil).group(:review_implementation).count,
+      catalogue_reviews: scope.where.not(review_catalogue_value: nil).group(:review_catalogue_value).count,
       repository_identities: scope.group(Arel.sql("COALESCE(evidence #>> '{repository_identity,status}', 'unchecked')")).count,
       request_statuses: request_scope.group(:status).count, input_tokens: request_scope.sum(:input_tokens), output_tokens: request_scope.sum(:output_tokens),
       api_attempts: request_scope.sum(:attempts),
@@ -44,7 +47,8 @@ class Jev::Run < ApplicationRecord
       discoveries.update_all(status: "pending_screen", screen_attempts: 0, enrich_attempts: 0,
         strict_probability: nil, implementation_probability: nil, screen_request_id: nil, enrich_request_id: nil,
         screened_at: nil, enriched_at: nil, enrichment_selected: false, control: false,
-        classification: "uncertain", review_state: "unreviewed", next_attempt_at: Time.current, lease_until: nil,
+        classification: "uncertain", review_state: "unreviewed", review_purpose: nil, review_implementation: nil,
+        review_catalogue_value: nil, next_attempt_at: Time.current, lease_until: nil,
         processing_token: nil, last_error: nil, updated_at: Time.current)
     end
   end

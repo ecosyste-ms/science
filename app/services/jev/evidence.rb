@@ -96,6 +96,9 @@ class Jev::Evidence
         end
         evidence["revision"] = revision
         evidence["skipped_large_files"] = checkout.skipped_paths
+        evidence["skipped_file_paths"] = checkout.skipped_file_paths.first(40)
+        evidence["skipped_file_paths_truncated"] = checkout.skipped_file_paths.size > 40
+        evidence["skipped_file_types"] = checkout.skipped_file_paths.map { |file| File.extname(file).downcase.presence || "(no extension)" }.tally.sort.to_h
         evidence["source_paths_complete"] = checkout.skipped_paths.zero?
       end
       evidence["collection_ms"] = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - collection_started) * 1000

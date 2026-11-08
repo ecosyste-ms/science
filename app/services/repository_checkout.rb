@@ -5,7 +5,7 @@ class RepositoryCheckout
   DISK_LIMIT_ERROR = "repository disk limit exceeded".freeze
   PARTIAL_BLOB_LIMIT = 1.megabyte
 
-  attr_reader :command, :skipped_paths
+  attr_reader :command, :skipped_paths, :skipped_file_paths
 
   def initialize(origin, revision: nil, skip_lfs: false, disk_limit: 500.megabytes, partial: false)
     raise ArgumentError, "Expected a full commit SHA" if revision && !revision.match?(/\A[0-9a-f]{40}\z/)
@@ -16,6 +16,7 @@ class RepositoryCheckout
     @disk_limit = disk_limit
     @partial = partial
     @skipped_paths = 0
+    @skipped_file_paths = []
   end
 
   def self.credentials(origin)
@@ -65,6 +66,7 @@ class RepositoryCheckout
       path if missing.include?(info.split(" ")[2])
     end
     @skipped_paths = paths.size
+    @skipped_file_paths = paths.map { |path| path.dup.force_encoding(Encoding::UTF_8).scrub }
     patterns = File.join(directory, "sparse-patterns")
     File.binwrite(patterns, ["/*", *paths.map { |path| "!/#{path.gsub(/[\\*?\[\]!# ]/) { |char| "\\#{char}" }}" }].join("\n") + "\n")
     runner.run([*git, "-C", checkout, "sparse-checkout", "set", "--no-cone", "--stdin"], input: patterns)

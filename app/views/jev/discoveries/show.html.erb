@@ -7,6 +7,19 @@
   <% if @discovery.project %><p>Existing project: <%= link_to @discovery.project.name.presence || @discovery.project.url, project_path(@discovery.project) %>. Science Score: <%= @discovery.project.science_score %>.</p><% end %>
   <% if @discovery.control? %><p>Random control from the <%= @discovery.screen_band %> screen band. Enrichment selection probability: <%= @discovery.control_probability %>.</p><% end %>
   <% [@discovery.last_error, @discovery.enrichment_error].compact.each do |error| %><p class="alert alert-warning"><%= error %></p><% end %>
+  <% if @discovery.evidence.key?("skipped_large_files") %>
+    <div class="card card-body mb-4">
+      <h2 class="h5">Evidence coverage</h2>
+      <p><%= @discovery.evidence["skipped_large_files"] %> large files omitted from the checkout. Tracked filenames can still appear in the model input; Brief counts cover downloaded content.</p>
+      <% if @discovery.evidence.key?("skipped_file_paths") %>
+        <% if @discovery.evidence["skipped_file_types"].present? %><p>Omitted file types: <%= @discovery.evidence["skipped_file_types"].map { |type, count| "#{type}: #{count}" }.join(" · ") %>.</p><% end %>
+        <% if @discovery.evidence["skipped_file_paths"].any? %><ul><% @discovery.evidence["skipped_file_paths"].each do |path| %><li><code><%= path %></code></li><% end %></ul><% end %>
+        <% if @discovery.evidence["skipped_file_paths_truncated"] %><p>Only the first 40 omitted filenames are shown.</p><% end %>
+      <% elsif @discovery.evidence["skipped_large_files"].to_i.positive? %>
+        <p>Omitted filenames were not recorded for this collection.</p>
+      <% end %>
+    </div>
+  <% end %>
   <% if (identity = @discovery.evidence["repository_identity"]) %>
     <div class="card card-body mb-4">
       <h2 class="h5">Repository identity</h2>
@@ -25,6 +38,11 @@
     <% if @discovery.errors.any? %><p class="text-danger"><%= @discovery.errors.full_messages.join(". ") %></p><% end %>
     <%= form.label :review_state, "Judgement", class: "form-label" %>
     <%= form.select :review_state, [["Unreviewed", "unreviewed"], ["Supported research software", "research"], ["Uncertain", "uncertain"], ["Not research software", "negative"]], {}, class: "form-select mb-3" %>
+    <p>Record scientific purpose, implementation evidence and catalogue value separately. A scientific implementation may already be represented or have an unresolved identity.</p>
+    <% { review_purpose: ["Scientific purpose", Jev::Discovery::REVIEW_PURPOSES], review_implementation: ["Implementation evidence", Jev::Discovery::REVIEW_IMPLEMENTATIONS], review_catalogue_value: ["Catalogue value", Jev::Discovery::REVIEW_CATALOGUE_VALUES] }.each do |key, (label, values)| %>
+      <%= form.label key, label, class: "form-label" %>
+      <%= form.select key, values.map { |value, text| [text, value] }, { include_blank: "Not assessed" }, class: "form-select mb-3" %>
+    <% end %>
     <%= form.label :review_notes, "Evidence and limitations", class: "form-label" %>
     <%= form.text_area :review_notes, rows: 5, maxlength: 4000, class: "form-control mb-3" %>
     <%= form.submit "Save review", class: "btn btn-primary" %>

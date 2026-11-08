@@ -40,6 +40,55 @@ class Jev::DiscoveriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal before, project.reload.attributes
   end
 
+  test "operator records independent review outcomes and filters them without changing model outputs" do
+    @candidate.update!(strict_probability: 0.17, implementation_probability: 0.91)
+    before = @candidate.attributes.slice("classification", "strict_probability", "implementation_probability", "evidence")
+    patch jev_discovery_path(@candidate), headers: @headers, params: { jev_discovery: {
+      review_state: "research", review_purpose: "scientific", review_implementation: "supported",
+      review_catalogue_value: "existing_relationship", review_notes: "A scientific variant of an existing project" } }
+    assert_redirected_to jev_discovery_path(@candidate)
+    assert_equal "scientific", @candidate.reload.review_purpose
+    assert_equal "supported", @candidate.review_implementation
+    assert_equal "existing_relationship", @candidate.review_catalogue_value
+    assert_equal before, @candidate.attributes.slice(*before.keys)
+    other = discovery_candidate(run: @candidate.run)
+    get jev_discoveries_path(run_id: @candidate.jev_run_id, review_purpose: "scientific", review_catalogue_value: "existing_relationship"), headers: @headers
+    assert_response :success
+    assert_select "a[href=?]", jev_discovery_path(@candidate)
+    assert_select "a[href=?]", jev_discovery_path(other), count: 0
+    assert_equal({ "scientific" => 1 }, @candidate.run.statistics[:purpose_reviews])
+    get jev_discovery_path(@candidate), headers: @headers
+    assert_select "select[name='jev_discovery[review_purpose]'] option[selected][value='scientific']"
+    assert_select "select[name='jev_discovery[review_catalogue_value]'] option[selected][value='existing_relationship']"
+  end
+
+  test "invalid structured review values are rejected and legacy updates retain existing axes" do
+    @candidate.review!(state: "research", notes: "Known source", reviewer: "reviewer", purpose: "scientific", implementation: "supported", catalogue_value: "distinct_candidate")
+    patch jev_discovery_path(@candidate), headers: @headers, params: { jev_discovery: { review_state: "research", review_purpose: "publish" } }
+    assert_response :unprocessable_entity
+    assert_equal "scientific", @candidate.reload.review_purpose
+    patch jev_discovery_path(@candidate), headers: @headers, params: { jev_discovery: { review_state: "research", review_notes: "Updated note" } }
+    assert_redirected_to jev_discovery_path(@candidate)
+    assert_equal "supported", @candidate.reload.review_implementation
+    assert_equal "distinct_candidate", @candidate.review_catalogue_value
+  end
+
+  test "review displays escaped omitted filenames and explains historical missing manifests" do
+    @candidate.update!(evidence: @candidate.evidence.merge("skipped_large_files" => 45,
+      "skipped_file_paths" => ["analysis.ipynb", "<script>alert(1)</script>.txt"],
+      "skipped_file_types" => { ".ipynb" => 40, ".txt" => 5 }, "skipped_file_paths_truncated" => true))
+    get jev_discovery_path(@candidate), headers: @headers
+    assert_response :success
+    assert_select "h2", "Evidence coverage"
+    assert_select "li code", "analysis.ipynb"
+    assert_select "script", text: "alert(1)", count: 0
+    assert_match "Brief counts cover downloaded content", response.body
+    assert_match "first 40 omitted filenames", response.body
+    @candidate.update!(evidence: @candidate.evidence.except("skipped_file_paths", "skipped_file_types"))
+    get jev_discovery_path(@candidate), headers: @headers
+    assert_match "Omitted filenames were not recorded", response.body
+  end
+
   test "invalid review state returns the form" do
     patch jev_discovery_path(@candidate), headers: @headers, params: { jev_discovery: { review_state: "publish" } }
     assert_response :unprocessable_entity

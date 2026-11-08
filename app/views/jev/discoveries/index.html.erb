@@ -8,6 +8,9 @@
       <% { classification: ["research_candidate", "uncertain", "negative"], review_state: ["unreviewed", "research", "uncertain", "negative"], screen_band: ["promising", "borderline", "low"] }.each do |key, values| %>
         <div class="col-md-3"><%= form.label key, key.to_s.humanize, class: "form-label" %><%= form.select key, values.map { |value| [value.humanize, value] }, { include_blank: "All", selected: params[key] }, class: "form-select" %></div>
       <% end %>
+      <% { review_purpose: ["Scientific purpose", Jev::Discovery::REVIEW_PURPOSES], review_implementation: ["Implementation evidence", Jev::Discovery::REVIEW_IMPLEMENTATIONS], review_catalogue_value: ["Catalogue value", Jev::Discovery::REVIEW_CATALOGUE_VALUES] }.each do |key, (label, values)| %>
+        <div class="col-md-4"><%= form.label key, label, class: "form-label" %><%= form.select key, values.map { |value, text| [text, value] }, { include_blank: "All", selected: params[key] }, class: "form-select" %></div>
+      <% end %>
       <div class="col-md-5"><%= form.label :q, "Repository", class: "form-label" %><%= form.search_field :q, value: params[:q], class: "form-control" %></div>
       <div class="col-md-4"><%= form.label :sample_group, "Sample group", class: "form-label" %><%= form.text_field :sample_group, value: params[:sample_group], class: "form-control" %></div>
       <div class="col-md-3"><%= form.label :controls, "Random controls", class: "form-label" %><%= form.select :controls, [["All candidates", ""], ["Controls only", "1"]], { selected: params[:controls] }, class: "form-select" %></div>
@@ -22,6 +25,9 @@
       <p>Processing: <%= @statistics[:statuses].map { |key, count| "#{key.humanize}: #{count}" }.join(" · ") %></p>
       <p>Classifications: <%= @statistics[:classifications].map { |key, count| "#{key.humanize}: #{count}" }.join(" · ") %></p>
       <p>Reviews: <%= @statistics[:reviews].map { |key, count| "#{key.humanize}: #{count}" }.join(" · ") %></p>
+      <% { purpose_reviews: "Scientific purpose reviews", implementation_reviews: "Implementation reviews", catalogue_reviews: "Catalogue value reviews" }.each do |key, label| %>
+        <% if @statistics[key].any? %><p><%= label %>: <%= @statistics[key].map { |value, count| "#{value.humanize}: #{count}" }.join(" · ") %></p><% end %>
+      <% end %>
       <p>Repository identities: <%= @statistics[:repository_identities].map { |key, count| "#{key.humanize}: #{count}" }.join(" · ") %></p>
       <% if @run.last_error.present? %><p class="text-danger"><%= @run.last_error %></p><% end %>
     </div>
@@ -31,7 +37,7 @@
       <thead><tr><th>Repository</th><th>Sample</th><th>Research</th><th>Implementation</th><th>Status</th><th>Review</th></tr></thead>
       <tbody>
         <% @discoveries.each do |discovery| %>
-          <tr><td><%= link_to discovery.repository_url.delete_prefix("https://"), jev_discovery_path(discovery) %><% if discovery.evidence.dig("repository_identity", "status") %><br><small><%= discovery.evidence.dig("repository_identity", "status").humanize %></small><% end %></td><td><%= discovery.sample_group %><%= " · control" if discovery.control? %></td><td><%= discovery.strict_probability&.round(3) || "Pending" %></td><td><%= discovery.implementation_probability&.round(3) || "Not enriched" %></td><td><%= discovery.classification.humanize %><br><small><%= discovery.status.humanize %></small></td><td><%= discovery.review_state.humanize %></td></tr>
+          <tr><td><%= link_to discovery.repository_url.delete_prefix("https://"), jev_discovery_path(discovery) %><% if discovery.evidence.dig("repository_identity", "status") %><br><small><%= discovery.evidence.dig("repository_identity", "status").humanize %></small><% end %><% if discovery.evidence["skipped_large_files"].to_i.positive? %><br><small><%= discovery.evidence["skipped_large_files"] %> files omitted from checkout</small><% end %></td><td><%= discovery.sample_group %><%= " · control" if discovery.control? %></td><td><%= discovery.strict_probability&.round(3) || "Pending" %></td><td><%= discovery.implementation_probability&.round(3) || "Not enriched" %></td><td><%= discovery.classification.humanize %><br><small><%= discovery.status.humanize %></small></td><td><%= discovery.review_state.humanize %><% if discovery.review_catalogue_value %><br><small><%= Jev::Discovery::REVIEW_CATALOGUE_VALUES[discovery.review_catalogue_value] %></small><% end %></td></tr>
         <% end %>
       </tbody>
     </table>

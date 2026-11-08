@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_07_210000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_08_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -276,10 +276,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_07_210000) do
     t.datetime "reviewed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "review_purpose"
+    t.string "review_implementation"
+    t.string "review_catalogue_value"
     t.index "jev_run_id, ((evidence #>> '{repository_identity,status}'::text[]))", name: "index_jev_discoveries_identity"
     t.index ["enrich_request_id"], name: "index_jev_discoveries_on_enrich_request_id"
     t.index ["jev_run_id", "classification", "review_state"], name: "index_jev_discoveries_review"
     t.index ["jev_run_id", "repository_url"], name: "index_jev_discoveries_on_jev_run_id_and_repository_url", unique: true
+    t.index ["jev_run_id", "review_catalogue_value", "id"], name: "index_jev_discoveries_review_catalogue_value", where: "(review_catalogue_value IS NOT NULL)"
+    t.index ["jev_run_id", "review_implementation", "id"], name: "index_jev_discoveries_review_implementation", where: "(review_implementation IS NOT NULL)"
+    t.index ["jev_run_id", "review_purpose", "id"], name: "index_jev_discoveries_review_purpose", where: "(review_purpose IS NOT NULL)"
     t.index ["jev_run_id", "status", "next_attempt_at"], name: "index_jev_discoveries_due"
     t.index ["jev_run_id"], name: "index_jev_discoveries_on_jev_run_id"
     t.index ["lease_until"], name: "index_jev_discoveries_on_lease_until"

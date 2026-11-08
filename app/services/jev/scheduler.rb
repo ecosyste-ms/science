@@ -68,6 +68,7 @@ class Jev::Scheduler
         **(changed ? { evidence: { "metadata" => metadata }, evidence_fingerprint: fingerprint, status: "pending_screen",
           screen_attempts: 0, enrich_attempts: 0, strict_probability: nil, implementation_probability: nil,
           screen_request_id: nil, enrich_request_id: nil, screened_at: nil, enriched_at: nil, review_state: "unreviewed",
+          review_purpose: nil, review_implementation: nil, review_catalogue_value: nil,
           classification: "uncertain", enrichment_selected: false, control: false, next_attempt_at: Time.current } : {}))
     rescue Jev::Client::Error => error
       candidate.update!(last_error: error.message, next_check_at: 1.day.from_now)

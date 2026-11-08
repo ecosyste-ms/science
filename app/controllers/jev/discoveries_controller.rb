@@ -7,7 +7,7 @@ class Jev::DiscoveriesController < ApplicationController
     @run = params[:run_id].present? ? Jev::Run.find(params[:run_id]) : @runs.first
     @statistics = @run&.statistics
     scope = @run ? @run.discoveries : Jev::Discovery.none
-    %w[classification status review_state sample_group screen_band].each do |key|
+    %w[classification status review_state sample_group screen_band review_purpose review_implementation review_catalogue_value].each do |key|
       scope = scope.where(key => params[key]) if params[key].present?
     end
     scope = scope.where(control: true) if params[:controls] == "1"
@@ -25,7 +25,10 @@ class Jev::DiscoveriesController < ApplicationController
   def update
     @discovery = Jev::Discovery.find(params[:id])
     @discovery.review!(state: params.require(:jev_discovery).fetch(:review_state),
-      notes: params[:jev_discovery][:review_notes], reviewer: @operator)
+      notes: params[:jev_discovery][:review_notes], reviewer: @operator,
+      purpose: params[:jev_discovery].fetch(:review_purpose, @discovery.review_purpose),
+      implementation: params[:jev_discovery].fetch(:review_implementation, @discovery.review_implementation),
+      catalogue_value: params[:jev_discovery].fetch(:review_catalogue_value, @discovery.review_catalogue_value))
     redirect_to jev_discovery_path(@discovery), notice: "Discovery review saved."
   rescue ActiveRecord::RecordInvalid
     render :show, status: :unprocessable_entity
