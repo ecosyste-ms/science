@@ -1,5 +1,7 @@
 # Brief scanning
 
+The notebook experiment binary is available as `brief-notebooks`, built from commit `5ae39885f9f39b82be60851103d2a0e35d33ca82`. Use `brief-notebooks --json --notebooks PATH` for bounded Jupyter code-cell statistics. Docker and CI use the same pinned build. Ordinary scans and the running discovery cohort continue to use the released `brief` executable. The notebook build is separate from version-based project rescans.
+
 Brief scans repository contents and stores a compact toolchain summary in `projects.brief`. `RepositoryScanWorker` uses the `swhid` queue and creates one temporary checkout for all due repository analyses. Brief reads that local checkout, which also supplies SWHID calculation and metadata provenance. SWH API requests use the separate `swh_api` queue.
 
 The rake task accepts selection options through environment variables:

@@ -59,6 +59,11 @@ jobs:
           echo "${TOOL_SHA256}  brief.tar.gz" | sha256sum --check
           sudo tar -xz -f brief.tar.gz -C /usr/local/bin brief
           brief --version
+      - name: Build notebook Brief
+        run: |
+          docker build --target brief-notebooks --output "type=local,dest=${RUNNER_TEMP}/brief-notebooks" .
+          sudo install "${RUNNER_TEMP}/brief-notebooks/brief-notebooks" /usr/local/bin/brief-notebooks
+          brief-notebooks --version
       - name: Install swhid
         working-directory: ${{ runner.temp }}
         env:
