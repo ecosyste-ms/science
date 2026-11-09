@@ -230,6 +230,37 @@ class RepositoryScanWorkerTest < ActiveSupport::TestCase
     ENV["OPENALEX_API_KEY"] = previous_key
   end
 
+  test "repository scans retain Markdown beside a rendered HTML README" do
+    content = "# Trap experiment\n" + ("Methods and inputs.\n" * 600) + "\nhttps://doi.org/10.1234/study\n"
+    File.write(File.join(@source, "README.md"), content)
+    File.write(File.join(@source, "README.html"), "<html>Rendered analysis</html>")
+    commit_source
+    @project.update!(joss_metadata: nil, readme: content,
+      repository: @project.repository.deep_merge("metadata" => { "files" => { "readme" => "README.md" } }))
+
+    RepositoryScanWorker.new.perform(@project.id)
+
+    assert_equal content, @project.reload.readme
+    assert_equal "README.md", @project.readme_file_name
+    source = @project.repository.dig("metadata", "file_sources", "readme")
+    assert_equal "README.md", source.fetch("path")
+    assert_equal @project.brief.fetch("revision"), source.fetch("revision")
+    assert_equal Digest::SHA256.hexdigest(content), source.fetch("sha256")
+    assert @project.science_score_breakdown.dig("breakdown", "has_publication_identifier", "present")
+    assert_operator @project.science_score, :>=, Project::SCIENCE_SCORE_THRESHOLD
+  end
+
+  test "repository scans retain an HTML README when no Markdown sibling exists" do
+    File.write(File.join(@source, "README.html"), "<h1>Research analysis</h1>")
+    commit_source
+
+    RepositoryScanWorker.new.perform(@project.id)
+
+    assert_equal "<h1>Research analysis</h1>", @project.reload.readme
+    assert_equal "README.html", @project.readme_file_name
+    assert_equal "README.html", @project.repository.dig("metadata", "file_sources", "readme", "path")
+  end
+
   test "queued scan preserves citation file and README BibTeX with diagnostics" do
     File.write(File.join(@source, "CITATION.bib"), <<~BIBTEX)
       @article{paper,

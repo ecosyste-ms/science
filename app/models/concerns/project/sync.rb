@@ -510,13 +510,25 @@ module Project::Sync
     puts "Error fetching issues for #{repository_url}"
   end
 
-  def load_readme
-    return unless download_url.present?
-    conn = ecosystem_http_client(archive_url(readme_file_name))
+  def readme_file_names
+    detected = readme_file_name
+    return %w[README.md README.rst README readme.md] if detected.blank?
+
+    RepositoryResources.preferred_readme_paths(detected)
+  end
+
+  def load_readme(file_name = readme_file_name)
+    return unless download_url.present? && file_name.present?
+    conn = ecosystem_http_client(archive_url(file_name))
+    conn.options.timeout = 20
+    conn.options.open_timeout = 5
     response = conn.get
     return unless response.success?
     json = JSON.parse(response.body)
-    json['contents'].gsub("\u0000", '').encode('UTF-8', invalid: :replace, undef: :replace, replace: '')
+    content = json['contents']
+    return unless content.is_a?(String)
+
+    content.gsub("\u0000", '').encode('UTF-8', invalid: :replace, undef: :replace, replace: '')
   end
 
   def load_codemeta
@@ -531,37 +543,65 @@ module Project::Sync
 
   def fetch_readme
     return unless repository.present?
-    
-    if readme_file_name.blank? || download_url.blank?
-      fetch_readme_fallback
-    else  
-      readme_content = load_readme
-      if readme_content.present?
-        self.readme = readme_content
-        self.save if changed?
-      else
-        fetch_readme_fallback
+
+    readme_file_names.each do |file_name|
+      content = begin
+        load_readme(file_name)
+      rescue Faraday::Error, JSON::ParserError, EncodingError
+        nil
       end
+      source_url = archive_url(file_name)
+      if content.blank?
+        content = load_readme_fallback(file_name)
+        source_url = readme_raw_url(file_name)
+      end
+      next if content.blank?
+      return if readme == content && readme_file_name == file_name
+
+      data = repository.deep_dup
+      metadata = data['metadata'] ||= {}
+      (metadata['files'] ||= {})['readme'] = file_name
+      (metadata['file_sources'] ||= {})['readme'] = {
+        'path' => file_name, 'url' => source_url, 'status' => 'ok',
+        'retrieved_at' => Time.current.iso8601, 'bytes' => content.bytesize,
+        'sha256' => Digest::SHA256.hexdigest(content)
+      }
+      return update!(readme: content, repository: data)
+    rescue Faraday::Error
+      raise unless readme_file_name.present? && file_name != readme_file_name
     end
   rescue => e
     puts "Error fetching readme for #{repository_url}"
     puts e.message
-    puts e.backtrace
-    fetch_readme_fallback
   end
 
-  def load_readme_fallback
+  def readme_raw_url(file_name)
+    url = raw_url(file_name)
+    return url unless url.present?
+
+    uri = URI(url)
+    return url unless uri.host&.casecmp?('github.com') && uri.path.match?(%r{\A/[^/]+/[^/]+/raw/})
+
+    uri.host = 'raw.githubusercontent.com'
+    uri.path = uri.path.sub(%r{\A/([^/]+/[^/]+)/raw/}, '/\1/')
+    uri.to_s
+  end
+
+  def load_readme_fallback(file_name = readme_file_name.presence || 'README.md')
     return unless repository.present?
 
-    file_name = readme_file_name.presence || 'README.md'
-    url = raw_url(file_name)
+    url = readme_raw_url(file_name)
 
     return unless url.present?
 
     conn = http_client(url, retry_requests: true)
+    conn.options.timeout = 20
+    conn.options.open_timeout = 5
 
     response = conn.get
-    return unless response.success?
+    return if [404, 410].include?(response.status)
+    raise Faraday::Error, "README fetch failed (HTTP #{response.status})" unless response.success?
+
     response.body.gsub("\u0000", '').encode('UTF-8', invalid: :replace, undef: :replace, replace: '')
   end
 
@@ -578,21 +618,6 @@ module Project::Sync
     response = conn.get
     return unless response.success?
     response.body.gsub("\u0000", '').encode('UTF-8', invalid: :replace, undef: :replace, replace: '')
-  end
-
-  def fetch_readme_fallback
-    return unless repository.present?
-
-    readme_content = load_readme_fallback
-    return unless readme_content.present?
-    self.readme = readme_content
-    self.save if changed?
-  rescue => e
-    puts "Error fetching fallback readme for project #{self.id} (#{self.url})"
-    puts "  repository_url: #{repository_url}"
-    puts "  Error: #{e.class} - #{e.message}"
-    puts "  Backtrace:"
-    puts e.backtrace.first(5)
   end
 
   def fetch_codemeta

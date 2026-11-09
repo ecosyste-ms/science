@@ -365,9 +365,121 @@ class ProjectSyncTest < ActiveSupport::TestCase
   test "fetch_readme falls back to raw url when archive fails" do
     p = build_project
     stub_request(:get, p.archive_url("README.md")).to_return(status: 500)
-    stub_request(:get, p.raw_url("README.md")).to_return(status: 200, body: "# fallback")
+    stub_request(:get, "https://raw.githubusercontent.com/numpy/numpy/main/README.md").to_return(status: 200, body: "# fallback")
     p.fetch_readme
     assert_equal "# fallback", p.reload.readme
+  end
+
+  test "fetch_readme prefers Markdown beside an advertised HTML file and records its source" do
+    project = build_project(readme: "<html>Rendered analysis</html>", repository: repo_hash.deep_merge(
+      "metadata" => { "files" => { "readme" => "README.html" },
+        "file_sources" => { "readme" => { "path" => "README.html", "revision" => "a" * 40 } } }))
+    content = "# Trap experiment\nhttps://doi.org/10.1371/journal.pone.0261119\n"
+    stub_request(:get, project.archive_url("README.md")).to_return(body: { contents: content }.to_json)
+
+    project.fetch_readme
+
+    assert_equal content, project.reload.readme
+    assert_equal "README.md", project.readme_file_name
+    assert project.readme_is_markdown?
+    assert_equal "CITATION.cff", project.citation_file_name
+    source = project.repository.dig("metadata", "file_sources", "readme")
+    assert_equal project.archive_url("README.md"), source["url"]
+    assert_equal Digest::SHA256.hexdigest(content), source["sha256"]
+    assert_equal content.bytesize, source["bytes"]
+    refute source.key?("revision")
+    assert_not_requested :get, project.archive_url("README.html")
+  end
+
+  test "fetch_readme retains an HTML README when its Markdown sibling is missing" do
+    project = build_project(repository: repo_hash.deep_merge("metadata" => { "files" => { "readme" => "README.html" } }))
+    stub_request(:get, project.archive_url("README.md")).to_return(status: 404)
+    stub_request(:get, "https://raw.githubusercontent.com/numpy/numpy/main/README.md").to_return(status: 404)
+    stub_request(:get, project.archive_url("README.html")).to_return(body: { contents: "<h1>Research</h1>" }.to_json)
+
+    project.fetch_readme
+
+    assert_equal "<h1>Research</h1>", project.reload.readme
+    assert_equal "README.html", project.readme_file_name
+  end
+
+  test "fetch_readme can use its advertised file after the preferred raw request fails" do
+    project = build_project(repository: repo_hash.deep_merge("metadata" => { "files" => { "readme" => "README.html" } }))
+    stub_request(:get, project.archive_url("README.md")).to_return(status: 500)
+    stub_request(:get, "https://raw.githubusercontent.com/numpy/numpy/main/README.md").to_return(status: 503)
+    stub_request(:get, project.archive_url("README.html")).to_return(body: { contents: "<h1>Research</h1>" }.to_json)
+
+    project.fetch_readme
+
+    assert_equal "<h1>Research</h1>", project.reload.readme
+  end
+
+  test "fetch_readme tries bounded root filenames when metadata has no detected README" do
+    project = build_project(repository: repo_hash.deep_merge("metadata" => { "files" => { "readme" => nil } }))
+    %w[README.md README.rst].each do |path|
+      stub_request(:get, project.archive_url(path)).to_return(status: 404)
+      stub_request(:get, "https://raw.githubusercontent.com/numpy/numpy/main/#{path}").to_return(status: 404)
+    end
+    stub_request(:get, project.archive_url("README")).to_return(body: { contents: "Phylogenetic analysis" }.to_json)
+
+    project.fetch_readme
+
+    assert_equal "Phylogenetic analysis", project.reload.readme
+    assert_equal "README", project.readme_file_name
+    assert_not_requested :get, project.archive_url("readme.md")
+  end
+
+  test "fetch_readme preserves previous contents and stops probing on a raw server error" do
+    project = build_project(readme: "Previous evidence", repository: repo_hash.deep_merge("metadata" => { "files" => { "readme" => nil } }))
+    stub_request(:get, project.archive_url("README.md")).to_return(status: 503)
+    stub_request(:get, "https://raw.githubusercontent.com/numpy/numpy/main/README.md").to_return(status: 503)
+
+    project.fetch_readme
+
+    assert_equal "Previous evidence", project.reload.readme
+    assert_nil project.readme_file_name
+    assert_not_requested :get, project.archive_url("README.rst")
+  end
+
+  test "fetch_readme ignores malformed archive contents and uses the raw response" do
+    project = build_project
+    stub_request(:get, project.archive_url("README.md")).to_return(body: { contents: nil }.to_json)
+    stub_request(:get, "https://raw.githubusercontent.com/numpy/numpy/main/README.md").to_return(body: "Actual README")
+
+    project.fetch_readme
+
+    assert_equal "Actual README", project.reload.readme
+  end
+
+  test "fetch_readme does not rewrite unchanged content or pinned provenance" do
+    project = build_project(readme: "Research", repository: repo_hash.deep_merge("metadata" => {
+      "file_sources" => { "readme" => { "path" => "README.md", "revision" => "a" * 40 } } }))
+    stub_request(:get, project.archive_url("README.md")).to_return(body: { contents: "Research" }.to_json)
+    before = project.attributes.deep_dup
+
+    travel 1.minute do
+      project.fetch_readme
+    end
+
+    assert_equal before, project.reload.attributes
+  end
+
+  test "sync worker stores the complete preferred README before applying the unchanged Science Score" do
+    project = build_project(science_score: 0, repository: repo_hash.deep_merge("metadata" => { "files" => { "readme" => "README.html" } }))
+    content = "# Drought study\n" + ("Methods and inputs.\n" * 600) + "\nhttps://doi.org/10.1234/study\n"
+    stub_request(:get, project.archive_url("README.md")).to_return(body: { contents: content }.to_json)
+    %i[check_url fetch_repository find_or_create_host fetch_owner find_or_create_owner fetch_dependencies fetch_packages
+      fetch_commits fetch_events fetch_issue_stats sync_issues fetch_citation_file fetch_codemeta fetch_zenodo_file
+      sync_releases update_committers update_keywords_from_contributors combine_keywords refresh_display_name update_score fetch_swhids_async].each do |method|
+      Project.any_instance.stubs(method)
+    end
+
+    SyncProjectWorker.new.perform(project.id)
+
+    assert_equal content, project.reload.readme
+    assert_equal "README.md", project.readme_file_name
+    assert_operator project.science_score, :>=, Project::SCIENCE_SCORE_THRESHOLD
+    assert project.science_score_breakdown.dig("breakdown", "has_publication_identifier", "present")
   end
 
   test "fetch_codemeta stores contents via archive" do

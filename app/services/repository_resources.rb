@@ -4,6 +4,8 @@ class RepositoryResources
   def self.store(project, files, revision:)
     paths = resource_paths(project.brief)
     by_path = files.index_by { |file| file["path"] }
+    readme = preferred_readme_paths(paths["readme"]).find { |path| by_path.dig(path, "status") == "ok" }
+    paths["readme"] = readme if readme
     attributes = {}
     repository = project.repository.deep_dup
     metadata = repository["metadata"] ||= {}
@@ -43,7 +45,14 @@ class RepositoryResources
   end
 
   def self.paths(brief)
-    (resource_paths(brief).values + description_paths(brief)).uniq.sort
+    resources = resource_paths(brief)
+    (resources.values + preferred_readme_paths(resources["readme"]) + description_paths(brief)).uniq.sort
+  end
+
+  def self.preferred_readme_paths(path)
+    return [] unless path.is_a?(String) && path.present?
+
+    path.match?(/\.html?\z/i) ? [path.sub(/\.html?\z/i, '.md'), path] : [path]
   end
 
   def self.description_paths(brief)
