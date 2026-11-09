@@ -126,4 +126,19 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :not_found
   end
+
+  test "owner pages include operator admissions while cached counts remain score based" do
+    host = Host.create!(name: "GitHub")
+    owner = Owner.create!(host: host, login: "research", projects_count: 0)
+    project = Project.create!(url: "https://github.com/research/solver", name: "Reviewed solver",
+      owner_record: owner, science_score: 0)
+    Catalogue::Admission.record!(project: project, decision: "accepted", reason: "Source implements a research solver", reviewer: "operator")
+    assert_equal 0, owner.reload.projects_count
+    get host_owner_url(host.name, owner.login)
+    assert_response :success
+    assert_equal [project], assigns(:projects)
+    get host_owners_url(host.name)
+    assert_response :success
+    assert_equal({ owner.id => 1 }, assigns(:catalogue_counts))
+  end
 end

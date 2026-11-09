@@ -30,7 +30,7 @@ class ScienceCohortExport
               packages: "ranked direct scientific dependencies", minimum_publisher_score: Package::MINIMUM_REPOSITORY_SCIENCE_SCORE },
             exporter_sha256: Digest::SHA256.file(__FILE__).hexdigest
           })
-          ProjectSearchSeeds.scope.select(:swhids).reorder(nil).find_in_batches(batch_size: @batch_size) do |projects|
+          ProjectSearchSeeds.scope.scientific.select(:swhids).reorder(nil).find_in_batches(batch_size: @batch_size) do |projects|
             years = SearchSeedYear.new(projects)
             projects.each do |project|
               write(file, "project", ProjectSearchSeeds.new(project, years: years).as_json.merge(swhids: ProjectSwhidEvidence.new(project).as_json))

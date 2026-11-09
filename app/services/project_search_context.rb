@@ -7,7 +7,7 @@ class ProjectSearchContext
   attr_reader :project, :metadata
 
   def self.scope
-    Project.visible.scientific.select(*PROJECT_COLUMNS)
+    Project.visible.in_catalogue.select(*PROJECT_COLUMNS)
       .preload(direct_project_dependencies: { package: :package_registry }, published_package_records: :package_registry)
   end
 

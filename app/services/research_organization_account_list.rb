@@ -5,6 +5,6 @@ class ResearchOrganizationAccountList
     @accounts = accounts
     ids = accounts.map(&:id)
     @evidence = links.where(owner_id: ids).includes(:research_organization).group_by(&:owner_id)
-    @project_counts = Project.visible.scientific.where(owner_id: ids).group(:owner_id).count
+    @project_counts = Project.visible.in_catalogue.where(owner_id: ids).group(:owner_id).count
   end
 end

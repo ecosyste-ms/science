@@ -29,7 +29,7 @@ class FieldsController < ApplicationController
     classifications = @field.project_fields
       .joins(:project)
       .merge(Project.visible)
-      .merge(Project.scientific)
+      .merge(Project.in_catalogue)
     @pagy, @project_fields = pagy(
       classifications
         .includes(project: { project_fields: :field })
@@ -92,7 +92,7 @@ class FieldsController < ApplicationController
   def visible_classifications
     ProjectField.joins(:project, :field)
       .merge(Project.visible)
-      .merge(Project.scientific)
+      .merge(Project.in_catalogue)
       .merge(Field.open_alex)
   end
 

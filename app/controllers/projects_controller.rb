@@ -1,7 +1,7 @@
 class ProjectsController < ApplicationController
   def show
     @project = Project.visible
-      .includes(:host, :owner_record, { project_fields: :field }, papers: :mentions)
+      .includes(:host, :owner_record, :catalogue_admission, { project_fields: :field }, papers: :mentions)
       .find(params[:id])
     @related_paper_links = @project.related_paper_links
     @registry_references = @project.project_external_software_records.registry_references
@@ -29,12 +29,12 @@ class ProjectsController < ApplicationController
   end
 
   def index
-    scope = Project.visible.includes(project_fields: :field).scientific
+    scope = Project.visible.includes(project_fields: :field).in_catalogue
     filtered_project_list(scope)
   end
 
   def search
-    @scope = Project.visible.includes(project_fields: :field).where('science_score > 0')
+    @scope = Project.visible.includes(project_fields: :field).listed
 
     if params[:q].present?
       @scope = @scope.merge(SoftwareSearch.projects(params[:q]))

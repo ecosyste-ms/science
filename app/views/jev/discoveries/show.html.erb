@@ -5,6 +5,10 @@
   <p><%= @discovery.classification.humanize %> · <%= @discovery.status.humanize %> · <%= @discovery.sample_group %></p>
   <p>Research probability: <%= @discovery.strict_probability&.round(3) || "Pending" %>. Implementation probability: <%= @discovery.implementation_probability&.round(3) || "Not enriched" %>.</p>
   <% if @discovery.project %><p>Existing project: <%= link_to @discovery.project.name.presence || @discovery.project.url, project_path(@discovery.project) %>. Science Score: <%= @discovery.project.science_score %>.</p><% end %>
+  <% if @discovery.project %>
+    <p><%= link_to "Review catalogue admission", project_admission_path(@discovery.project, source_discovery_id: @discovery.id), class: "btn btn-outline-primary" %> <%= link_to "Catalogue decisions", catalogue_admissions_path %></p>
+    <p>Catalogue admission is a separate operator decision. Saving an evidence review below does not admit the project.</p>
+  <% end %>
   <% if @discovery.control? %><p>Random control from the <%= @discovery.screen_band %> screen band. Enrichment selection probability: <%= @discovery.control_probability %>.</p><% end %>
   <% [@discovery.last_error, @discovery.enrichment_error].compact.each do |error| %><p class="alert alert-warning"><%= error %></p><% end %>
   <% if @discovery.evidence.key?("skipped_large_files") %>

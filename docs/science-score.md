@@ -2,7 +2,11 @@
 
 Science Score is a stored estimate of whether a repository contains research software. `ScienceScoreCalculator` returns a value from 0 to 100 with an evidence breakdown, and `Project#update_science_score` writes both values to `projects.science_score` and `projects.science_score_breakdown`.
 
-`Project.scientific` starts at 20 and `Project.highly_scientific` starts at 75. Projects with any positive score appear in the general project browser and search. The 20-point threshold controls OpenAlex field classification, metadata repository discovery, institutional owner pages, and several import paths. Brief scanning accepts visible projects with a positive score, publishers used directly by scientific projects, and confirmed Wikidata, bio.tools, ASCL, swMATH, RRID or DOI matches because a scan can add evidence and raise the score.
+`Project.scientific` starts at 20 and `Project.highly_scientific` starts at 75. Projects with any positive score appear in general search. The 20-point threshold controls OpenAlex field classification, metadata repository discovery and several import paths. Brief scanning accepts visible projects with a positive score, publishers used directly by scientific projects, and confirmed Wikidata, bio.tools, ASCL, swMATH, RRID or DOI matches because a scan can add evidence and raise the score.
+
+An explicit operator approval can also admit a project to the catalogue without changing its score or breakdown. `Project.in_catalogue` includes projects scoring at least 20 and operator-approved projects; public catalogue pages, institutional listings and software lookup use this scope. `Project.listed` adds operator approvals to positive-score search. Approval also permits routine sync and Brief scanning at zero points. The numeric `scientific` scope and automatic scoring rules retain their existing meaning. Frozen search-seed and science-cohort exports retain their documented minimum score of 20.
+
+The authenticated `/catalogue-admissions` page records accepted, deferred or rejected decisions with public evidence reasons and a private operator history. Deferral or rejection withdraws only the admission exception, so a project with a qualifying score remains included. Jev probabilities and discovery review labels never create approvals. The project detail API exposes `catalogue_included` and `catalogue_admission`; `/api/v1/projects?admission=accepted` lists synced records with current approvals.
 
 ## When scores change
 

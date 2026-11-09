@@ -19,6 +19,7 @@ class Jev::Run < ApplicationRecord
   def statistics
     scope = discoveries
     request_scope = requests
+    admissions = Catalogue::Admission.where(source_discovery_id: scope.select(:id))
     { id: id, name: name, status: status, target: target_count, sampled: scope.count,
       statuses: scope.group(:status).count, classifications: scope.group(:classification).count,
       sources: scope.group(:sample_group).count, screen_bands: scope.group(:screen_band).count,
@@ -27,6 +28,10 @@ class Jev::Run < ApplicationRecord
       purpose_reviews: scope.where.not(review_purpose: nil).group(:review_purpose).count,
       implementation_reviews: scope.where.not(review_implementation: nil).group(:review_implementation).count,
       catalogue_reviews: scope.where.not(review_catalogue_value: nil).group(:review_catalogue_value).count,
+      catalogue_decisions: admissions.group(:decision).count,
+      catalogue_additions: Catalogue::Admission.new_entries
+        .where("(evidence ->> 'entry_source_discovery_id')::bigint IN (#{scope.select(:id).to_sql})")
+        .where(project_id: Project.visible.select(:id)).count,
       repository_identities: scope.group(Arel.sql("COALESCE(evidence #>> '{repository_identity,status}', 'unchecked')")).count,
       request_statuses: request_scope.group(:status).count, input_tokens: request_scope.sum(:input_tokens), output_tokens: request_scope.sum(:output_tokens),
       api_attempts: request_scope.sum(:attempts),

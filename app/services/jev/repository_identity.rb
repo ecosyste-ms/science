@@ -46,7 +46,7 @@ class Jev::RepositoryIdentity
       alias_ids = aliases.select { |url, _| url == reference["url"] }.map(&:last)
       projects.select { |project| project.url == reference["url"] || alias_ids.include?(project.id) }.map do |project|
         reference.merge("project_id" => project.id, "project_url" => project.url, "science_score" => project.science_score,
-          "catalogued" => project.science_score.to_f >= Project::SCIENCE_SCORE_THRESHOLD)
+          "catalogued" => project.catalogued?)
       end
     end
     peers = @discovery.run.discoveries.where(repository_url: urls).where.not(id: @discovery.id)

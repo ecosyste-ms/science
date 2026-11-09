@@ -5,7 +5,7 @@ namespace :search_seeds do
     limit = Integer(ENV["LIMIT"], 10) if ENV["LIMIT"].present?
     raise ArgumentError, "AFTER_ID must be nonnegative and LIMIT positive" if after_id.negative? || (limit && limit < 1)
 
-    scope = Project.visible.where('science_score > 0').select(:id).where("id > ?", after_id)
+    scope = Project.visible.listed.select(:id).where("id > ?", after_id)
     scope = scope.limit(limit) if limit
     count = 0
     scope.find_each(batch_size: 250) do |project|

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_08_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_09_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -57,6 +57,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_08_100000) do
     t.datetime "updated_at", null: false
     t.index "lower(COALESCE(NULLIF(btrim(display_name), ''::text), (canonical_key)::text)), id", name: "index_authors_on_public_alphabetical", where: "(public_evidence_count > 0)"
     t.index ["canonical_key"], name: "index_authors_on_canonical_key", unique: true
+  end
+
+  create_table "catalogue_admissions", force: :cascade do |t|
+    t.bigint "project_id"
+    t.bigint "source_discovery_id"
+    t.string "repository_url", null: false
+    t.string "decision", null: false
+    t.text "reason", null: false
+    t.string "reviewed_by", null: false
+    t.datetime "reviewed_at", null: false
+    t.jsonb "evidence", default: {}, null: false
+    t.jsonb "history", default: [], null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["decision", "project_id"], name: "index_catalogue_admissions_on_decision_and_project_id"
+    t.index ["project_id"], name: "index_catalogue_admissions_on_project_id", unique: true
+    t.index ["source_discovery_id"], name: "index_catalogue_admissions_on_source_discovery_id"
   end
 
   create_table "collections", force: :cascade do |t|
@@ -838,11 +855,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_08_100000) do
     t.index ["language"], name: "index_projects_on_language"
     t.index ["last_synced_at", "id"], name: "index_projects_on_model_listing", order: { last_synced_at: "DESC NULLS LAST", id: :desc }, where: "model", include: ["owner_id"]
     t.index ["last_synced_at", "id"], name: "index_projects_on_sync_schedule", order: { last_synced_at: "NULLS FIRST" }
+    t.index ["name"], name: "index_projects_on_search_name", opclass: :gin_trgm_ops, where: "(science_score > (0)::double precision)", using: :gin
     t.index ["owner_id"], name: "index_projects_on_owner_id"
     t.index ["reviewed"], name: "index_projects_on_reviewed"
     t.index ["science_score"], name: "index_projects_on_science_score"
     t.index ["search_identifiers"], name: "index_projects_on_search_identifiers", opclass: :jsonb_path_ops, using: :gin
-    t.index ["name"], name: "index_projects_on_search_name", opclass: :gin_trgm_ops, where: "(science_score > (0)::double precision)", using: :gin
     t.index ["search_names"], name: "index_projects_on_search_names", opclass: :gin_trgm_ops, using: :gin
     t.index ["url"], name: "index_projects_on_search_url", opclass: :gin_trgm_ops, where: "(science_score > (0)::double precision)", using: :gin
     t.index ["url"], name: "index_projects_on_url", unique: true
@@ -967,6 +984,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_08_100000) do
   add_foreign_key "author_developer_account_links", "project_contributors", on_delete: :cascade
   add_foreign_key "author_developer_account_links", "projects", on_delete: :cascade
   add_foreign_key "author_identifiers", "authors", on_delete: :cascade
+  add_foreign_key "catalogue_admissions", "jev_discoveries", column: "source_discovery_id", on_delete: :nullify
+  add_foreign_key "catalogue_admissions", "projects", on_delete: :nullify
   add_foreign_key "developer_account_identifiers", "developer_accounts", on_delete: :cascade
   add_foreign_key "developer_account_identifiers", "hosts", on_delete: :cascade
   add_foreign_key "developer_accounts", "hosts", on_delete: :cascade

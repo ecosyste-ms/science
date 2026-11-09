@@ -65,6 +65,16 @@ class ScienceCohortRakeTest < ActiveSupport::TestCase
     assert_equal 1, exported.fetch("scientific_projects_count")
   end
 
+  test "operator admission does not change the frozen export score requirement" do
+    project, = cohort
+    admitted = create(Project, url: "https://github.com/cohort/operator-admitted", science_score: 0)
+    create(Catalogue::Admission, project: admitted, repository_url: admitted.url, decision: "accepted",
+      reason: "Source implements a research solver", reviewed_by: "operator", reviewed_at: Time.current)
+    capture_io { Rake::Task["science_cohort:export"].invoke }
+    rows = File.foreach(ENV.fetch("OUTPUT")).map { |line| JSON.parse(line) }
+    assert_equal [project.id], rows.select { |row| row["type"] == "project" }.map { |row| row.dig("data", "project_id") }
+  end
+
   test "invalid requests and failed exports leave no output and existing files survive" do
     ENV["BATCH_SIZE"] = "0"
     assert_raises(ArgumentError) { Rake::Task["science_cohort:export"].invoke }

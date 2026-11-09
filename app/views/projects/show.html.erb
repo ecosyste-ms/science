@@ -15,6 +15,12 @@
   </div>
 
   <%= render "registry_references" %>
+  <% if @project.catalogue_admission&.accepted? %>
+    <div class="alert alert-info" role="status">
+      <strong>Operator-approved catalogue entry.</strong> Science Score: <%= @project.science_score || "Not scored" %>.
+      <p class="mb-0"><%= @project.catalogue_admission.reason %></p>
+    </div>
+  <% end %>
 
   <% if @project.gated? %>
     <p class="alert alert-info" role="status"><strong>Gated model.</strong> The publisher restricts repository access, so repository scanning is skipped. Available package metadata is shown below.</p>

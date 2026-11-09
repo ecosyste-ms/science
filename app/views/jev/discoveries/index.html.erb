@@ -28,10 +28,12 @@
       <% { purpose_reviews: "Scientific purpose reviews", implementation_reviews: "Implementation reviews", catalogue_reviews: "Catalogue value reviews" }.each do |key, label| %>
         <% if @statistics[key].any? %><p><%= label %>: <%= @statistics[key].map { |value, count| "#{value.humanize}: #{count}" }.join(" · ") %></p><% end %>
       <% end %>
+      <p>Catalogue additions with current operator approval: <%= @statistics[:catalogue_additions] %>. Decisions: <%= @statistics[:catalogue_decisions].map { |value, count| "#{value.humanize}: #{count}" }.join(" · ").presence || "None" %>.</p>
       <p>Repository identities: <%= @statistics[:repository_identities].map { |key, count| "#{key.humanize}: #{count}" }.join(" · ") %></p>
       <% if @run.last_error.present? %><p class="text-danger"><%= @run.last_error %></p><% end %>
     </div>
   <% end %>
+  <p><%= link_to "Catalogue decisions", catalogue_admissions_path %>. Recorded decisions are separate from model classifications.</p>
   <div class="table-responsive">
     <table class="table">
       <thead><tr><th>Repository</th><th>Sample</th><th>Research</th><th>Implementation</th><th>Status</th><th>Review</th></tr></thead>

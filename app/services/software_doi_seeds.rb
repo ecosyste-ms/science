@@ -2,7 +2,7 @@ class SoftwareDoiSeeds
   PROJECT_COLUMNS = %i[id citation_file codemeta zenodo].freeze
 
   def self.scope
-    Project.visible.scientific.where("search_identifiers ? 'doi'").select(*PROJECT_COLUMNS)
+    Project.visible.in_catalogue.where("search_identifiers ? 'doi'").select(*PROJECT_COLUMNS)
   end
 
   def self.evidence(project)

@@ -13,7 +13,7 @@
     <%= form.submit "Apply", class: "btn btn-sm btn-primary ms-2" %>
   <% end %>
   <p><%= @counts[:organizations] %> institutions; <%= @counts[:accounts] %> confirmed accounts; <%= @counts[:scientific_projects] %> scientific projects; <%= @counts[:packages] %> packages.</p>
-  <p>Projects are owned by linked accounts and meet the science score threshold of <%= Project::SCIENCE_SCORE_THRESHOLD %>. Packages are associated with those projects. These links do not establish institutional authorship. <%= @counts[:ambiguous_accounts] %> accounts have ambiguous links in this scope; those links are excluded.</p>
+  <p>Projects are owned by linked accounts and qualify through Science Score <%= Project::SCIENCE_SCORE_THRESHOLD %> or operator admission. Packages are associated with those projects. These links do not establish institutional authorship. <%= @counts[:ambiguous_accounts] %> accounts have ambiguous links in this scope; those links are excluded.</p>
   <nav class="nav nav-pills mb-4" aria-label="Institution records">
     <% %w[owners projects packages].each do |section| %>
       <%= link_to section == "owners" ? "Accounts" : section.capitalize, url_for(action: section, include_descendants: @report.include_descendants), class: "nav-link #{'active' if @section == section}" %>

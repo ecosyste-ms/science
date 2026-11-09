@@ -7,7 +7,7 @@ class ProjectSearchSeeds
   attr_reader :project, :metadata
 
   def self.scope
-    Project.visible.scientific.select(*PROJECT_COLUMNS).order(:id)
+    Project.visible.in_catalogue.select(*PROJECT_COLUMNS).order(:id)
       .preload(:repository_aliases, published_package_records: :package_registry,
         project_external_software_records: :external_software_record)
   end

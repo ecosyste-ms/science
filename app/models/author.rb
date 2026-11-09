@@ -38,7 +38,7 @@ class Author < ApplicationRecord
     end
     return counts if author_ids.empty?
 
-    public_project_ids = Project.visible.scientific.select(:id)
+    public_project_ids = Project.visible.in_catalogue.select(:id)
     ProjectAuthor
       .where(author_id: author_ids, project_id: public_project_ids)
       .group(:author_id, :authorship_kind)
@@ -88,7 +88,7 @@ class Author < ApplicationRecord
   end
 
   def contributed_projects
-    scope = Project.visible.scientific
+    scope = Project.visible.in_catalogue
     scope.where(id: project_contributors.select(:project_id))
       .or(scope.where(id: project_authors.where(authorship_kind: ProjectAuthor::CONTRIBUTION_KINDS).select(:project_id)))
       .order(Arel.sql(
@@ -129,7 +129,7 @@ class Author < ApplicationRecord
       .where(authorship_kind: authorship_kind)
       .select(:project_id)
     Project.visible
-      .scientific
+      .in_catalogue
       .where(id: project_ids)
       .order(Arel.sql(
         "projects.science_score DESC NULLS LAST, " \
@@ -139,7 +139,7 @@ class Author < ApplicationRecord
 
   def papers_for_role(role)
     paper_ids = paper_authors.where(role: role).select(:paper_id)
-    public_project_ids = Project.visible.scientific.select(:id)
+    public_project_ids = Project.visible.in_catalogue.select(:id)
     mentioned_paper_ids = Mention
       .where(project_id: public_project_ids)
       .select(:paper_id)

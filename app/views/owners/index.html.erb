@@ -33,7 +33,7 @@
             <%= link_to owner.login, host_owner_path(@host.name, owner.login) %>
           </h5>
           <small class="text-muted">
-            <%= number_with_delimiter(owner.projects_count) %> projects
+            <%= number_with_delimiter(@catalogue_counts.fetch(owner.id, 0)) %> projects
           </small>
         </div>
         <% if owner.name.present? %>

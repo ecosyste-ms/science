@@ -10,6 +10,11 @@ class Api::V1::ProjectsController < Api::V1::ApplicationController
       .includes(project_fields: :field)
       .where.not(last_synced_at: nil)
 
+    if params[:admission].present?
+      decision = params[:admission].to_s.downcase
+      return render json: { error: "Unknown admission decision" }, status: :bad_request unless Catalogue::Admission::DECISIONS.key?(decision)
+      @projects = @projects.where(id: Catalogue::Admission.where(decision: decision).select(:project_id))
+    end
 
     if params[:sort].present? || params[:order].present?
       sort = sanitize_sort(Project.sortable_columns, default: 'projects.updated_at')
@@ -36,7 +41,7 @@ class Api::V1::ProjectsController < Api::V1::ApplicationController
   end
 
   def show
-    @project = Project.visible.includes(project_fields: :field).find(params[:id])
+    @project = Project.visible.includes(:catalogue_admission, project_fields: :field).find(params[:id])
   end
 
   def lookup

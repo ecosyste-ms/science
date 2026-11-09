@@ -73,7 +73,7 @@ class AuthorPublicEvidenceCounter
     counts = author_ids.index_with(0)
     public_project_ids = Project
       .left_outer_joins(:owner_record)
-      .scientific
+      .in_catalogue
       .where(owners: { hidden: [false, nil] })
       .select(:id)
 

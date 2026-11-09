@@ -5,7 +5,7 @@ class SoftwareSearchIndexer
 
     project.with_lock do
       values = {}
-      if project.science_score.to_f.positive?
+      if project.science_score.to_f.positive? || project.catalogue_admitted?
         document = ProjectSearchSeeds.new(project).as_json
         seeds = document[:seeds] + document[:packages].flat_map { |package| package[:seeds] }
         values = seeds.group_by { |seed| seed[:type] }

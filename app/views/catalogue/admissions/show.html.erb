@@ -1,0 +1,28 @@
+<% @meta_title = "Catalogue admission" %>
+<div class="container-md">
+  <p><%= link_to "Catalogue decisions", catalogue_admissions_path %></p>
+  <h1 class="h3">Catalogue admission</h1>
+  <p><%= link_to @project.name.presence || @project.url, project_path(@project) %></p>
+  <p><%= link_to @project.url, @project.url, rel: "noopener noreferrer" %></p>
+  <p>Science Score: <%= @project.science_score || "Not scored" %>. Currently in the scientific catalogue: <%= @project.catalogued? ? "Yes" : "No" %>.</p>
+  <p>Approval admits this project without changing its Science Score. Deferral or rejection removes operator admission and leaves the normal score rules in effect.</p>
+  <p>Check scientific purpose, delivered implementation and repository identity. Record setup and maintenance limitations as caveats. Reasons are public; cite repository or publication evidence.</p>
+  <%= form_with model: @admission, scope: :catalogue_admission, url: project_admission_path(@project), method: @admission.persisted? ? :patch : :post, local: true, class: "card card-body mb-4" do |form| %>
+    <% if @admission.errors.any? %><p class="text-danger"><%= @admission.errors.full_messages.join(". ") %></p><% end %>
+    <%= form.label :decision, class: "form-label" %>
+    <%= form.select :decision, Catalogue::Admission::DECISIONS.map { |value, label| [label, value] }, { include_blank: "Select a decision" }, class: "form-select mb-3", required: true %>
+    <%= form.label :reason, "Evidence and reason", class: "form-label" %>
+    <%= form.text_area :reason, rows: 6, maxlength: 4000, required: true, class: "form-control mb-3" %>
+    <%= form.label :source_discovery_id, "Discovery candidate ID (optional)", class: "form-label" %>
+    <%= form.number_field :source_discovery_id, value: @source_id, min: 1, class: "form-control mb-3" %>
+    <%= form.submit "Save catalogue decision", class: "btn btn-primary" %>
+  <% end %>
+  <% if @stored_admission %>
+    <p>Last decision: <%= @stored_admission.decision %>, <%= @stored_admission.reviewed_at %>, by <%= @stored_admission.reviewed_by %>.</p>
+    <p>Included before this decision: <%= @stored_admission.evidence["included_before"] ? "Yes" : "No" %>. Included after: <%= @stored_admission.evidence["included_after"] ? "Yes" : "No" %>.</p>
+    <% if @stored_admission.history.any? %>
+      <h2 class="h5">Earlier decisions</h2>
+      <ul><% @stored_admission.history.reverse_each do |entry| %><li><%= entry["reviewed_at"] %>: <%= entry["decision"] %> by <%= entry["reviewed_by"] %>. <%= entry["reason"] %></li><% end %></ul>
+    <% end %>
+  <% end %>
+</div>

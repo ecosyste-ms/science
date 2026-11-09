@@ -116,6 +116,17 @@ class SearchSeedsRakeTest < ActiveSupport::TestCase
     end
   end
 
+  test "operator admission does not change the frozen export score requirement" do
+    project = create(Project, url: "https://github.com/export/qualifying", science_score: 20)
+    admitted = create(Project, url: "https://github.com/export/operator-admitted", science_score: 0)
+    create(Catalogue::Admission, project: admitted, repository_url: admitted.url, decision: "accepted",
+      reason: "Source implements a research solver", reviewed_by: "operator", reviewed_at: Time.current)
+    capture_io { Rake::Task["search_seeds:export"].invoke }
+    SQLite3::Database.new(ENV.fetch("OUTPUT")) do |db|
+      assert_equal [project.id], db.execute("SELECT project_id FROM projects").flatten
+    end
+  end
+
   test "literal clue export deduplicates evidence while preserving candidates matching rules and years" do
     first = create(Project, url: "https://github.com/clues/first", name: "Star", science_score: 50,
       repository: { "homepage" => "https://EXAMPLE.org/Docs", "releases_url" => "https://repos.example/first/releases" },

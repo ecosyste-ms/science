@@ -63,6 +63,8 @@ class Project < ApplicationRecord
     column_name: ->(project) { :projects_count if project.science_score.to_f >= SCIENCE_SCORE_THRESHOLD },
     column_names: -> { { Project.scientific => :projects_count } }
 
+  has_one :catalogue_admission, class_name: "Catalogue::Admission", dependent: :nullify
+
   has_many :issues, dependent: :delete_all
   has_many :releases, dependent: :delete_all
   has_many :project_fields, dependent: :destroy
@@ -215,6 +217,9 @@ class Project < ApplicationRecord
   scope :with_joss, -> { where.not(joss_metadata: nil) }
   scope :with_research_organization_owner, -> { joins(:owner_record).merge(Owner.institutional) }
   scope :scientific, -> { where('science_score >= ?', SCIENCE_SCORE_THRESHOLD) }
+  scope :operator_admitted, -> { where(id: Catalogue::Admission.accepted.select(:project_id)) }
+  scope :in_catalogue, -> { scientific.or(operator_admitted) }
+  scope :listed, -> { where('science_score > 0').or(operator_admitted) }
   scope :highly_scientific, -> { where('science_score >= ?', 75) }
   scope :with_research_registry_match, -> {
     where(id: ProjectExternalSoftwareRecord.research_registry_matches.select(:project_id))
@@ -230,19 +235,29 @@ class Project < ApplicationRecord
     publisher = Package.where("packages.published_by_project_id = projects.id")
       .where(dependency).arel.exists
     where('science_score > 0').or(where(publisher))
-      .or(with_external_identifier).or(model_projects)
+      .or(with_external_identifier).or(model_projects).or(operator_admitted)
   }
   scope :should_sync, -> {
     where('last_synced_at IS NULL OR science_score IS NULL OR science_score > 0')
-      .or(with_research_registry_match).or(model_projects)
+      .or(with_research_registry_match).or(model_projects).or(operator_admitted)
   }
 
   def confirmed_external_identifier?
     project_external_software_records.confirmed_identifier_matches.exists?
   end
 
+  def catalogue_admitted?
+    return catalogue_admission&.accepted? == true if association(:catalogue_admission).loaded?
+
+    id.present? && Catalogue::Admission.accepted.exists?(project_id: id)
+  end
+
+  def catalogued?
+    science_score.to_f >= SCIENCE_SCORE_THRESHOLD || catalogue_admitted?
+  end
+
   def eligible_for_brief?
-    return true if model_project? || science_score.to_f.positive? || confirmed_external_identifier?
+    return true if model_project? || science_score.to_f.positive? || catalogue_admitted? || confirmed_external_identifier?
 
     Package.direct_scientific_dependencies
       .where(package_id: published_package_records.select(:id)).exists?
@@ -725,7 +740,7 @@ class Project < ApplicationRecord
   end
 
   def self.packages_sorted
-    visible.where('science_score > 0')
+    visible.listed
       .where("jsonb_array_length(COALESCE(packages::jsonb, '[]'::jsonb)) > 0")
       .order(Arel.sql("COALESCE((SELECT SUM((package->>'downloads')::numeric) FROM jsonb_array_elements(packages::jsonb) AS package), 0) DESC"), id: :desc)
   end
@@ -734,7 +749,7 @@ class Project < ApplicationRecord
     Rails.cache.fetch('all_package_and_project_names', expires_in: 2.hours) do
       names = Set.new
       uncached do
-        visible.with_packages.where('science_score > 0').in_batches(of: 1_000) do |batch|
+        visible.with_packages.listed.in_batches(of: 1_000) do |batch|
           batch.pluck(:name, Arel.sql("jsonb_path_query_array(packages::jsonb, '$[*].name')")).each do |name, package_names|
             ([name] + package_names).grep(String).each { |value| names << value.downcase }
           end
@@ -751,7 +766,7 @@ class Project < ApplicationRecord
 
     # Science score distribution
     score_distribution = scope.group(:science_score).count
-    scientific_count = scope.scientific.count
+    scientific_count = scope.in_catalogue.count
     highly_scientific_count = scope.highly_scientific.count
 
     # Calculate averages for scored projects

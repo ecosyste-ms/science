@@ -2,7 +2,7 @@
 
 `GET /api/v1/projects/search_seeds` returns names and identifiers for finding software candidates in paper text. Each seed retains its source and its connection to a Science project or registry package, so a detector can resolve a hit back to software metadata. Those identities also provide a basis for later integrations with OpenAlex's paper–software mention data.
 
-The endpoint reads stored metadata without making upstream requests. It includes visible projects with a Science Score of at least 20, including archived projects and projects without registry packages. Dependencies and incidental README references are excluded from the seed set. Science Score describes the project's scientific relevance; it does not measure confidence in a text match.
+The endpoint reads stored metadata without making upstream requests. It includes visible projects with a Science Score of at least 20 or an accepted operator admission, including archived projects and projects without registry packages. Dependencies and incidental README references are excluded from the seed set. Science Score describes the project's scientific relevance; it does not measure confidence in a text match.
 
 ## Requests and pagination
 
@@ -119,7 +119,7 @@ The existing `/api/v1/projects/names` endpoint remains a flat list of lowercase 
 
 ## Context for a candidate
 
-`GET /api/v1/projects/{id}/search_context` returns stored context for one candidate identified by a seed. It uses the same visibility and scientific eligibility rules as the seed endpoint; missing, hidden, or below-threshold projects return 404. The bulk seed response stays unchanged.
+`GET /api/v1/projects/{id}/search_context` returns stored context for one candidate identified by a seed. It uses the same visibility and catalogue eligibility rules as the seed endpoint; missing, hidden, or below-threshold projects without operator admission return 404. The bulk seed response stays unchanged.
 
 The response includes `project_id`, `repository_url`, `updated_at`, and `last_synced_at`, followed by:
 
@@ -153,7 +153,7 @@ The request reads stored metadata without fetching or indexing it. Empty arrays 
 
 ## Search and lookup
 
-The main search box uses `/projects/search`. It matches project names and repository URLs, plus indexed aliases and published package names. Matching is case insensitive and treats `%` and `_` literally. Complete historical repository URLs also match their indexed aliases. Results include visible projects with a positive Science Score, retain the keyword and language filters, and sort by combined science and ranking score with project ID breaking ties.
+The main search box uses `/projects/search`. It matches project names and repository URLs, plus indexed aliases and published package names. Matching is case insensitive and treats `%` and `_` literally. Complete historical repository URLs also match their indexed aliases. Results include visible projects with a positive Science Score or operator admission, retain the keyword and language filters, and sort by combined science and ranking score with project ID breaking ties.
 
 Confirmed linked Wikidata labels and aliases contribute names to the shared index and seed exports. Each name records its language, source field, catalogue record and project link in `name_evidence`. Ambiguous links contribute no names; when several confirmed projects share a name, they remain separate results. A failed source refresh retains names from the last retrieved record, while a missing record removes them on index refresh.
 
@@ -165,7 +165,7 @@ Both endpoints return `query`, `kind`, `match`, `projects`, and `next_after_id`.
 
 Set `limit` between 1 and 25 (default 10). Pass `next_after_id` as `after_id` with the same query and kind until it is null. The cursor is a project ID. The result is a live view: metadata updates can change matches between pages, and a page can be empty while still returning a cursor if indexed candidates no longer match their current metadata. A missing result does not prove a project is absent from Science.
 
-These routes only read stored data. Names and identifiers are indexed on the `projects` table in `search_identifiers` (JSONB), with `search_names` for substring search and `search_indexed_at` for freshness. The index covers positive-score projects for main search; the software API and seed export retain their scientific threshold of 20. PostgreSQL GIN indexes support exact containment and trigram searches. Committed project metadata, published package, repository alias and external identifier changes queue index refreshes, including bulk registry imports. Other bulk writes that bypass callbacks require a reindex. API evidence is extracted from current metadata for the selected page; main-search aliases reflect the last completed index refresh.
+These routes only read stored data. Names and identifiers are indexed on the `projects` table in `search_identifiers` (JSONB), with `search_names` for substring search and `search_indexed_at` for freshness. The index covers positive-score and operator-admitted projects for main search; the software API requires score 20 or operator admission, while the seed export retains its minimum score of 20. PostgreSQL GIN indexes support exact containment and trigram searches. Committed project metadata, published package, repository alias, external identifier and operator admission changes queue index refreshes, including bulk registry imports. Other bulk writes that bypass callbacks require a reindex. API evidence is extracted from current metadata for the selected page; main-search aliases reflect the last completed index refresh.
 
 After deploying the migration, populate the fields once from the configured Science database:
 
@@ -177,7 +177,7 @@ The task reads projects in batches of 250 and prints progress with the last proj
 
 ## Local SQLite export
 
-`search_seeds:export` writes the same seed data directly from the configured local database into a SQLite file. It uses `ProjectSearchSeeds` for extraction, retaining the API's eligibility rules and provenance. The development and test bundle includes the `sqlite3` gem; run `bundle install` through the project's Ruby setup after updating dependencies.
+`search_seeds:export` writes seed data directly from the configured local database into a SQLite file. It uses `ProjectSearchSeeds` for extraction and provenance, while retaining the export's minimum Science Score of 20. Operator-approved projects below 20 appear in the live API but are excluded from this export. The development and test bundle includes the `sqlite3` gem; run `bundle install` through the project's Ruby setup after updating dependencies.
 
 On a local checkout configured with rbenv, run:
 

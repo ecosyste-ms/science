@@ -35,7 +35,7 @@
             <div class="d-flex align-items-start flex-wrap">
               <div class="d-flex align-items-start me-4 mb-2">
                 <span class="text-muted">
-                  <%= number_with_delimiter(owner.projects_count) %> projects
+                  <%= number_with_delimiter(@catalogue_counts.fetch(owner.id, 0)) %> projects
                 </span>
               </div>
             </div>

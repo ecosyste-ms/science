@@ -119,4 +119,17 @@ class Jev::DiscoveriesControllerTest < ActionDispatch::IntegrationTest
   ensure
     Jev::DiscoveriesController.allow_forgery_protection = false
   end
+
+  test "candidate shortlist filters by IDs without admitting projects" do
+    other = discovery_candidate(run: @candidate.run)
+    get jev_discoveries_path(candidate_ids: @candidate.id.to_s), headers: @headers
+    assert_response :success
+    assert_select "a[href=?]", jev_discovery_path(@candidate)
+    assert_select "a[href=?]", jev_discovery_path(other), count: 0
+    assert_empty Catalogue::Admission.all
+    ["1,no", "1,", "0", "9223372036854775808", (1..101).to_a.join(",")].each do |ids|
+      get jev_discoveries_path(candidate_ids: ids), headers: @headers
+      assert_response :bad_request
+    end
+  end
 end

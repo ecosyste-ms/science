@@ -55,6 +55,14 @@ paths:
                     statistics:
                       type: object
                       additionalProperties: true
+                      properties:
+                        catalogue_decisions:
+                          type: object
+                          additionalProperties: {type: integer}
+                          description: Current operator decisions linked to candidates in this run, by decision.
+                        catalogue_additions:
+                          type: integer
+                          description: Visible projects whose continuing operator approval first admitted them through a candidate in this run. Already qualified approvals are excluded; amendments retain original run attribution and withdrawal removes the count.
         '404':
           description: Run not found.
   "/discovery/candidates":
@@ -912,6 +920,12 @@ paths:
       tags:
         - projects
       parameters:
+        - name: admission
+          in: query
+          description: Filter by the current operator admission decision, independently of Science Score. Case-insensitive.
+          schema:
+            type: string
+            enum: [accepted, deferred, rejected]
         - name: reviewed
           in: query
           description: reviewed status
@@ -952,9 +966,11 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Project"
+        400:
+          description: Unknown admission decision
   /projects/{id}:
     get:
-      description: get a project by id
+      description: Get a project by ID, including current catalogue membership and any explicit operator admission decision. Model classifications never grant admission.
       operationId: getProject
       tags:
         - projects
@@ -976,7 +992,8 @@ paths:
     get:
       description: >-
         Get stored descriptions, programming languages, published packages and indexed
-        direct dependencies for a visible project with a Science Score of at least 20.
+        direct dependencies for a visible project with a Science Score of at least 20
+        or an accepted operator admission.
         Evidence retains its source. Empty arrays mean no stored evidence was found;
         they do not establish that a project has no dependencies or packages.
         No upstream requests or dependency indexing run during this request.
@@ -997,7 +1014,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ProjectSearchContext"
         404:
-          description: Project is missing, hidden or below the scientific eligibility threshold
+          description: Project is missing, hidden or has neither a qualifying Science Score nor an accepted operator admission
   /projects/lookup:
     get:
       description: lookup project by url
@@ -1051,7 +1068,7 @@ paths:
   /projects/search_seeds:
     get:
       description: >-
-        Search seeds grouped by visible scientific project (Science Score at least 20),
+        Search seeds grouped by visible catalogue project (Science Score at least 20 or accepted operator admission),
         including archived projects and projects without packages. Reads stored metadata
         without fetching upstream data. Ordered by project ID. Follow the Link header
         for the next page; total counts are not returned. This is a live view, not a
@@ -2201,6 +2218,20 @@ components:
               type: string
             html_url:
               type: string
+    CatalogueAdmission:
+      type: object
+      nullable: true
+      description: On project detail responses, the current explicit operator decision, or null if none has been recorded. Reasons are public; operator identity and decision history are omitted. Deferral or rejection removes only the admission exception and does not exclude a project that qualifies by Science Score.
+      properties:
+        decision: {type: string, enum: [accepted, deferred, rejected]}
+        reason: {type: string}
+        reviewed_at: {type: string, format: date-time}
+        source_discovery_id: {type: integer, nullable: true}
+        included_before: {type: boolean}
+        included_after: {type: boolean}
+        new_catalogue_entry:
+          type: boolean
+          description: This continuing approval admitted a previously unqualified project. Kept when the approval reason is amended; cleared when admission is withdrawn.
     Project:
       type: object
       properties:
@@ -2242,6 +2273,11 @@ components:
           type: object
           nullable: true
           description: Saved evidence used to calculate the Science Score
+        catalogue_included:
+          type: boolean
+          description: On project detail responses, whether Science Score or an explicit operator approval currently qualifies this project for the catalogue. Hidden-owner projects are excluded from public responses.
+        catalogue_admission:
+          $ref: "#/components/schemas/CatalogueAdmission"
         created_at:
           type: string
           format: date-time

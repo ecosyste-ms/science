@@ -1,0 +1,21 @@
+<% @meta_title = "Catalogue decisions" %>
+<div class="container-md">
+  <p><%= link_to "Discovery review", jev_discoveries_path %></p>
+  <h1 class="h3">Catalogue decisions</h1>
+  <p>Recorded decisions: <%= @counts.map { |decision, count| "#{decision}: #{count}" }.join(" · ").presence || "None" %>.</p>
+  <p><%= @new_entries %> current approvals admitted a previously unqualified project. Approval of an already included project does not count as a new addition.</p>
+  <%= form_with url: catalogue_admissions_path, method: :get, local: true, class: "mb-4" do |form| %>
+    <%= form.label :project_id, "Review an existing Project ID", class: "form-label" %>
+    <%= form.number_field :project_id, min: 1, required: true, class: "form-control mb-2" %>
+    <%= form.submit "Review project", class: "btn btn-outline-primary" %>
+  <% end %>
+  <div class="table-responsive">
+    <table class="table">
+      <thead><tr><th>Project</th><th>Decision</th><th>Reason</th><th>Reviewed</th></tr></thead>
+      <tbody><% @admissions.each do |admission| %>
+        <tr><td><%= admission.project ? link_to(admission.repository_url, project_admission_path(admission.project)) : admission.repository_url %></td><td><%= admission.decision %></td><td><%= admission.reason %></td><td><%= admission.reviewed_at %></td></tr>
+      <% end %></tbody>
+    </table>
+  </div>
+  <%== pagy_bootstrap_nav(@pagy) if @pagy.next || @pagy.prev %>
+</div>

@@ -43,7 +43,7 @@ class ProjectSearch
   end
 
   def exact_repo_matches(repo_name)
-    projects = Project.where('science_score > 0')  # Include all projects with any science score
+    projects = Project.visible.listed
       .where("url ILIKE ?", "%/#{repo_name}")
       .select(:id, :name, :url, :description, :science_score, :score, :repository, :packages, :readme, :model)
     
@@ -56,7 +56,7 @@ class ProjectSearch
   end
 
   def exact_name_matches
-    projects = Project.where('science_score > 0')
+    projects = Project.visible.listed
       .where('name ILIKE ?', query)
       .select(:id, :name, :url, :description, :science_score, :score, :repository, :packages, :readme, :model)
     
@@ -68,7 +68,7 @@ class ProjectSearch
   def exact_package_matches
     # Use PostgreSQL's JSON operators to search within the packages array
     # We use json_array_elements to expand the array and search each element
-    projects = Project.where('science_score > 0')
+    projects = Project.visible.listed
       .where("EXISTS (SELECT 1 FROM json_array_elements(packages) AS pkg WHERE LOWER(pkg->>'name') = ?)", query.downcase)
       .select(:id, :name, :url, :description, :science_score, :score, :repository, :packages, :readme, :model)
     
@@ -94,7 +94,7 @@ class ProjectSearch
   def partial_name_matches(existing_results)
     excluded_ids = existing_results.map { |r| r[:project].id }
     
-    projects = Project.where('science_score > 0')
+    projects = Project.visible.listed
       .where('name ILIKE ?', "#{query}%")
       .where.not(id: excluded_ids)
       .limit(limit - existing_results.size)
@@ -108,7 +108,7 @@ class ProjectSearch
   def partial_repo_matches(repo_name, existing_results)
     excluded_ids = existing_results.map { |r| r[:project].id }
     
-    projects = Project.where('science_score > 0')
+    projects = Project.visible.listed
       .where("url ILIKE ?", "%/#{repo_name}%")
       .where.not(id: excluded_ids)
       .limit(limit - existing_results.size)
@@ -125,7 +125,7 @@ class ProjectSearch
   def contains_matches(existing_results)
     excluded_ids = existing_results.map { |r| r[:project].id }
     
-    projects = Project.where('science_score > 0')
+    projects = Project.visible.listed
       .where('name ILIKE ?', "%#{query}%")
       .where.not(id: excluded_ids)
       .limit(limit - existing_results.size)

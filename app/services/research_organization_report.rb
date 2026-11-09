@@ -29,7 +29,7 @@ class ResearchOrganizationReport
   end
 
   def projects
-    Project.visible.scientific.where(owner_id: accounts.reselect(:id).reorder(nil))
+    Project.visible.in_catalogue.where(owner_id: accounts.reselect(:id).reorder(nil))
       .includes(:host, :owner_record, project_fields: :field).order(science_score: :desc, id: :asc)
   end
 

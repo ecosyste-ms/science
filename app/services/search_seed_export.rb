@@ -90,7 +90,7 @@ class SearchSeedExport
     Project.transaction(isolation: :repeatable_read) do
       Project.connection.execute("SET TRANSACTION READ ONLY")
       Project.uncached do
-        scope = ProjectSearchSeeds.scope.select(*ProjectSearchContext::PROJECT_COLUMNS)
+        scope = ProjectSearchSeeds.scope.scientific.select(*ProjectSearchContext::PROJECT_COLUMNS)
           .reorder(nil).preload(direct_project_dependencies: { package: :package_registry }, project_fields: :field)
         scope = scope.limit(limit) if limit
         count = 0

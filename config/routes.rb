@@ -62,6 +62,7 @@ Rails.application.routes.draw do
   end
 
   resources :projects, constraints: { id: /.*/ }, only: [:index, :show] do
+    resource :admission, controller: "catalogue/admissions", only: %i[show create update]
     collection do
       get :lookup
       get :packages
@@ -124,5 +125,6 @@ Rails.application.routes.draw do
   get '/500', to: 'errors#internal'
 
   root "home#index"
+  resources :catalogue_admissions, controller: "catalogue/admissions", path: "catalogue-admissions", only: :index
   resources :jev_discoveries, controller: "jev/discoveries", path: "discovery-review", only: %i[index show update]
 end

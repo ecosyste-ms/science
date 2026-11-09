@@ -6,7 +6,7 @@ class HostsController < ApplicationController
   end
 
   def show
-    @scope = @host.projects.visible.scientific.includes(project_fields: :field)
+    @scope = @host.projects.visible.in_catalogue.includes(project_fields: :field)
 
     if params[:sort].present? || params[:order].present?
       sort = sanitize_sort(Project.sortable_columns, default: 'science_score')
