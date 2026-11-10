@@ -206,6 +206,33 @@ class OpenAlexApiClientTest < ActiveSupport::TestCase
     assert_nil client.normalize_doi("10.5281/zenodo.5565455.svg")
   end
 
+  test "API diagnostics include the reason and message with bounded redacted text" do
+    key = "test/key+secret"
+    encoded_key = URI.encode_www_form_component(key)
+    stub_request(:get, "https://api.openalex.org/works").with(query: { api_key: key })
+      .to_return(status: 400, body: { error: "Invalid query parameters", message: "Unknown filter for #{key} #{encoded_key}\n#{'x' * 300}" }.to_json)
+
+    error = assert_raises(OpenAlexApiClient::RequestError) { OpenAlexApiClient.new(api_key: key).get("works") }
+
+    assert_equal "Invalid query parameters", error.reason
+    assert_includes error.message, "Invalid query parameters: Unknown filter for [REDACTED]"
+    refute_includes error.message, key
+    refute_includes error.message, encoded_key
+    refute_includes error.message, "\n"
+    assert_operator error.message.length, :<=, "OpenAlex request failed with HTTP 400: ".length + 200
+  end
+
+  test "nonstring reasons and nonobject error responses preserve the HTTP status" do
+    [{ error: { detail: "invalid" } }, ["invalid"], nil, "not JSON"].each do |body|
+      stub_request(:get, "https://api.openalex.org/works").with(query: { api_key: "test-key" })
+        .to_return(status: 400, body: body.is_a?(String) ? body : body.to_json)
+      error = assert_raises(OpenAlexApiClient::RequestError) { OpenAlexApiClient.new(api_key: "test-key").get("works") }
+      assert_equal 400, error.status
+      assert_nil error.reason
+      assert_equal "OpenAlex request failed with HTTP 400", error.message
+    end
+  end
+
   def json_response(results:, next_cursor:)
     {
       status: 200,

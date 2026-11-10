@@ -46,6 +46,8 @@ class ExternalSoftwareImport < ApplicationRecord
           start_wikidata(page_size: record.page_size, restart: true)
         elsif source == "jss"
           start_jss(page_size: record.page_size, restart: true)
+        elsif source == "openalex"
+          start_open_alex(page_size: record.page_size, restart: true)
         else
           start_catalogue(source: source, page_size: record.page_size, restart: true)
         end
@@ -108,10 +110,56 @@ class ExternalSoftwareImport < ApplicationRecord
       initial_cursor: JssClient.initial_cursor(from: from, until_time: until_time))
   end
 
+  def self.start_open_alex(from: nil, until_time: nil, page_size: nil, restart: false)
+    previous = find_by(source: "openalex")
+    if previous && !restart
+      state = JSON.parse(previous.cursor)
+      if (from && OpenAlexSoftwareClient.date(from) != state["from"]) ||
+          (until_time && OpenAlexSoftwareClient.date(until_time) != state["until"])
+        raise ArgumentError, "OpenAlex date window is already saved; omit FROM and UNTIL to resume"
+      end
+      return start_catalogue(source: "openalex", page_size: page_size)
+    end
+    start_catalogue(source: "openalex", page_size: page_size, restart: restart,
+      initial_cursor: OpenAlexSoftwareClient.initial_cursor(from: from, until_time: until_time))
+  end
+
+  def self.harvest_open_alex
+    start_open_alex
+    resweep("openalex")
+  end
+
+  def self.resumable_open_alex
+    record = where(source: "openalex", completed_at: nil).where("next_run_at <= ?", Time.current)
+      .where("lease_expires_at IS NULL OR lease_expires_at <= ?", Time.current).first
+    record unless record&.open_alex_blocked?
+  end
+
+  def open_alex_blocked?
+    source == "openalex" && JSON.parse(cursor)["blocked"] == true
+  end
+
+  def block_open_alex(token, error)
+    with_lock do
+      return unless source == "openalex" && lease_token == token
+      update!(cursor: JSON.generate(JSON.parse(cursor).merge("blocked" => true)),
+        last_error: error.to_s.truncate(1000), lease_token: nil, lease_expires_at: nil)
+    end
+  end
+
+  def retry_open_alex
+    with_lock do
+      return false unless open_alex_blocked?
+      update!(cursor: JSON.generate(JSON.parse(cursor).except("blocked")),
+        next_run_at: Time.current, last_error: nil)
+      true
+    end
+  end
+
   def self.start_catalogue(source:, page_size: nil, restart: false, initial_cursor: nil)
-    initial_cursor ||= { "biotools" => "1", "ascl" => nil, "mloss" => nil, "jors" => nil, "jss" => nil, "swmath" => nil, "rrid_seeds" => nil, "rrid" => nil, "doi_seeds" => nil }.fetch(source)
+    initial_cursor ||= { "biotools" => "1", "ascl" => nil, "mloss" => nil, "jors" => nil, "jss" => nil, "swmath" => nil, "rrid_seeds" => nil, "rrid" => nil, "doi_seeds" => nil, "openalex" => OpenAlexSoftwareClient.initial_cursor }.fetch(source)
     client = { "biotools" => BiotoolsClient, "ascl" => AsclClient, "mloss" => MlossClient, "swmath" => SwmathClient,
-      "rrid_seeds" => RridClient, "rrid" => RridCatalogueClient, "doi_seeds" => SoftwareDoiClient, "jors" => JorsClient, "jss" => JssClient }.fetch(source)
+      "rrid_seeds" => RridClient, "rrid" => RridCatalogueClient, "doi_seeds" => SoftwareDoiClient, "jors" => JorsClient, "jss" => JssClient, "openalex" => OpenAlexSoftwareClient }.fetch(source)
     max_page_size = client::PAGE_SIZE
     if page_size && (!page_size.is_a?(Integer) || !page_size.between?(1, max_page_size))
       raise ArgumentError, "page size must be between 1 and #{max_page_size}"
@@ -174,17 +222,17 @@ class ExternalSoftwareImport < ApplicationRecord
   end
 
   def enqueue
-    return if completed_at
+    return if completed_at || open_alex_blocked?
     worker = { "biotools" => ImportBiotoolsWorker, "ascl" => ImportAsclWorker, "mloss" => ImportMlossWorker,
       "swmath" => ImportSwmathWorker, "wikidata" => ImportWikidataWorker,
       "rrid_seeds" => ImportRridSeedsWorker, "rrid" => ImportRridWorker,
-      "doi_seeds" => ImportSoftwareDoiSeedsWorker, "jors" => ImportJournalWorker, "jss" => ImportJournalWorker }.fetch(source)
+      "doi_seeds" => ImportSoftwareDoiSeedsWorker, "jors" => ImportJournalWorker, "jss" => ImportJournalWorker, "openalex" => ImportOpenAlexSoftwareWorker }.fetch(source)
     worker.perform_at([next_run_at, lease_expires_at, Time.current].compact.max, id)
   end
 
   def claim
     with_lock do
-      return if completed_at || next_run_at > Time.current || (lease_expires_at && lease_expires_at > Time.current)
+      return if completed_at || open_alex_blocked? || next_run_at > Time.current || (lease_expires_at && lease_expires_at > Time.current)
       update!(lease_token: SecureRandom.uuid, lease_expires_at: Time.current + LEASE_DURATION)
       lease_token
     end
@@ -221,6 +269,7 @@ class ExternalSoftwareImport < ApplicationRecord
         when "swmath" then SwmathClient.identifier(record["id"].to_s)
         when "rrid" then RridClient.identifier(record.dig("item", "identifier"))
         when "doi_seeds" then record.fetch("project_id").to_s
+        when "openalex" then OpenAlexSoftwareClient.identifier(record.fetch("id"))
         else BiotoolsClient.identifier(record["biotoolsID"])
         end
       end
@@ -232,7 +281,7 @@ class ExternalSoftwareImport < ApplicationRecord
     with_lock do
       return unless lease_token == token
       finished = pending_next_cursor.nil?
-      final_cursor = %w[biotools jss].include?(source) ? cursor : (pending_ids.last || cursor)
+      final_cursor = %w[biotools jss openalex].include?(source) ? cursor : (pending_ids.last || cursor)
       update!(cursor: pending_next_cursor || final_cursor, pages_processed: pages_processed + 1,
         items_processed: items_processed + pending_ids.size, pending_ids: [], pending_records: [],
         pending_next_cursor: nil, page_retrieved_at: nil, completed_at: finished ? Time.current : nil,
@@ -258,6 +307,7 @@ class ExternalSoftwareImport < ApplicationRecord
       lease_expires_at: lease_expires_at, last_error: last_error,
     }
     result[:page] = result.delete(:after).to_i if source == "biotools"
+    result[:blocked] = open_alex_blocked? if source == "openalex"
     result
   end
 end

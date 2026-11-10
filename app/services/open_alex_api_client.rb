@@ -13,12 +13,17 @@ class OpenAlexApiClient
   MAX_RETRY_INTERVAL = 5
 
   class RequestError < StandardError
-    attr_reader :status, :retry_at
+    attr_reader :status, :retry_at, :reason
 
-    def initialize(message, status: nil, retry_at: nil)
+    def initialize(message, status: nil, retry_at: nil, reason: nil)
       @status = status
       @retry_at = retry_at
+      @reason = reason
       super(message)
+    end
+
+    def terminal?
+      [400, 401, 403].include?(status) || reason == "Plan upgrade required"
     end
   end
 
@@ -77,9 +82,11 @@ class OpenAlexApiClient
     response = connection.get(path, params.merge(api_key: api_key))
     unless response.success?
       Rails.logger.warn("OpenAlex request failed: status=#{response.status}")
+      reason, diagnostic = error_details(response)
+      detail = ": #{diagnostic}" if diagnostic.present?
       raise RequestError.new(
-        "OpenAlex request failed with HTTP #{response.status}",
-        status: response.status, retry_at: retry_at(response)
+        "OpenAlex request failed with HTTP #{response.status}#{detail}",
+        status: response.status, retry_at: retry_at(response), reason: reason
       )
     end
 
@@ -88,6 +95,20 @@ class OpenAlexApiClient
     raise RequestError, "OpenAlex returned invalid JSON"
   rescue Faraday::Error => error
     raise RequestError, "OpenAlex request failed: #{error.class}"
+  end
+
+  def error_details(response)
+    body = JSON.parse(response.body)
+    return [nil, nil] unless body.is_a?(Hash)
+    reason = body["error"] if body["error"].is_a?(String)
+    diagnostic = [reason, body["message"]].grep(String).reject(&:blank?).uniq.join(": ")
+    [api_key, URI.encode_www_form_component(api_key)].uniq.each do |secret|
+      reason = reason&.gsub(secret, "[REDACTED]")
+      diagnostic = diagnostic.gsub(secret, "[REDACTED]")
+    end
+    [reason, diagnostic.gsub(/[[:cntrl:]]/, " ").squish.truncate(200)]
+  rescue JSON::ParserError, TypeError
+    [nil, nil]
   end
 
   def retry_at(response)
