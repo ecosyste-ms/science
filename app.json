@@ -142,7 +142,7 @@
     },
     {
       "command": "bundle exec rake external_software:discover",
-      "schedule": "57 * * * *"
+      "schedule": "7,17,27,37,47,57 * * * *"
     },
     {
       "command": "bundle exec rake external_software:sync",
