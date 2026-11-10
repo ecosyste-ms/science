@@ -1,12 +1,3 @@
-FROM golang:1.26.7-alpine@sha256:28d89ee9cc0ff9fec75c82ca201e6bf7fdf9a679d4b7b24dfa04f2bb766bb468 AS brief-notebooks-build
-
-ARG BRIEF_REVISION=5ae39885f9f39b82be60851103d2a0e35d33ca82
-RUN CGO_ENABLED=0 GOBIN=/out go install github.com/git-pkgs/brief/cmd/brief@${BRIEF_REVISION} \
- && /out/brief --version
-
-FROM scratch AS brief-notebooks
-COPY --from=brief-notebooks-build /out/brief /brief-notebooks
-
 FROM ruby:4.0.9-alpine
 
 ENV APP_ROOT=/usr/src/app
@@ -42,11 +33,20 @@ RUN apk add --no-cache \
  && pip install docutils \
  && npm install -g repomix
 
-ARG BRIEF_VERSION=0.14.2
+ARG BRIEF_VERSION=0.16.0
 RUN ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/') \
- && wget -qO- "https://github.com/git-pkgs/brief/releases/download/v${BRIEF_VERSION}/brief_${BRIEF_VERSION}_linux_${ARCH}.tar.gz" \
-    | tar -xz -C /usr/local/bin brief \
- && brief --version
+ && case "$ARCH" in \
+      amd64) BRIEF_SHA256=b524dcb54ce4d4057ba7ebef6159fc82c2e0444f7eabaf8a11ef9825dc402336 ;; \
+      arm64) BRIEF_SHA256=62dfe018ced4040b17799bb6c8e4850db46ff383f67ad58f763c8ab91ee62958 ;; \
+      *) exit 1 ;; \
+    esac \
+ && wget -qO /tmp/brief.tar.gz "https://github.com/git-pkgs/brief/releases/download/v${BRIEF_VERSION}/brief_${BRIEF_VERSION}_linux_${ARCH}.tar.gz" \
+ && echo "${BRIEF_SHA256}  /tmp/brief.tar.gz" | sha256sum -c - \
+ && tar -xz -f /tmp/brief.tar.gz -C /usr/local/bin brief \
+ && rm /tmp/brief.tar.gz \
+ && ln -s brief /usr/local/bin/brief-notebooks \
+ && brief --version \
+ && brief-notebooks --version
 
 ARG SCC_VERSION=4.1.0
 RUN ARCH=$(uname -m | sed 's/aarch64/arm64/') \
@@ -66,8 +66,6 @@ RUN ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/') \
  && wget -qO- "https://github.com/andrew/swhid-go/releases/download/v${SWHID_VERSION}/swhid_${SWHID_VERSION}_linux_${ARCH}.tar.gz" \
     | tar -xz -C /usr/local/bin swhid \
  && swhid --version
-
-COPY --from=brief-notebooks /brief-notebooks /usr/local/bin/brief-notebooks
 
 ENV LD_PRELOAD=/usr/lib/libjemalloc.so.2
 ENV RUBY_YJIT_ENABLE=1

@@ -53,16 +53,13 @@ jobs:
       - name: Install Brief
         working-directory: ${{ runner.temp }}
         env:
-          TOOL_SHA256: 6ea53649f378bb8b9e76e6126daf518b534898de598ce7b2508cc1c17a4c76ab
+          TOOL_SHA256: b524dcb54ce4d4057ba7ebef6159fc82c2e0444f7eabaf8a11ef9825dc402336
         run: |
-          curl -fsSL --output brief.tar.gz "https://github.com/git-pkgs/brief/releases/download/v0.14.2/brief_0.14.2_linux_amd64.tar.gz"
+          curl -fsSL --output brief.tar.gz "https://github.com/git-pkgs/brief/releases/download/v0.16.0/brief_0.16.0_linux_amd64.tar.gz"
           echo "${TOOL_SHA256}  brief.tar.gz" | sha256sum --check
           sudo tar -xz -f brief.tar.gz -C /usr/local/bin brief
+          sudo ln -s brief /usr/local/bin/brief-notebooks
           brief --version
-      - name: Build notebook Brief
-        run: |
-          docker build --target brief-notebooks --output "type=local,dest=${RUNNER_TEMP}/brief-notebooks" .
-          sudo install "${RUNNER_TEMP}/brief-notebooks/brief-notebooks" /usr/local/bin/brief-notebooks
           brief-notebooks --version
       - name: Install swhid
         working-directory: ${{ runner.temp }}
