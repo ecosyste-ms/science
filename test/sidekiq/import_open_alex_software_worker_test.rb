@@ -238,6 +238,28 @@ class ImportOpenAlexSoftwareWorkerTest < ActiveSupport::TestCase
     assert_equal "ok", record.status
   end
 
+  test "a later sweep leaves hydrated works alone when only the update date moved" do
+    page([work("W100", url: "https://github.com/research/tool")])
+    start
+    ImportOpenAlexSoftwareWorker.perform_one
+    task("open_alex:software:refresh")
+    SyncOpenAlexSoftwareWorker.perform_one
+    record = ExternalSoftwareRecord.sole
+    original = record.metadata.deep_dup
+    touched = work("W100", url: "https://github.com/research/tool").merge("updated_date" => "2026-11-08T00:00:00Z")
+    OpenAlexSoftwareImporter.new.sync_page([touched], started_at: 1.minute.from_now)
+    assert_equal "ok", record.reload.status
+    assert_equal original, record.metadata
+    OpenAlexSoftwareImporter.new.sync_page([touched.merge("display_name" => "Renamed tool")], started_at: 2.minutes.from_now)
+    assert_equal "pending", record.reload.status
+    assert_equal "Renamed tool", record.metadata.dig("openalex", "display_name")
+  end
+
+  test "identifiers reject hosts that only resemble openalex.org" do
+    assert_equal "W100", OpenAlexSoftwareClient.identifier("https://openalex.org/W100")
+    assert_raises(ArgumentError) { OpenAlexSoftwareClient.identifier("https://openalexXorg/W100") }
+  end
+
   test "a DOI absent from DataCite does not invalidate an explicit OpenAlex repository location" do
     id = "10.1234/research"
     datacite_record(id, status: 404, body: { errors: [{ status: "404" }] })

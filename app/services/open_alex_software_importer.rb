@@ -9,7 +9,7 @@ class OpenAlexSoftwareImporter < ExternalSoftwareImporter
       record.with_lock do
         next if record.status == "blocked"
         next if record.attempted_at && record.attempted_at >= started_at
-        next if record.metadata["openalex"] == work && record.retrieved_at
+        next if record.retrieved_at && record.metadata["openalex"]&.except("updated_date") == work.except("updated_date")
         record.update!(metadata: record.metadata.merge("openalex" => work), status: "pending",
           attempted_at: started_at, next_refresh_at: Time.current, next_discovery_at: nil, last_error: nil,
           collection_url: "#{OpenAlexApiClient::BASE_URL}/works/#{id}")
@@ -60,8 +60,9 @@ class OpenAlexSoftwareImporter < ExternalSoftwareImporter
     doi = entity["software_doi"]
     return [] if doi && doi["missing"] && doi["doi"].to_s.start_with?("10.5281/zenodo.")
     available_doi = doi && !doi["missing"]
-    return [] if available_doi && !SoftwareDoiImporter.new.software?(doi)
-    entries = available_doi ? SoftwareDoiImporter.new.repository_statements(doi) : []
+    @doi_importer ||= SoftwareDoiImporter.new
+    return [] if available_doi && !@doi_importer.software?(doi)
+    entries = available_doi ? @doi_importer.repository_statements(doi) : []
     locations = Array(work["locations"]).each_with_index.map { |location, index| [location, "openalex.locations[#{index}]"] }
     locations << [work["primary_location"], "openalex.primary_location"] if work["primary_location"]
     locations.uniq(&:first).each do |location, path|

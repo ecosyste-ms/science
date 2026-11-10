@@ -5,7 +5,7 @@ class OpenAlexSoftwareClient
 
   def self.identifier(value)
     raise ArgumentError, "invalid OpenAlex work ID" unless value.is_a?(String)
-    id = value.sub(%r{\Ahttps://openalex.org/}i, "").upcase
+    id = value.sub(%r{\Ahttps://openalex\.org/}i, "").upcase
     raise ArgumentError, "invalid OpenAlex work ID" unless id.match?(/\AW[1-9][0-9]*\z/)
     id
   end
