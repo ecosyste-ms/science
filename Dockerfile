@@ -44,9 +44,7 @@ RUN ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/') \
  && echo "${BRIEF_SHA256}  /tmp/brief.tar.gz" | sha256sum -c - \
  && tar -xz -f /tmp/brief.tar.gz -C /usr/local/bin brief \
  && rm /tmp/brief.tar.gz \
- && ln -s brief /usr/local/bin/brief-notebooks \
- && brief --version \
- && brief-notebooks --version
+ && brief --version
 
 ARG SCC_VERSION=4.1.0
 RUN ARCH=$(uname -m | sed 's/aarch64/arm64/') \

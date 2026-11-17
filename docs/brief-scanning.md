@@ -1,6 +1,6 @@
 # Brief scanning
 
-Docker and CI install Brief 0.16.0 from checksum-verified release archives. The `brief-notebooks` command is an alias for the same executable. Use `brief-notebooks --json --notebooks PATH` for bounded Jupyter code-cell statistics. Ordinary repository scans use `brief -json PATH` without notebook statistics.
+Docker and CI install Brief 0.16.0 from checksum-verified release archives. Use `brief --json --notebooks PATH` for bounded Jupyter code-cell statistics. Ordinary repository scans use `brief -json PATH` without notebook statistics.
 
 Brief scans repository contents and stores a compact toolchain summary in `projects.brief`. `RepositoryScanWorker` uses the `swhid` queue and creates one temporary checkout for all due repository analyses. Brief reads that local checkout, which also supplies SWHID calculation and metadata provenance. SWH API requests use the separate `swh_api` queue.
 

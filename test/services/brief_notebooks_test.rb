@@ -20,7 +20,7 @@ class BriefNotebooksTest < ActiveSupport::TestCase
     end
   end
 
-  test "installed notebook binary separates code from saved output and detects Jupytext YAML" do
+  test "released Brief separates notebook code from saved output and detects Jupytext YAML" do
     Dir.mktmpdir("brief-notebooks-") do |directory|
       File.write(File.join(directory, "analysis.ipynb"), JSON.generate({
         "nbformat" => 4,
@@ -31,7 +31,7 @@ class BriefNotebooksTest < ActiveSupport::TestCase
       File.write(File.join(directory, "jupytext.yaml"), "formats: ipynb,py:percent\n")
 
       output = RepositoryCommand.new(timeout: 120, output_limit: 1.megabyte)
-        .run(["brief-notebooks", "--json", "--notebooks", directory])
+        .run(["brief", "--json", "--notebooks", directory])
       report = JSON.parse(output)
       notebook = report.fetch("notebooks").fetch("files").sole
 

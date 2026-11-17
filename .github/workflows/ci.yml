@@ -58,9 +58,7 @@ jobs:
           curl -fsSL --output brief.tar.gz "https://github.com/git-pkgs/brief/releases/download/v0.16.0/brief_0.16.0_linux_amd64.tar.gz"
           echo "${TOOL_SHA256}  brief.tar.gz" | sha256sum --check
           sudo tar -xz -f brief.tar.gz -C /usr/local/bin brief
-          sudo ln -s brief /usr/local/bin/brief-notebooks
           brief --version
-          brief-notebooks --version
       - name: Install swhid
         working-directory: ${{ runner.temp }}
         env:
