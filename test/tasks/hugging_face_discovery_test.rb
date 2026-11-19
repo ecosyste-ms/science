@@ -21,7 +21,8 @@ class HuggingFaceDiscoveryTest < ActiveSupport::TestCase
   def record(name, topics, id:)
     { "id" => id, "name" => "lab/#{name}", "purl" => "pkg:huggingface/lab/#{name}",
       "keywords_array" => topics, "repository_url" => nil, "latest_release_number" => "a" * 40,
-      "description" => "An encoder for scientific documents.", "downloads" => 100 }
+      "description" => "An encoder for scientific documents.", "downloads" => 100,
+      "updated_at" => "2026-11-01T00:00:00Z" }
   end
 
   test "discovery requires a paper topic and imports repeatable package project identities" do
@@ -30,7 +31,7 @@ class HuggingFaceDiscoveryTest < ActiveSupport::TestCase
       record("no-paper", ["transformers", "research"], id: 103),
       record("empty-reference", ["arxiv:"], id: 104),
       record("disabled", ["arxiv:1810.04805"], id: 105).merge("status" => "removed")]
-    stub_request(:get, "https://packages.ecosyste.ms/api/v1/registries/huggingface.co/packages?page=1")
+    stub_request(:get, "https://packages.ecosyste.ms/api/v1/registries/huggingface.co/packages?sort=updated_at&order=asc&updated_after=1970-01-01T00%3A00%3A00Z&per_page=100")
       .to_return(status: 200, body: rows.to_json)
     SyncProjectWorker.expects(:perform_async).twice
 

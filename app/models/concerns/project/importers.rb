@@ -763,14 +763,15 @@ module Project::Importers
     def import_from_registry(registry, registry_name, max_pages: nil)
       puts "Starting #{registry_name} project import..."
       package_registry = PackageRegistry.where("lower(name) = ?", registry.downcase).first! if registry.casecmp?('huggingface.co')
+      cursor = '1970-01-01T00:00:00Z'
       page = 1
       total_created = 0
       total_existing = 0
       total_skipped = 0
 
       loop do
-        puts "Fetching page #{page}..."
-        url = "https://packages.ecosyste.ms/api/v1/registries/#{registry}/packages?page=#{page}"
+        puts "Fetching page #{page} (updated_after=#{cursor})..."
+        url = "https://packages.ecosyste.ms/api/v1/registries/#{registry}/packages?sort=updated_at&order=asc&updated_after=#{CGI.escape(cursor)}&per_page=100"
 
         conn = Faraday.new(url: url) do |faraday|
           faraday.request :instrumentation
@@ -834,6 +835,9 @@ module Project::Importers
         end
 
         puts "Page #{page} processed - Created: #{total_created}, Existing: #{total_existing}, Skipped: #{total_skipped}"
+        next_cursor = packages.last['updated_at']
+        break if next_cursor == cursor
+        cursor = next_cursor
         page += 1
         break if max_pages && page > max_pages
       end

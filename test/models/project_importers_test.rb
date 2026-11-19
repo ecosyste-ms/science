@@ -144,18 +144,29 @@ class ProjectImportersTest < ActiveSupport::TestCase
   # ---- import_from_registry + delegators ----
 
   test "import_from_registry only imports github repos" do
-    stub_request(:get, "https://packages.ecosyste.ms/api/v1/registries/cran.r-project.org/packages?page=1")
+    stub_request(:get, "https://packages.ecosyste.ms/api/v1/registries/cran.r-project.org/packages?sort=updated_at&order=asc&updated_after=1970-01-01T00%3A00%3A00Z&per_page=100")
       .to_return(status: 200, body: [
-        { repository_url: "https://github.com/tidyverse/dplyr/" },
-        { repository_url: "https://gitlab.com/x/y" },
-        { repository_url: nil },
+        { repository_url: "https://github.com/tidyverse/dplyr/", updated_at: "2026-11-01T00:00:00Z" },
+        { repository_url: "https://gitlab.com/x/y", updated_at: "2026-11-02T00:00:00Z" },
+        { repository_url: nil, updated_at: "2026-11-03T00:00:00Z" },
       ].to_json)
-    stub_request(:get, "https://packages.ecosyste.ms/api/v1/registries/cran.r-project.org/packages?page=2")
+    stub_request(:get, "https://packages.ecosyste.ms/api/v1/registries/cran.r-project.org/packages?sort=updated_at&order=asc&updated_after=2026-11-03T00%3A00%3A00Z&per_page=100")
       .to_return(status: 200, body: [].to_json)
 
     capture_io { Project.import_from_registry("cran.r-project.org", "CRAN") }
     assert Project.exists?(url: "https://github.com/tidyverse/dplyr")
     refute Project.exists?(url: "https://gitlab.com/x/y")
+  end
+
+  test "import_from_registry stops when the cursor does not advance" do
+    stub_request(:get, "https://packages.ecosyste.ms/api/v1/registries/cran.r-project.org/packages?sort=updated_at&order=asc&updated_after=1970-01-01T00%3A00%3A00Z&per_page=100")
+      .to_return(status: 200, body: [{ repository_url: "https://github.com/a/b", updated_at: "2026-11-01T00:07:11.830Z" }].to_json)
+    stub_request(:get, "https://packages.ecosyste.ms/api/v1/registries/cran.r-project.org/packages?sort=updated_at&order=asc&updated_after=2026-11-01T00%3A07%3A11.830Z&per_page=100")
+      .to_return(status: 200, body: [{ repository_url: "https://github.com/a/b", updated_at: "2026-11-01T00:07:11.830Z" }].to_json)
+      .then.to_raise("import_from_registry did not stop on a stalled cursor")
+
+    capture_io { Project.import_from_registry("cran.r-project.org", "CRAN") }
+    assert Project.exists?(url: "https://github.com/a/b")
   end
 
   test "import_from_cran delegates to import_from_registry" do
