@@ -257,7 +257,7 @@ class ProjectTest < ActiveSupport::TestCase
     )
     other_project = Project.create!(url: 'https://github.com/test/other-project')
     stub_request(:get, 'https://example.com/releases')
-      .with(query: { per_page: '100', page: '1', sort: 'id', order: 'asc' })
+      .with(query: { per_page: '100', page: '1', sort: 'published_at', order: 'desc' })
       .to_return(body: [{
         'uuid' => 'release-1',
         'tag_name' => 'v1',

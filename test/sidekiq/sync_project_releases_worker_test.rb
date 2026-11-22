@@ -258,7 +258,7 @@ class SyncProjectReleasesWorkerTest < ActiveSupport::TestCase
 
   def respond_with(source, records, page: 1, status: 200, headers: {})
     stub_request(:get, @project.repository.fetch("#{source}_url"))
-      .with(query: { per_page: "100", page: page.to_s, sort: "id", order: "asc" })
+      .with(query: { per_page: "100", page: page.to_s, sort: "published_at", order: "desc" })
       .to_return(status: status, body: records.to_json, headers: headers)
   end
 
