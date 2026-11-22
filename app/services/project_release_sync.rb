@@ -99,7 +99,7 @@ class ProjectReleaseSync
     connection.options.open_timeout = 5
     connection.options.timeout = 20
     response = connection.get do |request|
-      request.params.update(per_page: PER_PAGE, page: state.fetch("page"), sort: "id", order: "asc")
+      request.params.update(per_page: PER_PAGE, page: state.fetch("page"), sort: "published_at", order: "desc")
     end
     unless response.success?
       raise RequestError.new("#{source} request returned HTTP #{response.status}",
