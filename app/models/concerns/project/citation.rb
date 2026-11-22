@@ -24,7 +24,7 @@ module Project::Citation
   ].freeze
 
   def citation_file_name
-    path = repository&.dig('metadata', 'files', 'citation')
+    path = metadata_file_path('citation')
     return path if path.present?
     return unless has_attribute?(:brief)
 
@@ -33,17 +33,21 @@ module Project::Citation
   end
 
   def codemeta_file_name
-    return unless repository.present?
-    return unless repository['metadata'].present?
-    return unless repository['metadata']['files'].present?
-    repository['metadata']['files']['codemeta']
+    metadata_file_path('codemeta')
   end
 
   def zenodo_file_name
-    return unless repository.present?
-    return unless repository['metadata'].present?
-    return unless repository['metadata']['files'].present?
-    repository['metadata']['files']['zenodo']
+    metadata_file_path('zenodo')
+  end
+
+  # Older RepositoryResources.store wrote the whole brief resources hash into
+  # metadata.files, so a value here can be {"path" => "CITATION.cff", ...}
+  # instead of a bare path. Returning the hash reaches Process.spawn via
+  # ProjectSwhidScanner and raises TypeError.
+  def metadata_file_path(key)
+    value = repository&.dig('metadata', 'files', key)
+    value = value['path'] if value.is_a?(Hash)
+    value if value.is_a?(String) && value.present?
   end
 
   def codemeta_json

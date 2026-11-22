@@ -10,6 +10,19 @@ class ProjectCitationTest < ActiveSupport::TestCase
     assert_equal ".zenodo.json", p.zenodo_file_name
   end
 
+  test "file_name accessors unwrap legacy hash values stored by older brief scans" do
+    p = Project.new(url: "https://github.com/x/y", repository: {
+      "metadata" => { "files" => {
+        "citation" => { "path" => "CITATION.cff", "cff_version" => "1.2.0", "parse_status" => "parsed" },
+        "codemeta" => { "path" => "codemeta.json" },
+        "zenodo" => {},
+      } },
+    })
+    assert_equal "CITATION.cff", p.citation_file_name
+    assert_equal "codemeta.json", p.codemeta_file_name
+    assert_nil p.zenodo_file_name
+  end
+
   test "file_name accessors return nil when repository metadata missing" do
     p = Project.new(url: "https://github.com/x/y")
     assert_nil p.citation_file_name
