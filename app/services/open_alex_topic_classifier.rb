@@ -168,7 +168,7 @@ class OpenAlexTopicClassifier
   def matched_terms(topic_id, project_terms)
     topic_terms.fetch(topic_id).filter_map do |term, topic_weight|
       project_weight = project_terms[term]
-      [term, project_weight * topic_weight] if project_weight
+      [term, project_weight * topic_weight] if project_weight&.positive?
     end.sort_by { |term, contribution| [-contribution, term] }
       .first(MATCHED_TERM_LIMIT)
       .map(&:first)

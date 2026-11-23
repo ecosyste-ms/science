@@ -31,6 +31,23 @@ class OpenAlexTopicClassifierTest < ActiveSupport::TestCase
     assert_empty project.project_open_alex_topics
   end
 
+  test "matched terms exclude taxonomy terms absent from project evidence" do
+    create_topic(
+      openalex_id: "https://openalex.org/T-positive-signals",
+      name: "Genomics Oncology",
+      keywords: ["Clinical Management", "Cancer"]
+    )
+    project = Project.new(url: "https://github.com/test/genomics", name: "Genomics")
+    classifier = OpenAlexTopicClassifier.new
+
+    prediction = classifier.classify_project(project).first
+    field = classifier.classify_project_fields(project).first
+
+    assert_equal ["genomics"], prediction.matched_terms
+    assert_equal ["genomics"], field.matched_terms
+    assert_operator prediction.score, :>, 0.0
+  end
+
   test "returns no prediction without a taxonomy term match" do
     create_topic(
       openalex_id: "https://openalex.org/T3",
