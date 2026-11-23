@@ -97,4 +97,46 @@ class SearchSeedParquetPublishTest < ActiveSupport::TestCase
     assert_equal false, JSON.parse(output).fetch("latest")
     assert_equal :get_object, @client.api_requests.last[:operation_name]
   end
+
+  test "a losing publisher rereads latest and advances using the winning writer's ETag" do
+    @client.stub_responses(:put_object, {}, {}, {}, {}, "PreconditionFailed", "PreconditionFailed", {})
+    @client.stub_responses(:get_object, pointer_response("2025-12-30"), pointer_response("2025-12-31"))
+    output, = capture_io { @task.invoke }
+    assert JSON.parse(output).fetch("latest")
+    assert_equal ["2025-12-30", "2025-12-31"], latest_writes.filter_map { |p| p[:if_match] }
+  end
+
+  test "a conflict with a newer winner never overwrites it" do
+    @client.stub_responses(:put_object, {}, {}, {}, {}, "PreconditionFailed", "ConditionalRequestConflict")
+    @client.stub_responses(:get_object, pointer_response("2025-12-31"), pointer_response("2026-01-02"))
+    output, = capture_io { @task.invoke }
+    assert_equal false, JSON.parse(output).fetch("latest")
+    assert_equal 2, latest_writes.size
+  end
+
+  test "a missing pointer after a conflict is recreated conditionally" do
+    @client.stub_responses(:put_object, {}, {}, {}, {}, "ConditionalRequestConflict", {})
+    @client.stub_responses(:get_object, "NoSuchKey")
+    output, = capture_io { @task.invoke }
+    assert JSON.parse(output).fetch("latest")
+    assert_equal ["*", "*"], latest_writes.pluck(:if_none_match)
+  end
+
+  test "repeated contention fails after a bounded number of writes" do
+    @client.stub_responses(:put_object, {}, {}, {}, {}, "PreconditionFailed")
+    @client.stub_responses(:get_object, pointer_response("2025-12-31"))
+    assert_raises(Aws::S3::Errors::PreconditionFailed) { @task.invoke }
+    assert_equal SearchSeedParquetPublisher::MAX_POINTER_WRITES, latest_writes.size
+  end
+
+  def pointer_response(date)
+    { body: JSON.generate(snapshot_id: SecureRandom.uuid, started_at: "#{date}T00:00:00Z"), etag: date }
+  end
+
+  def latest_writes
+    @client.api_requests.filter_map do |request|
+      params = request.fetch(:params)
+      params if request[:operation_name] == :put_object && params[:key] == "clues/latest.json"
+    end
+  end
 end

@@ -3,6 +3,7 @@ require "digest"
 
 class SearchSeedParquetPublisher
   LATEST_KEY = "clues/latest.json"
+  MAX_POINTER_WRITES = 4
   SNAPSHOT_ID = /\A[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}\z/i
 
   def initialize(directory:, bucket:, client: Aws::S3::Client.new)
@@ -46,15 +47,23 @@ class SearchSeedParquetPublisher
     key = LATEST_KEY
     params = { bucket: @bucket, key: key, body: JSON.generate(pointer),
       content_type: "application/json", cache_control: "no-cache" }
-    @client.put_object(**params, if_none_match: "*")
-    true
-  rescue Aws::S3::Errors::PreconditionFailed
-    current = @client.get_object(bucket: @bucket, key: key)
-    published = JSON.parse(current.body.read)
-    return true if published.fetch("snapshot_id") == pointer.fetch(:snapshot_id)
-    return false if Time.iso8601(published.fetch("started_at")) >= started_at
-
-    @client.put_object(**params, if_match: current.etag)
-    true
+    condition = { if_none_match: "*" }
+    MAX_POINTER_WRITES.times do |attempt|
+      begin
+        @client.put_object(**params, **condition)
+        return true
+      rescue Aws::S3::Errors::PreconditionFailed, Aws::S3::Errors::ConditionalRequestConflict => conflict
+        begin
+          current = @client.get_object(bucket: @bucket, key: key)
+          published = JSON.parse(current.body.read)
+          return true if published.fetch("snapshot_id") == pointer.fetch(:snapshot_id)
+          return false if Time.iso8601(published.fetch("started_at")) >= started_at
+          condition = { if_match: current.etag }
+        rescue Aws::S3::Errors::NoSuchKey
+          condition = { if_none_match: "*" }
+        end
+        raise conflict if attempt + 1 == MAX_POINTER_WRITES
+      end
+    end
   end
 end
