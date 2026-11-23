@@ -1,9 +1,19 @@
+require 'open3'
+
 module CodemetaResearch
   module_function
 
   def normalize_version(version_string)
     return nil if version_string.blank?
     version_string.to_s.strip.downcase.sub(/\Av(?:ersion[-_\s]*)?/, '')
+  end
+
+  def clone(clone_url, repo_path)
+    system('git', '-c', 'protocol.ext.allow=never', 'clone', '--quiet', '--', clone_url, repo_path)
+  end
+
+  def git(repo_path, *args)
+    Open3.capture2('git', '-C', repo_path, *args, err: File::NULL)
   end
 
   def clone_and_analyze(project, base_dir: nil)
@@ -20,18 +30,14 @@ module CodemetaResearch
     begin
       unless Dir.exist?(repo_path)
         puts "Cloning #{project.url}..."
-        system("git clone --quiet #{clone_url} #{repo_path}")
-        unless $?.success?
+        unless clone(clone_url, repo_path)
           return [{ error: "Failed to clone repository", release_tag: nil }]
         end
       end
 
-      tags = []
-      Dir.chdir(repo_path) do
-        system("git fetch --tags --quiet 2>/dev/null")
-        tag_output = `git tag --sort=creatordate`
-        tags = tag_output.split("\n").map(&:strip).reject(&:empty?)
-      end
+      git(repo_path, 'fetch', '--tags', '--quiet')
+      tag_output, = git(repo_path, 'tag', '--sort=creatordate')
+      tags = tag_output.split("\n").map(&:strip).reject(&:empty?)
 
       if tags.empty?
         return [{ error: "No tags found in repository", release_tag: nil }]
@@ -55,43 +61,42 @@ module CodemetaResearch
         }
 
         begin
-          Dir.chdir(repo_path) do
-            tag_date = `git log -1 --format=%aI #{tag} 2>/dev/null`.strip
-            result[:release_date] = Time.parse(tag_date) if tag_date.present?
+          ref = "refs/tags/#{tag}"
+          tag_date, status = git(repo_path, 'log', '-1', '--format=%aI', ref)
+          unless status.success?
+            result[:error] = "Failed to read tag"
+            results << result
+            next
+          end
+
+          begin
+            result[:release_date] = Time.parse(tag_date.strip) if tag_date.present?
           rescue ArgumentError
           end
 
-          Dir.chdir(repo_path) do
-            system("git checkout --quiet #{tag} 2>/dev/null")
-            unless $?.success?
-              result[:error] = "Failed to checkout tag"
-              results << result
-              next
-            end
+          # Files are read from the object store, so nothing from the repository reaches a working tree.
+          ['codemeta.json', '.codemeta.json'].each do |path|
+            content, status = git(repo_path, 'show', "#{ref}:#{path}")
+            next unless status.success?
 
-            codemeta_paths = ['codemeta.json', '.codemeta.json']
-            codemeta_paths.each do |path|
-              if File.exist?(path)
-                result[:codemeta_exists] = true
-                result[:codemeta_file_path] = path
+            result[:codemeta_exists] = true
+            result[:codemeta_file_path] = path
 
-                begin
-                  data = JSON.parse(File.read(path))
-                  codemeta_version = data['version'] || data['softwareVersion']
+            begin
+              data = JSON.parse(content)
+              codemeta_version = data['version'] || data['softwareVersion']
 
-                  if codemeta_version.present?
-                    result[:codemeta_version] = codemeta_version
-                    normalized_codemeta = normalize_version(codemeta_version)
-                    normalized_tag = normalize_version(tag)
-                    result[:version_matches_tag] = (normalized_codemeta == normalized_tag)
-                  end
-                rescue JSON::ParserError => e
-                  result[:error] = "JSON parse error: #{e.message}"
-                end
-
-                break
+              if codemeta_version.present?
+                result[:codemeta_version] = codemeta_version
+                normalized_codemeta = normalize_version(codemeta_version)
+                normalized_tag = normalize_version(tag)
+                result[:version_matches_tag] = (normalized_codemeta == normalized_tag)
               end
+            rescue JSON::ParserError => e
+              result[:error] = "JSON parse error: #{e.message}"
             end
+
+            break
           end
         rescue => e
           result[:error] = e.message
@@ -121,64 +126,61 @@ module CodemetaResearch
     begin
       unless Dir.exist?(repo_path)
         puts "Cloning #{project.url}..."
-        system("git clone --quiet #{clone_url} #{repo_path}")
-        unless $?.success?
+        unless clone(clone_url, repo_path)
           return [{ error: "Failed to clone repository" }]
         end
       end
 
       codemeta_paths = ['codemeta.json', '.codemeta.json']
 
-      Dir.chdir(repo_path) do
-        system("git fetch --quiet 2>/dev/null")
+      git(repo_path, 'fetch', '--quiet')
 
-        codemeta_paths.each do |file_path|
-          next unless system("git cat-file -e HEAD:#{file_path} 2>/dev/null")
+      codemeta_paths.each do |file_path|
+        next unless git(repo_path, 'cat-file', '-e', "HEAD:#{file_path}").last.success?
 
-          puts "  Analyzing history of #{file_path}..."
+        puts "  Analyzing history of #{file_path}..."
 
-          log_output = `git log --follow --format="%H|%aI|%an|%ae|%s" -- #{file_path}`
+        log_output, = git(repo_path, 'log', '--follow', '--format=%H|%aI|%an|%ae|%s', '--', file_path)
 
-          log_output.split("\n").each do |line|
-            parts = line.split("|", 5)
-            next if parts.length < 5
+        log_output.split("\n").each do |line|
+          parts = line.split("|", 5)
+          next if parts.length < 5
 
-            commit_hash = parts[0]
-            commit_date = parts[1]
-            author_name = parts[2]
-            author_email = parts[3]
-            commit_message = parts[4]
+          commit_hash = parts[0]
+          commit_date = parts[1]
+          author_name = parts[2]
+          author_email = parts[3]
+          commit_message = parts[4]
 
-            file_content = `git show #{commit_hash}:#{file_path} 2>/dev/null`
+          file_content, = git(repo_path, 'show', "#{commit_hash}:#{file_path}")
 
-            codemeta_version = nil
-            parse_error = nil
+          codemeta_version = nil
+          parse_error = nil
 
-            if file_content.present?
-              begin
-                codemeta_data = JSON.parse(file_content)
-                codemeta_version = codemeta_data['version'] || codemeta_data['softwareVersion']
-              rescue JSON::ParserError => e
-                parse_error = e.message
-              end
+          if file_content.present?
+            begin
+              codemeta_data = JSON.parse(file_content)
+              codemeta_version = codemeta_data['version'] || codemeta_data['softwareVersion']
+            rescue JSON::ParserError => e
+              parse_error = e.message
             end
-
-            results << {
-              project_id: project.id,
-              project_url: project.url,
-              file_path: file_path,
-              commit_hash: commit_hash,
-              commit_date: Time.parse(commit_date),
-              author_name: author_name,
-              author_email: author_email,
-              commit_message: commit_message,
-              codemeta_version: codemeta_version,
-              parse_error: parse_error
-            }
           end
 
-          break if results.any?
+          results << {
+            project_id: project.id,
+            project_url: project.url,
+            file_path: file_path,
+            commit_hash: commit_hash,
+            commit_date: Time.parse(commit_date),
+            author_name: author_name,
+            author_email: author_email,
+            commit_message: commit_message,
+            codemeta_version: codemeta_version,
+            parse_error: parse_error
+          }
         end
+
+        break if results.any?
       end
 
       if results.empty?
