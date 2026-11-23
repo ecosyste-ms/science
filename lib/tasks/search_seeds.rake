@@ -26,4 +26,16 @@ namespace :search_seeds do
     )
     puts JSON.pretty_generate(export.export)
   end
+
+  desc "Export matching clues, candidates and provenance to Parquet (optional: OUTPUT=directory LIMIT=n)"
+  task export_parquet: :environment do
+    result = SearchSeedParquetExport.new(output: ENV["OUTPUT"], limit: ENV["LIMIT"], progress: ->(message) { warn message }).export
+    puts JSON.pretty_generate(result)
+  end
+
+  desc "Publish a completed Parquet export to S3 (OUTPUT=directory CLUE_EXPORT_BUCKET=bucket)"
+  task publish_parquet: :environment do
+    publisher = SearchSeedParquetPublisher.new(directory: ENV.fetch("OUTPUT"), bucket: ENV.fetch("CLUE_EXPORT_BUCKET"))
+    puts JSON.pretty_generate(publisher.publish)
+  end
 end

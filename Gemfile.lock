@@ -89,6 +89,26 @@ GEM
       logger
       rack (>= 2.0.0)
     asciidoctor (2.0.26)
+    aws-eventstream (1.4.1)
+    aws-partitions (1.1310.0)
+    aws-sdk-core (3.271.1)
+      aws-eventstream (~> 1, >= 1.4.1)
+      aws-partitions (~> 1, >= 1.992.0)
+      aws-sigv4 (~> 1.9)
+      base64
+      bigdecimal
+      jmespath (~> 1, >= 1.6.1)
+      logger
+      rexml (~> 3.4, >= 3.4.2)
+    aws-sdk-kms (1.145.0)
+      aws-sdk-core (~> 3, >= 3.270.0)
+      aws-sigv4 (~> 1.5)
+    aws-sdk-s3 (1.245.1)
+      aws-sdk-core (~> 3, >= 3.269.0)
+      aws-sdk-kms (~> 1)
+      aws-sigv4 (~> 1.5)
+    aws-sigv4 (1.12.1)
+      aws-eventstream (~> 1, >= 1.0.2)
     base64 (0.3.0)
     bibtex-ruby (6.2.0)
       latex-decode (~> 0.0)
@@ -149,7 +169,6 @@ GEM
     faraday-typhoeus (2.0.0)
       faraday (~> 2.0)
       typhoeus (~> 1.4)
-    ffi (1.17.4)
     ffi (1.17.4-aarch64-linux-gnu)
     ffi (1.17.4-aarch64-linux-musl)
     ffi (1.17.4-arm64-darwin)
@@ -176,6 +195,7 @@ GEM
     jbuilder (2.15.1)
       actionview (>= 7.0.0)
       activesupport (>= 7.0.0)
+    jmespath (1.6.2)
     jquery-rails (4.6.1)
       rails-dom-testing (>= 1, < 3)
       railties (>= 4.2.0)
@@ -197,7 +217,6 @@ GEM
     marcel (1.2.1)
     matrix (0.4.3)
     mini_mime (1.1.5)
-    mini_portile2 (2.8.9)
     minitest (6.1.0)
       drb (~> 2.0)
       prism (>= 1.5, < 3)
@@ -217,9 +236,6 @@ GEM
     net-smtp (0.5.2)
       net-protocol
     nio4r (2.7.5)
-    nokogiri (1.19.7)
-      mini_portile2 (~> 2.8.2)
-      racc (~> 1.4)
     nokogiri (1.19.7-aarch64-linux-gnu)
       racc (~> 1.4)
     nokogiri (1.19.7-aarch64-linux-musl)
@@ -238,7 +254,18 @@ GEM
       rubypants (~> 0.7)
     ostruct (0.6.3)
     pagy (9.4.0)
-    pg (1.7.0)
+    parquet (0.9.0-aarch64-linux)
+      bigdecimal
+    parquet (0.9.0-aarch64-linux-musl)
+      bigdecimal
+    parquet (0.9.0-arm64-darwin)
+      bigdecimal
+    parquet (0.9.0-x86_64-darwin)
+      bigdecimal
+    parquet (0.9.0-x86_64-linux)
+      bigdecimal
+    parquet (0.9.0-x86_64-linux-musl)
+      bigdecimal
     pg (1.7.0-aarch64-linux)
     pg (1.7.0-aarch64-linux-musl)
     pg (1.7.0-arm64-darwin)
@@ -251,7 +278,6 @@ GEM
     pp (0.6.4)
       prettyprint
     prettyprint (0.2.1)
-    prism (2.1.0)
     prism (2.1.0-aarch64-linux-gnu)
     prism (2.1.0-aarch64-linux-musl)
     prism (2.1.0-arm64-darwin)
@@ -375,8 +401,6 @@ GEM
       actionpack (>= 6.1)
       activesupport (>= 6.1)
       sprockets (>= 3.0.0)
-    sqlite3 (2.10.2)
-      mini_portile2 (~> 2.8.0)
     sqlite3 (2.10.2-aarch64-linux-gnu)
     sqlite3 (2.10.2-aarch64-linux-musl)
     sqlite3 (2.10.2-arm64-darwin)
@@ -425,6 +449,7 @@ DEPENDENCIES
   RedCloth
   appsignal
   asciidoctor
+  aws-sdk-s3 (>= 1.245)
   bibtex-ruby
   bootsnap
   bootstrap
@@ -449,6 +474,7 @@ DEPENDENCIES
   org-ruby
   ostruct
   pagy (~> 9.4.0)
+  parquet
   pg
   pghero
   public_suffix
@@ -496,6 +522,12 @@ CHECKSUMS
   addressable (2.9.2) sha256=9117c7e7d6ee07230e75ce41fb9401ae55354dc654fcd0e862ba41d539e9a610
   appsignal (5.0.7) sha256=7316aa63071f2cba80be44e3571f7a8fe1e3e18781d4a6029016456df8b1a8e0
   asciidoctor (2.0.26) sha256=16e3accf1fc206bbd6335848649d7fd65f31d2daa60d85af13d47a8ee4b071c1
+  aws-eventstream (1.4.1) sha256=ceb6a99c61df4bb00344e54aed0351574beca24f87a0d1487d1d2ed80929ce96
+  aws-partitions (1.1310.0) sha256=8f97a525563ec4803d55d02f54f9749a17f8428aa0978afe0b59e61f4ae8e3f6
+  aws-sdk-core (3.271.1) sha256=ee006612eb374da44bfe580f28063e7bdc66cb45875f71b2d2a879012a089c48
+  aws-sdk-kms (1.145.0) sha256=ddbe86fca434f9a28bd0480b68fc0ce8bae555b6fd41b370bb00caa2dcf58853
+  aws-sdk-s3 (1.245.1) sha256=f668ce78afffb2ce8bf22a63a44c8685c9a3c345d596d1bf88efca3e5edaf83a
+  aws-sigv4 (1.12.1) sha256=6973ff95cb0fd0dc58ba26e90e9510a2219525d07620c8babeb70ef831826c00
   base64 (0.3.0) sha256=27337aeabad6ffae05c265c450490628ef3ebd4b67be58257393227588f5a97b
   bibtex-ruby (6.2.0) sha256=d610eba78d6adf503a843daf144644449fb34e7c3f4a75e9ab67fae5dfd7c69a
   bigdecimal (4.1.3) sha256=61ebe1e5e559bdc3cc6f2c0ee7f427321fc838f59611c294356eb04d6e21cf66
@@ -529,7 +561,6 @@ CHECKSUMS
   faraday-net_http (3.5.0) sha256=2e7094c34e38754ee048cc3df47376f8657005d9375f8473bce1c3b526a22e36
   faraday-retry (2.4.0) sha256=7b79c48fb7e56526faf247b12d94a680071ff40c9fda7cf1ec1549439ad11ebe
   faraday-typhoeus (2.0.0) sha256=7a459529d782994caf8ce89ca181df3adb89dd471b8ab0b3851936ab566b4dd1
-  ffi (1.17.4) sha256=bcd1642e06f0d16fc9e09ac6d49c3a7298b9789bcb58127302f934e437d60acf
   ffi (1.17.4-aarch64-linux-gnu) sha256=b208f06f91ffd8f5e1193da3cae3d2ccfc27fc36fba577baf698d26d91c080df
   ffi (1.17.4-aarch64-linux-musl) sha256=9286b7a615f2676245283aef0a0a3b475ae3aae2bb5448baace630bb77b91f39
   ffi (1.17.4-arm64-darwin) sha256=19071aaf1419251b0a46852abf960e77330a3b334d13a4ab51d58b31a937001b
@@ -545,6 +576,7 @@ CHECKSUMS
   io-console (0.9.5) sha256=83dd9bbf4c4680416629245b39cd4212eb5f4d9a4ea91804870c1f6b846414d5
   irb (1.19.0) sha256=55ee56acbdd6c9fe06a2e6909f46a24e5c41f45f16906bab04e8049cf46f1d27
   jbuilder (2.15.1) sha256=2430bec28fb0cebacb5875b1009cf9d8bc3c303ccb810c4c8b062a4b51457637
+  jmespath (1.6.2) sha256=238d774a58723d6c090494c8879b5e9918c19485f7e840f2c1c7532cf84ebcb1
   jquery-rails (4.6.1) sha256=619f3496cdcdeaae1fd6dafa52dbac3fc45b745d4e09712da4184a16b3a8d9c0
   json (3.1.0) sha256=3ce7ccf8fde58960177a3a756c31f292a4c1e1dedee884547096a5b0604e3bd8
   json_schema (0.20.9) sha256=2ccb9054df9cdbb9b46c89fd7be482108811e080ee32ccef59047d7b2a3dae1d
@@ -556,7 +588,6 @@ CHECKSUMS
   marcel (1.2.1) sha256=1678e9360e32f9eafa917c80029e2f6d10b2715c66a4b87b6d0da9b9cd1f859f
   matrix (0.4.3) sha256=a0d5ab7ddcc1973ff690ab361b67f359acbb16958d1dc072b8b956a286564c5b
   mini_mime (1.1.5) sha256=8681b7e2e4215f2a159f9400b5816d85e9d8c6c6b491e96a12797e798f8bccef
-  mini_portile2 (2.8.9) sha256=0cd7c7f824e010c072e33f68bc02d85a00aeb6fce05bb4819c03dfd3c140c289
   minitest (6.1.0) sha256=ff373595aa8888631e8a5463986a76b3845346ae6d7fa46e139c1633d418076e
   mocha (3.1.0) sha256=75f42d69ebfb1f10b32489dff8f8431d37a418120ecdfc07afe3bc183d4e1d56
   msgpack (1.8.7) sha256=dfefec761b5f9047e6e8d95d2c7f8af4b3725d984a01942adc533aa819a2df33
@@ -566,7 +597,6 @@ CHECKSUMS
   net-protocol (0.4.0) sha256=f9f90c8c6f64794a45160bf422177a336db12809de3beeeaa26b88fcd2e8c853
   net-smtp (0.5.2) sha256=35103cc04d6b2d94632f9928ede07483c24b70b9c0db1f231fea43909b678f3c
   nio4r (2.7.5) sha256=6c90168e48fb5f8e768419c93abb94ba2b892a1d0602cb06eef16d8b7df1dca1
-  nokogiri (1.19.7) sha256=abe94507c54cb18f872777b16bdca4aad32b1abdc4c52fe843f1c80fbdf992b8
   nokogiri (1.19.7-aarch64-linux-gnu) sha256=8f5e15d299602456406e1f03a9f3456cceb33a0722811e818d2ee2214eb4c84a
   nokogiri (1.19.7-aarch64-linux-musl) sha256=efe0c3602e6e54521bc21c681930ce5568e2d11203de17400710b2b3ca2e4cb4
   nokogiri (1.19.7-arm64-darwin) sha256=f27d7f25f4873fbc3aa35a2cc2fb680c98555fec1925348da439d0869d541142
@@ -577,7 +607,12 @@ CHECKSUMS
   org-ruby (0.10.1) sha256=8b98f12db2f4d04ca68791149cdd36522cca1a6b4a20d870366e415e5d63cc4a
   ostruct (0.6.3) sha256=95a2ed4a4bd1d190784e666b47b2d3f078e4a9efda2fccf18f84ddc6538ed912
   pagy (9.4.0) sha256=db3f2e043f684155f18f78be62a81e8d033e39b9f97b1e1a8d12ad38d7bce738
-  pg (1.7.0) sha256=f7b536501284e883d4c9ef86dbde0313063e4aaafc23575b0017b0d572a26afb
+  parquet (0.9.0-aarch64-linux) sha256=2199a017e911411e88ef8996104d9cce0af7cdab6dca1a61a4a263c92991a5ed
+  parquet (0.9.0-aarch64-linux-musl) sha256=35616afcfc336da612cb726375a019b844490fa6ab9f71768d8a39304597f443
+  parquet (0.9.0-arm64-darwin) sha256=d5cd5fc9e088b769c74c38d227c48ce6118713f7dd057b1aeea0f0f60bd40385
+  parquet (0.9.0-x86_64-darwin) sha256=1c0526a9ef943419834d25a0e5d92b0257dc8a137ceee34366ac33a59862fc16
+  parquet (0.9.0-x86_64-linux) sha256=6f9b5698455cee49cfe823b0cfe6ab78cb7de54ce6ed190dd8826060bd655fd0
+  parquet (0.9.0-x86_64-linux-musl) sha256=808f2bbc2de488b5f6f79d237bfddc1615e6b1d230a949130c01977a8a20755c
   pg (1.7.0-aarch64-linux) sha256=101dd3a261000eb64b03ff41a5890674b735b626dbdce88652969b59fb0b1157
   pg (1.7.0-aarch64-linux-musl) sha256=5ca4d4619a1a39fb22de47350130956ece69cf0512858ee68dca926e46f65e4a
   pg (1.7.0-arm64-darwin) sha256=9fa895bbe28bdd579b83ccc80464c01d1015ea7549a7919134c9f8f10c060e4b
@@ -588,7 +623,6 @@ CHECKSUMS
   popper_js (2.11.8) sha256=f4b0be717fc0d50bdb3dbbc55788525a9e0e8f640b76c9971fc34ee609eadbd2
   pp (0.6.4) sha256=dfcb0fce700c41456265922884f9fe195d7fbb0674a3578e6c0f69588e82b570
   prettyprint (0.2.1) sha256=d555d57ea6d7cf001d4774b693546a6bd88bec1e778ddffb5c60b68ceec4b7d4
-  prism (2.1.0) sha256=1c0a7c6dea0e93183390fb123f007564dbe663198e2f86ad87204151147601f3
   prism (2.1.0-aarch64-linux-gnu) sha256=808dddc72def68e1a0463689414c97e0ba211938eddbab05387a4844aa2b3ec2
   prism (2.1.0-aarch64-linux-musl) sha256=dd1a0732620c1e575dabb07a297a62911fabd72f8e20ce850b522a866f877930
   prism (2.1.0-arm64-darwin) sha256=2d0c2e3e011cfd89c041940907d3ff3def379d7b0f2ba158d1d42238e8ad8afc
@@ -633,7 +667,6 @@ CHECKSUMS
   sitemap_generator (7.1.1) sha256=ab2a133d512a7b33ed713a27a9977f61d8379c9943e3b79900243fc1c4f7f81d
   sprockets (4.4.1) sha256=fbd665edad0916de5c7abefef0fc616866a60c5e48ce2846f39ac3fc5df9e184
   sprockets-rails (3.5.2) sha256=a9e88e6ce9f8c912d349aa5401509165ec42326baf9e942a85de4b76dbc4119e
-  sqlite3 (2.10.2) sha256=f1ea68cd3287f8a49f39a088ac9e4bd0ef4e7f394c3d4a60dd4c7e44b0566964
   sqlite3 (2.10.2-aarch64-linux-gnu) sha256=e9aea2c2b3476fc875dd8a89313a9a2862818519c0186bfb5b56d6f57bb08d98
   sqlite3 (2.10.2-aarch64-linux-musl) sha256=4986fc40cdf21342362b72a941df28e95cfe0e644f3ad2532d948b157c39dbee
   sqlite3 (2.10.2-arm64-darwin) sha256=5b0d235ea037e6dcd1b8387a19d73be571917db9f93044d35741cf933a21a37d

@@ -9,6 +9,7 @@ class SearchSeedsRakeTest < ActiveSupport::TestCase
   setup do
     Rails.application.load_tasks unless Rake::Task.task_defined?("search_seeds:export")
     Rake::Task["search_seeds:export"].reenable
+    Rake::Task["search_seeds:export_parquet"].reenable
     @original_env = %w[OUTPUT LIMIT].to_h { |key| [key, ENV[key]] }
     @directory = Dir.mktmpdir("search-seeds-test")
     ENV["OUTPUT"] = File.join(@directory, "snapshot.sqlite3")
@@ -404,6 +405,62 @@ class SearchSeedsRakeTest < ActiveSupport::TestCase
       assert_equal 2000, db.get_first_value("SELECT suggested_start_year FROM clues WHERE value = 'sharedname'")
       assert_equal [2000, 2011], db.execute("SELECT suggested_start_year FROM clue_candidates WHERE clue_id = (SELECT id FROM clues WHERE value = 'sharedname') ORDER BY suggested_start_year").flatten
     end
+  end
+
+  test "Parquet files resolve shared clues to their project, package and source" do
+    File.stubs(:link).raises(Errno::ENOTSUP)
+    ENV["OUTPUT"] = File.join(@directory, "parquet")
+    first = create(Project, url: "https://github.com/export/parquet-a", name: "SampleLib", science_score: 50)
+    other = create(Project, url: "https://github.com/export/parquet-b", name: "Other", science_score: 20,
+      packages: [{ "name" => "SampleLib", "ecosystem" => "pypi" }])
+    create(Project, url: "https://github.com/export/excluded", name: "Excluded", science_score: 19)
+
+    output, = capture_io { Rake::Task["search_seeds:export_parquet"].invoke }
+    directory = ENV.fetch("OUTPUT")
+    result = JSON.parse(output)
+    manifest = JSON.parse(File.read(File.join(directory, "manifest.json")))
+    assert_equal result.fetch("snapshot_id"), manifest.fetch("snapshot_id")
+    assert_equal result.fetch("files"), manifest.fetch("files")
+    rows = %w[clues candidates provenance].to_h do |name|
+      records = Parquet.each_row(File.join(directory, "#{name}.parquet")).to_a
+      assert_equal records.length, manifest.fetch("files").fetch("#{name}.parquet")
+      [name, records]
+    end
+    clue = rows.fetch("clues").select { |r| r["value"] == "samplelib" }.sole
+    assert_equal [0, 1, 1], clue.values_at("case_sensitive", "ambiguous", "shared_name")
+    candidates = rows.fetch("candidates").select { |r| r["clue_id"] == clue["id"] }.index_by { |r| r["project_id"] }
+    assert_equal [first.id, other.id].sort, candidates.keys.sort
+    assert_nil candidates.fetch(first.id)["package_entry_id"]
+    assert_equal first.url, candidates.fetch(first.id)["repository_url"]
+    package_id = candidates.fetch(other.id).fetch("package_entry_id")
+    assert_not_nil package_id
+    sources = rows.fetch("provenance").select { |r| r["clue_id"] == clue["id"] }
+    original = sources.find { |r| r["source"] == "project.name" && r["project_id"] == first.id }
+    assert_equal ["SampleLib", "whitespace"], original.values_at("value", "variant")
+    assert JSON.parse(original.fetch("name_evidence")).key?("kind")
+    assert sources.any? { |r| r["package_entry_id"] == package_id && r["project_id"] == other.id }
+    assert_equal [first.id, other.id].sort, rows.fetch("candidates").pluck("project_id").uniq.sort
+    assert_equal manifest.dig("counts", "clue_seed_links"), rows.fetch("provenance").size
+  end
+
+  test "empty Parquet datasets retain their schema and an existing destination is preserved" do
+    ENV["OUTPUT"] = File.join(@directory, "empty")
+    capture_io { Rake::Task["search_seeds:export_parquet"].invoke }
+    path = File.join(ENV.fetch("OUTPUT"), "clues.parquet")
+    assert_empty Parquet.each_row(path).to_a
+    assert_includes Parquet.metadata(path).fetch("schema").fetch("fields").pluck("name"), "id"
+    task = Rake::Task["search_seeds:export_parquet"]
+    task.reenable
+    assert_raises(Errno::EEXIST) { task.invoke }
+    assert_equal ["empty"], Dir.children(@directory)
+  end
+
+  test "a failed Parquet write leaves no partial dataset" do
+    require "parquet"
+    ENV["OUTPUT"] = File.join(@directory, "failed")
+    Parquet.stubs(:write_rows).raises(IOError, "disk full")
+    assert_raises(IOError) { capture_io { Rake::Task["search_seeds:export_parquet"].invoke } }
+    assert_empty Dir.children(@directory)
   end
 
   test "invalid limits fail before creating a file" do

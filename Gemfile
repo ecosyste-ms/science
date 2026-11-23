@@ -54,9 +54,11 @@ gem "creole"
 gem "rexml"
 gem "asciidoctor"
 
+gem 'sqlite3', '~> 2.9', require: false
+gem 'parquet', require: false
+
 group :development, :test do
   gem 'dotenv-rails'
-  gem 'sqlite3', '~> 2.9', require: false
 end
 
 group :development do
@@ -72,3 +74,5 @@ group :test do
 end
 
 gem "bootstrap-icons-helper", "~> 2.0"
+
+gem "aws-sdk-s3", ">= 1.245", require: false
