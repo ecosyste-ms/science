@@ -87,6 +87,83 @@ class CodemetaResearchTest < ActiveSupport::TestCase
     end
   end
 
+  test "clone_and_analyze does not pass tag names through a shell" do
+    Dir.mktmpdir do |work|
+      upstream = File.join(work, "upstream")
+      base = File.join(work, "clones")
+      marker = File.join(work, "marker")
+      FileUtils.mkdir_p(base)
+      build_repo(upstream, tag: "v1.0.0", codemeta_version: "1.0.0")
+      hostile = "v2;touch${IFS}#{marker}"
+      assert system("git", "-C", upstream, "tag", hostile)
+
+      project = Project.create!(url: "https://github.com/x/y", repository: { "clone_url" => upstream })
+      results = nil
+      capture_io { results = CodemetaResearch.clone_and_analyze(project, base_dir: base) }
+
+      refute File.exist?(marker)
+      result = results.find { |r| r[:release_tag] == hostile }
+      assert_equal "1.0.0", result[:codemeta_version]
+      assert_nil result[:error]
+    end
+  end
+
+  test "clone_and_analyze reads tags that look like options" do
+    Dir.mktmpdir do |work|
+      upstream = File.join(work, "upstream")
+      base = File.join(work, "clones")
+      FileUtils.mkdir_p(base)
+      build_repo(upstream, tag: "v1.0.0", codemeta_version: "1.0.0")
+      assert system("git", "-C", upstream, "update-ref", "refs/tags/--orphan", "HEAD")
+
+      project = Project.create!(url: "https://github.com/x/y", repository: { "clone_url" => upstream })
+      results = nil
+      capture_io { results = CodemetaResearch.clone_and_analyze(project, base_dir: base) }
+
+      result = results.find { |r| r[:release_tag] == "--orphan" }
+      assert_equal "1.0.0", result[:codemeta_version]
+      assert_nil result[:error]
+    end
+  end
+
+  test "clone_and_analyze does not follow a symlinked codemeta file" do
+    Dir.mktmpdir do |work|
+      upstream = File.join(work, "upstream")
+      base = File.join(work, "clones")
+      outside = File.join(work, "outside.json")
+      FileUtils.mkdir_p(base)
+      File.write(outside, JSON.generate(version: "9.9.9"))
+      build_repo(upstream, tag: nil, codemeta_version: nil)
+      File.symlink(outside, File.join(upstream, "codemeta.json"))
+      assert system("git", "-C", upstream, "add", "codemeta.json")
+      assert system("git", "-C", upstream, "commit", "--quiet", "-m", "link")
+      assert system("git", "-C", upstream, "tag", "v1.0.0")
+
+      project = Project.create!(url: "https://github.com/x/y", repository: { "clone_url" => upstream })
+      results = nil
+      capture_io { results = CodemetaResearch.clone_and_analyze(project, base_dir: base) }
+
+      assert_nil results.first[:codemeta_version]
+      assert_match(/JSON parse error/, results.first[:error])
+    end
+  end
+
+  test "clone_and_analyze does not run commands from the clone url" do
+    Dir.mktmpdir do |work|
+      marker = File.join(work, "marker")
+      ["x;touch #{marker}", "ext::sh -c touch% #{marker}"].each_with_index do |clone_url, index|
+        base = File.join(work, "clones-#{index}")
+        FileUtils.mkdir_p(base)
+        project = Project.new(url: "https://github.com/x/y", repository: { "clone_url" => clone_url })
+        results = nil
+        capture_subprocess_io { results = CodemetaResearch.clone_and_analyze(project, base_dir: base) }
+
+        assert_equal "Failed to clone repository", results.first[:error]
+        refute File.exist?(marker)
+      end
+    end
+  end
+
   # ---- analyze_history ----
 
   test "analyze_history returns empty array when project has no repository" do
