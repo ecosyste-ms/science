@@ -35,3 +35,5 @@
 *.dump
 .env
 /openalex-validation.csv
+
+/research
