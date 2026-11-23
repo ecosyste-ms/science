@@ -126,6 +126,27 @@ class CodemetaResearchTest < ActiveSupport::TestCase
     end
   end
 
+  test "clone_and_analyze reads a tag when a tracked file has the same path as its ref" do
+    Dir.mktmpdir do |work|
+      upstream = File.join(work, "upstream")
+      base = File.join(work, "clones")
+      FileUtils.mkdir_p(base)
+      build_repo(upstream, tag: nil, codemeta_version: "1.0.0")
+      FileUtils.mkdir_p(File.join(upstream, "refs", "tags"))
+      File.write(File.join(upstream, "refs", "tags", "v1.0.0"), "x")
+      assert system("git", "-C", upstream, "add", "refs")
+      assert system("git", "-C", upstream, "commit", "--quiet", "-m", "file named like a ref")
+      assert system("git", "-C", upstream, "tag", "v1.0.0")
+
+      project = Project.create!(url: "https://github.com/x/y", repository: { "clone_url" => upstream })
+      results = nil
+      capture_io { results = CodemetaResearch.clone_and_analyze(project, base_dir: base) }
+
+      assert_nil results.first[:error]
+      assert_equal "1.0.0", results.first[:codemeta_version]
+    end
+  end
+
   test "clone_and_analyze does not follow a symlinked codemeta file" do
     Dir.mktmpdir do |work|
       upstream = File.join(work, "upstream")

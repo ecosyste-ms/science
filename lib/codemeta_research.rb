@@ -62,7 +62,7 @@ module CodemetaResearch
 
         begin
           ref = "refs/tags/#{tag}"
-          tag_date, status = git(repo_path, 'log', '-1', '--format=%aI', ref)
+          tag_date, status = git(repo_path, 'log', '-1', '--format=%aI', ref, '--')
           unless status.success?
             result[:error] = "Failed to read tag"
             results << result
