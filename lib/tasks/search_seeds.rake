@@ -26,4 +26,29 @@ namespace :search_seeds do
     )
     puts JSON.pretty_generate(export.export)
   end
+
+  desc "Export matching clues, candidates and provenance to Parquet (optional: OUTPUT=directory LIMIT=n)"
+  task export_parquet: :environment do
+    result = SearchSeedParquetExport.new(output: ENV["OUTPUT"], limit: ENV["LIMIT"], progress: ->(message) { warn message }).export
+    puts JSON.pretty_generate(result)
+  end
+
+  desc "Publish a completed Parquet export to S3 (OUTPUT=directory CLUE_EXPORT_BUCKET=bucket)"
+  task publish_parquet: :environment do
+    publisher = SearchSeedParquetPublisher.new(directory: ENV.fetch("OUTPUT"), bucket: ENV.fetch("CLUE_EXPORT_BUCKET"))
+    puts JSON.pretty_generate(publisher.publish)
+  end
+
+  desc "Export the full Parquet clue catalogue and publish it to CLUE_EXPORT_BUCKET"
+  task export_and_publish: :environment do
+    require "tmpdir"
+    bucket = ENV.fetch("CLUE_EXPORT_BUCKET")
+    raise ArgumentError, "CLUE_EXPORT_BUCKET is blank" if bucket.blank?
+
+    Dir.mktmpdir("science-clues-") do |work|
+      directory = File.join(work, "catalogue")
+      SearchSeedParquetExport.new(output: directory, progress: ->(message) { warn message }).export
+      puts JSON.pretty_generate(SearchSeedParquetPublisher.new(directory: directory, bucket: bucket).publish)
+    end
+  end
 end

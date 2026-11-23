@@ -88,6 +88,7 @@ Rails.application.routes.draw do
   resources :packages, only: [:index]
 
   resources :models, only: [:index]
+  resources :clues, only: [:index]
 
   resources :issues, only: [:index]
 

@@ -175,9 +175,91 @@ RBENV_VERSION="$(cat .ruby-version)" /opt/homebrew/bin/rbenv exec bundle exec ra
 
 The task reads projects in batches of 250 and prints progress with the last project ID. Use `LIMIT=1000` for a bounded run or `AFTER_ID=12345` to resume after a reported ID. It is safe to rerun and does not fetch upstream metadata. Lookup coverage is incomplete until the backfill finishes; no SQLite file is needed by API or MCP users.
 
+## Export clues to Parquet
+
+Run the task against the configured Science database. Set `OUTPUT` to a new directory. For a smaller dataset, add `LIMIT=250` to select the first 250 eligible projects by ID.
+
+```sh
+OUTPUT=tmp/clue-catalogue bundle exec rake search_seeds:export_parquet
+```
+
+The task takes the same read-only PostgreSQL snapshot as the SQLite export. Allow space beside the destination for both the temporary SQLite database used to derive clues and the compressed Parquet files. The output directory appears when all files are ready.
+
+| File | Contents |
+| --- | --- |
+| `clues.parquet` | One row per literal and case rule. Includes the clue ID, ambiguity flags, word evidence and suggested start year. |
+| `candidates.parquet` | One row per clue and candidate project or package. Includes the repository URL, package identifiers, year evidence and fork details. |
+| `provenance.parquet` | One row per clue, source seed and variant rule. Includes the original spelling, normalized value, source field, relation and available name or identifier evidence. |
+| `manifest.json` | Snapshot ID, selection, extractor digests, word sources and row counts. |
+
+IDs for clues, seeds and package entries belong to one snapshot. Use all three files from the same directory. Flags retain their SQLite integer values, including null for unknowns. Evidence objects and arrays are JSON strings. For example, run this query in DuckDB from the output directory to inspect the sources behind a matching name:
+
+```sql
+SELECT c.value, k.repository_url, k.purl, p.value AS original_spelling, p.source, p.variant
+FROM 'clues.parquet' c
+JOIN 'provenance.parquet' p ON p.clue_id = c.id
+JOIN 'candidates.parquet' k
+  ON k.clue_id = p.clue_id AND k.project_id = p.project_id
+ AND k.package_entry_id IS NOT DISTINCT FROM p.package_entry_id
+WHERE lower(c.value) = 'numpy';
+```
+
+### Publish a snapshot to S3
+
+Dokku runs `bundle exec rake search_seeds:export_and_publish` daily at 02:22 in the server's time zone. The task exports the full catalogue to a temporary directory, publishes it to `CLUE_EXPORT_BUCKET` and removes the directory when the task exits. Set `AWS_REGION` and provide AWS credentials to the job. You can run the same command manually for an immediate publication.
+
+Point the publisher at a completed export directory and the destination bucket. The Ruby AWS SDK uses your configured region and credentials.
+
+```sh
+OUTPUT=tmp/clue-catalogue CLUE_EXPORT_BUCKET=my-bucket AWS_REGION=us-east-1 bundle exec rake search_seeds:publish_parquet
+```
+
+Read `clues/latest.json` once and fetch the manifest at the key in its `manifest` field. Download the Parquet files alongside that manifest. The publisher updates the pointer after uploading all three files and the manifest. Rerun the command with the same directory after an interruption. It checks existing objects by SHA-256 and keeps any newer published snapshot current.
+
+### Use the export with Clue Matcher
+
+Set `CLUE_EXPORT_BUCKET` and `AWS_REGION` once in the web process. The Download button on `/clues` links to `clues/latest.json`. The publisher updates that object after each export, so the link stays the same.
+
+To sample papers with the public test export, set `OPENALEX_API_KEY` in the Clue Matcher checkout's `.env` and add the line below. Run `bin/sample 2 42` from the checkout. Docker downloads the catalogue over HTTPS without AWS credentials. The test export covers 250 projects.
+
+```dotenv
+CLUE_EXPORT_URL=https://science-clue-export-test-a5fe9645.s3.us-east-1.amazonaws.com/clues/latest.json
+```
+
+Clue Matcher reads the pointer at the start of each run and caches the three Parquet files together by snapshot ID. The run's `clue-export.json` records the ID, manifest URL and clue file hash. Use the candidate and provenance files from that snapshot to resolve its hits. To download the files for an existing corpus, set the URL in your shell and run `./clue-matcher fetch-clues "$CLUE_EXPORT_URL" ./catalogues`. The JSON result contains the local directory.
+
+If you already have an export directory, set `CLUE_MATCHER_DATA` to its absolute path. The following Docker Compose command reads `clues.parquet` directly and scans the bundled example paper. Use a fresh directory for each run.
+
+```sh
+export CLUE_MATCHER_DATA=/absolute/path/to/clue-catalogue
+mkdir "$CLUE_MATCHER_DATA/matcher-run"
+docker compose run --build --rm --user "$(id -u):$(id -g)" --entrypoint clue-matcher sample \
+  --clues /data/clues.parquet --papers /opt/examples/papers.jsonl \
+  --hits /data/matcher-run/hits.jsonl
+```
+
+For your own corpus, place packed paper JSONL at `$CLUE_MATCHER_DATA/papers.jsonl` and use `--papers /data/papers.jsonl`. Choose a new hits path for each run. Check `completed` in the printed summary and compare its `clues` count with `files["clues.parquet"]` in the manifest. Keep the snapshot ID with the results.
+
+From the export directory, run this query in DuckDB to trace each occurrence back to the projects or packages it could refer to and the evidence for each candidate. A null package entry denotes a project-level candidate. Several sources can support the same candidate, so count occurrences in the hits file before joining to provenance.
+
+```sql
+SELECT h.paper, h.paragraph, h.start_byte, h.end_byte, c.value AS clue,
+       k.repository_url, k.purl, p.value AS original_spelling, p.source
+FROM read_json('matcher-run/hits.jsonl', format = 'newline_delimited',
+       columns = {paper: 'VARCHAR', paragraph: 'VARCHAR', clue_id: 'BIGINT',
+                  start_byte: 'BIGINT', end_byte: 'BIGINT'}) h
+JOIN 'clues.parquet' c ON c.id = h.clue_id
+JOIN 'provenance.parquet' p ON p.clue_id = h.clue_id
+JOIN 'candidates.parquet' k
+  ON k.clue_id = p.clue_id AND k.project_id = p.project_id
+ AND k.package_entry_id IS NOT DISTINCT FROM p.package_entry_id
+ORDER BY h.paper, h.paragraph, h.start_byte, k.project_id, p.seed_id
+LIMIT 20;
+```
+
 ## Local SQLite export
 
-`search_seeds:export` writes seed data directly from the configured local database into a SQLite file. It uses `ProjectSearchSeeds` for extraction and provenance, while retaining the export's minimum Science Score of 20. Operator-approved projects below 20 appear in the live API but are excluded from this export. The development and test bundle includes the `sqlite3` gem; run `bundle install` through the project's Ruby setup after updating dependencies.
+`search_seeds:export` writes seed data directly from the configured local database into a SQLite file. It uses `ProjectSearchSeeds` for extraction and provenance, while retaining the export's minimum Science Score of 20. Operator-approved projects below 20 appear in the live API but are excluded from this export. Run `bundle install` through the project's Ruby setup after updating dependencies.
 
 On a local checkout configured with rbenv, run:
 

@@ -1,0 +1,26 @@
+<% @meta_title = "Software clues" %>
+<% @meta_description = "Find mentions of scientific software in papers and download the clues, candidate software and source records as Parquet." %>
+
+<main class="container-md mb-5">
+  <div class="col-lg-8">
+    <h1>Software clues</h1>
+    <p>A clue is a string you can search for in a paper to find a possible software mention. Science builds clues from its catalogue of research software. A clue might be a package name, a repository URL or an identifier such as a DOI.</p>
+
+    <p>For example, in “We used ZOSPy for the optical model,” the package name <code>ZOSPy</code> matches a clue. Clue Matcher records the clue ID and the position of the match in the paragraph. You can use that ID to look up the candidate software and see which catalogue records supplied the name. When projects share a name, or a name is also an ordinary word, read the surrounding text to decide what the author meant.</p>
+
+    <h2 class="h4 mt-4">Download the clues</h2>
+    <% if @latest_url %>
+      <p>The download opens <code>latest.json</code>. Its <code>manifest</code> field gives the path to the latest snapshot manifest from the root of the bucket. The three Parquet files are in the same directory. Downloads require no AWS credentials.</p>
+      <p><%= link_to "Download", @latest_url, class: "btn btn-primary" %></p>
+    <% end %>
+    <p>Use all three Parquet files from the same snapshot. A clue ID can refer to a different string in another snapshot.</p>
+    <dl>
+      <dt>clues.parquet</dt>
+      <dd>The strings to match, their case rules and flags for ambiguous clues.</dd>
+      <dt>candidates.parquet</dt>
+      <dd>The projects and packages associated with each clue, including repository URLs and package identifiers.</dd>
+      <dt>provenance.parquet</dt>
+      <dd>The source field and original spelling behind each clue, and how that spelling became a search string.</dd>
+    </dl>
+  </div>
+</main>

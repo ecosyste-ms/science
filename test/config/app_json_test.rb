@@ -1,6 +1,13 @@
 require "test_helper"
 
 class AppJsonTest < ActiveSupport::TestCase
+  test "the clue export runs once a day without overlapping itself" do
+    crons = JSON.parse(Rails.root.join("app.json").read).fetch("cron")
+    task = crons.select { |cron| cron.fetch("command") == "bundle exec rake search_seeds:export_and_publish" }.sole
+    assert_equal "22 2 * * *", task.fetch("schedule")
+    assert_equal "forbid", task.fetch("concurrency_policy")
+  end
+
   test "due SWHID work is recovered independently every ten minutes" do
     crons = JSON.parse(Rails.root.join("app.json").read).fetch("cron")
       .select { |entry| entry.fetch("command").include?("swhids:enqueue") }
