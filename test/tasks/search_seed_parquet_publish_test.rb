@@ -36,6 +36,14 @@ class SearchSeedParquetPublishTest < ActiveSupport::TestCase
     assert_equal "#{base}/manifest.json", JSON.parse(puts_sent.last[:body]).fetch("manifest")
   end
 
+  test "scheduled task propagates export failures before publishing" do
+    SearchSeedParquetExport.any_instance.expects(:export).raises(IOError, "disk full")
+    task = Rake::Task["search_seeds:export_and_publish"]
+    task.reenable
+    assert_raises(IOError) { task.invoke }
+    assert_empty @client.api_requests
+  end
+
   test "retry after the first upload verifies it and advances latest only after the manifest" do
     stored_checksum = nil
     @client.stub_responses(:put_object, lambda { |ctx|

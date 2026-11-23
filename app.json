@@ -25,6 +25,11 @@
       "schedule": "0 2 * * *"
     },
     {
+      "command": "bundle exec rake search_seeds:export_and_publish",
+      "schedule": "22 2 * * *",
+      "concurrency_policy": "forbid"
+    },
+    {
       "command": "bundle exec rake projects:sync",
       "schedule": "0,10,20,30,40,50 * * * *"
     },

@@ -38,4 +38,17 @@ namespace :search_seeds do
     publisher = SearchSeedParquetPublisher.new(directory: ENV.fetch("OUTPUT"), bucket: ENV.fetch("CLUE_EXPORT_BUCKET"))
     puts JSON.pretty_generate(publisher.publish)
   end
+
+  desc "Export the full Parquet clue catalogue and publish it to CLUE_EXPORT_BUCKET"
+  task export_and_publish: :environment do
+    require "tmpdir"
+    bucket = ENV.fetch("CLUE_EXPORT_BUCKET")
+    raise ArgumentError, "CLUE_EXPORT_BUCKET is blank" if bucket.blank?
+
+    Dir.mktmpdir("science-clues-") do |work|
+      directory = File.join(work, "catalogue")
+      SearchSeedParquetExport.new(output: directory, progress: ->(message) { warn message }).export
+      puts JSON.pretty_generate(SearchSeedParquetPublisher.new(directory: directory, bucket: bucket).publish)
+    end
+  end
 end

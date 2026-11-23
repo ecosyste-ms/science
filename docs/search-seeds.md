@@ -206,6 +206,8 @@ WHERE lower(c.value) = 'numpy';
 
 ### Publish a snapshot to S3
 
+Dokku runs `bundle exec rake search_seeds:export_and_publish` daily at 02:22 in the server's time zone. The task exports the full catalogue to a temporary directory, publishes it to `CLUE_EXPORT_BUCKET` and removes the directory when the task exits. Set `AWS_REGION` and provide AWS credentials to the job. You can run the same command manually for an immediate publication.
+
 Point the publisher at a completed export directory and the destination bucket. The Ruby AWS SDK uses your configured region and credentials.
 
 ```sh

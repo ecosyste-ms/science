@@ -10,7 +10,7 @@ class SearchSeedsRakeTest < ActiveSupport::TestCase
     Rails.application.load_tasks unless Rake::Task.task_defined?("search_seeds:export")
     Rake::Task["search_seeds:export"].reenable
     Rake::Task["search_seeds:export_parquet"].reenable
-    @original_env = %w[OUTPUT LIMIT].to_h { |key| [key, ENV[key]] }
+    @original_env = %w[OUTPUT LIMIT CLUE_EXPORT_BUCKET].to_h { |key| [key, ENV[key]] }
     @directory = Dir.mktmpdir("search-seeds-test")
     ENV["OUTPUT"] = File.join(@directory, "snapshot.sqlite3")
     ENV.delete("LIMIT")
@@ -441,6 +441,35 @@ class SearchSeedsRakeTest < ActiveSupport::TestCase
     assert sources.any? { |r| r["package_entry_id"] == package_id && r["project_id"] == other.id }
     assert_equal [first.id, other.id].sort, rows.fetch("candidates").pluck("project_id").uniq.sort
     assert_equal manifest.dig("counts", "clue_seed_links"), rows.fetch("provenance").size
+  end
+
+  test "scheduled task publishes the complete export before updating latest" do
+    require "aws-sdk-s3"
+    create(Project, url: "https://github.com/export/first", name: "First", science_score: 30)
+    create(Project, url: "https://github.com/export/second", name: "Second", science_score: 30)
+    ENV["LIMIT"] = "1"
+    ENV["CLUE_EXPORT_BUCKET"] = "configured-clue-bucket"
+    client = Aws::S3::Client.new(stub_responses: true)
+    Aws::S3::Client.stubs(:new).returns(client)
+    uploads = {}
+    client.stub_responses(:put_object, lambda { |ctx|
+      assert_equal "configured-clue-bucket", ctx.params[:bucket]
+      body = ctx.params.fetch(:body)
+      uploads[ctx.params.fetch(:key)] = body.respond_to?(:read) ? body.read : body
+      {}
+    })
+
+    task = Rake::Task["search_seeds:export_and_publish"]
+    task.reenable
+    output, = capture_io { task.invoke }
+    manifest_key = JSON.parse(output).fetch("manifest")
+    manifest = JSON.parse(uploads.fetch(manifest_key))
+    assert_equal 2, manifest.dig("counts", "projects")
+    manifest.fetch("files").each_key do |filename|
+      assert uploads.fetch(File.join(File.dirname(manifest_key), filename)).start_with?("PAR1")
+    end
+    assert_equal "clues/latest.json", uploads.keys.last
+    assert_equal manifest_key, JSON.parse(uploads.fetch("clues/latest.json")).fetch("manifest")
   end
 
   test "empty Parquet datasets retain their schema and an existing destination is preserved" do
